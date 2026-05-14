@@ -18,7 +18,7 @@ export async function GET(req: Request) {
   const w=180,h=90,gap=12; let x=36,y=36
   for (const i of items) {
     if (y+h>756){ doc.addPage(); x=36; y=36 }
-    const link=`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/instances/${i.id}`
+    const link=`${process.env.NEXT_PUBLIC_APP_URL || 'https://axildb.com'}/instances/${i.id}`
     const qr=await QRCode.toDataURL(link,{margin:1,width:96})
     doc.rect(x,y,w,h).stroke()
     doc.fontSize(11).font('Helvetica-Bold').text(i.plantId,x+8,y+8,{width:w-72})

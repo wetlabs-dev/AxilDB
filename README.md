@@ -13,7 +13,7 @@ npm run db:seed
 npm run dev
 ```
 
-Open http://localhost:3000.
+Open http://localhost or https://axildb.com, depending on where it is deployed.
 
 The seed script creates the first admin user:
 

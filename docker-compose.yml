@@ -15,9 +15,10 @@ services:
       - db
     environment:
       DATABASE_URL: postgresql://plants:plants@db:5432/axildb?schema=public
-      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      NEXT_PUBLIC_APP_URL: https://axildb.com
+      PORT: 80
     ports:
-      - "3000:3000"
+      - "80:80"
     volumes:
       - ./public/uploads:/app/public/uploads
       - ./public/labels:/app/public/labels
