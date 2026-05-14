@@ -1,4 +1,15 @@
 services:
+  caddy:
+    image: caddy:2-alpine
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
   db:
     image: postgres:16-alpine
     environment:
@@ -16,11 +27,13 @@ services:
     environment:
       DATABASE_URL: postgresql://plants:plants@db:5432/axildb?schema=public
       NEXT_PUBLIC_APP_URL: https://axildb.com
-      PORT: 80
-    ports:
-      - "80:80"
+      PORT: 3000
+    expose:
+      - "3000"
     volumes:
       - ./public/uploads:/app/public/uploads
       - ./public/labels:/app/public/labels
 volumes:
   axildb_pgdata:
+  caddy_data:
+  caddy_config:

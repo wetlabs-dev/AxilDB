@@ -15,6 +15,12 @@ npm run dev
 
 Open http://localhost or https://axildb.com, depending on where it is deployed.
 
+## Docker with HTTPS
+
+`docker-compose.yml` includes Caddy as the public web server. Caddy listens on ports 80 and 443, proxies to the app container, and automatically requests/renews Let's Encrypt certificates for `axildb.com`.
+
+Before running it in production, point DNS for `axildb.com` at the server and make sure inbound ports 80 and 443 are open.
+
 The seed script creates the first admin user:
 
 ```text
