@@ -2,7 +2,7 @@
 
 Personal horticultural accession database, propagation tracker, bloom journal, QR tag generator, bulk PDF label exporter, sport review queue, and lineage graph.
 
-## Local SQLite setup
+## Local setup
 
 ```bash
 cp .env.example .env
@@ -37,7 +37,7 @@ Password: password
 
 ## v2 additions
 
-- SQLite-first schema for simple local use.
+- Postgres-backed schema for durable deployment.
 - Full edit/delete screens for plant definitions, plant instances, propagation events, bloom records, notes, and governing bodies.
 - Dagre-based automatic lineage graph layout through React Flow.
 - Dedicated Sport Review queue.
@@ -48,11 +48,12 @@ Password: password
 ## Reset local data
 
 ```bash
-rm prisma/axildb.db
+docker compose down -v
+docker compose up -d --build
 npx prisma db push
 npm run db:seed
 ```
 
 ## Notes
 
-This is still intentionally a local-first personal app. It uses string fields instead of Prisma enums because SQLite support is simpler that way.
+This is intentionally a small personal app. It uses string fields instead of Prisma enums to keep future data changes simple.
