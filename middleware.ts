@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 
 const marketingHosts = new Set(['axildb.com', 'www.axildb.com'])
+const publicFile = /\.(.*)$/
 
 export function middleware(request: NextRequest) {
   const host = request.headers.get('host')?.split(':')[0] || ''
@@ -13,21 +14,16 @@ export function middleware(request: NextRequest) {
       return NextResponse.rewrite(url)
     }
 
-    if (pathname.startsWith('/_next') || pathname === '/favicon.ico') {
+    if (pathname.startsWith('/_next') || publicFile.test(pathname)) {
       return NextResponse.next()
     }
 
-    const url = request.nextUrl.clone()
-    url.hostname = 'app.axildb.com'
-    url.pathname = pathname
-    url.search = search
+    const url = new URL(`${pathname}${search}`, 'https://app.axildb.com')
     return NextResponse.redirect(url)
   }
 
   if (host === 'app.axildb.com' && pathname === '/splash') {
-    const url = request.nextUrl.clone()
-    url.hostname = 'axildb.com'
-    url.pathname = '/'
+    const url = new URL('/', 'https://axildb.com')
     return NextResponse.redirect(url)
   }
 
