@@ -1,0 +1,4 @@
+import { prisma } from '@/lib/prisma'
+import { createGoverningBody } from '@/app/actions'
+import { Card, Field, TextArea, Button } from '@/components/ui'
+export default async function Settings(){ const bodies=await prisma.governingBody.findMany({orderBy:{name:'asc'}}); return <div className='space-y-6'><h2 className='text-3xl font-bold'>Settings</h2><Card><h3 className='mb-3 font-bold'>Governing Bodies</h3><form action={createGoverningBody} className='grid gap-3 md:grid-cols-2'><Field label='Name' name='name' required/><Field label='Abbreviation' name='abbreviation'/><Field label='Website' name='website'/><TextArea label='Notes' name='notes'/><Button className='md:col-span-2'>Add governing body</Button></form></Card><Card>{bodies.map(b=><p className='py-1 text-sm' key={b.id}><b>{b.name}</b> {b.abbreviation ? `(${b.abbreviation})` : ''}</p>)}</Card></div> }

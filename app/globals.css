@@ -1,0 +1,6 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+body { background: #f7f4ed; color: #1f2a22; }
+.tag-print { width: 2.5in; min-height: 1.25in; border: 1px solid #222; padding: .12in; display: grid; grid-template-columns: 1fr .7in; gap: .08in; background: white; }
+@media print { .no-print { display: none; } body { background: white; } }

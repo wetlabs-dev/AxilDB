@@ -1,0 +1,25 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: plants
+      POSTGRES_PASSWORD: plants
+      POSTGRES_DB: plant_lineage
+    ports:
+      - "5433:5432"
+    volumes:
+      - plant_lineage_pgdata:/var/lib/postgresql/data
+  app:
+    build: .
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql://plants:plants@db:5432/plant_lineage?schema=public
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./public/uploads:/app/public/uploads
+      - ./public/labels:/app/public/labels
+volumes:
+  plant_lineage_pgdata:

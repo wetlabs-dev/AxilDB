@@ -1,0 +1,169 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model GoverningBody {
+  id               String            @id @default(cuid())
+  name             String
+  abbreviation     String?
+  website          String?
+  notes            String?
+  plantDefinitions PlantDefinition[]
+}
+
+model PlantDefinition {
+  id                         String   @id @default(cuid())
+  genus                      String
+  species                    String
+  hybridNotation             String?
+  cultivarName               String?
+  cultivarRegistrationNumber String?
+  governingBodyId            String?
+  description                String?
+  notes                      String?
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+
+  governingBody GoverningBody?  @relation(fields: [governingBodyId], references: [id], onDelete: SetNull)
+  instances     PlantInstance[]
+
+  @@index([governingBodyId])
+}
+
+model PlantInstance {
+  id                String    @id @default(cuid())
+  plantDefinitionId String
+  plantId           String    @unique
+  instanceType      String
+  status            String    @default("ACTIVE")
+  location          String?
+  acquisitionDate   DateTime?
+  propagationDate   DateTime?
+  source            String?
+  distributor       String?
+  stockNumber       String?
+  purchasePrice     Decimal?
+  archiveDate       DateTime?
+  archiveReason     String?
+  archiveNotes      String?
+  isSportCandidate  Boolean   @default(false)
+  sportStatus       String    @default("NONE")
+  sportDescription  String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  plantDefinition PlantDefinition        @relation(fields: [plantDefinitionId], references: [id], onDelete: Cascade)
+  parentLinks     ParentageLink[]
+  childLinks      PropagationChild[]
+  blooms          BloomEvent[]
+  sportRecords    SportStabilityRecord[]
+
+  @@index([plantDefinitionId])
+  @@index([status])
+  @@index([instanceType])
+  @@index([sportStatus])
+}
+
+model PropagationEvent {
+  id            String   @id @default(cuid())
+  method        String
+  date          DateTime
+  notes         String?
+  successStatus String   @default("PENDING")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  parents      ParentageLink[]
+  children     PropagationChild[]
+  sportRecords SportStabilityRecord[]
+
+  @@index([date])
+  @@index([method])
+  @@index([successStatus])
+}
+
+model ParentageLink {
+  id                    String @id @default(cuid())
+  propagationEventId    String
+  parentPlantInstanceId String
+  parentRole            String
+
+  propagationEvent    PropagationEvent @relation(fields: [propagationEventId], references: [id], onDelete: Cascade)
+  parentPlantInstance PlantInstance    @relation(fields: [parentPlantInstanceId], references: [id], onDelete: Cascade)
+
+  @@index([propagationEventId])
+  @@index([parentPlantInstanceId])
+}
+
+model PropagationChild {
+  id                   String @id @default(cuid())
+  propagationEventId   String
+  childPlantInstanceId String
+
+  propagationEvent   PropagationEvent @relation(fields: [propagationEventId], references: [id], onDelete: Cascade)
+  childPlantInstance PlantInstance    @relation(fields: [childPlantInstanceId], references: [id], onDelete: Cascade)
+
+  @@index([propagationEventId])
+  @@index([childPlantInstanceId])
+}
+
+model Note {
+  id         String   @id @default(cuid())
+  entityType String
+  entityId   String
+  note       String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([entityType, entityId])
+}
+
+model Photo {
+  id         String   @id @default(cuid())
+  entityType String
+  entityId   String
+  filename   String
+  path       String
+  caption    String?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+}
+
+model BloomEvent {
+  id              String    @id @default(cuid())
+  plantInstanceId String
+  bloomStartDate  DateTime
+  peakBloomDate   DateTime?
+  bloomEndDate    DateTime?
+  flowerCount     Int?
+  firstBloom      Boolean   @default(false)
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  plantInstance PlantInstance @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
+
+  @@index([plantInstanceId])
+}
+
+model SportStabilityRecord {
+  id                 String   @id @default(cuid())
+  plantInstanceId    String
+  propagationEventId String
+  propagatedTrue     Boolean
+  generationNumber   Int
+  notes              String?
+  createdAt          DateTime @default(now())
+
+  plantInstance    PlantInstance    @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
+  propagationEvent PropagationEvent @relation(fields: [propagationEventId], references: [id], onDelete: Cascade)
+
+  @@index([plantInstanceId])
+  @@index([propagationEventId])
+}
