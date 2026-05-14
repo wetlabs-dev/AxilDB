@@ -8,7 +8,7 @@ import {
 import { Button, Card, Field, TextArea } from '@/components/ui'
 import { canCreate, getCurrentUser, isAdmin } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { fmtDate, plantName } from '@/lib/utils'
+import { fmtDate, plantName, taxonomyLabel } from '@/lib/utils'
 import Link from 'next/link'
 import QRCode from 'qrcode'
 
@@ -23,7 +23,7 @@ export default async function InstanceDetail({
   const i = await prisma.plantInstance.findUniqueOrThrow({
     where: { id },
     include: {
-      plantDefinition: true,
+      plantDefinition: { include: { aliases: { orderBy: { name: 'asc' } } } },
       blooms: {
         orderBy: { bloomStartDate: 'desc' },
       },
@@ -91,6 +91,11 @@ export default async function InstanceDetail({
       <div className="grid gap-4 lg:grid-cols-3">
         <Card>
           <h3 className="font-bold">Identity</h3>
+          <p className="font-medium">{plantName(i.plantDefinition)}</p>
+          <p>Confidence: {taxonomyLabel(i.plantDefinition.confidence)}</p>
+          <p>Acquired as: {i.plantDefinition.acquisitionLabel || '—'}</p>
+          <p>Provisional taxon: {i.plantDefinition.provisionalTaxon || '—'}</p>
+          <p>Authority: {i.plantDefinition.authority || '—'}</p>
           <p>Status: {i.status}</p>
           <p>Type: {i.instanceType}</p>
           <p>Location: {i.location || '—'}</p>
@@ -101,6 +106,16 @@ export default async function InstanceDetail({
           <Link className="mt-3 inline-block underline" href={`/graphs?root=${i.id}`}>
             View lineage graph
           </Link>
+          {i.plantDefinition.aliases.length > 0 && (
+            <div className="mt-3 border-t border-stone-200 pt-3 text-sm">
+              <p className="font-medium">Aliases</p>
+              {i.plantDefinition.aliases.map((alias) => (
+                <p key={alias.id}>
+                  {alias.name} · {taxonomyLabel(alias.aliasType)} · {taxonomyLabel(alias.confidence)}
+                </p>
+              ))}
+            </div>
+          )}
         </Card>
 
         <Card>

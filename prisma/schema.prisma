@@ -67,8 +67,12 @@ model PlantDefinition {
   species                    String
   hybridNotation             String?
   cultivarName               String?
+  authority                  String?
   cultivarRegistrationNumber String?
   governingBodyId            String?
+  confidence                 String   @default("UNCERTAIN")
+  acquisitionLabel           String?
+  provisionalTaxon           String?
   description                String?
   notes                      String?
   createdAt                  DateTime @default(now())
@@ -76,8 +80,28 @@ model PlantDefinition {
 
   governingBody GoverningBody?  @relation(fields: [governingBodyId], references: [id], onDelete: SetNull)
   instances     PlantInstance[]
+  aliases       PlantAlias[]
 
   @@index([governingBodyId])
+  @@index([confidence])
+}
+
+model PlantAlias {
+  id                String   @id @default(cuid())
+  plantDefinitionId String
+  name              String
+  aliasType         String   @default("SYNONYM")
+  source            String?
+  confidence        String   @default("UNCERTAIN")
+  notes             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  plantDefinition PlantDefinition @relation(fields: [plantDefinitionId], references: [id], onDelete: Cascade)
+
+  @@index([plantDefinitionId])
+  @@index([aliasType])
+  @@index([confidence])
 }
 
 model PlantInstance {

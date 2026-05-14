@@ -38,6 +38,7 @@ Password: password
 ## v2 additions
 
 - Postgres-backed schema for durable deployment.
+- Taxonomy confidence, acquisition/provisional labels, authority fields, and metadata-rich aliases for plant definitions.
 - Full edit/delete screens for plant definitions, plant instances, propagation events, bloom records, notes, and governing bodies.
 - Dagre-based automatic lineage graph layout through React Flow.
 - Dedicated Sport Review queue.

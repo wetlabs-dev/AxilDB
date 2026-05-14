@@ -12,6 +12,24 @@ const date = (s?: string) => (s ? new Date(s) : undefined)
 const dec = (s?: string) => (s ? s : undefined)
 const back = (fd: FormData) => val(fd, 'back') || '/'
 
+function aliasRows(fd: FormData) {
+  const names = fd.getAll('aliasName').map((value) => String(value || '').trim())
+  const types = fd.getAll('aliasType').map((value) => String(value || '').trim())
+  const sources = fd.getAll('aliasSource').map((value) => String(value || '').trim())
+  const confidences = fd.getAll('aliasConfidence').map((value) => String(value || '').trim())
+  const notes = fd.getAll('aliasNotes').map((value) => String(value || '').trim())
+
+  return names
+    .map((name, index) => ({
+      name,
+      aliasType: types[index] || 'SYNONYM',
+      source: sources[index] || undefined,
+      confidence: confidences[index] || 'UNCERTAIN',
+      notes: notes[index] || undefined,
+    }))
+    .filter((alias) => alias.name)
+}
+
 async function cleanupGenericEntity(entityType: string, entityId: string) {
   await prisma.note.deleteMany({ where: { entityType, entityId } })
   await prisma.photo.deleteMany({ where: { entityType, entityId } })
@@ -112,10 +130,15 @@ export async function createPlantDefinition(fd: FormData) {
       species: val(fd, 'species')!,
       hybridNotation: val(fd, 'hybridNotation'),
       cultivarName: val(fd, 'cultivarName'),
+      authority: val(fd, 'authority'),
       cultivarRegistrationNumber: val(fd, 'cultivarRegistrationNumber'),
       governingBodyId: val(fd, 'governingBodyId'),
+      confidence: val(fd, 'confidence') || 'UNCERTAIN',
+      acquisitionLabel: val(fd, 'acquisitionLabel'),
+      provisionalTaxon: val(fd, 'provisionalTaxon'),
       description: val(fd, 'description'),
       notes: val(fd, 'notes'),
+      aliases: { create: aliasRows(fd) },
     },
   })
   await audit(user, 'CREATE', 'PLANT_DEFINITION', definition.id, `Created plant definition ${definition.genus} ${definition.species}`)
@@ -134,10 +157,18 @@ export async function updatePlantDefinition(fd: FormData) {
       species: val(fd, 'species')!,
       hybridNotation: val(fd, 'hybridNotation'),
       cultivarName: val(fd, 'cultivarName'),
+      authority: val(fd, 'authority'),
       cultivarRegistrationNumber: val(fd, 'cultivarRegistrationNumber'),
       governingBodyId: val(fd, 'governingBodyId'),
+      confidence: val(fd, 'confidence') || 'UNCERTAIN',
+      acquisitionLabel: val(fd, 'acquisitionLabel'),
+      provisionalTaxon: val(fd, 'provisionalTaxon'),
       description: val(fd, 'description'),
       notes: val(fd, 'notes'),
+      aliases: {
+        deleteMany: {},
+        create: aliasRows(fd),
+      },
     },
   })
   await audit(user, 'UPDATE', 'PLANT_DEFINITION', id, `Updated plant definition ${definition.genus} ${definition.species}`)
@@ -489,8 +520,10 @@ export async function createCultivarFromSport(fd: FormData) {
       species: val(fd, 'species') || inst.plantDefinition.species,
       hybridNotation: val(fd, 'hybridNotation') || inst.plantDefinition.hybridNotation,
       cultivarName: val(fd, 'cultivarName')!,
+      authority: val(fd, 'authority'),
       cultivarRegistrationNumber: val(fd, 'cultivarRegistrationNumber'),
       governingBodyId: val(fd, 'governingBodyId'),
+      confidence: 'CONFIRMED',
       description: val(fd, 'description') || inst.sportDescription,
       notes: `Created from stable sport lineage of ${inst.plantId}.`,
     },
