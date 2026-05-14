@@ -24,7 +24,7 @@ Before running it in production, point DNS for `axildb.com` at the server and ma
 The seed script creates the first admin user:
 
 ```text
-Email: axildb@damonius.com
+Email: admin@axildb.com
 Password: password
 ```
 
