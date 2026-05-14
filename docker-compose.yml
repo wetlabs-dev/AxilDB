@@ -4,17 +4,17 @@ services:
     environment:
       POSTGRES_USER: plants
       POSTGRES_PASSWORD: plants
-      POSTGRES_DB: plant_lineage
+      POSTGRES_DB: axildb
     ports:
       - "5433:5432"
     volumes:
-      - plant_lineage_pgdata:/var/lib/postgresql/data
+      - axildb_pgdata:/var/lib/postgresql/data
   app:
     build: .
     depends_on:
       - db
     environment:
-      DATABASE_URL: postgresql://plants:plants@db:5432/plant_lineage?schema=public
+      DATABASE_URL: postgresql://plants:plants@db:5432/axildb?schema=public
       NEXT_PUBLIC_APP_URL: http://localhost:3000
     ports:
       - "3000:3000"
@@ -22,4 +22,4 @@ services:
       - ./public/uploads:/app/public/uploads
       - ./public/labels:/app/public/labels
 volumes:
-  plant_lineage_pgdata:
+  axildb_pgdata:

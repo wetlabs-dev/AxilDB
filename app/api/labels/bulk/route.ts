@@ -32,5 +32,5 @@ export async function GET(req: Request) {
   if (!items.length) doc.fontSize(14).text('No labels selected.')
   doc.end()
   const pdf=await done
-  return new NextResponse(pdf,{headers:{'Content-Type':'application/pdf','Content-Disposition':'attachment; filename="plant-tags.pdf"'}})
+  return new NextResponse(new Uint8Array(pdf),{headers:{'Content-Type':'application/pdf','Content-Disposition':'attachment; filename="axildb-plant-tags.pdf"'}})
 }

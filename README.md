@@ -1,4 +1,4 @@
-# Plant Lineage Tracker
+# AxilDB — Plant Lineage Tracker
 
 Personal horticultural accession database, propagation tracker, bloom journal, QR tag generator, bulk PDF label exporter, sport review queue, and lineage graph.
 
@@ -28,7 +28,7 @@ Open http://localhost:3000.
 ## Reset local data
 
 ```bash
-rm prisma/dev.db
+rm prisma/axildb.db
 npx prisma db push
 npm run db:seed
 ```
