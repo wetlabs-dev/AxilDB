@@ -9,7 +9,8 @@
     "lint": "next lint",
     "prisma:generate": "prisma generate",
     "db:push": "prisma db push",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "db:bootstrap": "tsx prisma/bootstrap.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
@@ -18,7 +19,7 @@
     "clsx": "^2.1.1",
     "dagre": "^0.8.5",
     "iconv-lite": "^0.7.2",
-    "lucide-react": "^0.468.0",
+    "lucide-react": "^0.4680",
     "next": "^15.0.3",
     "pdfkit": "^0.15.2",
     "qrcode": "^1.5.4",
