@@ -20,10 +20,28 @@ services:
       - "5433:5432"
     volumes:
       - axildb_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U plants -d axildb"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+  migrate:
+    build:
+      context: .
+      target: builder
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://plants:plants@db:5432/axildb?schema=public
+    command: sh -c "npx prisma db push && npm run db:bootstrap"
   app:
     build: .
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     environment:
       DATABASE_URL: postgresql://plants:plants@db:5432/axildb?schema=public
       NEXT_PUBLIC_APP_URL: https://axildb.com
