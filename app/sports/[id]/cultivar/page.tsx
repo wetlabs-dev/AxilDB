@@ -1,8 +1,10 @@
 import { prisma } from '@/lib/prisma'
 import { createCultivarFromSport } from '@/app/actions'
 import { Card, Field, TextArea, Button } from '@/components/ui'
+import { requireAdminUser } from '@/lib/auth'
 import { plantName } from '@/lib/utils'
 export default async function CultivarWizard({params}:{params:Promise<{id:string}>}){
+ await requireAdminUser()
  const {id}=await params
  const [i,bodies]=await Promise.all([prisma.plantInstance.findUniqueOrThrow({where:{id},include:{plantDefinition:true,sportRecords:{orderBy:{generationNumber:'desc'}}}}),prisma.governingBody.findMany({orderBy:{name:'asc'}})])
  return <div className='space-y-6'><h2 className='text-3xl font-bold'>Create Cultivar from Stable Sport</h2><Card><p className='font-bold'>{i.plantId}</p><p>{plantName(i.plantDefinition)}</p><p className='text-sm'>{i.sportDescription}</p><p className='mt-2 text-sm'>True propagation records: {i.sportRecords.filter(r=>r.propagatedTrue).length}</p></Card><Card><form action={createCultivarFromSport} className='grid gap-3 md:grid-cols-2'><input type='hidden' name='plantInstanceId' value={id}/><Field label='Genus' name='genus' defaultValue={i.plantDefinition.genus}/><Field label='Species' name='species' defaultValue={i.plantDefinition.species}/><Field label='Hybrid notation' name='hybridNotation' defaultValue={i.plantDefinition.hybridNotation}/><Field label='New cultivar name' name='cultivarName' required/><Field label='Cultivar registration number' name='cultivarRegistrationNumber'/><label className='grid gap-1 text-sm font-medium'>Governing body<select className='rounded-lg border px-3 py-2 font-normal' name='governingBodyId' defaultValue={i.plantDefinition.governingBodyId || ''}><option value=''>—</option>{bodies.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></label><TextArea label='Description' name='description' defaultValue={i.sportDescription}/><Button className='md:col-span-2'>Create definition and reassign this plant</Button></form></Card></div>

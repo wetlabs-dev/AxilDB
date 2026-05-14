@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
+import { audit, requireAdminUser, requireCreateUser } from '@/lib/auth'
 
 const val = (fd: FormData, k: string) =>
   String(fd.get(k) || '').trim() || undefined
@@ -63,7 +64,8 @@ async function cleanupOrphanPropagationEvents() {
 }
 
 export async function createGoverningBody(fd: FormData) {
-  await prisma.governingBody.create({
+  const user = await requireAdminUser()
+  const body = await prisma.governingBody.create({
     data: {
       name: val(fd, 'name')!,
       abbreviation: val(fd, 'abbreviation'),
@@ -71,12 +73,14 @@ export async function createGoverningBody(fd: FormData) {
       notes: val(fd, 'notes'),
     },
   })
+  await audit(user, 'CREATE', 'GOVERNING_BODY', body.id, `Created governing body ${body.name}`)
 
   redirect('/settings')
 }
 
 export async function updateGoverningBody(fd: FormData) {
-  await prisma.governingBody.update({
+  const user = await requireAdminUser()
+  const body = await prisma.governingBody.update({
     where: { id: val(fd, 'id')! },
     data: {
       name: val(fd, 'name')!,
@@ -85,19 +89,24 @@ export async function updateGoverningBody(fd: FormData) {
       notes: val(fd, 'notes'),
     },
   })
+  await audit(user, 'UPDATE', 'GOVERNING_BODY', body.id, `Updated governing body ${body.name}`)
 
   redirect('/settings')
 }
 
 export async function deleteGoverningBody(fd: FormData) {
+  const user = await requireAdminUser()
   const id = val(fd, 'id')!
+  const body = await prisma.governingBody.findUnique({ where: { id } })
   await cleanupGenericEntity('GOVERNING_BODY', id)
   await prisma.governingBody.delete({ where: { id } })
+  await audit(user, 'DELETE', 'GOVERNING_BODY', id, `Deleted governing body ${body?.name || id}`)
   redirect('/settings')
 }
 
 export async function createPlantDefinition(fd: FormData) {
-  await prisma.plantDefinition.create({
+  const user = await requireCreateUser()
+  const definition = await prisma.plantDefinition.create({
     data: {
       genus: val(fd, 'genus')!,
       species: val(fd, 'species')!,
@@ -109,14 +118,16 @@ export async function createPlantDefinition(fd: FormData) {
       notes: val(fd, 'notes'),
     },
   })
+  await audit(user, 'CREATE', 'PLANT_DEFINITION', definition.id, `Created plant definition ${definition.genus} ${definition.species}`)
 
   redirect('/plants')
 }
 
 export async function updatePlantDefinition(fd: FormData) {
+  const user = await requireAdminUser()
   const id = val(fd, 'id')!
 
-  await prisma.plantDefinition.update({
+  const definition = await prisma.plantDefinition.update({
     where: { id },
     data: {
       genus: val(fd, 'genus')!,
@@ -129,12 +140,15 @@ export async function updatePlantDefinition(fd: FormData) {
       notes: val(fd, 'notes'),
     },
   })
+  await audit(user, 'UPDATE', 'PLANT_DEFINITION', id, `Updated plant definition ${definition.genus} ${definition.species}`)
 
   redirect(`/plants/${id}/edit`)
 }
 
 export async function deletePlantDefinition(fd: FormData) {
+  const user = await requireAdminUser()
   const id = val(fd, 'id')!
+  const definition = await prisma.plantDefinition.findUnique({ where: { id } })
 
   const instances = await prisma.plantInstance.findMany({
     where: { plantDefinitionId: id },
@@ -148,12 +162,14 @@ export async function deletePlantDefinition(fd: FormData) {
   await cleanupGenericEntity('PLANT_DEFINITION', id)
   await prisma.plantDefinition.delete({ where: { id } })
   await cleanupOrphanPropagationEvents()
+  await audit(user, 'DELETE', 'PLANT_DEFINITION', id, `Deleted plant definition ${definition ? `${definition.genus} ${definition.species}` : id}`)
 
   redirect('/plants')
 }
 
 export async function createPlantInstance(fd: FormData) {
-  await prisma.plantInstance.create({
+  const user = await requireCreateUser()
+  const instance = await prisma.plantInstance.create({
     data: {
       plantDefinitionId: val(fd, 'plantDefinitionId')!,
       plantId: val(fd, 'plantId')!,
@@ -170,14 +186,16 @@ export async function createPlantInstance(fd: FormData) {
       sportDescription: val(fd, 'sportDescription'),
     },
   })
+  await audit(user, 'CREATE', 'PLANT_INSTANCE', instance.id, `Created plant instance ${instance.plantId}`)
 
   redirect('/instances')
 }
 
 export async function updatePlantInstance(fd: FormData) {
+  const user = await requireAdminUser()
   const id = val(fd, 'id')!
 
-  await prisma.plantInstance.update({
+  const instance = await prisma.plantInstance.update({
     where: { id },
     data: {
       plantDefinitionId: val(fd, 'plantDefinitionId')!,
@@ -198,24 +216,29 @@ export async function updatePlantInstance(fd: FormData) {
       archiveNotes: val(fd, 'archiveNotes'),
     },
   })
+  await audit(user, 'UPDATE', 'PLANT_INSTANCE', id, `Updated plant instance ${instance.plantId}`)
 
   redirect(`/instances/${id}`)
 }
 
 export async function deletePlantInstance(fd: FormData) {
+  const user = await requireAdminUser()
   const id = val(fd, 'id')!
+  const instance = await prisma.plantInstance.findUnique({ where: { id } })
 
   await cleanupPlantInstanceDependents(id)
   await prisma.plantInstance.delete({ where: { id } })
   await cleanupOrphanPropagationEvents()
+  await audit(user, 'DELETE', 'PLANT_INSTANCE', id, `Deleted plant instance ${instance?.plantId || id}`)
 
   redirect('/instances')
 }
 
 export async function archivePlantInstance(fd: FormData) {
+  const user = await requireAdminUser()
   const id = val(fd, 'id')!
 
-  await prisma.plantInstance.update({
+  const instance = await prisma.plantInstance.update({
     where: { id },
     data: {
       status: 'ARCHIVED',
@@ -224,38 +247,48 @@ export async function archivePlantInstance(fd: FormData) {
       archiveNotes: val(fd, 'archiveNotes'),
     },
   })
+  await audit(user, 'ARCHIVE', 'PLANT_INSTANCE', id, `Archived plant instance ${instance.plantId}`)
 
   redirect(`/instances/${id}`)
 }
 
 export async function restorePlantInstance(fd: FormData) {
+  const user = await requireAdminUser()
   const id = val(fd, 'id')!
 
-  await prisma.plantInstance.update({
+  const instance = await prisma.plantInstance.update({
     where: { id },
     data: { status: 'ACTIVE', archiveDate: null, archiveReason: null, archiveNotes: null },
   })
+  await audit(user, 'RESTORE', 'PLANT_INSTANCE', id, `Restored plant instance ${instance.plantId}`)
 
   redirect(`/instances/${id}`)
 }
 
 export async function addNote(fd: FormData) {
-  await prisma.note.create({
+  const user = await requireCreateUser()
+  const note = await prisma.note.create({
     data: { entityType: val(fd, 'entityType')!, entityId: val(fd, 'entityId')!, note: val(fd, 'note')! },
   })
+  await audit(user, 'CREATE', 'NOTE', note.id, `Added note to ${note.entityType} ${note.entityId}`)
 
   redirect(back(fd))
 }
 
 export async function deleteNote(fd: FormData) {
-  await prisma.note.delete({ where: { id: val(fd, 'id')! } })
+  const user = await requireAdminUser()
+  const id = val(fd, 'id')!
+  const note = await prisma.note.findUnique({ where: { id } })
+  await prisma.note.delete({ where: { id } })
+  await audit(user, 'DELETE', 'NOTE', id, `Deleted note ${id}`, note)
   redirect(back(fd))
 }
 
 export async function openBloomEvent(fd: FormData) {
+  const user = await requireCreateUser()
   const plantInstanceId = val(fd, 'plantInstanceId')!
 
-  await prisma.bloomEvent.create({
+  const bloom = await prisma.bloomEvent.create({
     data: {
       plantInstanceId,
       bloomStartDate: date(val(fd, 'bloomStartDate'))!,
@@ -263,12 +296,14 @@ export async function openBloomEvent(fd: FormData) {
       notes: val(fd, 'notes'),
     },
   })
+  await audit(user, 'CREATE', 'BLOOM_EVENT', bloom.id, `Opened bloom event for plant instance ${plantInstanceId}`)
 
   revalidatePath(`/instances/${plantInstanceId}`)
   redirect(`/instances/${plantInstanceId}`)
 }
 
 export async function updateBloomPeak(fd: FormData) {
+  const user = await requireAdminUser()
   const id = val(fd, 'id')!
   const plantInstanceId = val(fd, 'plantInstanceId')!
 
@@ -280,12 +315,14 @@ export async function updateBloomPeak(fd: FormData) {
       notes: val(fd, 'notes'),
     },
   })
+  await audit(user, 'UPDATE', 'BLOOM_EVENT', id, `Updated bloom peak for plant instance ${plantInstanceId}`)
 
   revalidatePath(`/instances/${plantInstanceId}`)
   redirect(`/instances/${plantInstanceId}`)
 }
 
 export async function closeBloomEvent(fd: FormData) {
+  const user = await requireAdminUser()
   const id = val(fd, 'id')!
   const plantInstanceId = val(fd, 'plantInstanceId')!
 
@@ -293,6 +330,7 @@ export async function closeBloomEvent(fd: FormData) {
     where: { id },
     data: { bloomEndDate: date(val(fd, 'bloomEndDate'))!, notes: val(fd, 'notes') },
   })
+  await audit(user, 'UPDATE', 'BLOOM_EVENT', id, `Closed bloom event for plant instance ${plantInstanceId}`)
 
   revalidatePath(`/instances/${plantInstanceId}`)
   redirect(`/instances/${plantInstanceId}`)
@@ -303,6 +341,7 @@ export async function createBloomEvent(fd: FormData) {
 }
 
 export async function updateBloomEvent(fd: FormData) {
+  const user = await requireAdminUser()
   const id = val(fd, 'id')!
   const plantInstanceId = val(fd, 'plantInstanceId')!
 
@@ -317,21 +356,25 @@ export async function updateBloomEvent(fd: FormData) {
       notes: val(fd, 'notes'),
     },
   })
+  await audit(user, 'UPDATE', 'BLOOM_EVENT', id, `Updated bloom event for plant instance ${plantInstanceId}`)
 
   redirect(`/instances/${plantInstanceId}`)
 }
 
 export async function deleteBloomEvent(fd: FormData) {
+  const user = await requireAdminUser()
   const id = val(fd, 'id')!
   const plantInstanceId = val(fd, 'plantInstanceId')!
 
   await cleanupGenericEntity('BLOOM_EVENT', id)
   await prisma.bloomEvent.delete({ where: { id } })
+  await audit(user, 'DELETE', 'BLOOM_EVENT', id, `Deleted bloom event for plant instance ${plantInstanceId}`)
 
   redirect(`/instances/${plantInstanceId}`)
 }
 
 export async function createPropagationEvent(fd: FormData) {
+  const user = await requireCreateUser()
   const method = val(fd, 'method')!
   const parent1 = val(fd, 'parent1')!
   const parent2 = val(fd, 'parent2')
@@ -380,14 +423,16 @@ export async function createPropagationEvent(fd: FormData) {
       data: { propagationEventId: event.id, childPlantInstanceId: child.id },
     })
   }
+  await audit(user, 'CREATE', 'PROPAGATION_EVENT', event.id, `Created ${method} propagation event`, { childCodes })
 
   redirect('/propagations')
 }
 
 export async function updatePropagationEvent(fd: FormData) {
+  const user = await requireAdminUser()
   const id = val(fd, 'id')!
 
-  await prisma.propagationEvent.update({
+  const event = await prisma.propagationEvent.update({
     where: { id },
     data: {
       method: val(fd, 'method')!,
@@ -396,21 +441,26 @@ export async function updatePropagationEvent(fd: FormData) {
       notes: val(fd, 'notes'),
     },
   })
+  await audit(user, 'UPDATE', 'PROPAGATION_EVENT', id, `Updated ${event.method} propagation event`)
 
   redirect('/propagations')
 }
 
 export async function deletePropagationEvent(fd: FormData) {
+  const user = await requireAdminUser()
   const id = val(fd, 'id')!
+  const event = await prisma.propagationEvent.findUnique({ where: { id } })
 
   await cleanupGenericEntity('PROPAGATION_EVENT', id)
   await prisma.propagationEvent.delete({ where: { id } })
+  await audit(user, 'DELETE', 'PROPAGATION_EVENT', id, `Deleted ${event?.method || ''} propagation event`)
 
   redirect('/propagations')
 }
 
 export async function createSportStabilityRecord(fd: FormData) {
-  await prisma.sportStabilityRecord.create({
+  const user = await requireCreateUser()
+  const record = await prisma.sportStabilityRecord.create({
     data: {
       plantInstanceId: val(fd, 'plantInstanceId')!,
       propagationEventId: val(fd, 'propagationEventId')!,
@@ -419,11 +469,13 @@ export async function createSportStabilityRecord(fd: FormData) {
       notes: val(fd, 'notes'),
     },
   })
+  await audit(user, 'CREATE', 'SPORT_STABILITY_RECORD', record.id, `Added sport stability record`)
 
   redirect(back(fd))
 }
 
 export async function createCultivarFromSport(fd: FormData) {
+  const user = await requireAdminUser()
   const plantInstanceId = val(fd, 'plantInstanceId')!
 
   const inst = await prisma.plantInstance.findUniqueOrThrow({
@@ -448,6 +500,8 @@ export async function createCultivarFromSport(fd: FormData) {
     where: { id: plantInstanceId },
     data: { plantDefinitionId: def.id, sportStatus: 'REGISTERED', isSportCandidate: false },
   })
+  await audit(user, 'CREATE', 'PLANT_DEFINITION', def.id, `Created cultivar ${def.cultivarName} from sport ${inst.plantId}`)
+  await audit(user, 'UPDATE', 'PLANT_INSTANCE', plantInstanceId, `Reassigned sport ${inst.plantId} to new cultivar ${def.cultivarName}`)
 
   redirect(`/instances/${plantInstanceId}`)
 }

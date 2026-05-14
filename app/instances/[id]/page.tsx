@@ -6,6 +6,7 @@ import {
   closeBloomEvent,
 } from '@/app/actions'
 import { Button, Card, Field, TextArea } from '@/components/ui'
+import { canCreate, getCurrentUser, isAdmin } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { fmtDate, plantName } from '@/lib/utils'
 import Link from 'next/link'
@@ -17,6 +18,7 @@ export default async function InstanceDetail({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
+  const user = await getCurrentUser()
 
   const i = await prisma.plantInstance.findUniqueOrThrow({
     where: { id },
@@ -107,9 +109,9 @@ export default async function InstanceDetail({
           <p>{i.sportDescription || 'No sport notes.'}</p>
         </Card>
 
-        <Card>
+        {(isAdmin(user) || i.status !== 'ACTIVE') && <Card>
           <h3 className="font-bold">Archive</h3>
-          {i.status === 'ACTIVE' ? (
+          {isAdmin(user) && i.status === 'ACTIVE' ? (
             <form action={archivePlantInstance} className="grid gap-2">
               <input type="hidden" name="id" value={id} />
               <Field label="Reason" name="archiveReason" />
@@ -121,7 +123,7 @@ export default async function InstanceDetail({
               {i.archiveReason} on {fmtDate(i.archiveDate)}
             </p>
           )}
-        </Card>
+        </Card>}
       </div>
 
       <Card>
@@ -141,13 +143,13 @@ export default async function InstanceDetail({
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <h3 className="font-bold">Add note</h3>
-          <form action={addNote} className="grid gap-2">
+          {canCreate(user) && <form action={addNote} className="grid gap-2">
             <input type="hidden" name="entityType" value="PLANT_INSTANCE" />
             <input type="hidden" name="entityId" value={id} />
             <input type="hidden" name="back" value={`/instances/${id}`} />
             <TextArea label="Note" name="note" />
             <Button>Add note</Button>
-          </form>
+          </form>}
 
           {notes.map((n) => (
             <p className="mt-3 border-t pt-3 text-sm" key={n.id}>
@@ -164,7 +166,7 @@ export default async function InstanceDetail({
             Open a bloom when it starts, mark peak later, then close it when finished. Photos can be added to the bloom event at any stage.
           </p>
 
-          <form action={openBloomEvent} className="grid gap-2 rounded-xl border p-4">
+          {canCreate(user) && <form action={openBloomEvent} className="grid gap-2 rounded-xl border p-4">
             <input type="hidden" name="plantInstanceId" value={id} />
             <Field label="Bloom start" name="bloomStartDate" type="date" required />
             <label className="text-sm">
@@ -172,7 +174,7 @@ export default async function InstanceDetail({
             </label>
             <TextArea label="Opening notes" name="notes" />
             <Button>Open bloom event</Button>
-          </form>
+          </form>}
 
           <div className="mt-6 space-y-4">
             {i.blooms.length === 0 && (
@@ -203,7 +205,7 @@ export default async function InstanceDetail({
                   {b.firstBloom && <p className="mt-2 text-sm font-medium">First bloom</p>}
                   {b.notes && <p className="mt-2 text-sm whitespace-pre-wrap">{b.notes}</p>}
 
-                  {!b.peakBloomDate && (
+                  {isAdmin(user) && !b.peakBloomDate && (
                     <form action={updateBloomPeak} className="mt-4 grid gap-2 rounded-xl bg-neutral-50 p-3">
                       <input type="hidden" name="id" value={b.id} />
                       <input type="hidden" name="plantInstanceId" value={id} />
@@ -214,7 +216,7 @@ export default async function InstanceDetail({
                     </form>
                   )}
 
-                  {!b.bloomEndDate && (
+                  {isAdmin(user) && !b.bloomEndDate && (
                     <form action={closeBloomEvent} className="mt-4 grid gap-2 rounded-xl bg-neutral-50 p-3">
                       <input type="hidden" name="id" value={b.id} />
                       <input type="hidden" name="plantInstanceId" value={id} />
@@ -224,7 +226,7 @@ export default async function InstanceDetail({
                     </form>
                   )}
 
-                  <form
+                  {canCreate(user) && <form
                     action="/api/photos"
                     method="post"
                     encType="multipart/form-data"
@@ -236,7 +238,7 @@ export default async function InstanceDetail({
                     <input name="photo" type="file" accept="image/*" className="rounded-lg border p-2" />
                     <Field label="Caption" name="caption" />
                     <Button>Add bloom photo</Button>
-                  </form>
+                  </form>}
 
                   {(photosByBloomId[b.id] || []).length > 0 && (
                     <div className="mt-4 grid grid-cols-2 gap-3">
@@ -257,7 +259,7 @@ export default async function InstanceDetail({
 
       <Card>
         <h3 className="font-bold">Photos</h3>
-        <form
+        {canCreate(user) && <form
           action="/api/photos"
           method="post"
           encType="multipart/form-data"
@@ -269,7 +271,7 @@ export default async function InstanceDetail({
           <input name="photo" type="file" accept="image/*" className="rounded-lg border p-2" />
           <Field label="Caption" name="caption" />
           <Button>Upload photo</Button>
-        </form>
+        </form>}
 
         <div className="mt-4 grid grid-cols-3 gap-3">
           {photos.map((p) => (

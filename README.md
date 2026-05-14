@@ -15,6 +15,20 @@ npm run dev
 
 Open http://localhost:3000.
 
+The seed script creates the first admin user:
+
+```text
+Email: axildb@damonius.com
+Password: password
+```
+
+## Roles and audit log
+
+- Unauthenticated visitors can browse the app in read-only mode.
+- Loggers can add new records such as plants, blooms, propagations, notes, photos, and sport stability records.
+- Admins can add, edit, delete, archive/restore, manage users, manage governing bodies, and view the audit log.
+- Authenticated mutations are written to the admin-only audit log.
+
 ## v2 additions
 
 - SQLite-first schema for simple local use.

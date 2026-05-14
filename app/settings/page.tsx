@@ -2,8 +2,10 @@ import { prisma } from '@/lib/prisma'
 import { createGoverningBody, deleteGoverningBody, updateGoverningBody } from '@/app/actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { Card, Field, TextArea, Button } from '@/components/ui'
+import { requireAdminUser } from '@/lib/auth'
 
 export default async function Settings() {
+  await requireAdminUser()
   const bodies = await prisma.governingBody.findMany({
     include: { _count: { select: { plantDefinitions: true } } },
     orderBy: { name: 'asc' },
