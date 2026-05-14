@@ -1,5 +1,6 @@
 import { logout } from '@/app/auth-actions'
 import { getCurrentUser, isAdmin } from '@/lib/auth'
+import Link from 'next/link'
 import { MobileMenuAutoClose } from './MobileMenuAutoClose'
 import { Button, GhostLink } from './ui'
 import {
@@ -79,13 +80,13 @@ export async function Sidebar() {
     <>
       <header className="no-print sticky top-0 z-40 border-b border-stone-200/80 bg-[#fffaf0]/95 px-4 py-3 shadow-sm backdrop-blur md:hidden">
         <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2 rounded-md outline-none transition hover:text-[#1f472f] focus:ring-2 focus:ring-[#8fa58f]/30">
             <Leaf className="h-6 w-6 text-[#2f6b45]" />
             <div>
               <h1 className="font-serif text-xl font-semibold leading-none">AxilDB</h1>
               <p className="text-xs text-stone-600">Plant Lineage</p>
             </div>
-          </div>
+          </Link>
           <details className="relative" data-mobile-menu>
             <MobileMenuAutoClose />
             <summary className="flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-lg border border-stone-200 bg-white/80 shadow-sm">
@@ -100,13 +101,13 @@ export async function Sidebar() {
       </header>
 
       <aside className="no-print sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-stone-200/80 bg-[#fffaf0]/85 p-4 shadow-sm backdrop-blur md:flex">
-        <div className="mb-7 flex items-center gap-2">
+        <Link href="/" className="mb-7 flex items-center gap-2 rounded-md outline-none transition hover:text-[#1f472f] focus:ring-2 focus:ring-[#8fa58f]/30">
           <Leaf className="h-7 w-7 text-[#2f6b45]" />
           <div>
             <h1 className="font-serif text-2xl font-semibold leading-none">AxilDB</h1>
             <p className="text-xs text-stone-600">Plant Lineage</p>
           </div>
-        </div>
+        </Link>
         <div className="min-h-0 flex-1 overflow-auto">{nav}</div>
         <div className="mt-6 border-t border-stone-200 pt-4 text-sm">{account}</div>
       </aside>
