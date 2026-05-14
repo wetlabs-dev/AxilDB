@@ -1,0 +1,11 @@
+.git
+.next
+node_modules
+npm-debug.log
+Dockerfile
+docker-compose.yml
+.env
+.env.local
+public/uploads
+public/labels
+tsconfig.tsbuildinfo
