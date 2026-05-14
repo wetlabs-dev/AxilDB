@@ -1,5 +1,6 @@
 import { logout } from '@/app/auth-actions'
 import { getCurrentUser, isAdmin } from '@/lib/auth'
+import { MobileMenuAutoClose } from './MobileMenuAutoClose'
 import { Button, GhostLink } from './ui'
 import {
   Archive,
@@ -85,7 +86,8 @@ export async function Sidebar() {
               <p className="text-xs text-stone-600">Plant Lineage</p>
             </div>
           </div>
-          <details className="relative">
+          <details className="relative" data-mobile-menu>
+            <MobileMenuAutoClose />
             <summary className="flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-lg border border-stone-200 bg-white/80 shadow-sm">
               <Menu className="h-5 w-5" />
             </summary>
