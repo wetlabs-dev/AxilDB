@@ -75,7 +75,7 @@ export default async function InstanceDetail({
   }, {})
 
   const qr = await QRCode.toDataURL(
-    `${process.env.NEXT_PUBLIC_APP_URL || 'https://axildb.com'}/instances/${id}`
+    `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.axildb.com'}/instances/${id}`
   )
 
   return (

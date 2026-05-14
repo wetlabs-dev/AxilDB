@@ -1,3 +1,3 @@
-axildb.com {
+axildb.com, www.axildb.com, app.axildb.com {
 	reverse_proxy app:3000
 }
