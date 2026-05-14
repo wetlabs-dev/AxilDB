@@ -162,8 +162,8 @@ export default function SplashPage() {
       <footer className="border-t border-stone-200 px-5 py-8 text-sm text-stone-600 sm:px-6 lg:px-8">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-md border border-stone-200 bg-white/70">
-              <Leaf className="h-5 w-5 text-[#2f6b45]" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-md border border-stone-200 bg-white/70 p-1.5">
+              <img src="/wetlabs-logo.png" alt="WetLabs" className="h-full w-full object-contain" />
             </div>
             <div>
               <p>AxilDB — Plant Lineage Tracker</p>
