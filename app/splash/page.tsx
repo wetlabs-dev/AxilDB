@@ -13,7 +13,7 @@ import {
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.axildb.com'
 const githubUrl = process.env.NEXT_PUBLIC_GITHUB_URL || 'https://github.com/wetlabs-dev/AxilDB'
-const donateUrl = process.env.NEXT_PUBLIC_DONATE_URL || 'https://ko-fi.com/axildb'
+const donateUrl = process.env.NEXT_PUBLIC_DONATE_URL || 'https://ko-fi.com/wetlabs'
 
 const features = [
   ['Plant lineage', 'Trace parent plants, propagations, sport candidates, and stable cultivar lines without losing the story.', GitBranch],
@@ -160,8 +160,16 @@ export default function SplashPage() {
       </section>
 
       <footer className="border-t border-stone-200 px-5 py-8 text-sm text-stone-600 sm:px-6 lg:px-8">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p>AxilDB — Plant Lineage Tracker</p>
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-md border border-stone-200 bg-white/70">
+              <Leaf className="h-5 w-5 text-[#2f6b45]" />
+            </div>
+            <div>
+              <p>AxilDB — Plant Lineage Tracker</p>
+              <p className="text-xs">Made with love by WetLabs</p>
+            </div>
+          </div>
           <div className="flex gap-4">
             <a className="underline" href={appUrl}>App</a>
             <a className="underline" href={githubUrl}>GitHub</a>

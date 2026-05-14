@@ -74,4 +74,4 @@ The AxilDB name, marks, logos, screenshots, and visual identity are not licensed
 
 ## Support
 
-The splash page includes a Ko-fi donation link. If your Ko-fi handle is different from `axildb`, update `NEXT_PUBLIC_DONATE_URL` in `.env` or `docker-compose.yml`.
+The splash page includes a Ko-fi donation link. If your Ko-fi handle changes, update `NEXT_PUBLIC_DONATE_URL` in `.env` or `docker-compose.yml`.
