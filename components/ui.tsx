@@ -1,16 +1,16 @@
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 
+const control = 'rounded-md border border-stone-300 bg-[#fffdf7] px-3 py-2 font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
+const primary = 'rounded-md bg-[#2f6b45] px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-[#255537]'
+
 export function Card({ className = '', children }: any) {
-  return <div className={cn('rounded-2xl border bg-white/80 p-5 shadow-sm', className)}>{children}</div>
+  return <div className={cn('rounded-lg border border-stone-200/90 bg-[#fffaf0]/82 p-4 shadow-[0_8px_30px_rgba(47,38,24,0.07)] sm:p-5', className)}>{children}</div>
 }
 
 export function Button({ className = '', children, ...props }: any) {
   return (
-    <button
-      className={cn('rounded-xl bg-green-800 px-4 py-2 text-sm font-medium text-white hover:bg-green-900', className)}
-      {...props}
-    >
+    <button className={cn(primary, className)} {...props}>
       {children}
     </button>
   )
@@ -19,7 +19,7 @@ export function Button({ className = '', children, ...props }: any) {
 export function DangerButton({ className = '', children, ...props }: any) {
   return (
     <button
-      className={cn('rounded-xl bg-red-800 px-4 py-2 text-sm font-medium text-white hover:bg-red-900', className)}
+      className={cn('rounded-md bg-[#9a3f35] px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-[#7d3028]', className)}
       {...props}
     >
       {children}
@@ -29,7 +29,7 @@ export function DangerButton({ className = '', children, ...props }: any) {
 
 export function LinkButton({ href, children, className = '' }: any) {
   return (
-    <Link href={href} className={cn('rounded-xl bg-green-800 px-4 py-2 text-sm font-medium text-white hover:bg-green-900', className)}>
+    <Link href={href} className={cn(primary, 'inline-flex items-center justify-center', className)}>
       {children}
     </Link>
   )
@@ -37,7 +37,7 @@ export function LinkButton({ href, children, className = '' }: any) {
 
 export function GhostLink({ href, children }: any) {
   return (
-    <Link className="rounded-lg px-3 py-2 text-sm hover:bg-green-900/10" href={href}>
+    <Link className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm text-stone-800 transition hover:bg-[#d6dfc9]/70 hover:text-[#1f472f]" href={href}>
       {children}
     </Link>
   )
@@ -45,11 +45,11 @@ export function GhostLink({ href, children }: any) {
 
 export function Field({ label, name, type = 'text', required = false, defaultValue, children, ...props }: any) {
   return (
-    <label className="grid gap-1 text-sm font-medium">
+    <label className="grid gap-1.5 text-sm font-medium text-stone-800">
       {label}
       {children ?? (
         <input
-          className="rounded-lg border px-3 py-2 font-normal"
+          className={control}
           name={name}
           type={type}
           required={required}
@@ -63,10 +63,10 @@ export function Field({ label, name, type = 'text', required = false, defaultVal
 
 export function TextArea({ label, name, defaultValue, ...props }: any) {
   return (
-    <label className="grid gap-1 text-sm font-medium">
+    <label className="grid gap-1.5 text-sm font-medium text-stone-800">
       {label}
       <textarea
-        className="min-h-24 rounded-lg border px-3 py-2 font-normal"
+        className={cn(control, 'min-h-24')}
         name={name}
         defaultValue={defaultValue ?? ''}
         {...props}
@@ -77,9 +77,9 @@ export function TextArea({ label, name, defaultValue, ...props }: any) {
 
 export function Select({ label, name, defaultValue, children, ...props }: any) {
   return (
-    <label className="grid gap-1 text-sm font-medium">
+    <label className="grid gap-1.5 text-sm font-medium text-stone-800">
       {label}
-      <select className="rounded-lg border px-3 py-2 font-normal" name={name} defaultValue={defaultValue} {...props}>
+      <select className={control} name={name} defaultValue={defaultValue} {...props}>
         {children}
       </select>
     </label>
