@@ -11,10 +11,10 @@ function hashPassword(password: string) {
 
 async function main() {
   await prisma.user.upsert({
-    where: { email: 'axildb@damonius.com' },
+    where: { email: 'admin@axildb.com' },
     update: {},
     create: {
-      email: 'axildb@damonius.com',
+      email: 'admin@axildb.com',
       passwordHash: hashPassword('password'),
       role: 'ADMIN',
     },
