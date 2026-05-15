@@ -2,6 +2,7 @@
 import React, { useMemo } from 'react'
 import ReactFlow, { Background, Controls, MiniMap, Edge, MarkerType, Node } from 'reactflow'
 import dagre from 'dagre'
+import { useRouter, useSearchParams } from 'next/navigation'
 import 'reactflow/dist/style.css'
 
 const methodStyles: Record<string, { color: string; dash?: string; width: number }> = {
@@ -68,6 +69,8 @@ function styleEdges(edges: Edge[]) {
 }
 
 export default function LineageGraph({nodes, edges, selectedId}:{nodes:any[], edges:any[], selectedId?: string}){
+ const router = useRouter()
+ const searchParams = useSearchParams()
  const laidOut = useMemo(() => {
    const selected = nodes.map((node) => ({
      ...node,
@@ -76,6 +79,11 @@ export default function LineageGraph({nodes, edges, selectedId}:{nodes:any[], ed
    return layout(selected, edges)
  }, [nodes, edges, selectedId])
  const styledEdges = useMemo(()=>styleEdges(edges),[edges])
+ const handleNodeClick = (_event: React.MouseEvent, node: Node) => {
+   const params = new URLSearchParams(searchParams.toString())
+   params.set('root', node.id)
+   router.push(`/graphs?${params.toString()}`)
+ }
 
  return (
   <div className="lineage-canvas relative h-[720px] overflow-hidden rounded-lg border border-[#d8cdb8]">
@@ -102,6 +110,7 @@ export default function LineageGraph({nodes, edges, selectedId}:{nodes:any[], ed
       fitView
       proOptions={{ hideAttribution: true }}
       defaultEdgeOptions={{ type: 'smoothstep' }}
+      onNodeClick={handleNodeClick}
     >
       <Background color="#b8c2aa" gap={26} size={1} />
       <MiniMap nodeStrokeWidth={3} maskColor="rgba(255,250,240,.72)" />

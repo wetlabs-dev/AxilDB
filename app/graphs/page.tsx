@@ -33,8 +33,15 @@ export default async function Graphs({
     orderBy: { plantId: 'asc' },
   })
   const root = sp.root || roots[0]?.id
-  const graph = root ? await getLineageGraph(root) : { nodes: [], edges: [] }
-  const selected = roots.find((item) => item.id === root)
+  const [graph, selected] = await Promise.all([
+    root ? getLineageGraph(root) : Promise.resolve({ nodes: [], edges: [] }),
+    root
+      ? prisma.plantInstance.findUnique({
+          where: { id: root },
+          include: { plantDefinition: true },
+        })
+      : Promise.resolve(null),
+  ])
 
   return (
     <div className="space-y-6">
@@ -85,7 +92,11 @@ export default async function Graphs({
         <section className="min-w-0 space-y-3">
           {selected && (
             <div className="rounded-lg border border-stone-200 bg-[#fffaf0]/82 px-4 py-3 text-sm shadow-sm">
-              <span className="font-semibold">Selected:</span> {selected.plantId} · {plantName(selected.plantDefinition)}
+              <span className="font-semibold">Selected:</span>{' '}
+              <Link className="font-semibold text-[#2f6b45] underline decoration-[#8fa58f] underline-offset-2" href={`/instances/${selected.id}`}>
+                {selected.plantId}
+              </Link>{' '}
+              · {plantName(selected.plantDefinition)}
             </div>
           )}
           {root ? <LineageGraph nodes={graph.nodes} edges={graph.edges} selectedId={root} /> : <Card>No plants yet.</Card>}
