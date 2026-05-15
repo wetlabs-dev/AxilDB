@@ -1,10 +1,12 @@
 import {
   BadgeCheck,
   Camera,
+  FlaskConical,
   Flower2,
   GitBranch,
   Github,
   Heart,
+  History,
   LockKeyhole,
   QrCode,
   Search,
@@ -23,6 +25,8 @@ const features = [
   ['QR plant tags', 'Generate printable QR labels with standard plant IDs that link directly to each record.', QrCode],
   ['Role-aware access', 'Let visitors browse, loggers add records, and admins edit, delete, manage users, and review audit logs.', LockKeyhole],
   ['Collection search', 'Search plants by generated IDs, cultivars, aliases, old taxonomy, common names, notes, and sources.', Search],
+  ['Activity timeline', 'Review recent propagations, blooms, sport observations, acquisitions, and archive actions in one chronological feed.', History],
+  ['Admin tools', 'Seed realistic demo data, manage governing bodies, review audit history, and keep collection records tidy as the database grows.', FlaskConical],
 ] as const
 
 const workflow = [
