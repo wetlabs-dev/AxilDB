@@ -36,20 +36,20 @@ export default async function SportReview() {
         <p className="mt-1 text-sm text-stone-600">Review suspected sports, log true-to-type propagation records, mark reverted branches, and start the cultivar wizard when a line reaches three true propagations.</p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
+      <div className="grid auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
         {sports.map((sport) => {
           const trueCount = sport.sportRecords.filter((record) => record.propagatedTrue).length
           const eligible = sport.sportRecords.some((record) => record.propagatedTrue && record.generationNumber >= 3) || trueCount >= 3
 
           return (
-            <Card key={sport.id} className="overflow-hidden p-0">
-              <Link href={`/instances/${sport.id}`} className="block">
+            <Card key={sport.id} className="flex h-full flex-col overflow-hidden p-0">
+              <Link href={`/instances/${sport.id}`} className="block flex-1">
                 <div className="aspect-[4/3]">
                   <PlantImage src={photoByInstance[sport.id]} alt={sport.plantId} />
                 </div>
-                <div className="p-3">
+                <div className="min-h-0 overflow-hidden p-3">
                   <p className="text-xs font-medium uppercase tracking-[0.12em] text-[#2f6b45]">{sport.sportStatus}</p>
-                  <h3 className="mt-1 text-sm font-bold leading-tight underline">{sport.plantId}</h3>
+                  <h3 className="mt-1 line-clamp-2 text-sm font-bold leading-tight underline">{sport.plantId}</h3>
                   <p className="mt-1 line-clamp-2 text-xs text-stone-700">{plantName(sport.plantDefinition)}</p>
                   <p className="mt-2 text-xs font-medium text-stone-700">True records: {trueCount}</p>
                   {sport.sportDescription && <p className="mt-2 line-clamp-3 text-xs text-stone-600">{sport.sportDescription}</p>}

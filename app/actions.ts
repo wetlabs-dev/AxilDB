@@ -2,6 +2,8 @@
 
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
+import { unlink } from 'fs/promises'
+import path from 'path'
 import { prisma } from '@/lib/prisma'
 import { audit, requireAdminUser, requireCreateUser } from '@/lib/auth'
 import { createDemoData } from '@/lib/demo-data'
@@ -456,6 +458,29 @@ export async function setTypePhoto(fd: FormData) {
 
   await audit(user, 'UPDATE', 'PHOTO', id, `Selected type photo for plant definition ${instance.plantDefinitionId}`)
   redirect(back(fd))
+}
+
+export async function deletePhoto(fd: FormData) {
+  const user = await requireAdminUser()
+  const id = val(fd, 'id')!
+  const destination = back(fd)
+  const photo = await prisma.photo.findUniqueOrThrow({ where: { id } })
+  const samePathCount = await prisma.photo.count({ where: { path: photo.path } })
+
+  await prisma.photo.delete({ where: { id } })
+
+  if (samePathCount <= 1 && photo.path.startsWith('/uploads/')) {
+    const filename = path.basename(photo.path)
+    try {
+      await unlink(path.join(process.cwd(), 'public', 'uploads', filename))
+    } catch {
+      // The database record is the source of truth; missing files should not block cleanup.
+    }
+  }
+
+  await audit(user, 'DELETE', 'PHOTO', id, `Deleted photo for ${photo.entityType} ${photo.entityId}`, photo)
+  revalidatePath(destination)
+  redirect(destination)
 }
 
 export async function openBloomEvent(fd: FormData) {

@@ -69,17 +69,17 @@ export default async function Instances() {
         </AddPanel>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
+      <div className="grid auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
         {instances.map((instance) => (
-          <Card key={instance.id} className="overflow-hidden p-0">
-            <Link href={`/instances/${instance.id}`} className="block">
+          <Card key={instance.id} className="flex h-full flex-col overflow-hidden p-0">
+            <Link href={`/instances/${instance.id}`} className="block flex-1">
               <div className="aspect-[4/3]">
                 <PlantImage src={photoByInstance[instance.id]} alt={instance.plantId} />
               </div>
-              <div className="p-3">
-                <p className="text-sm font-bold underline">{instance.plantId}</p>
-                <p className="text-sm text-stone-700">{plantName(instance.plantDefinition)}</p>
-                <p className="text-sm text-stone-600">{instance.instanceType} · {instance.location || 'No location'}</p>
+              <div className="min-h-0 overflow-hidden p-3">
+                <p className="line-clamp-2 text-sm font-bold underline">{instance.plantId}</p>
+                <p className="line-clamp-2 text-sm text-stone-700">{plantName(instance.plantDefinition)}</p>
+                <p className="truncate text-sm text-stone-600">{instance.instanceType} · {instance.location || 'No location'}</p>
               </div>
             </Link>
             <div className="flex gap-2 border-t border-stone-200 p-3">

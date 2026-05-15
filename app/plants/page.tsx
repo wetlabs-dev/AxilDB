@@ -87,31 +87,31 @@ export default async function Plants() {
         </AddPanel>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
+      <div className="grid auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
         {plants.map((plant) => {
           const typePhoto = typePhotoByDefinition[plant.id] || plant.instances.map((instance) => typePhotoByInstance[instance.id]).find(Boolean)
           return (
-          <Card key={plant.id} className="overflow-hidden p-0">
+          <Card key={plant.id} className="flex h-full flex-col overflow-hidden p-0">
             <div className="aspect-[4/3]">
               <PlantImage src={typePhoto} alt={plantName(plant)} />
             </div>
-            <div className="p-3">
+            <div className="min-h-0 flex-1 overflow-hidden p-3">
               <div className="flex items-start justify-between gap-4">
-                <div>
-                  <span className="text-sm font-bold leading-tight">{plantName(plant)}</span>
-                <p className="text-sm">
+                <div className="min-w-0">
+                  <span className="line-clamp-2 text-sm font-bold leading-tight">{plantName(plant)}</span>
+                <p className="truncate text-sm">
                   {plant.governingBody?.abbreviation || 'No governing body'} · {plant._count.instances} instance(s) ·{' '}
                   {taxonomyLabel(plant.confidence)}
                 </p>
                 {(plant.acquisitionLabel || plant.provisionalTaxon || plant.authority) && (
-                  <p className="text-sm text-stone-600">
+                  <p className="line-clamp-2 text-sm text-stone-600">
                     {plant.acquisitionLabel && <>Acquired as {plant.acquisitionLabel}. </>}
                     {plant.provisionalTaxon && <>Provisional taxon: {plant.provisionalTaxon}. </>}
                     {plant.authority && <>Authority: {plant.authority}.</>}
                   </p>
                 )}
                 {plant.aliases.length > 0 && (
-                  <p className="text-sm text-stone-600">
+                  <p className="line-clamp-2 text-sm text-stone-600">
                     Aliases: {plant.aliases.slice(0, 4).map((alias) => alias.name).join(', ')}
                     {plant.aliases.length > 4 ? `, +${plant.aliases.length - 4} more` : ''}
                   </p>
@@ -124,7 +124,7 @@ export default async function Plants() {
                     {plant.gbifUrl && <a className="rounded-md border border-stone-300 bg-white/60 px-2 py-1 underline" href={plant.gbifUrl}>GBIF</a>}
                   </div>
                 )}
-                <p className="text-sm text-stone-600">{plant.description}</p>
+                <p className="line-clamp-2 text-sm text-stone-600">{plant.description}</p>
                 </div>
               {isAdmin(user) && (
                 <Link className="rounded-md border px-2 py-1 text-xs" href={`/plants/${plant.id}/edit`}>

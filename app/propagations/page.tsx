@@ -105,21 +105,21 @@ export default async function Propagations() {
         </AddPanel>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
+      <div className="grid auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
         {events.map((event) => {
           const firstChild = event.children[0]?.childPlantInstance
           const firstParent = event.parents[0]?.parentPlantInstance
           const image = photoByInstance[firstChild?.id || ''] || photoByInstance[firstParent?.id || '']
 
           return (
-            <Card key={event.id} className="overflow-hidden p-0">
-              <Link href={firstChild ? `/instances/${firstChild.id}` : '/propagations'} className="block">
+            <Card key={event.id} className="flex h-full flex-col overflow-hidden p-0">
+              <Link href={firstChild ? `/instances/${firstChild.id}` : '/propagations'} className="block flex-1">
                 <div className="aspect-[4/3]">
                   <PlantImage src={image} alt={firstChild?.plantId || event.method} />
                 </div>
-                <div className="p-3">
+                <div className="min-h-0 overflow-hidden p-3">
                   <p className="text-xs font-medium uppercase tracking-[0.12em] text-[#2f6b45]">{fmtDate(event.date)} · {event.method}</p>
-                  <h3 className="mt-1 text-sm font-bold leading-tight">{firstChild?.plantId || event.method}</h3>
+                  <h3 className="mt-1 line-clamp-2 text-sm font-bold leading-tight">{firstChild?.plantId || event.method}</h3>
                   <p className="mt-1 text-xs text-stone-600">{event.successStatus}</p>
                   <p className="mt-2 line-clamp-2 text-xs text-stone-700">
                     Children: {event.children.map((child) => child.childPlantInstance.plantId).join(', ') || '—'}

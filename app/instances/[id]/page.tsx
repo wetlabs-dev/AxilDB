@@ -6,9 +6,11 @@ import {
   closeBloomEvent,
   setCoverPhoto,
   setTypePhoto,
+  deletePhoto,
   markSportCandidate,
   markSportReverted,
 } from '@/app/actions'
+import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { PlantImage } from '@/components/PlantImage'
 import { Button, Card, Field, TextArea } from '@/components/ui'
 import { canCreate, getCurrentUser, isAdmin } from '@/lib/auth'
@@ -307,9 +309,27 @@ export default async function InstanceDetail({
                   {(photosByBloomId[b.id] || []).length > 0 && (
                     <div className="mt-4 grid grid-cols-2 gap-3">
                       {(photosByBloomId[b.id] || []).map((p) => (
-                        <figure key={p.id}>
-                          <img src={p.path} className="rounded-xl" alt={p.caption || 'Bloom photo'} />
-                          <figcaption className="text-xs">{p.caption}</figcaption>
+                        <figure key={p.id} className="overflow-hidden rounded-xl border border-stone-200 bg-white/70">
+                          <div className="aspect-[4/3]">
+                            <PlantImage src={p.path} alt={p.caption || 'Bloom photo'} />
+                          </div>
+                          <figcaption className="space-y-2 p-2 text-xs">
+                            <p>{p.caption || 'Untitled bloom photo'}</p>
+                            {isAdmin(user) && (
+                              <form action={deletePhoto}>
+                                <input type="hidden" name="id" value={p.id} />
+                                <input type="hidden" name="back" value={`/instances/${id}`} />
+                                <ConfirmDeleteButton
+                                  className="px-2 py-1 text-xs"
+                                  title="Delete bloom photo?"
+                                  message="This will permanently delete this bloom photo from the bloom event."
+                                  confirmLabel="Delete photo"
+                                >
+                                  Delete photo
+                                </ConfirmDeleteButton>
+                              </form>
+                            )}
+                          </figcaption>
                         </figure>
                       ))}
                     </div>
