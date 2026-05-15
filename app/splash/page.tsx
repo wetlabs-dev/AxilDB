@@ -79,13 +79,13 @@ export default function SplashPage() {
             </div>
           </div>
 
-          <div className="relative min-h-[430px]">
+          <div className="relative grid gap-4 lg:min-h-[430px]">
             <img
               src="/splash-hero-botanical-cluster.png"
               alt=""
-              className="absolute inset-x-0 top-0 mx-auto w-full max-w-[680px] object-contain drop-shadow-[0_18px_36px_rgba(47,38,24,0.13)]"
+              className="mx-auto w-full max-w-[520px] object-contain drop-shadow-[0_18px_36px_rgba(47,38,24,0.13)] sm:max-w-[600px] lg:absolute lg:inset-x-0 lg:top-0 lg:max-w-[680px]"
             />
-            <div className="absolute bottom-0 left-0 right-0 mx-auto max-w-md rounded-lg border border-stone-200 bg-white/80 p-4 shadow-[0_18px_60px_rgba(47,38,24,0.14)] backdrop-blur">
+            <div className="mx-auto w-full max-w-md rounded-lg border border-stone-200 bg-white/80 p-4 shadow-[0_18px_60px_rgba(47,38,24,0.14)] backdrop-blur lg:absolute lg:bottom-0 lg:left-0 lg:right-0">
               <div className="flex items-start justify-between gap-4 border-b border-stone-200 pb-4">
                 <div>
                   <p className="text-sm text-stone-600">Accepted name</p>
