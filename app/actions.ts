@@ -18,7 +18,8 @@ const boundedInt = (value: string | undefined, fallback: number, min: number, ma
   if (!Number.isFinite(parsed)) return fallback
   return Math.max(min, Math.min(max, Math.floor(parsed)))
 }
-const isSportLine = (status?: string | null) => !!status && status !== 'NONE' && status !== 'UNSTABLE'
+const isSportLine = (status?: string | null) =>
+  !!status && !['NONE', 'UNSTABLE', 'REVERTED'].includes(status)
 
 function aliasRows(fd: FormData) {
   const names = fd.getAll('aliasName').map((value) => String(value || '').trim())
@@ -361,6 +362,34 @@ export async function markSportCandidate(fd: FormData) {
   redirect(`/instances/${id}`)
 }
 
+export async function markSportReverted(fd: FormData) {
+  const user = await requireCreateUser()
+  const id = val(fd, 'id')!
+  const observation = val(fd, 'observation')
+
+  const instance = await prisma.plantInstance.update({
+    where: { id },
+    data: {
+      isSportCandidate: false,
+      sportStatus: 'REVERTED',
+      sportDescription: observation,
+    },
+  })
+
+  await prisma.note.create({
+    data: {
+      entityType: 'PLANT_INSTANCE',
+      entityId: id,
+      note: observation
+        ? `Sport reverted: ${observation}`
+        : 'Sport reverted: plant appears to match the original cultivar or parent phenotype.',
+    },
+  })
+
+  await audit(user, 'UPDATE', 'PLANT_INSTANCE', id, `Marked plant instance ${instance.plantId} as reverted`)
+  redirect(back(fd) || `/instances/${id}`)
+}
+
 export async function deleteNote(fd: FormData) {
   const user = await requireAdminUser()
   const id = val(fd, 'id')!
@@ -634,11 +663,11 @@ export async function createSportStabilityRecord(fd: FormData) {
   })
   const trueCount = trueRecords.length
   const maxGeneration = trueRecords.reduce((max, item) => Math.max(max, item.generationNumber), 0)
-  const nextStatus = trueCount >= 3 || maxGeneration >= 3 ? 'STABLE' : propagatedTrue ? 'CANDIDATE' : 'UNSTABLE'
+  const nextStatus = trueCount >= 3 || maxGeneration >= 3 ? 'STABLE' : propagatedTrue ? 'CANDIDATE' : 'REVERTED'
 
   await prisma.plantInstance.update({
     where: { id: plantInstanceId },
-    data: { isSportCandidate: nextStatus !== 'UNSTABLE', sportStatus: nextStatus },
+    data: { isSportCandidate: nextStatus !== 'REVERTED', sportStatus: nextStatus },
   })
 
   await audit(user, 'CREATE', 'SPORT_STABILITY_RECORD', record.id, `Added sport stability record`)

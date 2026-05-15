@@ -7,6 +7,7 @@ import {
   setCoverPhoto,
   setTypePhoto,
   markSportCandidate,
+  markSportReverted,
 } from '@/app/actions'
 import { PlantImage } from '@/components/PlantImage'
 import { Button, Card, Field, TextArea } from '@/components/ui'
@@ -145,7 +146,19 @@ export default async function InstanceDetail({
           {i.sportStatus !== 'NONE' && (
             <div className="mt-4 border-t border-stone-200 pt-3 text-sm">
               <p className="font-medium">Workflow</p>
-              <p>Propagations from this plant will enter Sport Review as candidate sports. Add true-to-type stability records there; three confirmed generations marks the line stable.</p>
+              <p>
+                {i.sportStatus === 'REVERTED'
+                  ? 'This plant is marked reverted, so future propagations from it will not inherit sport candidate status.'
+                  : 'Propagations from this plant will enter Sport Review as candidate sports. Add true-to-type stability records there; three confirmed generations marks the line stable.'}
+              </p>
+              {canCreate(user) && !['REVERTED', 'REGISTERED'].includes(i.sportStatus) && (
+                <form action={markSportReverted} className="mt-4 grid gap-2 rounded-lg border border-stone-200 bg-white/60 p-3">
+                  <input type="hidden" name="id" value={id} />
+                  <input type="hidden" name="back" value={`/instances/${id}`} />
+                  <TextArea label="Why is this reverted?" name="observation" />
+                  <Button>Mark reverted</Button>
+                </form>
+              )}
               {i.sportRecords.length > 0 && (
                 <div className="mt-3">
                   <p className="font-medium">Stability records</p>

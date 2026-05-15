@@ -91,6 +91,7 @@ export default async function SearchPage({
             <option>CANDIDATE</option>
             <option>STABLE</option>
             <option>UNSTABLE</option>
+            <option>REVERTED</option>
             <option>REGISTERED</option>
           </select>
           <Button className="md:col-span-5">Search</Button>

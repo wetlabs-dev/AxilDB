@@ -1,4 +1,4 @@
-import { createSportStabilityRecord } from '@/app/actions'
+import { createSportStabilityRecord, markSportReverted } from '@/app/actions'
 import { PlantImage } from '@/components/PlantImage'
 import { Button, Card, Field, LinkButton, TextArea } from '@/components/ui'
 import { canCreate, getCurrentUser, isAdmin } from '@/lib/auth'
@@ -33,7 +33,7 @@ export default async function SportReview() {
     <div className="space-y-6">
       <div>
         <h2 className="text-3xl font-bold">Sport Stability Review</h2>
-        <p className="mt-1 text-sm text-stone-600">Review suspected sports, log true-to-type propagation records, and start the cultivar wizard when a line reaches three true propagations.</p>
+        <p className="mt-1 text-sm text-stone-600">Review suspected sports, log true-to-type propagation records, mark reverted branches, and start the cultivar wizard when a line reaches three true propagations.</p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
@@ -59,7 +59,7 @@ export default async function SportReview() {
               <div className="space-y-3 border-t border-stone-200 p-3 text-xs">
                 {isAdmin(user) && eligible && <LinkButton className="w-full px-2 py-1.5 text-xs" href={`/sports/${sport.id}/cultivar`}>Create cultivar</LinkButton>}
 
-                {canCreate(user) && (
+                {canCreate(user) && sport.sportStatus !== 'REVERTED' && (
                   <details className="rounded-md border border-stone-200 bg-white/60 p-2">
                     <summary className="cursor-pointer font-medium">Add stability record</summary>
                     <form action={createSportStabilityRecord} className="mt-3 grid gap-2">
@@ -79,6 +79,18 @@ export default async function SportReview() {
                       <label className="text-xs font-medium"><input type="checkbox" name="propagatedTrue" /> Propagated true</label>
                       <TextArea label="Notes/evidence" name="notes" />
                       <Button className="px-3 py-1.5 text-xs">Add record</Button>
+                    </form>
+                  </details>
+                )}
+
+                {canCreate(user) && !['REVERTED', 'REGISTERED'].includes(sport.sportStatus) && (
+                  <details className="rounded-md border border-stone-200 bg-white/60 p-2">
+                    <summary className="cursor-pointer font-medium">Mark reverted</summary>
+                    <form action={markSportReverted} className="mt-3 grid gap-2">
+                      <input type="hidden" name="id" value={sport.id} />
+                      <input type="hidden" name="back" value="/sports" />
+                      <TextArea label="Reversion notes" name="observation" />
+                      <Button className="px-3 py-1.5 text-xs">Mark reverted</Button>
                     </form>
                   </details>
                 )}
