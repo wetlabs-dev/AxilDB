@@ -1,49 +1,106 @@
 import { PlantImage } from '@/components/PlantImage'
 import { Card } from '@/components/ui'
 import { prisma } from '@/lib/prisma'
-import { fmtDate, plantName } from '@/lib/utils'
-import { Flower2, GitBranch, Leaf, Sprout } from 'lucide-react'
+import { cn, fmtDate, plantName } from '@/lib/utils'
+import { Archive, Flower2, GitBranch, Leaf, Sparkles, Sprout } from 'lucide-react'
 import Link from 'next/link'
-import type { ReactNode } from 'react'
 
 type PhotoLookup = Record<string, string | undefined>
+type ActivityKind = 'propagation' | 'bloom' | 'sport' | 'acquired' | 'archive'
+type ActivityItem = {
+  id: string
+  kind: ActivityKind
+  href: string
+  date: Date
+  title: string
+  subtitle: string
+  detail?: string | null
+  image?: string
+}
 
 function coverFor(photos: PhotoLookup, id?: string | null) {
   return id ? photos[id] : undefined
 }
 
-function MiniCard({
-  href,
-  image,
-  title,
-  meta,
-  children,
+const activityStyles: Record<ActivityKind, { label: string; className: string; imageClassName: string; icon: typeof Leaf }> = {
+  propagation: {
+    label: 'Propagation',
+    icon: GitBranch,
+    className: 'border-[#b7caa9] bg-[#f4f8ed]',
+    imageClassName: 'bg-[#d6dfc9]/65 text-[#2f6b45]',
+  },
+  bloom: {
+    label: 'Bloom',
+    icon: Flower2,
+    className: 'border-[#e8c4b7] bg-[#fff4ee]',
+    imageClassName: 'bg-[#f3d5ca]/55 text-[#9a4f3b]',
+  },
+  sport: {
+    label: 'Sport review',
+    icon: Sparkles,
+    className: 'border-[#d8c3e9] bg-[#fbf4ff]',
+    imageClassName: 'bg-[#e9d8f3]/55 text-[#72508a]',
+  },
+  acquired: {
+    label: 'New plant',
+    icon: Leaf,
+    className: 'border-[#c7d5b9] bg-[#f7f8ee]',
+    imageClassName: 'bg-[#e2ead7]/65 text-[#2f6b45]',
+  },
+  archive: {
+    label: 'Archived',
+    icon: Archive,
+    className: 'border-stone-300 bg-stone-100/70 opacity-80',
+    imageClassName: 'bg-stone-200 text-stone-500 grayscale',
+  },
+}
+
+function ActivityCard({
+  item,
 }: {
-  href: string
-  image?: string
-  title: string
-  meta: string
-  children?: ReactNode
+  item: ActivityItem
 }) {
+  const style = activityStyles[item.kind]
+  const Icon = style.icon
+
   return (
-    <Link href={href} className="group overflow-hidden rounded-lg border border-stone-200 bg-white/65 shadow-[0_8px_30px_rgba(47,38,24,0.06)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_36px_rgba(47,38,24,0.10)]">
-      <div className="aspect-[4/3] overflow-hidden">
-        <PlantImage src={image} alt="" className="transition duration-300 group-hover:scale-[1.03]" />
+    <Link
+      href={item.href}
+      className={cn(
+        'group grid overflow-hidden rounded-lg border shadow-[0_8px_24px_rgba(47,38,24,0.06)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(47,38,24,0.10)] sm:grid-cols-[8.5rem_1fr]',
+        style.className,
+      )}
+    >
+      <div className="aspect-[4/3] overflow-hidden sm:aspect-auto">
+        <PlantImage src={item.image} alt="" className={cn('transition duration-300 group-hover:scale-[1.03]', style.imageClassName)} />
       </div>
-      <div className="p-4">
-        <p className="text-xs font-medium uppercase tracking-[0.12em] text-[#2f6b45]">{meta}</p>
-        <h4 className="mt-1 font-serif text-lg leading-tight">{title}</h4>
-        {children && <div className="mt-2 text-sm leading-6 text-stone-700">{children}</div>}
+      <div className="min-w-0 p-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-current/20 bg-white/55 px-2 py-0.5 text-[0.68rem] font-bold uppercase tracking-[0.14em] text-stone-700">
+            <Icon className="h-3.5 w-3.5" />
+            {style.label}
+          </span>
+          <span className="text-xs font-medium text-stone-500">{fmtDate(item.date)}</span>
+        </div>
+        <h4 className="mt-2 truncate font-serif text-lg leading-tight">{item.title}</h4>
+        <p className="mt-1 line-clamp-2 text-sm text-stone-700">{item.subtitle}</p>
+        {item.detail && <p className="mt-2 line-clamp-2 text-xs leading-5 text-stone-600">{item.detail}</p>}
       </div>
     </Link>
   )
 }
 
-export default async function Dashboard() {
-  const [active, recentProps, blooms, sports, archived] = await Promise.all([
+export default async function Dashboard({
+  searchParams,
+}: {
+  searchParams: Promise<{ activity?: string }>
+}) {
+  const sp = await searchParams
+  const activityTake = Math.min(Math.max(Number(sp.activity || 12) || 12, 12), 48)
+  const [active, recentProps, blooms, sports, acquired, archived] = await Promise.all([
     prisma.plantInstance.count({ where: { status: 'ACTIVE' } }),
     prisma.propagationEvent.findMany({
-      take: 6,
+      take: activityTake,
       orderBy: { date: 'desc' },
       include: {
         parents: { include: { parentPlantInstance: { include: { plantDefinition: true } } } },
@@ -51,19 +108,25 @@ export default async function Dashboard() {
       },
     }),
     prisma.bloomEvent.findMany({
-      take: 6,
+      take: activityTake,
       orderBy: { bloomStartDate: 'desc' },
       include: { plantInstance: { include: { plantDefinition: true } } },
     }),
     prisma.plantInstance.findMany({
       where: { OR: [{ isSportCandidate: true }, { sportStatus: { not: 'NONE' } }] },
-      take: 6,
+      take: activityTake,
       include: { plantDefinition: true },
       orderBy: { updatedAt: 'desc' },
     }),
     prisma.plantInstance.findMany({
+      where: { instanceType: 'MOTHER' },
+      take: activityTake,
+      orderBy: [{ acquisitionDate: 'desc' }, { createdAt: 'desc' }],
+      include: { plantDefinition: true },
+    }),
+    prisma.plantInstance.findMany({
       where: { status: 'ARCHIVED' },
-      take: 6,
+      take: activityTake,
       orderBy: { archiveDate: 'desc' },
       include: { plantDefinition: true },
     }),
@@ -76,6 +139,7 @@ export default async function Dashboard() {
     ]),
     ...blooms.map((bloom) => bloom.plantInstanceId),
     ...sports.map((sport) => sport.id),
+    ...acquired.map((item) => item.id),
     ...archived.map((item) => item.id),
   ]))
   const bloomIds = blooms.map((bloom) => bloom.id)
@@ -99,6 +163,67 @@ export default async function Dashboard() {
     if (!acc[photo.entityId]) acc[photo.entityId] = photo.path
     return acc
   }, {})
+
+  const activity: ActivityItem[] = [
+    ...recentProps.map((event) => {
+      const firstChild = event.children[0]?.childPlantInstance
+      const firstParent = event.parents[0]?.parentPlantInstance
+      const children = event.children.map((child) => child.childPlantInstance.plantId)
+      const parents = event.parents.map((parent) => parent.parentPlantInstance.plantId)
+      return {
+        id: event.id,
+        kind: 'propagation' as const,
+        href: firstChild ? `/instances/${firstChild.id}` : '/propagations',
+        date: event.date,
+        title: firstChild?.plantId || event.method,
+        subtitle: `${event.method.replaceAll('_', ' ')} · ${event.successStatus.toLowerCase()}`,
+        detail: `Children: ${children.join(', ') || '—'}${parents.length ? ` · Parents: ${parents.join(', ')}` : ''}`,
+        image: coverFor(coverPhotosByInstance, firstChild?.id) || coverFor(coverPhotosByInstance, firstParent?.id),
+      }
+    }),
+    ...blooms.map((bloom) => ({
+      id: bloom.id,
+      kind: 'bloom' as const,
+      href: `/instances/${bloom.plantInstanceId}`,
+      date: bloom.bloomStartDate,
+      title: bloom.plantInstance.plantId,
+      subtitle: plantName(bloom.plantInstance.plantDefinition),
+      detail: [bloom.firstBloom ? 'First bloom' : null, bloom.flowerCount ? `${bloom.flowerCount} flower${bloom.flowerCount === 1 ? '' : 's'}` : null, bloom.notes].filter(Boolean).join(' · '),
+      image: coverFor(bloomPhotosByEvent, bloom.id) || coverFor(coverPhotosByInstance, bloom.plantInstanceId),
+    })),
+    ...sports.map((sport) => ({
+      id: sport.id,
+      kind: 'sport' as const,
+      href: `/instances/${sport.id}`,
+      date: sport.updatedAt,
+      title: sport.plantId,
+      subtitle: `${sport.sportStatus.replaceAll('_', ' ').toLowerCase()} · ${plantName(sport.plantDefinition)}`,
+      detail: sport.sportDescription,
+      image: coverFor(coverPhotosByInstance, sport.id),
+    })),
+    ...acquired.map((item) => ({
+      id: item.id,
+      kind: 'acquired' as const,
+      href: `/instances/${item.id}`,
+      date: item.acquisitionDate || item.createdAt,
+      title: item.plantId,
+      subtitle: plantName(item.plantDefinition),
+      detail: [item.source, item.distributor, item.location].filter(Boolean).join(' · '),
+      image: coverFor(coverPhotosByInstance, item.id),
+    })),
+    ...archived.map((item) => ({
+      id: item.id,
+      kind: 'archive' as const,
+      href: `/instances/${item.id}`,
+      date: item.archiveDate || item.updatedAt,
+      title: item.plantId,
+      subtitle: item.archiveReason || plantName(item.plantDefinition),
+      detail: item.archiveNotes,
+      image: coverFor(coverPhotosByInstance, item.id),
+    })),
+  ]
+    .sort((a, b) => b.date.getTime() - a.date.getTime())
+    .slice(0, activityTake)
 
   const stats = [
     ['Active plants', active, Leaf, '/instances'],
@@ -132,81 +257,34 @@ export default async function Dashboard() {
         ))}
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-2">
-        <Card>
-          <h3 className="font-bold">Recent propagations</h3>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {recentProps.map((event) => {
-              const firstChild = event.children[0]?.childPlantInstance
-              const firstParent = event.parents[0]?.parentPlantInstance
-              const image = coverFor(coverPhotosByInstance, firstChild?.id) || coverFor(coverPhotosByInstance, firstParent?.id)
-              return (
-                <MiniCard
-                  key={event.id}
-                  href="/propagations"
-                  image={image}
-                  title={firstChild ? firstChild.plantId : event.method}
-                  meta={`${fmtDate(event.date)} · ${event.method}`}
-                >
-                  {event.children.map((child) => child.childPlantInstance.plantId).join(', ')}
-                </MiniCard>
-              )
-            })}
+      <Card>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h3 className="font-bold">Recent activity</h3>
+            <p className="mt-1 text-sm text-stone-600">The latest propagations, blooms, sport notes, acquisitions, and archive actions in one stream.</p>
           </div>
-        </Card>
-
-        <Card>
-          <h3 className="font-bold">Sport candidates needing review</h3>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {sports.map((sport) => (
-              <MiniCard
-                key={sport.id}
-                href={`/instances/${sport.id}`}
-                image={coverFor(coverPhotosByInstance, sport.id)}
-                title={sport.plantId}
-                meta={sport.sportStatus}
-              >
-                {plantName(sport.plantDefinition)}
-              </MiniCard>
+          <div className="flex flex-wrap gap-2 text-xs">
+            {Object.entries(activityStyles).map(([kind, style]) => (
+              <span key={kind} className={cn('rounded-full border px-2 py-1 font-medium', style.className)}>
+                {style.label}
+              </span>
             ))}
           </div>
-        </Card>
-
-        <Card>
-          <h3 className="font-bold">Recent blooms</h3>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {blooms.map((bloom) => (
-              <MiniCard
-                key={bloom.id}
-                href={`/instances/${bloom.plantInstanceId}`}
-                image={coverFor(bloomPhotosByEvent, bloom.id) || coverFor(coverPhotosByInstance, bloom.plantInstanceId)}
-                title={bloom.plantInstance.plantId}
-                meta={fmtDate(bloom.bloomStartDate)}
-              >
-                {plantName(bloom.plantInstance.plantDefinition)}
-              </MiniCard>
-            ))}
+        </div>
+        <div className="mt-4 grid gap-3 xl:grid-cols-2 2xl:grid-cols-3">
+          {activity.map((item) => (
+            <ActivityCard key={`${item.kind}-${item.id}`} item={item} />
+          ))}
+          {activity.length === 0 && <p className="text-sm text-stone-600">No recent activity yet.</p>}
+        </div>
+        {activity.length >= activityTake && activityTake < 48 && (
+          <div className="mt-5 flex justify-center">
+            <Link className="rounded-md border border-stone-300 bg-white/60 px-4 py-2 text-sm font-medium text-stone-800 transition hover:bg-white" href={`/?activity=${activityTake + 12}`}>
+              Load 12 more
+            </Link>
           </div>
-        </Card>
-
-        <Card>
-          <h3 className="font-bold">Recently archived</h3>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {archived.length === 0 && <p className="text-sm text-stone-600">No archived plants yet.</p>}
-            {archived.map((item) => (
-              <MiniCard
-                key={item.id}
-                href={`/instances/${item.id}`}
-                image={coverFor(coverPhotosByInstance, item.id)}
-                title={item.plantId}
-                meta={fmtDate(item.archiveDate)}
-              >
-                {item.archiveReason || plantName(item.plantDefinition)}
-              </MiniCard>
-            ))}
-          </div>
-        </Card>
-      </div>
+        )}
+      </Card>
     </div>
   )
 }
