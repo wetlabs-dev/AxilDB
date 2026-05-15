@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { createPlantDefinition } from '@/app/actions'
-import { AddPanel, Card, Field, TextArea, Button, LinkButton } from '@/components/ui'
+import { AddPanel, Card, Field, TextArea, LinkButton } from '@/components/ui'
 import { ConfidenceSelect, PlantAliasFields } from '@/components/PlantAliasFields'
 import { PlantImage } from '@/components/PlantImage'
 import { canCreate, getCurrentUser, isAdmin } from '@/lib/auth'
@@ -69,8 +69,7 @@ export default async function Plants() {
             </label>
             <TextArea label="Description" name="description" wrapperClassName="lg:col-span-2" />
             <TextArea label="Notes" name="notes" wrapperClassName="lg:col-span-2" />
-            <PlantAliasFields />
-            <Button className="justify-self-start lg:col-span-4">Create plant definition</Button>
+            <PlantAliasFields submitLabel="Create plant definition" />
           </form>
         </AddPanel>
       )}

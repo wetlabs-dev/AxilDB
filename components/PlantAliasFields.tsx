@@ -1,4 +1,8 @@
+'use client'
+
+import { useState } from 'react'
 import { aliasTypeOptions, confidenceOptions } from '@/lib/taxonomy'
+import { Button } from '@/components/ui'
 
 type Alias = {
   id?: string
@@ -34,11 +38,18 @@ export function ConfidenceSelect({
   )
 }
 
-export function PlantAliasFields({ aliases = [] }: { aliases?: Alias[] }) {
-  const rows = [
-    ...aliases,
-    ...Array.from({ length: Math.max(2, 3 - aliases.length) }, () => ({} as Alias)),
-  ]
+export function PlantAliasFields({
+  aliases = [],
+  submitLabel = 'Save changes',
+}: {
+  aliases?: Alias[]
+  submitLabel?: string
+}) {
+  const [rows, setRows] = useState<Alias[]>(aliases.length > 0 ? aliases : [{}])
+
+  function addAliasRow() {
+    setRows((current) => [...current, {}])
+  }
 
   return (
     <div className="lg:col-span-4">
@@ -76,6 +87,12 @@ export function PlantAliasFields({ aliases = [] }: { aliases?: Alias[] }) {
             </label>
           </div>
         ))}
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <Button className="px-3 py-1.5" type="button" onClick={addAliasRow}>
+          Add another alias
+        </Button>
+        <Button>{submitLabel}</Button>
       </div>
     </div>
   )

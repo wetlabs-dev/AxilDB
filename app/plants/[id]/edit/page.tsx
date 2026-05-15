@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { updatePlantDefinition, deletePlantDefinition } from '@/app/actions'
-import { Card, Field, TextArea, Button } from '@/components/ui'
+import { Card, Field, TextArea } from '@/components/ui'
 import { ConfidenceSelect, PlantAliasFields } from '@/components/PlantAliasFields'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { requireAdminUser } from '@/lib/auth'
@@ -53,8 +53,7 @@ export default async function EditPlant({ params }: { params: Promise<{ id: stri
           </label>
           <TextArea label="Description" name="description" defaultValue={plant.description} wrapperClassName="lg:col-span-2" />
           <TextArea label="Notes" name="notes" defaultValue={plant.notes} wrapperClassName="lg:col-span-2" />
-          <PlantAliasFields aliases={plant.aliases} />
-          <Button className="justify-self-start lg:col-span-4">Save changes</Button>
+          <PlantAliasFields aliases={plant.aliases} submitLabel="Save changes" />
         </form>
       </Card>
       <Card>
