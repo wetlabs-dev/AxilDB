@@ -8,6 +8,19 @@ export function Card({ className = '', children }: any) {
   return <div className={cn('rounded-lg border border-stone-200/90 bg-[#fffaf0]/82 p-4 shadow-[0_8px_30px_rgba(47,38,24,0.07)] sm:p-5', className)}>{children}</div>
 }
 
+export function AddPanel({ label, children, className = '' }: any) {
+  return (
+    <details className={cn('group rounded-lg border border-stone-200/90 bg-[#fffaf0]/82 shadow-[0_8px_30px_rgba(47,38,24,0.07)]', className)}>
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-4 py-3 text-sm font-semibold text-stone-900 transition hover:bg-[#f5f0e2] sm:px-5">
+        <span>{label}</span>
+        <span className="rounded-md bg-[#2f6b45] px-3 py-1.5 text-xs font-medium text-white group-open:hidden">Open form</span>
+        <span className="hidden rounded-md border border-stone-300 bg-white/60 px-3 py-1.5 text-xs font-medium group-open:inline-block">Hide form</span>
+      </summary>
+      <div className="border-t border-stone-200 px-4 py-4 sm:px-5">{children}</div>
+    </details>
+  )
+}
+
 export function Button({ className = '', children, ...props }: any) {
   return (
     <button className={cn(primary, className)} {...props}>

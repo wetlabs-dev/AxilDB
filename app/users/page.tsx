@@ -1,6 +1,6 @@
 import { createUser, deleteUser, updateUser } from '@/app/auth-actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
-import { Card, Field, Button } from '@/components/ui'
+import { AddPanel, Card, Field, Button } from '@/components/ui'
 import { requireAdminUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
@@ -11,15 +11,14 @@ export default async function Users() {
   return (
     <div className="space-y-6">
       <h2 className="text-3xl font-bold">Users</h2>
-      <Card>
-        <h3 className="mb-3 font-bold">Add user</h3>
+      <AddPanel label="Add user">
         <form action={createUser} className="grid max-w-4xl gap-x-3 gap-y-2 md:grid-cols-3">
           <Field label="Email" name="email" type="email" required />
           <Field label="Password" name="password" type="password" required />
           <label className="grid gap-1 text-sm font-medium">Role<select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="role"><option>LOGGER</option><option>ADMIN</option></select></label>
           <Button className="justify-self-start md:col-span-3">Add user</Button>
         </form>
-      </Card>
+      </AddPanel>
 
       <div className="grid gap-4">
         {users.map((user) => (

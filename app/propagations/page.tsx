@@ -1,7 +1,7 @@
 import { createPropagationEvent, deletePropagationEvent } from '@/app/actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { PlantImage } from '@/components/PlantImage'
-import { Button, Card, Field, TextArea } from '@/components/ui'
+import { AddPanel, Button, Card, Field, TextArea } from '@/components/ui'
 import { canCreate, getCurrentUser, isAdmin } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { fmtDate, plantName } from '@/lib/utils'
@@ -42,7 +42,7 @@ export default async function Propagations() {
       <h2 className="text-3xl font-bold">Propagations</h2>
 
       {canCreate(user) && (
-        <Card>
+        <AddPanel label="Add propagation event">
           <form action={createPropagationEvent} className="grid max-w-5xl gap-x-3 gap-y-2 lg:grid-cols-4">
             <label className="grid gap-1 text-sm font-medium">
               Method
@@ -96,7 +96,7 @@ export default async function Propagations() {
             <TextArea label="Notes" name="notes" wrapperClassName="lg:col-span-2" />
             <Button className="justify-self-start lg:col-span-4">Create propagation</Button>
           </form>
-        </Card>
+        </AddPanel>
       )}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">

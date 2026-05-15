@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { createGoverningBody, deleteGoverningBody, updateGoverningBody } from '@/app/actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
-import { Card, Field, TextArea, Button } from '@/components/ui'
+import { AddPanel, Card, Field, TextArea, Button } from '@/components/ui'
 import { requireAdminUser } from '@/lib/auth'
 
 export default async function Settings() {
@@ -15,8 +15,7 @@ export default async function Settings() {
     <div className="space-y-6">
       <h2 className="text-3xl font-bold">Governing Bodies</h2>
 
-      <Card>
-        <h3 className="mb-3 font-bold">Add governing body</h3>
+      <AddPanel label="Add governing body">
         <form action={createGoverningBody} className="grid max-w-4xl gap-x-3 gap-y-2 lg:grid-cols-3">
           <Field label="Name" name="name" required />
           <Field label="Abbreviation" name="abbreviation" />
@@ -24,7 +23,7 @@ export default async function Settings() {
           <TextArea label="Notes" name="notes" wrapperClassName="lg:col-span-3" />
           <Button className="justify-self-start lg:col-span-3">Add governing body</Button>
         </form>
-      </Card>
+      </AddPanel>
 
       <div className="grid gap-4">
         {bodies.map((body) => (

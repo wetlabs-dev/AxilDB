@@ -1,6 +1,6 @@
 import { createPlantInstance } from '@/app/actions'
 import { PlantImage } from '@/components/PlantImage'
-import { Button, Card, Field, TextArea } from '@/components/ui'
+import { AddPanel, Button, Card, Field, TextArea } from '@/components/ui'
 import { canCreate, getCurrentUser, isAdmin } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { plantName } from '@/lib/utils'
@@ -31,7 +31,7 @@ export default async function Instances() {
       <h2 className="text-3xl font-bold">Plant Instances</h2>
 
       {canCreate(user) && (
-        <Card>
+        <AddPanel label="Add plant instance">
           <form action={createPlantInstance} className="grid max-w-5xl gap-x-3 gap-y-2 lg:grid-cols-4">
             <label className="grid gap-1 text-sm font-medium">
               Plant definition
@@ -63,7 +63,7 @@ export default async function Instances() {
             <TextArea label="Notes" name="note" wrapperClassName="lg:col-span-2" />
             <Button className="justify-self-start lg:col-span-4">Create instance</Button>
           </form>
-        </Card>
+        </AddPanel>
       )}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
