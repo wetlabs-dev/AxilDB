@@ -8,9 +8,23 @@ import { PlantImage } from '@/components/PlantImage'
 
 const selectClass = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
 
-export default async function EditPlant({ params }: { params: Promise<{ id: string }> }) {
+const uploadErrorMessages: Record<string, string> = {
+  missing_photo: 'Choose an image file before uploading.',
+  unsupported_format: 'That image format is not supported by this server. Try exporting it as JPEG, PNG, WebP, TIFF, or AVIF first.',
+  processing_failed: 'That image could not be processed. If it came from an iPhone photo library, try exporting it as a JPEG and uploading that version.',
+  upload_failed: 'The image was processed, but AxilDB could not save it. Please try again.',
+}
+
+export default async function EditPlant({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>
+  searchParams: Promise<{ uploadError?: string }>
+}) {
   await requireAdminUser()
   const { id } = await params
+  const { uploadError } = await searchParams
   const [plant, bodies, typePhotos] = await Promise.all([
     prisma.plantDefinition.findUniqueOrThrow({
       where: { id },
@@ -67,6 +81,11 @@ export default async function EditPlant({ params }: { params: Promise<{ id: stri
         <p className="mt-1 text-sm text-stone-600">
           Use this when the best representative image is from a reference source rather than your own collection. Uploads are resized automatically.
         </p>
+        {uploadError && uploadErrorMessages[uploadError] && (
+          <div className="mt-3 rounded-md border border-[#c47a5a]/30 bg-[#fff7ed] px-3 py-2 text-sm text-[#8a4b32]">
+            {uploadErrorMessages[uploadError]}
+          </div>
+        )}
         <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(16rem,22rem)_1fr]">
           <div className="overflow-hidden rounded-lg border border-stone-200 bg-white/70">
             <div className="aspect-[4/3]">
