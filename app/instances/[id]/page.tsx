@@ -6,6 +6,7 @@ import {
   closeBloomEvent,
   setCoverPhoto,
   setTypePhoto,
+  markSportCandidate,
 } from '@/app/actions'
 import { PlantImage } from '@/components/PlantImage'
 import { Button, Card, Field, TextArea } from '@/components/ui'
@@ -48,6 +49,7 @@ export default async function InstanceDetail({
           },
         },
       },
+      sportRecords: { include: { propagationEvent: true }, orderBy: { generationNumber: 'desc' } },
     },
   })
 
@@ -132,7 +134,30 @@ export default async function InstanceDetail({
         <Card>
           <h3 className="font-bold">Sport / mutation</h3>
           <p>Status: {i.sportStatus}</p>
-          <p>{i.sportDescription || 'No sport notes.'}</p>
+          <p className="text-sm text-stone-700">{i.sportDescription || 'No sport observations yet.'}</p>
+          {canCreate(user) && i.sportStatus === 'NONE' && (
+            <form action={markSportCandidate} className="mt-4 grid gap-2 rounded-lg border border-stone-200 bg-white/60 p-3">
+              <input type="hidden" name="id" value={id} />
+              <TextArea label="Why do you suspect this is a sport?" name="observation" />
+              <Button>Mark suspected sport</Button>
+            </form>
+          )}
+          {i.sportStatus !== 'NONE' && (
+            <div className="mt-4 border-t border-stone-200 pt-3 text-sm">
+              <p className="font-medium">Workflow</p>
+              <p>Propagations from this plant will enter Sport Review as candidate sports. Add true-to-type stability records there; three confirmed generations marks the line stable.</p>
+              {i.sportRecords.length > 0 && (
+                <div className="mt-3">
+                  <p className="font-medium">Stability records</p>
+                  {i.sportRecords.map((record) => (
+                    <p key={record.id}>
+                      Gen {record.generationNumber}: {record.propagatedTrue ? 'true' : 'not true'} · {fmtDate(record.propagationEvent.date)}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </Card>
 
         {(isAdmin(user) || i.status !== 'ACTIVE') && <Card>

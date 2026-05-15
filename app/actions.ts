@@ -18,6 +18,7 @@ const boundedInt = (value: string | undefined, fallback: number, min: number, ma
   if (!Number.isFinite(parsed)) return fallback
   return Math.max(min, Math.min(max, Math.floor(parsed)))
 }
+const isSportLine = (status?: string | null) => !!status && status !== 'NONE' && status !== 'UNSTABLE'
 
 function aliasRows(fd: FormData) {
   const names = fd.getAll('aliasName').map((value) => String(value || '').trim())
@@ -237,11 +238,16 @@ export async function createPlantInstance(fd: FormData) {
       distributor: val(fd, 'distributor'),
       stockNumber: val(fd, 'stockNumber'),
       purchasePrice: dec(val(fd, 'purchasePrice')) as any,
-      isSportCandidate: !!fd.get('isSportCandidate'),
-      sportStatus: val(fd, 'sportStatus') || 'NONE',
-      sportDescription: val(fd, 'sportDescription'),
     },
   })
+
+  const note = val(fd, 'note')
+  if (note) {
+    await prisma.note.create({
+      data: { entityType: 'PLANT_INSTANCE', entityId: instance.id, note },
+    })
+  }
+
   await audit(user, 'CREATE', 'PLANT_INSTANCE', instance.id, `Created plant instance ${instance.plantId}`)
 
   redirect('/instances')
@@ -264,9 +270,6 @@ export async function updatePlantInstance(fd: FormData) {
       distributor: val(fd, 'distributor'),
       stockNumber: val(fd, 'stockNumber'),
       purchasePrice: dec(val(fd, 'purchasePrice')) as any,
-      isSportCandidate: !!fd.get('isSportCandidate'),
-      sportStatus: val(fd, 'sportStatus') || 'NONE',
-      sportDescription: val(fd, 'sportDescription'),
       archiveReason: val(fd, 'archiveReason'),
       archiveNotes: val(fd, 'archiveNotes'),
     },
@@ -328,6 +331,34 @@ export async function addNote(fd: FormData) {
   await audit(user, 'CREATE', 'NOTE', note.id, `Added note to ${note.entityType} ${note.entityId}`)
 
   redirect(back(fd))
+}
+
+export async function markSportCandidate(fd: FormData) {
+  const user = await requireCreateUser()
+  const id = val(fd, 'id')!
+  const observation = val(fd, 'observation')
+
+  const instance = await prisma.plantInstance.update({
+    where: { id },
+    data: {
+      isSportCandidate: true,
+      sportStatus: 'SUSPECTED',
+      sportDescription: observation,
+    },
+  })
+
+  if (observation) {
+    await prisma.note.create({
+      data: {
+        entityType: 'PLANT_INSTANCE',
+        entityId: id,
+        note: `Sport suspected: ${observation}`,
+      },
+    })
+  }
+
+  await audit(user, 'UPDATE', 'PLANT_INSTANCE', id, `Marked plant instance ${instance.plantId} as a suspected sport`)
+  redirect(`/instances/${id}`)
 }
 
 export async function deleteNote(fd: FormData) {
@@ -500,6 +531,10 @@ export async function createPropagationEvent(fd: FormData) {
   }
 
   const parentPlant = await prisma.plantInstance.findUniqueOrThrow({ where: { id: parent1 } })
+  const childSportStatus = isSportLine(parentPlant.sportStatus) ? 'CANDIDATE' : 'NONE'
+  const childSportDescription = isSportLine(parentPlant.sportStatus)
+    ? `Derived from sport line ${parentPlant.plantId}. Confirm whether the trait propagates true.`
+    : undefined
 
   const event = await prisma.propagationEvent.create({
     data: {
@@ -534,9 +569,9 @@ export async function createPropagationEvent(fd: FormData) {
         instanceType: 'PROPAGATION',
         propagationDate: eventDate,
         location: val(fd, 'location'),
-        isSportCandidate: !!fd.get('isSportCandidate'),
-        sportStatus: val(fd, 'sportStatus') || 'NONE',
-        sportDescription: val(fd, 'sportDescription'),
+        isSportCandidate: isSportLine(parentPlant.sportStatus),
+        sportStatus: childSportStatus,
+        sportDescription: childSportDescription,
       },
     })
 
@@ -581,15 +616,31 @@ export async function deletePropagationEvent(fd: FormData) {
 
 export async function createSportStabilityRecord(fd: FormData) {
   const user = await requireCreateUser()
+  const plantInstanceId = val(fd, 'plantInstanceId')!
+  const propagatedTrue = !!fd.get('propagatedTrue')
   const record = await prisma.sportStabilityRecord.create({
     data: {
-      plantInstanceId: val(fd, 'plantInstanceId')!,
+      plantInstanceId,
       propagationEventId: val(fd, 'propagationEventId')!,
-      propagatedTrue: !!fd.get('propagatedTrue'),
+      propagatedTrue,
       generationNumber: Number(val(fd, 'generationNumber') || 1),
       notes: val(fd, 'notes'),
     },
   })
+
+  const trueRecords = await prisma.sportStabilityRecord.findMany({
+    where: { plantInstanceId, propagatedTrue: true },
+    select: { generationNumber: true },
+  })
+  const trueCount = trueRecords.length
+  const maxGeneration = trueRecords.reduce((max, item) => Math.max(max, item.generationNumber), 0)
+  const nextStatus = trueCount >= 3 || maxGeneration >= 3 ? 'STABLE' : propagatedTrue ? 'CANDIDATE' : 'UNSTABLE'
+
+  await prisma.plantInstance.update({
+    where: { id: plantInstanceId },
+    data: { isSportCandidate: nextStatus !== 'UNSTABLE', sportStatus: nextStatus },
+  })
+
   await audit(user, 'CREATE', 'SPORT_STABILITY_RECORD', record.id, `Added sport stability record`)
 
   redirect(back(fd))

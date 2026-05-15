@@ -93,20 +93,7 @@ export default async function Propagations() {
                 <option>FAILED</option>
               </select>
             </label>
-            <label className="text-sm font-medium"><input type="checkbox" name="isSportCandidate" /> Children are sport candidates</label>
-            <label className="grid gap-1 text-sm font-medium">
-              Sport status
-              <select className="rounded-lg border px-3 py-2 font-normal" name="sportStatus">
-                <option>NONE</option>
-                <option>SUSPECTED</option>
-                <option>CANDIDATE</option>
-                <option>STABLE</option>
-                <option>UNSTABLE</option>
-                <option>REGISTERED</option>
-              </select>
-            </label>
             <TextArea label="Notes" name="notes" />
-            <TextArea label="Sport description" name="sportDescription" />
             <Button className="md:col-span-2">Create propagation</Button>
           </form>
         </Card>

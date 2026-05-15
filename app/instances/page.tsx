@@ -60,19 +60,7 @@ export default async function Instances() {
             <Field label="Distributor" name="distributor" />
             <Field label="Stock number" name="stockNumber" />
             <Field label="Purchase price" name="purchasePrice" type="number" />
-            <label className="text-sm font-medium"><input type="checkbox" name="isSportCandidate" /> Sport candidate</label>
-            <label className="grid gap-1 text-sm font-medium">
-              Sport status
-              <select className="rounded-lg border px-3 py-2 font-normal" name="sportStatus">
-                <option>NONE</option>
-                <option>SUSPECTED</option>
-                <option>CANDIDATE</option>
-                <option>STABLE</option>
-                <option>UNSTABLE</option>
-                <option>REGISTERED</option>
-              </select>
-            </label>
-            <TextArea label="Sport description" name="sportDescription" />
+            <TextArea label="Notes" name="note" />
             <Button className="md:col-span-2">Create instance</Button>
           </form>
         </Card>
