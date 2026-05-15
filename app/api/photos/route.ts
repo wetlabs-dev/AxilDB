@@ -16,12 +16,18 @@ function redirectBack(req: Request, back: string, uploadError?: string) {
   const base = `${proto}://${host}`
   const target = new URL(back || '/', base)
   if (uploadError) target.searchParams.set('uploadError', uploadError)
-  return NextResponse.redirect(target)
+  return NextResponse.redirect(target, { status: 303 })
 }
 
 export async function POST(req: Request) {
   const user = await requireCreateUser()
-  const form = await req.formData()
+  let form: FormData
+  try {
+    form = await req.formData()
+  } catch (error) {
+    console.error('Photo form parsing failed', { error })
+    return redirectBack(req, '/', 'upload_failed')
+  }
   const file = form.get('photo') as File | null
   const entityType = String(form.get('entityType') || '')
   const entityId = String(form.get('entityId') || '')
