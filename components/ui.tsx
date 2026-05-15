@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 
-const control = 'rounded-md border border-stone-300 bg-[#fffdf7] px-3 py-2 font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
+const control = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
 const primary = 'rounded-md bg-[#2f6b45] px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-[#255537]'
 
 export function Card({ className = '', children }: any) {
@@ -43,13 +43,13 @@ export function GhostLink({ href, children }: any) {
   )
 }
 
-export function Field({ label, name, type = 'text', required = false, defaultValue, children, ...props }: any) {
+export function Field({ label, name, type = 'text', required = false, defaultValue, children, wrapperClassName = '', className = '', ...props }: any) {
   return (
-    <label className="grid gap-1.5 text-sm font-medium text-stone-800">
+    <label className={cn('grid gap-1 text-sm font-medium text-stone-800', wrapperClassName)}>
       {label}
       {children ?? (
         <input
-          className={control}
+          className={cn(control, className)}
           name={name}
           type={type}
           required={required}
@@ -61,12 +61,12 @@ export function Field({ label, name, type = 'text', required = false, defaultVal
   )
 }
 
-export function TextArea({ label, name, defaultValue, ...props }: any) {
+export function TextArea({ label, name, defaultValue, wrapperClassName = '', className = '', ...props }: any) {
   return (
-    <label className="grid gap-1.5 text-sm font-medium text-stone-800">
+    <label className={cn('grid gap-1 text-sm font-medium text-stone-800', wrapperClassName)}>
       {label}
       <textarea
-        className={cn(control, 'min-h-24')}
+        className={cn(control, 'min-h-20', className)}
         name={name}
         defaultValue={defaultValue ?? ''}
         {...props}
@@ -75,11 +75,11 @@ export function TextArea({ label, name, defaultValue, ...props }: any) {
   )
 }
 
-export function Select({ label, name, defaultValue, children, ...props }: any) {
+export function Select({ label, name, defaultValue, children, wrapperClassName = '', className = '', ...props }: any) {
   return (
-    <label className="grid gap-1.5 text-sm font-medium text-stone-800">
+    <label className={cn('grid gap-1 text-sm font-medium text-stone-800', wrapperClassName)}>
       {label}
-      <select className={control} name={name} defaultValue={defaultValue} {...props}>
+      <select className={cn(control, className)} name={name} defaultValue={defaultValue} {...props}>
         {children}
       </select>
     </label>

@@ -43,10 +43,10 @@ export default async function Propagations() {
 
       {canCreate(user) && (
         <Card>
-          <form action={createPropagationEvent} className="grid gap-3 md:grid-cols-2">
+          <form action={createPropagationEvent} className="grid max-w-5xl gap-x-3 gap-y-2 lg:grid-cols-4">
             <label className="grid gap-1 text-sm font-medium">
               Method
-              <select className="rounded-lg border px-3 py-2 font-normal" name="method">
+              <select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="method">
                 <option>LEAF</option>
                 <option>CUTTING</option>
                 <option>RHIZOME_SPLIT</option>
@@ -60,7 +60,7 @@ export default async function Propagations() {
             <Field label="Date" name="date" type="date" required />
             <label className="grid gap-1 text-sm font-medium">
               Parent / seed parent
-              <select className="rounded-lg border px-3 py-2 font-normal" name="parent1">
+              <select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="parent1">
                 {instances.map((instance) => (
                   <option key={instance.id} value={instance.id}>
                     {instance.plantId} · {plantName(instance.plantDefinition)}
@@ -70,7 +70,7 @@ export default async function Propagations() {
             </label>
             <label className="grid gap-1 text-sm font-medium">
               Pollen parent, for seed only
-              <select className="rounded-lg border px-3 py-2 font-normal" name="parent2">
+              <select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="parent2">
                 <option value="">—</option>
                 {instances.map((instance) => (
                   <option key={instance.id} value={instance.id}>
@@ -80,21 +80,21 @@ export default async function Propagations() {
               </select>
             </label>
             <Field label="Number of child plants to create" name="childCount" type="number" required defaultValue="1" min="1" max="50" />
-            <p className="rounded-md border border-[#d6dfc9] bg-[#f5f4e8] px-3 py-2 text-sm text-stone-700">
+            <p className="rounded-md border border-[#d6dfc9] bg-[#f5f4e8] px-3 py-2 text-sm text-stone-700 lg:col-span-2">
               Child plant IDs will be generated from the parent definition, propagation date, method, and sequence.
             </p>
             <Field label="Child location" name="location" />
             <label className="grid gap-1 text-sm font-medium">
               Success status
-              <select className="rounded-lg border px-3 py-2 font-normal" name="successStatus">
+              <select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="successStatus">
                 <option>PENDING</option>
                 <option>SUCCESS</option>
                 <option>PARTIAL</option>
                 <option>FAILED</option>
               </select>
             </label>
-            <TextArea label="Notes" name="notes" />
-            <Button className="md:col-span-2">Create propagation</Button>
+            <TextArea label="Notes" name="notes" wrapperClassName="lg:col-span-2" />
+            <Button className="justify-self-start lg:col-span-4">Create propagation</Button>
           </form>
         </Card>
       )}

@@ -13,23 +13,23 @@ export default async function Users() {
       <h2 className="text-3xl font-bold">Users</h2>
       <Card>
         <h3 className="mb-3 font-bold">Add user</h3>
-        <form action={createUser} className="grid gap-3 md:grid-cols-3">
+        <form action={createUser} className="grid max-w-4xl gap-x-3 gap-y-2 md:grid-cols-3">
           <Field label="Email" name="email" type="email" required />
           <Field label="Password" name="password" type="password" required />
-          <label className="grid gap-1 text-sm font-medium">Role<select className="rounded-lg border px-3 py-2 font-normal" name="role"><option>LOGGER</option><option>ADMIN</option></select></label>
-          <Button className="md:col-span-3">Add user</Button>
+          <label className="grid gap-1 text-sm font-medium">Role<select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="role"><option>LOGGER</option><option>ADMIN</option></select></label>
+          <Button className="justify-self-start md:col-span-3">Add user</Button>
         </form>
       </Card>
 
       <div className="grid gap-4">
         {users.map((user) => (
           <Card key={user.id}>
-            <form action={updateUser} className="grid gap-3 md:grid-cols-3">
+            <form action={updateUser} className="grid max-w-4xl gap-x-3 gap-y-2 md:grid-cols-3">
               <input type="hidden" name="id" value={user.id} />
               <Field label="Email" name="email" type="email" required defaultValue={user.email} />
               <Field label="New password" name="password" type="password" />
-              <label className="grid gap-1 text-sm font-medium">Role<select className="rounded-lg border px-3 py-2 font-normal" name="role" defaultValue={user.role}><option>LOGGER</option><option>ADMIN</option></select></label>
-              <Button className="md:col-span-3">Save user</Button>
+              <label className="grid gap-1 text-sm font-medium">Role<select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="role" defaultValue={user.role}><option>LOGGER</option><option>ADMIN</option></select></label>
+              <Button className="justify-self-start md:col-span-3">Save user</Button>
             </form>
             {user.id !== currentUser.id && (
               <form action={deleteUser} className="mt-4 border-t pt-4">

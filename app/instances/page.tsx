@@ -32,10 +32,10 @@ export default async function Instances() {
 
       {canCreate(user) && (
         <Card>
-          <form action={createPlantInstance} className="grid gap-3 md:grid-cols-2">
+          <form action={createPlantInstance} className="grid max-w-5xl gap-x-3 gap-y-2 lg:grid-cols-4">
             <label className="grid gap-1 text-sm font-medium">
               Plant definition
-              <select className="rounded-lg border px-3 py-2 font-normal" name="plantDefinitionId" required>
+              <select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="plantDefinitionId" required>
                 {defs.map((definition) => (
                   <option key={definition.id} value={definition.id}>
                     {plantName(definition)}
@@ -45,12 +45,12 @@ export default async function Instances() {
             </label>
             <label className="grid gap-1 text-sm font-medium">
               Type
-              <select className="rounded-lg border px-3 py-2 font-normal" name="instanceType">
+              <select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="instanceType">
                 <option>MOTHER</option>
                 <option>PROPAGATION</option>
               </select>
             </label>
-            <p className="rounded-md border border-[#d6dfc9] bg-[#f5f4e8] px-3 py-2 text-sm text-stone-700 md:col-span-2">
+            <p className="rounded-md border border-[#d6dfc9] bg-[#f5f4e8] px-3 py-2 text-sm text-stone-700 lg:col-span-2">
               Plant ID will be generated automatically from the plant definition, relevant date, and record type.
             </p>
             <Field label="Location" name="location" />
@@ -60,8 +60,8 @@ export default async function Instances() {
             <Field label="Distributor" name="distributor" />
             <Field label="Stock number" name="stockNumber" />
             <Field label="Purchase price" name="purchasePrice" type="number" />
-            <TextArea label="Notes" name="note" />
-            <Button className="md:col-span-2">Create instance</Button>
+            <TextArea label="Notes" name="note" wrapperClassName="lg:col-span-2" />
+            <Button className="justify-self-start lg:col-span-4">Create instance</Button>
           </form>
         </Card>
       )}

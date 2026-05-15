@@ -7,7 +7,7 @@ import { canCreate, getCurrentUser, isAdmin } from '@/lib/auth'
 import { plantName, taxonomyLabel } from '@/lib/utils'
 import Link from 'next/link'
 
-const selectClass = 'rounded-md border border-stone-300 bg-[#fffdf7] px-3 py-2 font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
+const selectClass = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
 
 export default async function Plants() {
   const user = await getCurrentUser()
@@ -42,7 +42,7 @@ export default async function Plants() {
 
       {canCreate(user) && (
         <Card>
-          <form action={createPlantDefinition} className="grid gap-3 md:grid-cols-2">
+          <form action={createPlantDefinition} className="grid max-w-6xl gap-x-3 gap-y-2 lg:grid-cols-4">
             <Field label="Genus" name="genus" required />
             <Field label="Species" name="species" required />
             <Field label="Hybrid notation" name="hybridNotation" />
@@ -56,7 +56,7 @@ export default async function Plants() {
             <Field label="iNaturalist URL" name="inaturalistUrl" type="url" />
             <Field label="POWO URL" name="powoUrl" type="url" />
             <Field label="GBIF URL" name="gbifUrl" type="url" />
-            <label className="grid gap-1.5 text-sm font-medium text-stone-800">
+            <label className="grid gap-1 text-sm font-medium text-stone-800">
               Governing body
               <select className={selectClass} name="governingBodyId">
                 <option value="">—</option>
@@ -67,10 +67,10 @@ export default async function Plants() {
                 ))}
               </select>
             </label>
-            <TextArea label="Description" name="description" />
-            <TextArea label="Notes" name="notes" />
+            <TextArea label="Description" name="description" wrapperClassName="lg:col-span-2" />
+            <TextArea label="Notes" name="notes" wrapperClassName="lg:col-span-2" />
             <PlantAliasFields />
-            <Button className="md:col-span-2">Create plant definition</Button>
+            <Button className="justify-self-start lg:col-span-4">Create plant definition</Button>
           </form>
         </Card>
       )}
