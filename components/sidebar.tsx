@@ -83,7 +83,7 @@ export async function Sidebar() {
       <header className="no-print sticky top-0 z-40 border-b border-stone-200/80 bg-[#fffaf0]/95 px-4 py-3 shadow-sm backdrop-blur md:hidden">
         <div className="flex items-center justify-between gap-3">
           <Link href="/" className="flex items-center gap-2 rounded-md outline-none transition hover:text-[#1f472f] focus:ring-2 focus:ring-[#8fa58f]/30">
-            <Leaf className="h-6 w-6 text-[#2f6b45]" />
+            <img src="/axildb-logo.png" alt="" className="h-9 w-9 shrink-0 object-contain" />
             <div>
               <h1 className="font-serif text-xl font-semibold leading-none">AxilDB</h1>
               <p className="text-xs text-stone-600">Plant Lineage</p>
@@ -103,8 +103,8 @@ export async function Sidebar() {
       </header>
 
       <aside className="no-print sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-stone-200/80 bg-[#fffaf0]/85 p-4 shadow-sm backdrop-blur md:flex">
-        <Link href="/" className="mb-7 flex items-center gap-2 rounded-md outline-none transition hover:text-[#1f472f] focus:ring-2 focus:ring-[#8fa58f]/30">
-          <Leaf className="h-7 w-7 text-[#2f6b45]" />
+        <Link href="/" className="mb-7 flex items-center gap-3 rounded-md outline-none transition hover:text-[#1f472f] focus:ring-2 focus:ring-[#8fa58f]/30">
+          <img src="/axildb-logo.png" alt="" className="h-11 w-11 shrink-0 object-contain" />
           <div>
             <h1 className="font-serif text-2xl font-semibold leading-none">AxilDB</h1>
             <p className="text-xs text-stone-600">Plant Lineage</p>

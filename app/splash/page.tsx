@@ -5,7 +5,6 @@ import {
   GitBranch,
   Github,
   Heart,
-  Leaf,
   LockKeyhole,
   QrCode,
   Search,
@@ -41,8 +40,8 @@ export default function SplashPage() {
     >
       <header className="sticky top-0 z-30 border-b border-stone-200/70 bg-[#fffaf0]/90 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4 sm:px-6 lg:px-8">
-          <a href="/" className="flex items-center gap-2">
-            <Leaf className="h-7 w-7 text-[#2f6b45]" />
+          <a href="/" className="flex items-center gap-3">
+            <img src="/axildb-logo.png" alt="" className="h-10 w-10 shrink-0 object-contain" />
             <span className="font-serif text-2xl font-semibold">AxilDB</span>
           </a>
           <nav className="flex items-center gap-2 text-sm">
