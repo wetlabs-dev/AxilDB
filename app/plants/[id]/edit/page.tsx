@@ -95,8 +95,16 @@ export default async function EditPlant({
               {currentTypePhoto ? (
                 <>
                   <p className="font-medium">{currentTypePhoto.caption || 'Type image'}</p>
-                  <p className="text-stone-600">Source: {currentTypePhoto.source || '—'}</p>
-                  {currentTypePhoto.sourceUrl && <a className="text-[#2f6b45] underline" href={currentTypePhoto.sourceUrl}>Source URL</a>}
+                  <p className="text-stone-600">
+                    Source:{' '}
+                    {currentTypePhoto.sourceUrl ? (
+                      <a className="text-[#2f6b45] underline" href={currentTypePhoto.sourceUrl}>
+                        {currentTypePhoto.source || currentTypePhoto.sourceUrl}
+                      </a>
+                    ) : (
+                      currentTypePhoto.source || '—'
+                    )}
+                  </p>
                 </>
               ) : (
                 <p className="text-stone-600">No definition-level type image yet.</p>
