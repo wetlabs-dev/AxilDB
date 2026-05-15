@@ -7,11 +7,32 @@ export function middleware(request: NextRequest) {
   const host = request.headers.get('host')?.split(':')[0] || ''
   const { pathname, search } = request.nextUrl
 
+  if (host === 'app.axildb.com' && pathname === '/splash') {
+    const url = new URL('/', 'https://axildb.com')
+    return NextResponse.redirect(url)
+  }
+
+  if (pathname === '/splash') {
+    const requestHeaders = new Headers(request.headers)
+    requestHeaders.set('x-axildb-marketing', '1')
+    return NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    })
+  }
+
   if (marketingHosts.has(host)) {
     if (pathname === '/') {
       const url = request.nextUrl.clone()
       url.pathname = '/splash'
-      return NextResponse.rewrite(url)
+      const requestHeaders = new Headers(request.headers)
+      requestHeaders.set('x-axildb-marketing', '1')
+      return NextResponse.rewrite(url, {
+        request: {
+          headers: requestHeaders,
+        },
+      })
     }
 
     if (pathname.startsWith('/_next') || publicFile.test(pathname)) {
@@ -19,11 +40,6 @@ export function middleware(request: NextRequest) {
     }
 
     const url = new URL(`${pathname}${search}`, 'https://app.axildb.com')
-    return NextResponse.redirect(url)
-  }
-
-  if (host === 'app.axildb.com' && pathname === '/splash') {
-    const url = new URL('/', 'https://axildb.com')
     return NextResponse.redirect(url)
   }
 

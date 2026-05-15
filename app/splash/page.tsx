@@ -33,7 +33,10 @@ const workflow = [
 
 export default function SplashPage() {
   return (
-    <main className="min-h-screen overflow-hidden bg-[#fffaf0] text-stone-900">
+    <main
+      className="min-h-screen overflow-hidden bg-[#fffaf0] bg-cover bg-top text-stone-900"
+      style={{ backgroundImage: "linear-gradient(rgba(255,250,240,.88), rgba(255,250,240,.94)), url('/splash-bg-wash.png')" }}
+    >
       <header className="sticky top-0 z-30 border-b border-stone-200/70 bg-[#fffaf0]/90 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4 sm:px-6 lg:px-8">
           <a href="/" className="flex items-center gap-2">
@@ -55,7 +58,7 @@ export default function SplashPage() {
       </header>
 
       <section className="border-b border-stone-200/80">
-        <div className="mx-auto grid max-w-7xl gap-10 px-5 py-16 sm:px-6 lg:grid-cols-[1.05fr_.95fr] lg:px-8 lg:py-24">
+        <div className="mx-auto grid max-w-7xl gap-10 px-5 py-16 sm:px-6 lg:grid-cols-[1fr_1.05fr] lg:px-8 lg:py-24">
           <div className="max-w-3xl">
             <p className="mb-4 inline-flex rounded-md border border-[#8fa58f]/40 bg-white/60 px-3 py-1 text-sm font-medium text-[#2f6b45]">
               Plant Lineage and Collection Database
@@ -76,8 +79,13 @@ export default function SplashPage() {
             </div>
           </div>
 
-          <div className="rounded-lg border border-stone-200 bg-white/60 p-4 shadow-[0_18px_60px_rgba(47,38,24,0.10)]">
-            <div className="rounded-md border border-stone-200 bg-[#fffdf7] p-5">
+          <div className="relative min-h-[430px]">
+            <img
+              src="/splash-hero-botanical-cluster.png"
+              alt=""
+              className="absolute inset-x-0 top-0 mx-auto w-full max-w-[680px] object-contain drop-shadow-[0_18px_36px_rgba(47,38,24,0.13)]"
+            />
+            <div className="absolute bottom-0 left-0 right-0 mx-auto max-w-md rounded-lg border border-stone-200 bg-white/80 p-4 shadow-[0_18px_60px_rgba(47,38,24,0.14)] backdrop-blur">
               <div className="flex items-start justify-between gap-4 border-b border-stone-200 pb-4">
                 <div>
                   <p className="text-sm text-stone-600">Accepted name</p>
@@ -110,6 +118,26 @@ export default function SplashPage() {
             </article>
           ))}
         </div>
+        <div className="mt-8 grid gap-4 lg:grid-cols-3">
+          <article className="overflow-hidden rounded-lg border border-stone-200 bg-white/70 shadow-[0_8px_30px_rgba(47,38,24,0.06)]">
+            <div className="flex h-56 items-center justify-center bg-[#fffdf7] p-4">
+              <img src="/splash-plant-label.png" alt="" className="max-h-full w-full object-contain" />
+            </div>
+            <div className="p-5">
+              <h3 className="font-serif text-xl">Readable plant tags</h3>
+              <p className="mt-2 text-sm leading-6 text-stone-700">Connect physical labels and QR codes back to the living record.</p>
+            </div>
+          </article>
+          <article className="overflow-hidden rounded-lg border border-stone-200 bg-white/70 shadow-[0_8px_30px_rgba(47,38,24,0.06)] lg:col-span-2">
+            <div className="grid min-h-56 items-center gap-4 bg-[#fffdf7] p-5 md:grid-cols-[.95fr_1.05fr]">
+              <div>
+                <h3 className="font-serif text-2xl">Lineage you can see</h3>
+                <p className="mt-3 text-sm leading-6 text-stone-700">Propagations and sport candidates stay attached to their parent context, not buried in notes.</p>
+              </div>
+              <img src="/splash-lineage-diagram.png" alt="" className="max-h-72 w-full object-contain mix-blend-multiply" />
+            </div>
+          </article>
+        </div>
       </section>
 
       <section className="border-y border-stone-200/80 bg-white/45">
@@ -133,18 +161,39 @@ export default function SplashPage() {
       </section>
 
       <section className="mx-auto max-w-7xl px-5 py-16 sm:px-6 lg:px-8">
-        <div className="grid gap-4 lg:grid-cols-3">
-          <div className="rounded-lg border border-stone-200 bg-white/65 p-6 lg:col-span-2">
-            <ShieldCheck className="mb-4 h-7 w-7 text-[#2f6b45]" />
-            <h2 className="text-3xl">Self-hosted and branch-friendly</h2>
-            <p className="mt-3 leading-7 text-stone-700">
-              AxilDB is licensed under the GNU AGPLv3 so people can study, fork, and improve it while keeping network-hosted changes available to users.
-              The AxilDB name and branding remain reserved for the official project.
+        <div className="grid overflow-hidden rounded-lg border border-stone-200 bg-white/70 shadow-[0_12px_40px_rgba(47,38,24,0.08)] lg:grid-cols-[.9fr_1.1fr]">
+          <div className="p-6 sm:p-8 lg:p-10">
+            <p className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-[#2f6b45]">A tiny botany wink</p>
+            <h2 className="text-3xl">Named for the place new growth begins</h2>
+            <p className="mt-4 leading-7 text-stone-700">
+              An axil is the little junction where a leaf meets a stem, the tucked-away spot where buds, blooms, and branches often start.
+              AxilDB borrows that idea for collection records: a small point of context where the next part of the plant&apos;s story can emerge.
             </p>
-            <a className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[#2f6b45] underline" href={githubUrl}>
-              <Github className="h-4 w-4" />
-              Read the source
-            </a>
+          </div>
+          <div className="flex min-h-80 items-center justify-center bg-[#fffdf7] p-4">
+            <img src="/splash-axil.png" alt="Botanical illustration pointing out the axil of a plant" className="max-h-[460px] w-full object-contain" />
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-5 py-16 sm:px-6 lg:px-8">
+        <div className="grid gap-4 lg:grid-cols-3">
+          <div className="overflow-hidden rounded-lg border border-stone-200 bg-white/65 lg:col-span-2">
+            <div className="grid gap-4 lg:grid-cols-[.95fr_1.05fr]">
+              <div className="p-6">
+                <ShieldCheck className="mb-4 h-7 w-7 text-[#2f6b45]" />
+                <h2 className="text-3xl">Self-hosted and branch-friendly</h2>
+                <p className="mt-3 leading-7 text-stone-700">
+                  AxilDB is licensed under the GNU AGPLv3 so people can study, fork, and improve it while keeping network-hosted changes available to users.
+                  The AxilDB name and branding remain reserved for the official project.
+                </p>
+                <a className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[#2f6b45] underline" href={githubUrl}>
+                  <Github className="h-4 w-4" />
+                  Read the source
+                </a>
+              </div>
+              <img src="/splash-audit.png" alt="" className="h-full min-h-72 w-full object-cover" />
+            </div>
           </div>
           <div className="rounded-lg border border-[#c47a5a]/30 bg-[#fff7ed] p-6">
             <Heart className="mb-4 h-7 w-7 text-[#c47a5a]" />

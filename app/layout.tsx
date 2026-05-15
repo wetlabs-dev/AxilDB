@@ -8,13 +8,15 @@ export const metadata = {
 }
 
 export default async function RootLayout({children}:{children:React.ReactNode}) {
-  const host = (await headers()).get('host')?.split(':')[0] || ''
+  const requestHeaders = await headers()
+  const host = requestHeaders.get('host')?.split(':')[0] || ''
   const isMarketingHost = host === 'axildb.com' || host === 'www.axildb.com'
+  const isMarketingRoute = requestHeaders.get('x-axildb-marketing') === '1'
 
   return (
     <html lang="en">
       <body>
-        {isMarketingHost ? (
+        {isMarketingHost || isMarketingRoute ? (
           children
         ) : (
           <div className="min-h-screen md:flex">
