@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { createPlantDefinition } from '@/app/actions'
 import { Card, Field, TextArea, Button, LinkButton } from '@/components/ui'
 import { ConfidenceSelect, PlantAliasFields } from '@/components/PlantAliasFields'
+import { PlantImage } from '@/components/PlantImage'
 import { canCreate, getCurrentUser, isAdmin } from '@/lib/auth'
 import { plantName, taxonomyLabel } from '@/lib/utils'
 import Link from 'next/link'
@@ -15,12 +16,22 @@ export default async function Plants() {
       include: {
         governingBody: true,
         aliases: { orderBy: { name: 'asc' } },
+        instances: { select: { id: true } },
         _count: { select: { instances: true } },
       },
       orderBy: [{ genus: 'asc' }, { species: 'asc' }],
     }),
     prisma.governingBody.findMany({ orderBy: { name: 'asc' } }),
   ])
+  const instanceIds = plants.flatMap((plant) => plant.instances.map((instance) => instance.id))
+  const typePhotos = await prisma.photo.findMany({
+    where: { entityType: 'PLANT_INSTANCE', entityId: { in: instanceIds }, isType: true },
+    orderBy: { createdAt: 'desc' },
+  })
+  const typePhotoByInstance = typePhotos.reduce<Record<string, string>>((acc, photo) => {
+    if (!acc[photo.entityId]) acc[photo.entityId] = photo.path
+    return acc
+  }, {})
 
   return (
     <div className="space-y-6">
@@ -64,12 +75,18 @@ export default async function Plants() {
         </Card>
       )}
 
-      <div className="grid gap-3">
-        {plants.map((plant) => (
-          <Card key={plant.id}>
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <span className="text-lg font-bold">{plantName(plant)}</span>
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {plants.map((plant) => {
+          const typePhoto = plant.instances.map((instance) => typePhotoByInstance[instance.id]).find(Boolean)
+          return (
+          <Card key={plant.id} className="overflow-hidden p-0">
+            <div className="aspect-[4/3]">
+              <PlantImage src={typePhoto} alt={plantName(plant)} />
+            </div>
+            <div className="p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <span className="text-lg font-bold">{plantName(plant)}</span>
                 <p className="text-sm">
                   {plant.governingBody?.abbreviation || 'No governing body'} · {plant._count.instances} instance(s) ·{' '}
                   {taxonomyLabel(plant.confidence)}
@@ -96,15 +113,17 @@ export default async function Plants() {
                   </div>
                 )}
                 <p className="text-sm text-stone-600">{plant.description}</p>
-              </div>
+                </div>
               {isAdmin(user) && (
                 <Link className="rounded-xl border px-3 py-2 text-sm" href={`/plants/${plant.id}/edit`}>
                   Edit
                 </Link>
               )}
+              </div>
             </div>
           </Card>
-        ))}
+          )
+        })}
       </div>
     </div>
   )

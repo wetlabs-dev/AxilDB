@@ -324,6 +324,65 @@ export async function deleteNote(fd: FormData) {
   redirect(back(fd))
 }
 
+export async function setCoverPhoto(fd: FormData) {
+  const user = await requireAdminUser()
+  const id = val(fd, 'id')!
+  const photo = await prisma.photo.findUniqueOrThrow({ where: { id } })
+
+  if (photo.entityType !== 'PLANT_INSTANCE') {
+    throw new Error('Only plant instance photos can be selected as cover photos.')
+  }
+
+  await prisma.$transaction([
+    prisma.photo.updateMany({
+      where: { entityType: 'PLANT_INSTANCE', entityId: photo.entityId },
+      data: { isCover: false },
+    }),
+    prisma.photo.update({
+      where: { id },
+      data: { isCover: true },
+    }),
+  ])
+
+  await audit(user, 'UPDATE', 'PHOTO', id, `Selected cover photo for plant instance ${photo.entityId}`)
+  redirect(back(fd))
+}
+
+export async function setTypePhoto(fd: FormData) {
+  const user = await requireAdminUser()
+  const id = val(fd, 'id')!
+  const photo = await prisma.photo.findUniqueOrThrow({ where: { id } })
+
+  if (photo.entityType !== 'PLANT_INSTANCE') {
+    throw new Error('Only plant instance photos can be selected as type photos.')
+  }
+
+  const instance = await prisma.plantInstance.findUniqueOrThrow({
+    where: { id: photo.entityId },
+    select: { plantDefinitionId: true },
+  })
+
+  const siblingInstances = await prisma.plantInstance.findMany({
+    where: { plantDefinitionId: instance.plantDefinitionId },
+    select: { id: true },
+  })
+  const siblingIds = siblingInstances.map((item) => item.id)
+
+  await prisma.$transaction([
+    prisma.photo.updateMany({
+      where: { entityType: 'PLANT_INSTANCE', entityId: { in: siblingIds } },
+      data: { isType: false },
+    }),
+    prisma.photo.update({
+      where: { id },
+      data: { isType: true },
+    }),
+  ])
+
+  await audit(user, 'UPDATE', 'PHOTO', id, `Selected type photo for plant definition ${instance.plantDefinitionId}`)
+  redirect(back(fd))
+}
+
 export async function openBloomEvent(fd: FormData) {
   const user = await requireCreateUser()
   const plantInstanceId = val(fd, 'plantInstanceId')!

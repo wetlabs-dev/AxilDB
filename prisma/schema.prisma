@@ -203,9 +203,13 @@ model Photo {
   filename   String
   path       String
   caption    String?
+  isCover    Boolean  @default(false)
+  isType     Boolean  @default(false)
   createdAt  DateTime @default(now())
 
   @@index([entityType, entityId])
+  @@index([isCover])
+  @@index([isType])
 }
 
 model BloomEvent {

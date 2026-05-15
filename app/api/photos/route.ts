@@ -3,6 +3,10 @@ import { prisma } from '@/lib/prisma'
 import { audit, requireCreateUser } from '@/lib/auth'
 import { mkdir, writeFile } from 'fs/promises'
 import path from 'path'
+import sharp from 'sharp'
+
+const MAX_PHOTO_DIMENSION = 2000
+
 export async function POST(req: Request) {
   const user = await requireCreateUser()
   const form = await req.formData()
@@ -12,11 +16,22 @@ export async function POST(req: Request) {
   const caption = String(form.get('caption') || '') || undefined
   const back = String(form.get('back') || '/')
   if (!file || !entityType || !entityId) return NextResponse.redirect(new URL(back, req.url))
-  const bytes = Buffer.from(await file.arrayBuffer())
+  const original = Buffer.from(await file.arrayBuffer())
+  const bytes = await sharp(original)
+    .rotate()
+    .resize({
+      width: MAX_PHOTO_DIMENSION,
+      height: MAX_PHOTO_DIMENSION,
+      fit: 'inside',
+      withoutEnlargement: true,
+    })
+    .jpeg({ quality: 84, mozjpeg: true })
+    .toBuffer()
   await mkdir(path.join(process.cwd(), 'public', 'uploads'), { recursive: true })
-  const filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '-')}`
+  const parsed = path.parse(file.name.replace(/[^a-zA-Z0-9._-]/g, '-'))
+  const filename = `${Date.now()}-${parsed.name || 'photo'}.jpg`
   await writeFile(path.join(process.cwd(), 'public', 'uploads', filename), bytes)
   const photo = await prisma.photo.create({ data: { entityType, entityId, filename, path: `/uploads/${filename}`, caption } })
-  await audit(user, 'CREATE', 'PHOTO', photo.id, `Uploaded photo for ${entityType} ${entityId}`, { filename })
+  await audit(user, 'CREATE', 'PHOTO', photo.id, `Uploaded photo for ${entityType} ${entityId}`, { filename, originalBytes: original.length, storedBytes: bytes.length, maxDimension: MAX_PHOTO_DIMENSION })
   return NextResponse.redirect(new URL(back, req.url))
 }

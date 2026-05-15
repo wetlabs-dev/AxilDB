@@ -4,7 +4,10 @@ import {
   openBloomEvent,
   updateBloomPeak,
   closeBloomEvent,
+  setCoverPhoto,
+  setTypePhoto,
 } from '@/app/actions'
+import { PlantImage } from '@/components/PlantImage'
 import { Button, Card, Field, TextArea } from '@/components/ui'
 import { canCreate, getCurrentUser, isAdmin } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -55,7 +58,7 @@ export default async function InstanceDetail({
 
   const photos = await prisma.photo.findMany({
     where: { entityType: 'PLANT_INSTANCE', entityId: id },
-    orderBy: { createdAt: 'desc' },
+    orderBy: [{ isCover: 'desc' }, { isType: 'desc' }, { createdAt: 'desc' }],
   })
 
   const bloomPhotos = await prisma.photo.findMany({
@@ -281,7 +284,10 @@ export default async function InstanceDetail({
       </div>
 
       <Card>
-        <h3 className="font-bold">Photos</h3>
+        <h3 className="font-bold">Specimen photos</h3>
+        <p className="mt-1 text-sm text-stone-600">
+          Choose one cover photo for this specimen card. Admins can also mark one specimen photo as the type photo for the plant definition.
+        </p>
         {canCreate(user) && <form
           action="/api/photos"
           method="post"
@@ -296,11 +302,35 @@ export default async function InstanceDetail({
           <Button>Upload photo</Button>
         </form>}
 
-        <div className="mt-4 grid grid-cols-3 gap-3">
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {photos.length === 0 && <p className="text-sm text-stone-600">No specimen photos yet.</p>}
           {photos.map((p) => (
-            <figure key={p.id}>
-              <img src={p.path} className="rounded-xl" alt={p.caption || 'Plant photo'} />
-              <figcaption className="text-xs">{p.caption}</figcaption>
+            <figure key={p.id} className="overflow-hidden rounded-lg border border-stone-200 bg-white/70">
+              <div className="aspect-[4/3]">
+                <PlantImage src={p.path} alt={p.caption || 'Plant photo'} />
+              </div>
+              <figcaption className="space-y-3 p-3 text-xs">
+                <div>
+                  <p className="font-medium">{p.caption || 'Untitled photo'}</p>
+                  <p className="text-stone-600">
+                    {p.isCover ? 'Cover photo' : 'Not cover'} · {p.isType ? 'Type photo' : 'Not type'}
+                  </p>
+                </div>
+                {isAdmin(user) && (
+                  <div className="flex flex-wrap gap-2">
+                    <form action={setCoverPhoto}>
+                      <input type="hidden" name="id" value={p.id} />
+                      <input type="hidden" name="back" value={`/instances/${id}`} />
+                      <Button className="px-3 py-1.5 text-xs" disabled={p.isCover}>Set cover</Button>
+                    </form>
+                    <form action={setTypePhoto}>
+                      <input type="hidden" name="id" value={p.id} />
+                      <input type="hidden" name="back" value={`/instances/${id}`} />
+                      <Button className="px-3 py-1.5 text-xs" disabled={p.isType}>Set type</Button>
+                    </form>
+                  </div>
+                )}
+              </figcaption>
             </figure>
           ))}
         </div>
