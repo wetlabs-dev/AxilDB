@@ -4,6 +4,7 @@ import { plantName } from './utils'
 export async function getLineageGraph(rootId: string) {
   const nodes = new Map<string, any>()
   const edges: any[] = []
+  const edgeIds = new Set<string>()
   const visit = async (id: string) => {
     if (nodes.has(id)) return
     const item = await prisma.plantInstance.findUnique({ where:{id}, include:{plantDefinition:true} })
@@ -22,19 +23,26 @@ export async function getLineageGraph(rootId: string) {
     for (const link of outgoing) {
       for (const child of link.propagationEvent.children) {
         if (child.childPlantInstanceId === id) continue
-        edges.push({
-          id: `${id}-${child.childPlantInstanceId}-${link.propagationEventId}`,
-          source: id,
-          target: child.childPlantInstanceId,
-          animated: item.sportStatus !== 'NONE',
-          label: link.propagationEvent.method,
-          data: { method: link.propagationEvent.method },
-        })
+        const edgeId = `${id}-${child.childPlantInstanceId}-${link.propagationEventId}`
+        if (!edgeIds.has(edgeId)) {
+          edgeIds.add(edgeId)
+          edges.push({
+            id: edgeId,
+            source: id,
+            target: child.childPlantInstanceId,
+            animated: item.sportStatus !== 'NONE',
+            label: link.propagationEvent.method,
+            data: { method: link.propagationEvent.method },
+          })
+        }
         await visit(child.childPlantInstanceId)
       }
     }
   }
-  await visit(rootId)
+  const roots = await findRootMothers(rootId)
+  for (const root of roots) {
+    await visit(root)
+  }
   return { nodes: Array.from(nodes.values()), edges }
 }
 

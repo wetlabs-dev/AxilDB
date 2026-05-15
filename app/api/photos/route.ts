@@ -14,6 +14,8 @@ export async function POST(req: Request) {
   const entityType = String(form.get('entityType') || '')
   const entityId = String(form.get('entityId') || '')
   const caption = String(form.get('caption') || '') || undefined
+  const source = String(form.get('source') || '') || undefined
+  const sourceUrl = String(form.get('sourceUrl') || '') || undefined
   const back = String(form.get('back') || '/')
   if (!file || !entityType || !entityId) return NextResponse.redirect(new URL(back, req.url))
   const original = Buffer.from(await file.arrayBuffer())
@@ -31,7 +33,22 @@ export async function POST(req: Request) {
   const parsed = path.parse(file.name.replace(/[^a-zA-Z0-9._-]/g, '-'))
   const filename = `${Date.now()}-${parsed.name || 'photo'}.jpg`
   await writeFile(path.join(process.cwd(), 'public', 'uploads', filename), bytes)
-  const photo = await prisma.photo.create({ data: { entityType, entityId, filename, path: `/uploads/${filename}`, caption } })
-  await audit(user, 'CREATE', 'PHOTO', photo.id, `Uploaded photo for ${entityType} ${entityId}`, { filename, originalBytes: original.length, storedBytes: bytes.length, maxDimension: MAX_PHOTO_DIMENSION })
+  const data = {
+    entityType,
+    entityId,
+    filename,
+    path: `/uploads/${filename}`,
+    caption,
+    source,
+    sourceUrl,
+    isType: entityType === 'PLANT_DEFINITION',
+  }
+  const photo = entityType === 'PLANT_DEFINITION'
+    ? (await prisma.$transaction([
+        prisma.photo.updateMany({ where: { entityType: 'PLANT_DEFINITION', entityId }, data: { isType: false } }),
+        prisma.photo.create({ data }),
+      ]))[1]
+    : await prisma.photo.create({ data })
+  await audit(user, 'CREATE', 'PHOTO', photo.id, `Uploaded photo for ${entityType} ${entityId}`, { filename, originalBytes: original.length, storedBytes: bytes.length, maxDimension: MAX_PHOTO_DIMENSION, source, sourceUrl })
   return NextResponse.redirect(new URL(back, req.url))
 }

@@ -203,6 +203,8 @@ model Photo {
   filename   String
   path       String
   caption    String?
+  source     String?
+  sourceUrl  String?
   isCover    Boolean  @default(false)
   isType     Boolean  @default(false)
   createdAt  DateTime @default(now())

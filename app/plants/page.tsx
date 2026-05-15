@@ -24,10 +24,20 @@ export default async function Plants() {
     prisma.governingBody.findMany({ orderBy: { name: 'asc' } }),
   ])
   const instanceIds = plants.flatMap((plant) => plant.instances.map((instance) => instance.id))
-  const typePhotos = await prisma.photo.findMany({
-    where: { entityType: 'PLANT_INSTANCE', entityId: { in: instanceIds }, isType: true },
-    orderBy: { createdAt: 'desc' },
-  })
+  const [definitionPhotos, typePhotos] = await Promise.all([
+    prisma.photo.findMany({
+      where: { entityType: 'PLANT_DEFINITION', entityId: { in: plants.map((plant) => plant.id) }, isType: true },
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.photo.findMany({
+      where: { entityType: 'PLANT_INSTANCE', entityId: { in: instanceIds }, isType: true },
+      orderBy: { createdAt: 'desc' },
+    }),
+  ])
+  const typePhotoByDefinition = definitionPhotos.reduce<Record<string, string>>((acc, photo) => {
+    if (!acc[photo.entityId]) acc[photo.entityId] = photo.path
+    return acc
+  }, {})
   const typePhotoByInstance = typePhotos.reduce<Record<string, string>>((acc, photo) => {
     if (!acc[photo.entityId]) acc[photo.entityId] = photo.path
     return acc
@@ -76,7 +86,7 @@ export default async function Plants() {
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
         {plants.map((plant) => {
-          const typePhoto = plant.instances.map((instance) => typePhotoByInstance[instance.id]).find(Boolean)
+          const typePhoto = typePhotoByDefinition[plant.id] || plant.instances.map((instance) => typePhotoByInstance[instance.id]).find(Boolean)
           return (
           <Card key={plant.id} className="overflow-hidden p-0">
             <div className="aspect-[4/3]">

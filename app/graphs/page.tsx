@@ -5,6 +5,8 @@ import { prisma } from '@/lib/prisma'
 import { plantName } from '@/lib/utils'
 import Link from 'next/link'
 
+const contains = (value: string) => ({ contains: value, mode: 'insensitive' as const })
+
 export default async function Graphs({
   searchParams,
 }: {
@@ -18,11 +20,11 @@ export default async function Graphs({
       ...(q
         ? {
             OR: [
-              { plantId: { contains: q } },
-              { location: { contains: q } },
-              { plantDefinition: { is: { genus: { contains: q } } } },
-              { plantDefinition: { is: { species: { contains: q } } } },
-              { plantDefinition: { is: { cultivarName: { contains: q } } } },
+              { plantId: contains(q) },
+              { location: contains(q) },
+              { plantDefinition: { is: { genus: contains(q) } } },
+              { plantDefinition: { is: { species: contains(q) } } },
+              { plantDefinition: { is: { cultivarName: contains(q) } } },
             ],
           }
         : {}),
@@ -38,7 +40,7 @@ export default async function Graphs({
     <div className="space-y-6">
       <div>
         <h2 className="text-3xl font-bold">Lineage Graphs</h2>
-        <p className="mt-1 text-sm text-stone-600">Choose a plant, then follow its descendants through propagation events and sport lines.</p>
+        <p className="mt-1 text-sm text-stone-600">Choose a plant, then see its full connected lineage from earliest ancestor through descendants.</p>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[18rem_1fr]">
