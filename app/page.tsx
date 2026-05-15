@@ -67,14 +67,14 @@ function ActivityCard({
     <Link
       href={item.href}
       className={cn(
-        'group grid overflow-hidden rounded-lg border shadow-[0_8px_24px_rgba(47,38,24,0.06)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(47,38,24,0.10)] sm:grid-cols-[8.5rem_1fr]',
+        'group grid overflow-hidden rounded-lg border shadow-[0_8px_24px_rgba(47,38,24,0.06)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(47,38,24,0.10)] sm:h-36 sm:grid-cols-[8.5rem_1fr]',
         style.className,
       )}
     >
-      <div className="aspect-[4/3] overflow-hidden sm:aspect-auto">
+      <div className="h-40 overflow-hidden sm:h-full">
         <PlantImage src={item.image} alt="" className={cn('transition duration-300 group-hover:scale-[1.03]', style.imageClassName)} />
       </div>
-      <div className="min-w-0 p-4">
+      <div className="min-h-0 min-w-0 overflow-hidden p-4">
         <div className="flex flex-wrap items-center gap-2">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-current/20 bg-white/55 px-2 py-0.5 text-[0.68rem] font-bold uppercase tracking-[0.14em] text-stone-700">
             <Icon className="h-3.5 w-3.5" />
@@ -83,7 +83,7 @@ function ActivityCard({
           <span className="text-xs font-medium text-stone-500">{fmtDate(item.date)}</span>
         </div>
         <h4 className="mt-2 truncate font-serif text-lg leading-tight">{item.title}</h4>
-        <p className="mt-1 line-clamp-2 text-sm text-stone-700">{item.subtitle}</p>
+        <p className="mt-1 truncate text-sm text-stone-700">{item.subtitle}</p>
         {item.detail && <p className="mt-2 line-clamp-2 text-xs leading-5 text-stone-600">{item.detail}</p>}
       </div>
     </Link>
