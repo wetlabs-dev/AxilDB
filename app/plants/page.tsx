@@ -75,7 +75,7 @@ export default async function Plants() {
         </Card>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
         {plants.map((plant) => {
           const typePhoto = plant.instances.map((instance) => typePhotoByInstance[instance.id]).find(Boolean)
           return (
@@ -83,10 +83,10 @@ export default async function Plants() {
             <div className="aspect-[4/3]">
               <PlantImage src={typePhoto} alt={plantName(plant)} />
             </div>
-            <div className="p-4">
+            <div className="p-3">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <span className="text-lg font-bold">{plantName(plant)}</span>
+                  <span className="text-sm font-bold leading-tight">{plantName(plant)}</span>
                 <p className="text-sm">
                   {plant.governingBody?.abbreviation || 'No governing body'} · {plant._count.instances} instance(s) ·{' '}
                   {taxonomyLabel(plant.confidence)}
@@ -115,7 +115,7 @@ export default async function Plants() {
                 <p className="text-sm text-stone-600">{plant.description}</p>
                 </div>
               {isAdmin(user) && (
-                <Link className="rounded-xl border px-3 py-2 text-sm" href={`/plants/${plant.id}/edit`}>
+                <Link className="rounded-md border px-2 py-1 text-xs" href={`/plants/${plant.id}/edit`}>
                   Edit
                 </Link>
               )}

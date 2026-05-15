@@ -101,10 +101,10 @@ export default async function Dashboard() {
   }, {})
 
   const stats = [
-    ['Active plants', active, Leaf],
-    ['Recent propagations', recentProps.length, GitBranch],
-    ['Recent blooms', blooms.length, Flower2],
-    ['Sport candidates', sports.length, Sprout],
+    ['Active plants', active, Leaf, '/instances'],
+    ['Recent propagations', recentProps.length, GitBranch, '/propagations'],
+    ['Recent blooms', blooms.length, Flower2, '/blooms'],
+    ['Sport candidates', sports.length, Sprout, '/sports'],
   ] as const
 
   return (
@@ -115,8 +115,9 @@ export default async function Dashboard() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {stats.map(([label, value, Icon]) => (
-          <Card key={label}>
+        {stats.map(([label, value, Icon, href]) => (
+          <Link key={label} href={href} className="group block">
+            <Card className="transition group-hover:-translate-y-0.5 group-hover:shadow-[0_14px_36px_rgba(47,38,24,0.10)]">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="text-sm text-stone-600">{label}</div>
@@ -126,7 +127,8 @@ export default async function Dashboard() {
                 <Icon className="h-6 w-6" />
               </div>
             </div>
-          </Card>
+            </Card>
+          </Link>
         ))}
       </div>
 

@@ -76,22 +76,22 @@ export default async function Instances() {
         </Card>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
         {instances.map((instance) => (
           <Card key={instance.id} className="overflow-hidden p-0">
             <Link href={`/instances/${instance.id}`} className="block">
               <div className="aspect-[4/3]">
                 <PlantImage src={photoByInstance[instance.id]} alt={instance.plantId} />
               </div>
-              <div className="p-4">
-                <p className="text-lg font-bold underline">{instance.plantId}</p>
+              <div className="p-3">
+                <p className="text-sm font-bold underline">{instance.plantId}</p>
                 <p className="text-sm text-stone-700">{plantName(instance.plantDefinition)}</p>
                 <p className="text-sm text-stone-600">{instance.instanceType} · {instance.location || 'No location'}</p>
               </div>
             </Link>
-            <div className="flex gap-2 border-t border-stone-200 p-4">
-              {isAdmin(user) && <Link className="rounded-xl border px-3 py-2 text-sm" href={`/instances/${instance.id}/edit`}>Edit</Link>}
-              <Link className="rounded-xl border px-3 py-2 text-sm" href={`/labels/${instance.id}`}>Label</Link>
+            <div className="flex gap-2 border-t border-stone-200 p-3">
+              {isAdmin(user) && <Link className="rounded-md border px-2 py-1 text-xs" href={`/instances/${instance.id}/edit`}>Edit</Link>}
+              <Link className="rounded-md border px-2 py-1 text-xs" href={`/labels/${instance.id}`}>Label</Link>
             </div>
           </Card>
         ))}
