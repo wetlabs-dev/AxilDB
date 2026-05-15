@@ -1,5 +1,6 @@
 import {
   BadgeCheck,
+  Camera,
   Flower2,
   GitBranch,
   Github,
@@ -16,19 +17,20 @@ const githubUrl = process.env.NEXT_PUBLIC_GITHUB_URL || 'https://github.com/wetl
 const donateUrl = process.env.NEXT_PUBLIC_DONATE_URL || 'https://ko-fi.com/wetlabs'
 
 const features = [
-  ['Plant lineage', 'Trace parent plants, propagations, sport candidates, and stable cultivar lines without losing the story.', GitBranch],
+  ['Plant lineage', 'Trace parent plants, generated propagation IDs, sport candidates, and stable cultivar lines without losing the story.', GitBranch],
   ['Taxonomy confidence', 'Record accepted names, provisional labels, acquisition names, aliases, sources, and uncertainty.', BadgeCheck],
-  ['Bloom history', 'Log bloom starts, peaks, closures, flower counts, first blooms, notes, and photos over time.', Flower2],
-  ['QR plant tags', 'Generate printable QR labels that link directly to each plant record in the app.', QrCode],
+  ['Photo-backed records', 'Choose cover photos for specimen cards, type photos for definitions, and keep uploads space-conscious.', Camera],
+  ['Bloom history', 'Log bloom starts, peaks, closures, flower counts, first blooms, notes, and bloom photos over time.', Flower2],
+  ['QR plant tags', 'Generate printable QR labels with standard plant IDs that link directly to each record.', QrCode],
   ['Role-aware access', 'Let visitors browse, loggers add records, and admins edit, delete, manage users, and review audit logs.', LockKeyhole],
-  ['Collection search', 'Search plants by IDs, cultivars, aliases, old taxonomy, common names, notes, and sources.', Search],
+  ['Collection search', 'Search plants by generated IDs, cultivars, aliases, old taxonomy, common names, notes, and sources.', Search],
 ] as const
 
 const workflow = [
-  ['Define', 'Capture the accepted identity and any messy synonym or trade-name context.'],
-  ['Grow', 'Track instances, locations, acquisition history, propagations, and plant status.'],
-  ['Observe', 'Record blooms, photos, notes, sports, and lineage evidence as the collection changes.'],
-  ['Share', 'Use QR tags and read-only browsing to make the collection easier to explore.'],
+  ['Define', 'Capture the accepted identity and any messy synonym, trade-name, reference-link, or confidence context.'],
+  ['Grow', 'Track instances, locations, acquisition history, generated plant IDs, and propagation batches.'],
+  ['Observe', 'Add notes, blooms, cover photos, and suspected sport observations when the plant actually gives you evidence.'],
+  ['Resolve', 'Confirm whether sport traits propagate true, promote stable lines, and share records through QR tags or read-only browsing.'],
 ] as const
 
 export default function SplashPage() {
@@ -66,7 +68,7 @@ export default function SplashPage() {
             <h1 className="text-5xl leading-[1.02] sm:text-6xl lg:text-7xl">A living database for plants with complicated names.</h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-stone-700">
               AxilDB tracks plant definitions, collection instances, propagations, blooms, taxonomy uncertainty,
-              aliases, photos, QR tags, and audit history in one self-hosted app.
+              aliases, generated plant IDs, photos, QR tags, sport stability, and audit history in one self-hosted app.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <a className="inline-flex items-center justify-center rounded-md bg-[#2f6b45] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#255537]" href={appUrl}>
@@ -125,14 +127,14 @@ export default function SplashPage() {
             </div>
             <div className="p-5">
               <h3 className="font-serif text-xl">Readable plant tags</h3>
-              <p className="mt-2 text-sm leading-6 text-stone-700">Connect physical labels and QR codes back to the living record.</p>
+              <p className="mt-2 text-sm leading-6 text-stone-700">Connect physical labels, generated plant IDs, and QR codes back to the living record.</p>
             </div>
           </article>
           <article className="overflow-hidden rounded-lg border border-stone-200 bg-white/70 shadow-[0_8px_30px_rgba(47,38,24,0.06)] lg:col-span-2">
             <div className="grid min-h-56 items-center gap-4 bg-[#fffdf7] p-5 md:grid-cols-[.95fr_1.05fr]">
               <div>
                 <h3 className="font-serif text-2xl">Lineage you can see</h3>
-                <p className="mt-3 text-sm leading-6 text-stone-700">Propagations and sport candidates stay attached to their parent context, not buried in notes.</p>
+                <p className="mt-3 text-sm leading-6 text-stone-700">Propagations inherit their parent context, while suspected sports become candidate lines only when observations justify it.</p>
               </div>
               <img src="/splash-lineage-diagram.png" alt="" className="max-h-72 w-full object-contain mix-blend-multiply" />
             </div>
@@ -145,7 +147,7 @@ export default function SplashPage() {
           <div>
             <h2 className="text-3xl">From label to lineage</h2>
             <p className="mt-3 text-stone-700">
-              Keep the seller&apos;s label, your current interpretation, the evidence, and the propagation history together.
+              Keep the seller&apos;s label, your current interpretation, photos, notes, sport evidence, and propagation history together.
             </p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
