@@ -43,7 +43,6 @@ export default async function Instances() {
                 ))}
               </select>
             </label>
-            <Field label="Plant ID" name="plantId" required />
             <label className="grid gap-1 text-sm font-medium">
               Type
               <select className="rounded-lg border px-3 py-2 font-normal" name="instanceType">
@@ -51,6 +50,9 @@ export default async function Instances() {
                 <option>PROPAGATION</option>
               </select>
             </label>
+            <p className="rounded-md border border-[#d6dfc9] bg-[#f5f4e8] px-3 py-2 text-sm text-stone-700 md:col-span-2">
+              Plant ID will be generated automatically from the plant definition, relevant date, and record type.
+            </p>
             <Field label="Location" name="location" />
             <Field label="Acquisition date" name="acquisitionDate" type="date" />
             <Field label="Propagation date" name="propagationDate" type="date" />

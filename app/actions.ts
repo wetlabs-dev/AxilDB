@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { audit, requireAdminUser, requireCreateUser } from '@/lib/auth'
 import { createDemoData } from '@/lib/demo-data'
+import { generatePlantId } from '@/lib/plant-id'
 
 const val = (fd: FormData, k: string) =>
   String(fd.get(k) || '').trim() || undefined
@@ -12,6 +13,11 @@ const val = (fd: FormData, k: string) =>
 const date = (s?: string) => (s ? new Date(s) : undefined)
 const dec = (s?: string) => (s ? s : undefined)
 const back = (fd: FormData) => val(fd, 'back') || '/'
+const boundedInt = (value: string | undefined, fallback: number, min: number, max: number) => {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return fallback
+  return Math.max(min, Math.min(max, Math.floor(parsed)))
+}
 
 function aliasRows(fd: FormData) {
   const names = fd.getAll('aliasName').map((value) => String(value || '').trim())
@@ -209,14 +215,24 @@ export async function deletePlantDefinition(fd: FormData) {
 
 export async function createPlantInstance(fd: FormData) {
   const user = await requireCreateUser()
+  const plantDefinitionId = val(fd, 'plantDefinitionId')!
+  const instanceType = val(fd, 'instanceType')!
+  const acquisitionDate = date(val(fd, 'acquisitionDate'))
+  const propagationDate = date(val(fd, 'propagationDate'))
+  const plantId = await generatePlantId(prisma, {
+    plantDefinitionId,
+    instanceType,
+    date: propagationDate || acquisitionDate,
+  })
+
   const instance = await prisma.plantInstance.create({
     data: {
-      plantDefinitionId: val(fd, 'plantDefinitionId')!,
-      plantId: val(fd, 'plantId')!,
-      instanceType: val(fd, 'instanceType')!,
+      plantDefinitionId,
+      plantId,
+      instanceType,
       location: val(fd, 'location'),
-      acquisitionDate: date(val(fd, 'acquisitionDate')),
-      propagationDate: date(val(fd, 'propagationDate')),
+      acquisitionDate,
+      propagationDate,
       source: val(fd, 'source'),
       distributor: val(fd, 'distributor'),
       stockNumber: val(fd, 'stockNumber'),
@@ -239,7 +255,6 @@ export async function updatePlantInstance(fd: FormData) {
     where: { id },
     data: {
       plantDefinitionId: val(fd, 'plantDefinitionId')!,
-      plantId: val(fd, 'plantId')!,
       instanceType: val(fd, 'instanceType')!,
       status: val(fd, 'status') || 'ACTIVE',
       location: val(fd, 'location'),
@@ -477,22 +492,19 @@ export async function createPropagationEvent(fd: FormData) {
   const method = val(fd, 'method')!
   const parent1 = val(fd, 'parent1')!
   const parent2 = val(fd, 'parent2')
+  const eventDate = date(val(fd, 'date'))!
+  const childCount = boundedInt(val(fd, 'childCount'), 1, 1, 50)
 
   if (method === 'SEED' && !parent2) {
     throw new Error('Sexual reproduction requires two parent plants.')
   }
-
-  const childCodes = String(fd.get('childCodes') || '')
-    .split('\n')
-    .map((s) => s.trim())
-    .filter(Boolean)
 
   const parentPlant = await prisma.plantInstance.findUniqueOrThrow({ where: { id: parent1 } })
 
   const event = await prisma.propagationEvent.create({
     data: {
       method,
-      date: date(val(fd, 'date'))!,
+      date: eventDate,
       notes: val(fd, 'notes'),
       successStatus: val(fd, 'successStatus') || 'PENDING',
       parents: {
@@ -504,13 +516,23 @@ export async function createPropagationEvent(fd: FormData) {
     },
   })
 
-  for (const code of childCodes) {
+  const childCodes: string[] = []
+
+  for (let index = 0; index < childCount; index += 1) {
+    const plantId = await generatePlantId(prisma, {
+      plantDefinitionId: parentPlant.plantDefinitionId,
+      date: eventDate,
+      instanceType: 'PROPAGATION',
+      method,
+    })
+    childCodes.push(plantId)
+
     const child = await prisma.plantInstance.create({
       data: {
         plantDefinitionId: parentPlant.plantDefinitionId,
-        plantId: code,
+        plantId,
         instanceType: 'PROPAGATION',
-        propagationDate: date(val(fd, 'date')),
+        propagationDate: eventDate,
         location: val(fd, 'location'),
         isSportCandidate: !!fd.get('isSportCandidate'),
         sportStatus: val(fd, 'sportStatus') || 'NONE',

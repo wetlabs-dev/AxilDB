@@ -79,10 +79,10 @@ export default async function Propagations() {
                 ))}
               </select>
             </label>
-            <label className="grid gap-1 text-sm font-medium md:col-span-2">
-              Child plant IDs, one per line
-              <textarea className="min-h-24 rounded-lg border px-3 py-2 font-normal" name="childCodes" required placeholder={'AV-001-P1\nAV-001-P2'} />
-            </label>
+            <Field label="Number of child plants to create" name="childCount" type="number" required defaultValue="1" min="1" max="50" />
+            <p className="rounded-md border border-[#d6dfc9] bg-[#f5f4e8] px-3 py-2 text-sm text-stone-700">
+              Child plant IDs will be generated from the parent definition, propagation date, method, and sequence.
+            </p>
             <Field label="Child location" name="location" />
             <label className="grid gap-1 text-sm font-medium">
               Success status
