@@ -73,6 +73,10 @@ model PlantDefinition {
   confidence                 String   @default("UNCERTAIN")
   acquisitionLabel           String?
   provisionalTaxon           String?
+  wikipediaUrl               String?
+  inaturalistUrl             String?
+  powoUrl                    String?
+  gbifUrl                    String?
   description                String?
   notes                      String?
   createdAt                  DateTime @default(now())

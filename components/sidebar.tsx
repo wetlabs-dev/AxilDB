@@ -12,6 +12,7 @@ import {
   GitBranch,
   Home,
   Leaf,
+  FlaskConical,
   Menu,
   Search,
   Settings,
@@ -36,6 +37,7 @@ const baseItems = [
 
 const adminItems = [
   ['/settings', 'Governing Bodies', Settings],
+  ['/admin-tools', 'Admin Tools', FlaskConical],
   ['/audit', 'Audit Log', FileText],
   ['/users', 'Users', Users],
 ] as const

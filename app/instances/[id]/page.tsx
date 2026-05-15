@@ -96,6 +96,14 @@ export default async function InstanceDetail({
           <p>Acquired as: {i.plantDefinition.acquisitionLabel || '—'}</p>
           <p>Provisional taxon: {i.plantDefinition.provisionalTaxon || '—'}</p>
           <p>Authority: {i.plantDefinition.authority || '—'}</p>
+          {(i.plantDefinition.wikipediaUrl || i.plantDefinition.inaturalistUrl || i.plantDefinition.powoUrl || i.plantDefinition.gbifUrl) && (
+            <div className="mt-3 flex flex-wrap gap-2 text-xs">
+              {i.plantDefinition.wikipediaUrl && <a className="rounded-md border border-stone-300 bg-white/60 px-2 py-1 underline" href={i.plantDefinition.wikipediaUrl}>Wikipedia</a>}
+              {i.plantDefinition.inaturalistUrl && <a className="rounded-md border border-stone-300 bg-white/60 px-2 py-1 underline" href={i.plantDefinition.inaturalistUrl}>iNaturalist</a>}
+              {i.plantDefinition.powoUrl && <a className="rounded-md border border-stone-300 bg-white/60 px-2 py-1 underline" href={i.plantDefinition.powoUrl}>POWO</a>}
+              {i.plantDefinition.gbifUrl && <a className="rounded-md border border-stone-300 bg-white/60 px-2 py-1 underline" href={i.plantDefinition.gbifUrl}>GBIF</a>}
+            </div>
+          )}
           <p>Status: {i.status}</p>
           <p>Type: {i.instanceType}</p>
           <p>Location: {i.location || '—'}</p>

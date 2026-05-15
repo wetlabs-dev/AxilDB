@@ -36,6 +36,10 @@ export default async function EditPlant({ params }: { params: Promise<{ id: stri
           <ConfidenceSelect name="confidence" defaultValue={plant.confidence} />
           <Field label="Acquisition label" name="acquisitionLabel" defaultValue={plant.acquisitionLabel} />
           <Field label="Provisional taxon" name="provisionalTaxon" defaultValue={plant.provisionalTaxon} />
+          <Field label="Wikipedia URL" name="wikipediaUrl" type="url" defaultValue={plant.wikipediaUrl} />
+          <Field label="iNaturalist URL" name="inaturalistUrl" type="url" defaultValue={plant.inaturalistUrl} />
+          <Field label="POWO URL" name="powoUrl" type="url" defaultValue={plant.powoUrl} />
+          <Field label="GBIF URL" name="gbifUrl" type="url" defaultValue={plant.gbifUrl} />
           <label className="grid gap-1.5 text-sm font-medium text-stone-800">
             Governing body
             <select className={selectClass} name="governingBodyId" defaultValue={plant.governingBodyId || ''}>

@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { audit, requireAdminUser, requireCreateUser } from '@/lib/auth'
+import { createDemoData } from '@/lib/demo-data'
 
 const val = (fd: FormData, k: string) =>
   String(fd.get(k) || '').trim() || undefined
@@ -136,6 +137,10 @@ export async function createPlantDefinition(fd: FormData) {
       confidence: val(fd, 'confidence') || 'UNCERTAIN',
       acquisitionLabel: val(fd, 'acquisitionLabel'),
       provisionalTaxon: val(fd, 'provisionalTaxon'),
+      wikipediaUrl: val(fd, 'wikipediaUrl'),
+      inaturalistUrl: val(fd, 'inaturalistUrl'),
+      powoUrl: val(fd, 'powoUrl'),
+      gbifUrl: val(fd, 'gbifUrl'),
       description: val(fd, 'description'),
       notes: val(fd, 'notes'),
       aliases: { create: aliasRows(fd) },
@@ -163,6 +168,10 @@ export async function updatePlantDefinition(fd: FormData) {
       confidence: val(fd, 'confidence') || 'UNCERTAIN',
       acquisitionLabel: val(fd, 'acquisitionLabel'),
       provisionalTaxon: val(fd, 'provisionalTaxon'),
+      wikipediaUrl: val(fd, 'wikipediaUrl'),
+      inaturalistUrl: val(fd, 'inaturalistUrl'),
+      powoUrl: val(fd, 'powoUrl'),
+      gbifUrl: val(fd, 'gbifUrl'),
       description: val(fd, 'description'),
       notes: val(fd, 'notes'),
       aliases: {
@@ -537,4 +546,16 @@ export async function createCultivarFromSport(fd: FormData) {
   await audit(user, 'UPDATE', 'PLANT_INSTANCE', plantInstanceId, `Reassigned sport ${inst.plantId} to new cultivar ${def.cultivarName}`)
 
   redirect(`/instances/${plantInstanceId}`)
+}
+
+export async function populateDemoData() {
+  const user = await requireAdminUser()
+  const result = await createDemoData()
+  await audit(user, 'CREATE', 'DEMO_DATA', result.batch, `Populated demo data batch ${result.batch}`, result)
+
+  revalidatePath('/')
+  revalidatePath('/plants')
+  revalidatePath('/instances')
+  revalidatePath('/propagations')
+  redirect('/admin-tools')
 }

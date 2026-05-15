@@ -41,6 +41,10 @@ export default async function Plants() {
             <ConfidenceSelect name="confidence" />
             <Field label="Acquisition label" name="acquisitionLabel" />
             <Field label="Provisional taxon" name="provisionalTaxon" />
+            <Field label="Wikipedia URL" name="wikipediaUrl" type="url" />
+            <Field label="iNaturalist URL" name="inaturalistUrl" type="url" />
+            <Field label="POWO URL" name="powoUrl" type="url" />
+            <Field label="GBIF URL" name="gbifUrl" type="url" />
             <label className="grid gap-1.5 text-sm font-medium text-stone-800">
               Governing body
               <select className={selectClass} name="governingBodyId">
@@ -82,6 +86,14 @@ export default async function Plants() {
                     Aliases: {plant.aliases.slice(0, 4).map((alias) => alias.name).join(', ')}
                     {plant.aliases.length > 4 ? `, +${plant.aliases.length - 4} more` : ''}
                   </p>
+                )}
+                {(plant.wikipediaUrl || plant.inaturalistUrl || plant.powoUrl || plant.gbifUrl) && (
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                    {plant.wikipediaUrl && <a className="rounded-md border border-stone-300 bg-white/60 px-2 py-1 underline" href={plant.wikipediaUrl}>Wikipedia</a>}
+                    {plant.inaturalistUrl && <a className="rounded-md border border-stone-300 bg-white/60 px-2 py-1 underline" href={plant.inaturalistUrl}>iNaturalist</a>}
+                    {plant.powoUrl && <a className="rounded-md border border-stone-300 bg-white/60 px-2 py-1 underline" href={plant.powoUrl}>POWO</a>}
+                    {plant.gbifUrl && <a className="rounded-md border border-stone-300 bg-white/60 px-2 py-1 underline" href={plant.gbifUrl}>GBIF</a>}
+                  </div>
                 )}
                 <p className="text-sm text-stone-600">{plant.description}</p>
               </div>
