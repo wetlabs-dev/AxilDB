@@ -139,7 +139,7 @@ export default async function InstanceDetail({
           {canCreate(user) && i.sportStatus === 'NONE' && (
             <form action={markSportCandidate} className="mt-4 grid gap-2 rounded-lg border border-stone-200 bg-white/60 p-3">
               <input type="hidden" name="id" value={id} />
-              <TextArea label="Why do you suspect this is a sport?" name="observation" />
+              <TextArea label="Why do you suspect this is a sport?" help="Describe the visible difference you are tracking, such as flower color, leaf variegation, growth habit, or another trait that may propagate true." name="observation" />
               <Button>Mark suspected sport</Button>
             </form>
           )}
@@ -155,7 +155,7 @@ export default async function InstanceDetail({
                 <form action={markSportReverted} className="mt-4 grid gap-2 rounded-lg border border-stone-200 bg-white/60 p-3">
                   <input type="hidden" name="id" value={id} />
                   <input type="hidden" name="back" value={`/instances/${id}`} />
-                  <TextArea label="Why is this reverted?" name="observation" />
+                  <TextArea label="Why is this reverted?" help="Use when this branch appears to have returned to the original cultivar or no longer shows the suspected sport trait." name="observation" />
                   <Button>Mark reverted</Button>
                 </form>
               )}
@@ -178,8 +178,8 @@ export default async function InstanceDetail({
           {isAdmin(user) && i.status === 'ACTIVE' ? (
             <form action={archivePlantInstance} className="grid gap-2">
               <input type="hidden" name="id" value={id} />
-              <Field label="Reason" name="archiveReason" />
-              <TextArea label="Notes" name="archiveNotes" />
+              <Field label="Reason" help="Short reason this plant left active collection, such as sold, discarded, died, duplicate, or gifted." name="archiveReason" />
+              <TextArea label="Notes" help="Optional archive context, including date details, condition, recipient, or follow-up notes." name="archiveNotes" />
               <Button>Archive plant</Button>
             </form>
           ) : (
@@ -232,7 +232,7 @@ export default async function InstanceDetail({
 
           {canCreate(user) && <form action={openBloomEvent} className="grid gap-2 rounded-xl border p-4">
             <input type="hidden" name="plantInstanceId" value={id} />
-            <Field label="Bloom start" name="bloomStartDate" type="date" required />
+            <Field label="Bloom start" help="The date the bloom event began, usually when the first flower opened or the bud clearly started opening." name="bloomStartDate" type="date" required />
             <label className="text-sm">
               <input type="checkbox" name="firstBloom" /> First bloom
             </label>
@@ -273,8 +273,8 @@ export default async function InstanceDetail({
                     <form action={updateBloomPeak} className="mt-4 grid gap-2 rounded-xl bg-neutral-50 p-3">
                       <input type="hidden" name="id" value={b.id} />
                       <input type="hidden" name="plantInstanceId" value={id} />
-                      <Field label="Peak bloom date" name="peakBloomDate" type="date" required />
-                      <Field label="Flower count" name="flowerCount" type="number" />
+                      <Field label="Peak bloom date" help="The date the bloom looked its fullest or most representative." name="peakBloomDate" type="date" required />
+                      <Field label="Flower count" help="Approximate number of open flowers at peak bloom." name="flowerCount" type="number" />
                       <TextArea label="Peak notes" name="notes" defaultValue={b.notes || ''} />
                       <Button>Mark peak bloom</Button>
                     </form>
@@ -284,7 +284,7 @@ export default async function InstanceDetail({
                     <form action={closeBloomEvent} className="mt-4 grid gap-2 rounded-xl bg-neutral-50 p-3">
                       <input type="hidden" name="id" value={b.id} />
                       <input type="hidden" name="plantInstanceId" value={id} />
-                      <Field label="Bloom end date" name="bloomEndDate" type="date" required />
+                      <Field label="Bloom end date" help="The date the bloom event was finished or no longer useful to track as open." name="bloomEndDate" type="date" required />
                       <TextArea label="Closing notes" name="notes" defaultValue={b.notes || ''} />
                       <Button>Close bloom event</Button>
                     </form>

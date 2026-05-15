@@ -75,9 +75,9 @@ export default async function SportReview() {
                           ))}
                         </select>
                       </label>
-                      <Field label="Generation number" name="generationNumber" type="number" defaultValue={trueCount + 1} />
+                      <Field label="Generation number" help="Which propagation generation this evidence represents. Three true generations can support a stable sport decision." name="generationNumber" type="number" defaultValue={trueCount + 1} />
                       <label className="text-xs font-medium"><input type="checkbox" name="propagatedTrue" /> Propagated true</label>
-                      <TextArea label="Notes/evidence" name="notes" />
+                      <TextArea label="Notes/evidence" help="Record what stayed consistent or changed in this propagation, with enough detail to justify the stability decision later." name="notes" />
                       <Button className="px-3 py-1.5 text-xs">Add record</Button>
                     </form>
                   </details>
@@ -89,7 +89,7 @@ export default async function SportReview() {
                     <form action={markSportReverted} className="mt-3 grid gap-2">
                       <input type="hidden" name="id" value={sport.id} />
                       <input type="hidden" name="back" value="/sports" />
-                      <TextArea label="Reversion notes" name="observation" />
+                      <TextArea label="Reversion notes" help="Explain why this plant or branch should stop carrying the sport line forward." name="observation" />
                       <Button className="px-3 py-1.5 text-xs">Mark reverted</Button>
                     </form>
                   </details>

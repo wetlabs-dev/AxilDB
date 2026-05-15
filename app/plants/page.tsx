@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { createPlantDefinition } from '@/app/actions'
-import { AddPanel, Card, Field, TextArea, LinkButton } from '@/components/ui'
+import { AddPanel, Card, Field, HelpTooltip, TextArea, LinkButton } from '@/components/ui'
 import { ConfidenceSelect, PlantAliasFields } from '@/components/PlantAliasFields'
 import { PlantImage } from '@/components/PlantImage'
 import { canCreate, getCurrentUser, isAdmin } from '@/lib/auth'
@@ -55,19 +55,22 @@ export default async function Plants() {
           <form action={createPlantDefinition} className="grid max-w-6xl gap-x-3 gap-y-2 lg:grid-cols-4">
             <Field label="Genus" name="genus" required />
             <Field label="Species" name="species" required />
-            <Field label="Hybrid notation" name="hybridNotation" />
-            <Field label="Cultivar name" name="cultivarName" />
-            <Field label="Authority" name="authority" />
-            <Field label="Cultivar registration number" name="cultivarRegistrationNumber" />
+            <Field label="Hybrid notation" help="Use for botanical hybrid markers or formula context, such as x, grex, or parentage notation that belongs with the name." name="hybridNotation" />
+            <Field label="Cultivar name" help="The named cultivated variety, usually written in single quotes, such as 'Morning Glow'. Leave blank for unnamed species or clones." name="cultivarName" />
+            <Field label="Authority" help="The author citation for the scientific name, such as (L.f.) R.Br. It records who validly published the name or combination." name="authority" />
+            <Field label="Cultivar registration number" help="Use when a formal cultivar registry or governing body assigns a registration number to the cultivar." name="cultivarRegistrationNumber" />
             <ConfidenceSelect name="confidence" />
-            <Field label="Acquisition label" name="acquisitionLabel" />
-            <Field label="Provisional taxon" name="provisionalTaxon" />
-            <Field label="Wikipedia URL" name="wikipediaUrl" type="url" />
-            <Field label="iNaturalist URL" name="inaturalistUrl" type="url" />
-            <Field label="POWO URL" name="powoUrl" type="url" />
-            <Field label="GBIF URL" name="gbifUrl" type="url" />
+            <Field label="Acquisition label" help="The name or label the plant arrived with, even if you later determine a different accepted name." name="acquisitionLabel" />
+            <Field label="Provisional taxon" help="A cautious working identification when the accepted name is not settled yet. Useful for 'probably this' or awaiting confirmation." name="provisionalTaxon" />
+            <Field label="Wikipedia URL" help="Optional quick reference link for the species or genus entry." name="wikipediaUrl" type="url" />
+            <Field label="iNaturalist URL" help="Optional link to an iNaturalist taxon page for observations, common names, and community references." name="inaturalistUrl" type="url" />
+            <Field label="POWO URL" help="Optional Plants of the World Online link for accepted names, synonyms, and distribution data." name="powoUrl" type="url" />
+            <Field label="GBIF URL" help="Optional GBIF link for occurrence records, taxonomy backbone data, and biodiversity references." name="gbifUrl" type="url" />
             <label className="grid gap-1 text-sm font-medium text-stone-800">
-              Governing body
+              <span className="flex items-center gap-1.5">
+                <span>Governing body</span>
+                <HelpTooltip>The registry, society, or authority that governs naming or registration for this plant group, if applicable.</HelpTooltip>
+              </span>
               <select className={selectClass} name="governingBodyId">
                 <option value="">—</option>
                 {bodies.map((body) => (

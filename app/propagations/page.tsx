@@ -1,7 +1,7 @@
 import { createPropagationEvent, deletePropagationEvent } from '@/app/actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { PlantImage } from '@/components/PlantImage'
-import { AddPanel, Button, Card, Field, TextArea } from '@/components/ui'
+import { AddPanel, Button, Card, Field, HelpTooltip, TextArea } from '@/components/ui'
 import { canCreate, getCurrentUser, isAdmin } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { fmtDate, plantName } from '@/lib/utils'
@@ -45,7 +45,10 @@ export default async function Propagations() {
         <AddPanel label="Add propagation event">
           <form action={createPropagationEvent} className="grid max-w-5xl gap-x-3 gap-y-2 lg:grid-cols-4">
             <label className="grid gap-1 text-sm font-medium">
-              Method
+              <span className="flex items-center gap-1.5">
+                <span>Method</span>
+                <HelpTooltip>The propagation technique used. This affects lineage graph styling and helps interpret parent/child records later.</HelpTooltip>
+              </span>
               <select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="method">
                 <option>LEAF</option>
                 <option>CUTTING</option>
@@ -85,7 +88,10 @@ export default async function Propagations() {
             </p>
             <Field label="Child location" name="location" />
             <label className="grid gap-1 text-sm font-medium">
-              Success status
+              <span className="flex items-center gap-1.5">
+                <span>Success status</span>
+                <HelpTooltip>Use pending while the propagation is still in progress, then update to success, partial, or failed once the outcome is clear.</HelpTooltip>
+              </span>
               <select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="successStatus">
                 <option>PENDING</option>
                 <option>SUCCESS</option>

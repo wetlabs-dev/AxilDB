@@ -1,6 +1,6 @@
 import { createPlantInstance } from '@/app/actions'
 import { PlantImage } from '@/components/PlantImage'
-import { AddPanel, Button, Card, Field, TextArea } from '@/components/ui'
+import { AddPanel, Button, Card, Field, HelpTooltip, TextArea } from '@/components/ui'
 import { canCreate, getCurrentUser, isAdmin } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { plantName } from '@/lib/utils'
@@ -44,7 +44,10 @@ export default async function Instances() {
               </select>
             </label>
             <label className="grid gap-1 text-sm font-medium">
-              Type
+              <span className="flex items-center gap-1.5">
+                <span>Type</span>
+                <HelpTooltip>Mother plants are acquired source plants. Propagations are plants created from another plant or batch.</HelpTooltip>
+              </span>
               <select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="instanceType">
                 <option>MOTHER</option>
                 <option>PROPAGATION</option>
@@ -54,13 +57,13 @@ export default async function Instances() {
               Plant ID will be generated automatically from the plant definition, relevant date, and record type.
             </p>
             <Field label="Location" name="location" />
-            <Field label="Acquisition date" name="acquisitionDate" type="date" />
-            <Field label="Propagation date" name="propagationDate" type="date" />
-            <Field label="Source/propagator" name="source" />
-            <Field label="Distributor" name="distributor" />
-            <Field label="Stock number" name="stockNumber" />
-            <Field label="Purchase price" name="purchasePrice" type="number" />
-            <TextArea label="Notes" name="note" wrapperClassName="lg:col-span-2" />
+            <Field label="Acquisition date" help="When this physical plant entered your collection." name="acquisitionDate" type="date" />
+            <Field label="Propagation date" help="When this plant was propagated, if it was created from another plant." name="propagationDate" type="date" />
+            <Field label="Source/propagator" help="Who produced or propagated the plant, or the immediate source of the plant material." name="source" />
+            <Field label="Distributor" help="The seller, vendor, swap partner, or organization that distributed the plant to you." name="distributor" />
+            <Field label="Stock number" help="Optional vendor, nursery, or collection stock number from the original source." name="stockNumber" />
+            <Field label="Purchase price" help="Optional cost record for your own collection tracking." name="purchasePrice" type="number" />
+            <TextArea label="Notes" help="Initial observation or context to add to the plant's note history at creation." name="note" wrapperClassName="lg:col-span-2" />
             <Button className="justify-self-start lg:col-span-4">Create instance</Button>
           </form>
         </AddPanel>

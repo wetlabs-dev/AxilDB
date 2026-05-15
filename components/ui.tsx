@@ -56,10 +56,35 @@ export function GhostLink({ href, children }: any) {
   )
 }
 
-export function Field({ label, name, type = 'text', required = false, defaultValue, children, wrapperClassName = '', className = '', ...props }: any) {
+export function HelpTooltip({ children }: { children: string }) {
+  return (
+    <details className="group relative inline-block">
+      <summary
+        aria-label="Field help"
+        className="inline-flex h-4 w-4 cursor-pointer list-none items-center justify-center rounded-full border border-[#8fa58f]/50 bg-white/70 text-[0.65rem] font-bold leading-none text-[#2f6b45] shadow-sm transition hover:bg-[#d6dfc9]/70 focus:outline-none focus:ring-2 focus:ring-[#8fa58f]/30"
+      >
+        ?
+      </summary>
+      <span className="absolute left-1/2 top-6 z-30 w-64 -translate-x-1/2 rounded-md border border-stone-200 bg-[#fffaf0] p-3 text-xs font-normal leading-5 text-stone-700 shadow-xl group-open:block">
+        {children}
+      </span>
+    </details>
+  )
+}
+
+function LabelText({ label, help }: { label: string; help?: string }) {
+  return (
+    <span className="flex items-center gap-1.5">
+      <span>{label}</span>
+      {help && <HelpTooltip>{help}</HelpTooltip>}
+    </span>
+  )
+}
+
+export function Field({ label, help, name, type = 'text', required = false, defaultValue, children, wrapperClassName = '', className = '', ...props }: any) {
   return (
     <label className={cn('grid gap-1 text-sm font-medium text-stone-800', wrapperClassName)}>
-      {label}
+      <LabelText label={label} help={help} />
       {children ?? (
         <input
           className={cn(control, className)}
@@ -74,10 +99,10 @@ export function Field({ label, name, type = 'text', required = false, defaultVal
   )
 }
 
-export function TextArea({ label, name, defaultValue, wrapperClassName = '', className = '', ...props }: any) {
+export function TextArea({ label, help, name, defaultValue, wrapperClassName = '', className = '', ...props }: any) {
   return (
     <label className={cn('grid gap-1 text-sm font-medium text-stone-800', wrapperClassName)}>
-      {label}
+      <LabelText label={label} help={help} />
       <textarea
         className={cn(control, 'min-h-20', className)}
         name={name}
@@ -88,10 +113,10 @@ export function TextArea({ label, name, defaultValue, wrapperClassName = '', cla
   )
 }
 
-export function Select({ label, name, defaultValue, children, wrapperClassName = '', className = '', ...props }: any) {
+export function Select({ label, help, name, defaultValue, children, wrapperClassName = '', className = '', ...props }: any) {
   return (
     <label className={cn('grid gap-1 text-sm font-medium text-stone-800', wrapperClassName)}>
-      {label}
+      <LabelText label={label} help={help} />
       <select className={cn(control, className)} name={name} defaultValue={defaultValue} {...props}>
         {children}
       </select>

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { aliasTypeOptions, confidenceOptions } from '@/lib/taxonomy'
-import { Button } from '@/components/ui'
+import { Button, HelpTooltip } from '@/components/ui'
 
 type Alias = {
   id?: string
@@ -18,15 +18,20 @@ const control = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 t
 export function ConfidenceSelect({
   name,
   label = 'Confidence',
+  help = 'How certain this identification or name relationship is. Use confirmed when verified from reliable evidence, probable when likely, and uncertain when the record still needs checking.',
   defaultValue = 'UNCERTAIN',
 }: {
   name: string
   label?: string
+  help?: string
   defaultValue?: string | null
 }) {
   return (
     <label className="grid gap-1 text-sm font-medium text-stone-800">
-      {label}
+      <span className="flex items-center gap-1.5">
+        <span>{label}</span>
+        {help && <HelpTooltip>{help}</HelpTooltip>}
+      </span>
       <select className={control} name={name} defaultValue={defaultValue || 'UNCERTAIN'}>
         {confidenceOptions.map(([value, text]) => (
           <option key={value} value={value}>
@@ -67,7 +72,10 @@ export function PlantAliasFields({
               <input className={control} name="aliasName" defaultValue={alias.name || ''} />
             </label>
             <label className="grid gap-1 text-sm font-medium text-stone-800">
-              Type
+              <span className="flex items-center gap-1.5">
+                <span>Type</span>
+                <HelpTooltip>What kind of alternate name this is, such as a synonym, common name, obsolete taxonomy, trade name, or misapplied label.</HelpTooltip>
+              </span>
               <select className={control} name="aliasType" defaultValue={alias.aliasType || 'SYNONYM'}>
                 {aliasTypeOptions.map(([value, text]) => (
                   <option key={value} value={value}>
@@ -78,7 +86,10 @@ export function PlantAliasFields({
             </label>
             <ConfidenceSelect name="aliasConfidence" defaultValue={alias.confidence || 'UNCERTAIN'} />
             <label className="grid gap-1 text-sm font-medium text-stone-800">
-              Source
+              <span className="flex items-center gap-1.5">
+                <span>Source</span>
+                <HelpTooltip>Where this alternate name came from: a seller label, registry, publication, website, grower note, or your own observation.</HelpTooltip>
+              </span>
               <input className={control} name="aliasSource" defaultValue={alias.source || ''} />
             </label>
             <label className="grid gap-1 text-sm font-medium text-stone-800 lg:col-span-4">

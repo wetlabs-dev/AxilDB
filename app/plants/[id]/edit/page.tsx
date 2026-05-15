@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { updatePlantDefinition, deletePlantDefinition } from '@/app/actions'
-import { Button, Card, Field, TextArea } from '@/components/ui'
+import { Button, Card, Field, HelpTooltip, TextArea } from '@/components/ui'
 import { ConfidenceSelect, PlantAliasFields } from '@/components/PlantAliasFields'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { requireAdminUser } from '@/lib/auth'
@@ -49,19 +49,22 @@ export default async function EditPlant({
           <input type="hidden" name="id" value={id} />
           <Field label="Genus" name="genus" required defaultValue={plant.genus} />
           <Field label="Species" name="species" required defaultValue={plant.species} />
-          <Field label="Hybrid notation" name="hybridNotation" defaultValue={plant.hybridNotation} />
-          <Field label="Cultivar name" name="cultivarName" defaultValue={plant.cultivarName} />
-          <Field label="Authority" name="authority" defaultValue={plant.authority} />
-          <Field label="Cultivar registration number" name="cultivarRegistrationNumber" defaultValue={plant.cultivarRegistrationNumber} />
+          <Field label="Hybrid notation" help="Use for botanical hybrid markers or formula context, such as x, grex, or parentage notation that belongs with the name." name="hybridNotation" defaultValue={plant.hybridNotation} />
+          <Field label="Cultivar name" help="The named cultivated variety, usually written in single quotes, such as 'Morning Glow'. Leave blank for unnamed species or clones." name="cultivarName" defaultValue={plant.cultivarName} />
+          <Field label="Authority" help="The author citation for the scientific name, such as (L.f.) R.Br. It records who validly published the name or combination." name="authority" defaultValue={plant.authority} />
+          <Field label="Cultivar registration number" help="Use when a formal cultivar registry or governing body assigns a registration number to the cultivar." name="cultivarRegistrationNumber" defaultValue={plant.cultivarRegistrationNumber} />
           <ConfidenceSelect name="confidence" defaultValue={plant.confidence} />
-          <Field label="Acquisition label" name="acquisitionLabel" defaultValue={plant.acquisitionLabel} />
-          <Field label="Provisional taxon" name="provisionalTaxon" defaultValue={plant.provisionalTaxon} />
-          <Field label="Wikipedia URL" name="wikipediaUrl" type="url" defaultValue={plant.wikipediaUrl} />
-          <Field label="iNaturalist URL" name="inaturalistUrl" type="url" defaultValue={plant.inaturalistUrl} />
-          <Field label="POWO URL" name="powoUrl" type="url" defaultValue={plant.powoUrl} />
-          <Field label="GBIF URL" name="gbifUrl" type="url" defaultValue={plant.gbifUrl} />
+          <Field label="Acquisition label" help="The name or label the plant arrived with, even if you later determine a different accepted name." name="acquisitionLabel" defaultValue={plant.acquisitionLabel} />
+          <Field label="Provisional taxon" help="A cautious working identification when the accepted name is not settled yet. Useful for 'probably this' or awaiting confirmation." name="provisionalTaxon" defaultValue={plant.provisionalTaxon} />
+          <Field label="Wikipedia URL" help="Optional quick reference link for the species or genus entry." name="wikipediaUrl" type="url" defaultValue={plant.wikipediaUrl} />
+          <Field label="iNaturalist URL" help="Optional link to an iNaturalist taxon page for observations, common names, and community references." name="inaturalistUrl" type="url" defaultValue={plant.inaturalistUrl} />
+          <Field label="POWO URL" help="Optional Plants of the World Online link for accepted names, synonyms, and distribution data." name="powoUrl" type="url" defaultValue={plant.powoUrl} />
+          <Field label="GBIF URL" help="Optional GBIF link for occurrence records, taxonomy backbone data, and biodiversity references." name="gbifUrl" type="url" defaultValue={plant.gbifUrl} />
           <label className="grid gap-1 text-sm font-medium text-stone-800">
-            Governing body
+            <span className="flex items-center gap-1.5">
+              <span>Governing body</span>
+              <HelpTooltip>The registry, society, or authority that governs naming or registration for this plant group, if applicable.</HelpTooltip>
+            </span>
             <select className={selectClass} name="governingBodyId" defaultValue={plant.governingBodyId || ''}>
               <option value="">—</option>
               {bodies.map((body) => (
@@ -120,8 +123,8 @@ export default async function EditPlant({
               <input name="photo" type="file" accept="image/*" className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm" />
             </label>
             <Field label="Caption" name="caption" />
-            <Field label="Source" name="source" placeholder="Wikipedia, Wikimedia Commons, iNaturalist, photographer name..." />
-            <Field label="Source URL" name="sourceUrl" type="url" />
+            <Field label="Source" help="Credit where the image came from, such as Wikimedia Commons, a photographer, a nursery, or your own reference file." name="source" placeholder="Wikipedia, Wikimedia Commons, iNaturalist, photographer name..." />
+            <Field label="Source URL" help="Optional link back to the image source or license page." name="sourceUrl" type="url" />
             <Button className="justify-self-start">Upload type image</Button>
           </form>
         </div>
