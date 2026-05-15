@@ -7,6 +7,16 @@ import sharp from 'sharp'
 
 const MAX_PHOTO_DIMENSION = 2000
 
+function redirectBack(req: Request, back: string) {
+  const forwardedHost = req.headers.get('x-forwarded-host')
+  const forwardedProto = req.headers.get('x-forwarded-proto')
+  const host = forwardedHost || req.headers.get('host') || new URL(req.url).host
+  const proto = forwardedProto || new URL(req.url).protocol.replace(':', '')
+  const base = `${proto}://${host}`
+  const target = new URL(back || '/', base)
+  return NextResponse.redirect(target)
+}
+
 export async function POST(req: Request) {
   const user = await requireCreateUser()
   const form = await req.formData()
@@ -17,7 +27,7 @@ export async function POST(req: Request) {
   const source = String(form.get('source') || '') || undefined
   const sourceUrl = String(form.get('sourceUrl') || '') || undefined
   const back = String(form.get('back') || '/')
-  if (!file || !entityType || !entityId) return NextResponse.redirect(new URL(back, req.url))
+  if (!file || !entityType || !entityId) return redirectBack(req, back)
   const original = Buffer.from(await file.arrayBuffer())
   const bytes = await sharp(original)
     .rotate()
@@ -50,5 +60,5 @@ export async function POST(req: Request) {
       ]))[1]
     : await prisma.photo.create({ data })
   await audit(user, 'CREATE', 'PHOTO', photo.id, `Uploaded photo for ${entityType} ${entityId}`, { filename, originalBytes: original.length, storedBytes: bytes.length, maxDimension: MAX_PHOTO_DIMENSION, source, sourceUrl })
-  return NextResponse.redirect(new URL(back, req.url))
+  return redirectBack(req, back)
 }
