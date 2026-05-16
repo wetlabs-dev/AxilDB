@@ -3,8 +3,8 @@ import { Sidebar } from '@/components/sidebar'
 import { headers } from 'next/headers'
 
 export const metadata = {
-  title: 'AxilDB — Plant Lineage Tracker',
-  description: 'Personal horticultural accession database and plant lineage tracker.',
+  title: 'AxilDB — Botanical Accession System',
+  description: 'Personal horticultural accession database for plant records, propagation history, and lineage tracking.',
 }
 
 export default async function RootLayout({children}:{children:React.ReactNode}) {

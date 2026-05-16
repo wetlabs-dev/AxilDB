@@ -1,6 +1,6 @@
-# AxilDB — Plant Lineage Tracker
+# AxilDB — Botanical Accession System
 
-AxilDB is a personal horticultural collection database for tracking plant definitions, living specimens, propagations, blooms, photos, sport candidates, QR labels, and lineage history.
+AxilDB is a personal horticultural accession database for tracking plant definitions, living specimens, propagations, blooms, photos, sport candidates, QR labels, and lineage history.
 
 It is designed for real collection work: messy taxonomy, acquisition names, aliases, provisional labels, uncertain IDs, photos over time, and plant lines that change as they are propagated.
 

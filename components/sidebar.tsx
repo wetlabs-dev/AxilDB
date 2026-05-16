@@ -90,7 +90,7 @@ export async function Sidebar() {
             <img src="/axildb-logo.png" alt="" className="h-9 w-9 shrink-0 object-contain" />
             <div>
               <h1 className="font-serif text-xl font-semibold leading-none">AxilDB</h1>
-              <p className="text-xs text-stone-600">Plant Lineage</p>
+              <p className="text-xs text-stone-600">Botanical Accession</p>
             </div>
           </Link>
           <details className="relative" data-mobile-menu>
@@ -111,7 +111,7 @@ export async function Sidebar() {
           <img src="/axildb-logo.png" alt="" className="h-11 w-11 shrink-0 object-contain" />
           <div>
             <h1 className="font-serif text-2xl font-semibold leading-none">AxilDB</h1>
-            <p className="text-xs text-stone-600">Plant Lineage</p>
+            <p className="text-xs text-stone-600">Botanical Accession</p>
           </div>
         </Link>
         <div className="min-h-0 flex-1 overflow-auto">{nav}</div>

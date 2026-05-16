@@ -5,14 +5,14 @@ const control = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 t
 const primary = 'rounded-md bg-[#2f6b45] px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-[#255537]'
 
 export function Card({ className = '', children }: any) {
-  return <div className={cn('rounded-lg border border-stone-200/90 bg-[#fffaf0]/82 p-4 shadow-[0_8px_30px_rgba(47,38,24,0.07)] sm:p-5', className)}>{children}</div>
+  return <div className={cn('min-w-0 overflow-hidden rounded-lg border border-stone-200/90 bg-[#fffaf0]/82 p-4 shadow-[0_8px_30px_rgba(47,38,24,0.07)] sm:p-5', className)}>{children}</div>
 }
 
 export function AddPanel({ label, children, className = '' }: any) {
   return (
-    <details className={cn('group rounded-lg border border-stone-200/90 bg-[#fffaf0]/82 shadow-[0_8px_30px_rgba(47,38,24,0.07)]', className)}>
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-4 py-3 text-sm font-semibold text-stone-900 transition hover:bg-[#f5f0e2] sm:px-5">
-        <span>{label}</span>
+    <details className={cn('group min-w-0 overflow-hidden rounded-lg border border-stone-200/90 bg-[#fffaf0]/82 shadow-[0_8px_30px_rgba(47,38,24,0.07)]', className)}>
+      <summary className="flex min-w-0 cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-4 py-3 text-sm font-semibold text-stone-900 transition hover:bg-[#f5f0e2] sm:px-5">
+        <span className="min-w-0 truncate">{label}</span>
         <span className="rounded-md bg-[#2f6b45] px-3 py-1.5 text-xs font-medium text-white group-open:hidden">Open form</span>
         <span className="hidden rounded-md border border-stone-300 bg-white/60 px-3 py-1.5 text-xs font-medium group-open:inline-block">Hide form</span>
       </summary>
@@ -65,7 +65,7 @@ export function HelpTooltip({ children }: { children: string }) {
       >
         ?
       </summary>
-      <span className="absolute left-1/2 top-6 z-30 w-64 -translate-x-1/2 rounded-md border border-stone-200 bg-[#fffaf0] p-3 text-xs font-normal leading-5 text-stone-700 shadow-xl group-open:block">
+      <span className="help-tooltip absolute left-1/2 top-6 z-30 w-64 -translate-x-1/2 rounded-md border border-stone-200 bg-[#fffaf0] p-3 text-xs font-normal leading-5 text-stone-700 shadow-xl group-open:block">
         {children}
       </span>
     </details>
@@ -74,8 +74,8 @@ export function HelpTooltip({ children }: { children: string }) {
 
 function LabelText({ label, help }: { label: string; help?: string }) {
   return (
-    <span className="flex items-center gap-1.5">
-      <span>{label}</span>
+    <span className="flex min-w-0 items-center gap-1.5">
+      <span className="min-w-0 truncate">{label}</span>
       {help && <HelpTooltip>{help}</HelpTooltip>}
     </span>
   )
@@ -83,11 +83,11 @@ function LabelText({ label, help }: { label: string; help?: string }) {
 
 export function Field({ label, help, name, type = 'text', required = false, defaultValue, children, wrapperClassName = '', className = '', ...props }: any) {
   return (
-    <label className={cn('grid gap-1 text-sm font-medium text-stone-800', wrapperClassName)}>
+    <label className={cn('grid min-w-0 gap-1 text-sm font-medium text-stone-800', wrapperClassName)}>
       <LabelText label={label} help={help} />
       {children ?? (
         <input
-          className={cn(control, className)}
+          className={cn(control, 'min-w-0 max-w-full', className)}
           name={name}
           type={type}
           required={required}
@@ -101,10 +101,10 @@ export function Field({ label, help, name, type = 'text', required = false, defa
 
 export function TextArea({ label, help, name, defaultValue, wrapperClassName = '', className = '', ...props }: any) {
   return (
-    <label className={cn('grid gap-1 text-sm font-medium text-stone-800', wrapperClassName)}>
+    <label className={cn('grid min-w-0 gap-1 text-sm font-medium text-stone-800', wrapperClassName)}>
       <LabelText label={label} help={help} />
       <textarea
-        className={cn(control, 'min-h-20', className)}
+        className={cn(control, 'min-h-20 min-w-0 max-w-full', className)}
         name={name}
         defaultValue={defaultValue ?? ''}
         {...props}
@@ -115,9 +115,9 @@ export function TextArea({ label, help, name, defaultValue, wrapperClassName = '
 
 export function Select({ label, help, name, defaultValue, children, wrapperClassName = '', className = '', ...props }: any) {
   return (
-    <label className={cn('grid gap-1 text-sm font-medium text-stone-800', wrapperClassName)}>
+    <label className={cn('grid min-w-0 gap-1 text-sm font-medium text-stone-800', wrapperClassName)}>
       <LabelText label={label} help={help} />
-      <select className={cn(control, className)} name={name} defaultValue={defaultValue} {...props}>
+      <select className={cn(control, 'min-w-0 max-w-full', className)} name={name} defaultValue={defaultValue} {...props}>
         {children}
       </select>
     </label>

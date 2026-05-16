@@ -18,7 +18,7 @@ const githubUrl = process.env.NEXT_PUBLIC_GITHUB_URL || 'https://github.com/wetl
 const donateUrl = process.env.NEXT_PUBLIC_DONATE_URL || 'https://ko-fi.com/wetlabs'
 
 const features = [
-  ['Plant lineage', 'Trace parent plants, generated propagation IDs, sport candidates, and stable cultivar lines without losing the story.', GitBranch],
+  ['Accession records', 'Trace living specimens, generated plant IDs, source details, propagation context, and stable cultivar lines without losing the story.', GitBranch],
   ['Taxonomy confidence', 'Record accepted names, provisional labels, acquisition names, aliases, sources, and uncertainty.', BadgeCheck],
   ['Photo-backed records', 'Choose cover photos for specimen cards, type photos for definitions, and keep uploads space-conscious.', Camera],
   ['Bloom history', 'Log bloom starts, peaks, closures, flower counts, first blooms, notes, and bloom photos over time.', Flower2],
@@ -66,7 +66,7 @@ export default function SplashPage() {
         <div className="mx-auto grid max-w-7xl gap-10 px-5 py-16 sm:px-6 lg:grid-cols-[1fr_1.05fr] lg:px-8 lg:py-24">
           <div className="max-w-3xl">
             <p className="mb-4 inline-flex rounded-md border border-[#8fa58f]/40 bg-white/60 px-3 py-1 text-sm font-medium text-[#2f6b45]">
-              Plant Lineage and Collection Database
+              Botanical Accession System
             </p>
             <h1 className="text-5xl leading-[1.02] sm:text-6xl lg:text-7xl">A living database for plants with complicated names.</h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-stone-700">
@@ -148,7 +148,7 @@ export default function SplashPage() {
       <section className="border-y border-stone-200/80 bg-white/45">
         <div className="mx-auto grid max-w-7xl gap-8 px-5 py-16 sm:px-6 lg:grid-cols-[.85fr_1.15fr] lg:px-8">
           <div>
-            <h2 className="text-3xl">From label to lineage</h2>
+            <h2 className="text-3xl">From label to accession</h2>
             <p className="mt-3 text-stone-700">
               Keep the seller&apos;s label, your current interpretation, photos, notes, sport evidence, and propagation history together.
             </p>
@@ -220,7 +220,7 @@ export default function SplashPage() {
               <img src="/wetlabs-logo.png" alt="WetLabs" className="h-full w-full object-contain" />
             </div>
             <div>
-              <p>AxilDB — Plant Lineage Tracker</p>
+              <p>AxilDB — Botanical Accession System</p>
               <p className="text-xs">Made with love by WetLabs</p>
             </div>
           </div>
