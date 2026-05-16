@@ -25,6 +25,7 @@ It is designed for real collection work: messy taxonomy, acquisition names, alia
 - Collection search across definitions, instances, aliases, notes, source metadata, and plant IDs.
 - Archive/restore workflow for plants that leave the active collection.
 - Local user accounts with admin/logger roles.
+- SMTP-ready email foundation with welcome/verification emails, secure single-use tokens, branded HTML/plain-text templates, and user email preferences.
 - Read-only browsing for unauthenticated visitors.
 - Admin-only edit/delete tools, users page, governing bodies page, and audit log.
 - Confirmation modals for destructive delete actions.
@@ -146,6 +147,9 @@ Core models:
 - `Note`: freeform notes attached to entities.
 - `SportStabilityRecord`: evidence for sport-line stability.
 - `User`, `Session`, and `AuditLog`: local auth, sessions, and mutation history.
+- `EmailToken`: hashed single-use tokens for email verification, password resets, and magic links.
+- `EmailPreference`: user-configurable email categories, timezone, and quiet-hours settings.
+- `Reminder` and `ReminderDelivery`: reminder scheduling metadata and delivery history.
 - `GoverningBody`: registration or standards organizations.
 
 The schema intentionally uses string fields rather than Prisma enums for many domain states. This keeps taxonomy, sport states, propagation methods, and future horticultural vocabulary easier to evolve.
@@ -174,6 +178,46 @@ Authenticated mutations write audit entries with:
 - timestamp
 
 The audit log is visible to admin users.
+
+## Email
+
+AxilDB uses provider-agnostic SMTP configuration through Nodemailer. In development, email delivery defaults to log mode so generated messages appear in app logs instead of being sent.
+
+Relevant environment variables:
+
+```text
+EMAIL_DELIVERY_MODE=log
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=
+SMTP_PASSWORD=
+SMTP_FROM="AxilDB <no-reply@axildb.com>"
+SMTP_REPLY_TO=
+```
+
+Set `EMAIL_DELIVERY_MODE=smtp` and provide SMTP credentials to send real email.
+
+Recommended production provider: Amazon SES. It fits well with the AWS/Lightsail deployment, is intended for application and transactional email, supports SMTP credentials, and avoids tying AxilDB to a personal mailbox. Gmail SMTP can work for small testing, especially with Google Workspace and app passwords, but it is less ideal as the long-term sender for app-auth and reminder emails.
+
+Current email foundation:
+
+- Welcome email for newly created users.
+- Email verification token generation and verification page.
+- Secure random single-use tokens stored only as SHA-256 hashes.
+- Token purpose, expiration, and used-at tracking.
+- User email preferences on the account page.
+- Quiet botanical branded HTML and plain-text templates.
+- SMTP/log delivery abstraction.
+
+Planned next email steps:
+
+- Password reset request and completion screens.
+- Magic login link request and consumption screens.
+- Reminder creation UI tied to plant instances and bloom events.
+- Scheduled reminder sending job.
+- Reminder delivery history UI.
+- Basic auth-email anti-abuse protections such as cooldowns and request throttling.
 
 ## Licensing and Branding
 

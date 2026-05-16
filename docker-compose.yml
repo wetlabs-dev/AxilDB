@@ -48,6 +48,14 @@ services:
       NEXT_PUBLIC_MARKETING_URL: https://axildb.com
       NEXT_PUBLIC_GITHUB_URL: https://github.com/wetlabs-dev/AxilDB
       NEXT_PUBLIC_DONATE_URL: https://ko-fi.com/wetlabs
+      EMAIL_DELIVERY_MODE: ${EMAIL_DELIVERY_MODE:-log}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-AxilDB <no-reply@axildb.com>}
+      SMTP_REPLY_TO: ${SMTP_REPLY_TO:-}
       PORT: 3000
     expose:
       - "3000"

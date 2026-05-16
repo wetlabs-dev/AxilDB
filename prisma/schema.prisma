@@ -17,16 +17,21 @@ model GoverningBody {
 }
 
 model User {
-  id           String    @id @default(cuid())
-  email        String    @unique
-  passwordHash String
-  role         String    @default("LOGGER")
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  sessions     Session[]
-  auditLogs    AuditLog[]
+  id              String           @id @default(cuid())
+  email           String           @unique
+  emailVerifiedAt DateTime?
+  passwordHash    String
+  role            String           @default("LOGGER")
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  sessions        Session[]
+  auditLogs       AuditLog[]
+  emailTokens     EmailToken[]
+  emailPreference EmailPreference?
+  reminders       Reminder[]
 
   @@index([role])
+  @@index([emailVerifiedAt])
 }
 
 model Session {
@@ -59,6 +64,44 @@ model AuditLog {
   @@index([userId])
   @@index([entityType, entityId])
   @@index([createdAt])
+}
+
+model EmailToken {
+  id           String    @id @default(cuid())
+  userId       String?
+  email        String
+  purpose      String
+  tokenHash    String    @unique
+  expiresAt    DateTime
+  usedAt       DateTime?
+  consumedByIp String?
+  createdAt    DateTime  @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([email])
+  @@index([purpose])
+  @@index([expiresAt])
+  @@index([usedAt])
+}
+
+model EmailPreference {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  timezone              String   @default("America/New_York")
+  authSecurityEmails    Boolean  @default(true)
+  welcomeEmails         Boolean  @default(true)
+  generalReminders      Boolean  @default(true)
+  plantCheckInReminders Boolean  @default(true)
+  bloomCycleReminders   Boolean  @default(true)
+  propagationFollowUps  Boolean  @default(true)
+  quietHoursStart       String?
+  quietHoursEnd         String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model PlantDefinition {
@@ -245,4 +288,52 @@ model SportStabilityRecord {
 
   @@index([plantInstanceId])
   @@index([propagationEventId])
+}
+
+model Reminder {
+  id          String    @id @default(cuid())
+  userId      String
+  title       String
+  body        String?
+  category    String    @default("GENERAL")
+  entityType  String?
+  entityId    String?
+  dueAt       DateTime
+  rrule       String?
+  lastSentAt  DateTime?
+  nextSendAt  DateTime?
+  completedAt DateTime?
+  pausedAt    DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries ReminderDelivery[]
+
+  @@index([userId])
+  @@index([category])
+  @@index([entityType, entityId])
+  @@index([nextSendAt])
+  @@index([dueAt])
+}
+
+model ReminderDelivery {
+  id           String   @id @default(cuid())
+  reminderId   String
+  userId       String?
+  recipient    String
+  subject      String
+  status       String   @default("PENDING")
+  provider     String?
+  providerId   String?
+  error        String?
+  sentAt       DateTime?
+  createdAt    DateTime @default(now())
+
+  reminder Reminder @relation(fields: [reminderId], references: [id], onDelete: Cascade)
+
+  @@index([reminderId])
+  @@index([userId])
+  @@index([status])
+  @@index([sentAt])
 }

@@ -1,4 +1,4 @@
-import { createUser, deleteUser, updateUser } from '@/app/auth-actions'
+import { createUser, deleteUser, resendVerificationEmail, updateUser } from '@/app/auth-actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { AddPanel, Card, Field, Button } from '@/components/ui'
 import { requireAdminUser } from '@/lib/auth'
@@ -30,6 +30,15 @@ export default async function Users() {
               <label className="grid gap-1 text-sm font-medium">Role<select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="role" defaultValue={user.role}><option>LOGGER</option><option>ADMIN</option></select></label>
               <Button className="justify-self-start md:col-span-3">Save user</Button>
             </form>
+            <div className="mt-3 text-xs text-stone-600">
+              Email {user.emailVerifiedAt ? `verified ${user.emailVerifiedAt.toLocaleDateString()}` : 'not verified'}
+            </div>
+            {!user.emailVerifiedAt && (
+              <form action={resendVerificationEmail} className="mt-3">
+                <input type="hidden" name="id" value={user.id} />
+                <Button className="px-3 py-1.5 text-xs">Send verification email</Button>
+              </form>
+            )}
             {user.id !== currentUser.id && (
               <form action={deleteUser} className="mt-4 border-t pt-4">
                 <input type="hidden" name="id" value={user.id} />
