@@ -1,23 +1,27 @@
 import QRCode from 'qrcode'
-import { confirmTwoFactorSetup, resetTwoFactorSetup } from '@/app/auth-actions'
+import { confirmTwoFactorSetup, dismissRecoveryCodes, regenerateRecoveryCodes, resetTwoFactorSetup } from '@/app/auth-actions'
 import { Button, Card, Field } from '@/components/ui'
 import { requireUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { decryptTotpSecret, encryptTotpSecret, generateTotpSecret, totpProvisioningUri } from '@/lib/totp'
+import { decryptRecoveryCodes, decryptTotpSecret, encryptTotpSecret, generateTotpSecret, totpProvisioningUri } from '@/lib/totp'
 
 export default async function AccountSecurity({
   searchParams,
 }: {
-  searchParams: Promise<{ setup?: string; twoFactor?: string }>
+  searchParams: Promise<{ setup?: string; twoFactor?: string; recoveryCodes?: string }>
 }) {
   const user = await requireUser()
   const sp = await searchParams
-  let setup = await prisma.userTwoFactor.findUnique({ where: { userId: user.id } })
+  let setup = await prisma.userTwoFactor.findUnique({
+    where: { userId: user.id },
+    include: { recoveryCodes: { where: { usedAt: null }, select: { id: true } } },
+  })
 
   if (!setup) {
     const secret = generateTotpSecret()
     setup = await prisma.userTwoFactor.create({
       data: { userId: user.id, secretCiphertext: encryptTotpSecret(secret) },
+      include: { recoveryCodes: { where: { usedAt: null }, select: { id: true } } },
     })
   }
 
@@ -35,6 +39,8 @@ export default async function AccountSecurity({
   }
   const secret = decryptTotpSecret(setup.secretCiphertext)
   const qrCode = enabled ? null : await QRCode.toDataURL(totpProvisioningUri(user.email, secret), { margin: 1, width: 240 })
+  const recoveryCodes = decryptRecoveryCodes(setup.recoveryCodesCiphertext)
+  const unusedRecoveryCount = setup.recoveryCodes.length
 
   return (
     <div className="space-y-6">
@@ -63,12 +69,18 @@ export default async function AccountSecurity({
           Your two-factor setup was reset. Scan the new QR code to enable it again.
         </p>
       )}
+      {sp.recoveryCodes === 'generated' && (
+        <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900">
+          New recovery codes generated. Save them somewhere safe before dismissing them.
+        </p>
+      )}
 
       <Card className="max-w-3xl">
         <h3 className="font-bold">Authenticator app</h3>
         {enabled ? (
           <div className="mt-3 grid gap-4 text-sm text-stone-700">
             <p>Two-factor authentication is active for {user.email}. Admin sign-ins now require a verification code.</p>
+            <p>{unusedRecoveryCount} unused recovery code{unusedRecoveryCount === 1 ? '' : 's'} remaining.</p>
             <form action={resetTwoFactorSetup}>
               <Button className="bg-amber-700 hover:bg-amber-800">Reset QR setup</Button>
             </form>
@@ -107,6 +119,39 @@ export default async function AccountSecurity({
           </div>
         )}
       </Card>
+
+      {enabled && (
+        <Card className="max-w-3xl">
+          <h3 className="font-bold">Recovery codes</h3>
+          <p className="mt-1 text-sm text-stone-600">
+            Recovery codes are one-time backup codes for signing in if your authenticator is unavailable.
+          </p>
+          {recoveryCodes.length > 0 ? (
+            <div className="mt-4 grid gap-4">
+              <div className="grid gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                <p className="text-sm font-medium text-amber-950">Save these codes now. They will not be shown after you dismiss this box.</p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {recoveryCodes.map((recoveryCode) => (
+                    <code key={recoveryCode} className="rounded-md border border-amber-200 bg-white/80 px-3 py-2 text-sm tracking-[0.12em] text-stone-900">
+                      {recoveryCode}
+                    </code>
+                  ))}
+                </div>
+              </div>
+              <form action={dismissRecoveryCodes}>
+                <Button>I've saved these recovery codes</Button>
+              </form>
+            </div>
+          ) : (
+            <div className="mt-4 grid gap-3 text-sm text-stone-700">
+              <p>{unusedRecoveryCount} unused recovery code{unusedRecoveryCount === 1 ? '' : 's'} remaining.</p>
+              <form action={regenerateRecoveryCodes}>
+                <Button className="justify-self-start">Generate new recovery codes</Button>
+              </form>
+            </div>
+          )}
+        </Card>
+      )}
     </div>
   )
 }

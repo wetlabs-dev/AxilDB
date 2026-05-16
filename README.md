@@ -25,7 +25,7 @@ It is designed for real collection work: messy taxonomy, acquisition names, alia
 - Collection search across definitions, instances, aliases, notes, source metadata, and plant IDs.
 - Archive/restore workflow for plants that leave the active collection.
 - Local user accounts with admin/logger roles.
-- QR-code two-factor authentication for admin users, compatible with Apple Passwords and standard authenticator apps.
+- QR-code two-factor authentication with one-time recovery codes, compatible with Apple Passwords and standard authenticator apps.
 - SMTP-ready email foundation with welcome/verification emails, secure single-use tokens, branded HTML/plain-text templates, and user email preferences.
 - User reminders for general tasks, plant check-ins, bloom follow-ups, and propagation follow-ups, with one-time or recurring schedules.
 - Reminder delivery history and a lightweight scheduled reminder worker.
@@ -152,7 +152,7 @@ Core models:
 - `Note`: freeform notes attached to entities.
 - `SportStabilityRecord`: evidence for sport-line stability.
 - `User`, `Session`, and `AuditLog`: local auth, sessions, and mutation history.
-- `UserTwoFactor` and `TwoFactorChallenge`: encrypted authenticator secrets and short-lived admin login challenges.
+- `UserTwoFactor`, `TwoFactorChallenge`, and `TwoFactorRecoveryCode`: encrypted authenticator secrets, short-lived login challenges, and one-time recovery-code hashes.
 - `EmailToken`: hashed single-use tokens for email verification, password resets, and magic links.
 - `EmailPreference`: user-configurable email categories, timezone, and quiet-hours settings.
 - `Reminder` and `ReminderDelivery`: reminder scheduling metadata and delivery history.
@@ -276,7 +276,7 @@ Once enabled, admin sign-ins require:
 1. Email/password or magic-link authentication.
 2. A current 6-digit rotating verification code.
 
-Logger users are not required to use 2FA. Recovery codes are not implemented yet, so keep at least one authenticated admin session available while testing, and avoid resetting the QR setup unless you can immediately scan the replacement code.
+Logger users are not required to use 2FA, but they can enable it from **Account security**. When 2FA is enabled, AxilDB generates one-time recovery codes. Save them somewhere safe; after you dismiss the displayed codes, AxilDB keeps only hashed versions for verification. Generating a new recovery-code batch invalidates the old batch.
 
 Planned next email steps:
 

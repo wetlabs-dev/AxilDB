@@ -9,6 +9,21 @@ export function generateTotpSecret() {
   return base32Encode(randomBytes(20))
 }
 
+export function generateRecoveryCodes(count = 10) {
+  return Array.from({ length: count }, () => {
+    const raw = randomBytes(8).toString('hex').toUpperCase()
+    return `${raw.slice(0, 4)}-${raw.slice(4, 8)}-${raw.slice(8, 12)}-${raw.slice(12, 16)}`
+  })
+}
+
+export function normalizeRecoveryCode(code: string) {
+  return code.toUpperCase().replace(/[^A-Z0-9]/g, '')
+}
+
+export function hashRecoveryCode(code: string) {
+  return createHash('sha256').update(normalizeRecoveryCode(code)).digest('hex')
+}
+
 export function totpProvisioningUri(email: string, secret: string) {
   const label = `${issuer}:${email}`
   const params = new URLSearchParams({
@@ -33,16 +48,33 @@ export function verifyTotp(secret: string, code: string, window = 1) {
 }
 
 export function encryptTotpSecret(secret: string) {
+  return encryptText(secret)
+}
+
+export function decryptTotpSecret(ciphertext: string) {
+  return decryptText(ciphertext)
+}
+
+export function encryptRecoveryCodes(codes: string[]) {
+  return encryptText(JSON.stringify(codes))
+}
+
+export function decryptRecoveryCodes(ciphertext: string | null | undefined) {
+  if (!ciphertext) return []
+  return JSON.parse(decryptText(ciphertext)) as string[]
+}
+
+function encryptText(value: string) {
   const iv = randomBytes(12)
   const cipher = createCipheriv('aes-256-gcm', encryptionKey(), iv)
-  const encrypted = Buffer.concat([cipher.update(secret, 'utf8'), cipher.final()])
+  const encrypted = Buffer.concat([cipher.update(value, 'utf8'), cipher.final()])
   const tag = cipher.getAuthTag()
   return [iv, tag, encrypted].map((part) => part.toString('base64url')).join('.')
 }
 
-export function decryptTotpSecret(ciphertext: string) {
+function decryptText(ciphertext: string) {
   const [ivRaw, tagRaw, encryptedRaw] = ciphertext.split('.')
-  if (!ivRaw || !tagRaw || !encryptedRaw) throw new Error('Invalid two-factor secret payload.')
+  if (!ivRaw || !tagRaw || !encryptedRaw) throw new Error('Invalid encrypted two-factor payload.')
 
   const decipher = createDecipheriv('aes-256-gcm', encryptionKey(), Buffer.from(ivRaw, 'base64url'))
   decipher.setAuthTag(Buffer.from(tagRaw, 'base64url'))

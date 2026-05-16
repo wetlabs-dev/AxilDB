@@ -6,7 +6,7 @@ import { sendEmail, appUrl } from '@/lib/email'
 import { consumeEmailToken, createEmailToken, emailTokenPurposes, expireOutstandingEmailTokens, type EmailTokenPurpose } from '@/lib/email-tokens'
 import { magicLoginEmail, passwordResetEmail, welcomeEmail } from '@/lib/email-templates'
 import { prisma } from '@/lib/prisma'
-import { decryptTotpSecret, encryptTotpSecret, generateTotpSecret, verifyTotp } from '@/lib/totp'
+import { decryptTotpSecret, encryptRecoveryCodes, encryptTotpSecret, generateRecoveryCodes, generateTotpSecret, hashRecoveryCode, verifyTotp } from '@/lib/totp'
 
 const val = (fd: FormData, key: string) => String(fd.get(key) || '').trim()
 
@@ -107,7 +107,24 @@ export async function verifyTwoFactorLogin(fd: FormData) {
   if (!challenge?.user.twoFactor?.enabledAt) redirect('/login?twoFactor=expired')
 
   const secret = decryptTotpSecret(challenge.user.twoFactor.secretCiphertext)
-  if (!verifyTotp(secret, code)) redirect('/two-factor?error=1')
+  let method: 'totp' | 'recovery_code' = 'totp'
+  if (!verifyTotp(secret, code)) {
+    const recoveryCode = await prisma.twoFactorRecoveryCode.findFirst({
+      where: {
+        userTwoFactorId: challenge.user.twoFactor.id,
+        codeHash: hashRecoveryCode(code),
+        usedAt: null,
+      },
+    })
+
+    if (!recoveryCode) redirect('/two-factor?error=1')
+
+    await prisma.twoFactorRecoveryCode.update({
+      where: { id: recoveryCode.id },
+      data: { usedAt: new Date() },
+    })
+    method = 'recovery_code'
+  }
 
   await consumeTwoFactorChallenge(challenge.id)
   await createSession(challenge.user.id, { twoFactorVerifiedAt: new Date() })
@@ -117,6 +134,7 @@ export async function verifyTwoFactorLogin(fd: FormData) {
     'USER',
     challenge.user.id,
     `${challenge.user.email} signed in with two-factor authentication`,
+    { method },
   )
   redirect('/')
 }
@@ -131,9 +149,24 @@ export async function confirmTwoFactorSetup(fd: FormData) {
   const secret = decryptTotpSecret(setup.secretCiphertext)
   if (!verifyTotp(secret, code)) redirect('/account/security?twoFactor=invalid')
 
-  await prisma.userTwoFactor.update({
-    where: { userId: user.id },
-    data: { enabledAt: new Date() },
+  const recoveryCodes = generateRecoveryCodes()
+  await prisma.$transaction(async (tx) => {
+    await tx.twoFactorRecoveryCode.deleteMany({ where: { userTwoFactorId: setup.id } })
+    await tx.userTwoFactor.update({
+      where: { userId: user.id },
+      data: {
+        enabledAt: new Date(),
+        recoveryCodesCiphertext: encryptRecoveryCodes(recoveryCodes),
+        recoveryCodesGeneratedAt: new Date(),
+        recoveryCodesViewedAt: null,
+      },
+    })
+    await tx.twoFactorRecoveryCode.createMany({
+      data: recoveryCodes.map((recoveryCode) => ({
+        userTwoFactorId: setup.id,
+        codeHash: hashRecoveryCode(recoveryCode),
+      })),
+    })
   })
   await markCurrentSessionTwoFactorVerified()
   await audit(user, 'ENABLE_2FA', 'USER', user.id, `${user.email} enabled two-factor authentication`)
@@ -149,10 +182,56 @@ export async function resetTwoFactorSetup() {
   await prisma.userTwoFactor.upsert({
     where: { userId: user.id },
     create: { userId: user.id, secretCiphertext: encryptTotpSecret(secret) },
-    update: { secretCiphertext: encryptTotpSecret(secret), enabledAt: null },
+    update: {
+      secretCiphertext: encryptTotpSecret(secret),
+      enabledAt: null,
+      recoveryCodesCiphertext: null,
+      recoveryCodesGeneratedAt: null,
+      recoveryCodesViewedAt: null,
+      recoveryCodes: { deleteMany: {} },
+    },
   })
   await audit(user, 'RESET_2FA_SETUP', 'USER', user.id, `${user.email} reset two-factor setup`)
   redirect('/account/security?twoFactor=reset')
+}
+
+export async function regenerateRecoveryCodes() {
+  const user = await requireUser()
+  const setup = await prisma.userTwoFactor.findUnique({ where: { userId: user.id } })
+  if (!setup?.enabledAt) redirect('/account/security?twoFactor=missing')
+  if (user.role === 'ADMIN' && !user.twoFactorVerifiedAt) redirect('/login?twoFactor=expired')
+
+  const recoveryCodes = generateRecoveryCodes()
+  await prisma.$transaction(async (tx) => {
+    await tx.twoFactorRecoveryCode.deleteMany({ where: { userTwoFactorId: setup.id } })
+    await tx.userTwoFactor.update({
+      where: { userId: user.id },
+      data: {
+        recoveryCodesCiphertext: encryptRecoveryCodes(recoveryCodes),
+        recoveryCodesGeneratedAt: new Date(),
+        recoveryCodesViewedAt: null,
+      },
+    })
+    await tx.twoFactorRecoveryCode.createMany({
+      data: recoveryCodes.map((recoveryCode) => ({
+        userTwoFactorId: setup.id,
+        codeHash: hashRecoveryCode(recoveryCode),
+      })),
+    })
+  })
+
+  await audit(user, 'REGENERATE_2FA_RECOVERY_CODES', 'USER', user.id, `${user.email} regenerated two-factor recovery codes`)
+  redirect('/account/security?recoveryCodes=generated')
+}
+
+export async function dismissRecoveryCodes() {
+  const user = await requireUser()
+  await prisma.userTwoFactor.updateMany({
+    where: { userId: user.id },
+    data: { recoveryCodesCiphertext: null, recoveryCodesViewedAt: new Date() },
+  })
+  await audit(user, 'DISMISS_2FA_RECOVERY_CODES', 'USER', user.id, `${user.email} confirmed two-factor recovery codes were saved`)
+  redirect('/account/security')
 }
 
 export async function logout() {
