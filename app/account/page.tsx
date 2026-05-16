@@ -1,4 +1,4 @@
-import { updateAccount, updateEmailPreferences } from '@/app/auth-actions'
+import { resendOwnVerificationEmail, updateAccount, updateEmailPreferences } from '@/app/auth-actions'
 import { Card, Field, Button } from '@/components/ui'
 import { requireUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -15,8 +15,13 @@ export default async function Account() {
     <div className="space-y-6">
       <h2 className="text-3xl font-bold">Account</h2>
       <Card>
-        <div className="mb-4 rounded-lg border border-stone-200 bg-white/50 p-3 text-sm text-stone-700">
-          Email status: {account?.emailVerifiedAt ? `verified ${account.emailVerifiedAt.toLocaleDateString()}` : 'not verified yet'}
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-stone-200 bg-white/50 p-3 text-sm text-stone-700">
+          <span>Email status: {account?.emailVerifiedAt ? `verified ${account.emailVerifiedAt.toLocaleDateString()}` : 'not verified yet'}</span>
+          {!account?.emailVerifiedAt && (
+            <form action={resendOwnVerificationEmail}>
+              <Button className="px-3 py-1.5 text-xs">Resend verification</Button>
+            </form>
+          )}
         </div>
         <form action={updateAccount} className="grid max-w-2xl gap-x-3 gap-y-2 md:grid-cols-2">
           <Field label="Email" name="email" type="email" required defaultValue={user.email} />

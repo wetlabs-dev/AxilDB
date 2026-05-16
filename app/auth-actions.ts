@@ -34,6 +34,21 @@ async function sendWelcomeVerificationEmail(user: { id: string; email: string })
   })
 }
 
+async function sendVerificationAndAudit(
+  actor: { id: string; email: string; role: string },
+  user: { id: string; email: string },
+  destination: string,
+) {
+  try {
+    await sendWelcomeVerificationEmail(user)
+    await audit(actor, 'SEND', 'EMAIL', user.id, `Sent verification email to ${user.email}`, { email: user.email, template: 'welcome' })
+  } catch (error) {
+    await audit(actor, 'ERROR', 'EMAIL', user.id, `Failed to send verification email to ${user.email}`, { email: user.email, error: String(error) })
+  }
+
+  redirect(destination)
+}
+
 export async function login(fd: FormData) {
   const email = val(fd, 'email').toLowerCase()
   const password = val(fd, 'password')
@@ -123,15 +138,14 @@ export async function resendVerificationEmail(fd: FormData) {
   const actor = await requireAdminUser()
   const id = val(fd, 'id')
   const user = await prisma.user.findUniqueOrThrow({ where: { id } })
+  await sendVerificationAndAudit(actor, user, '/users')
+}
 
-  try {
-    await sendWelcomeVerificationEmail(user)
-    await audit(actor, 'SEND', 'EMAIL', user.id, `Sent verification email to ${user.email}`, { email: user.email, template: 'welcome' })
-  } catch (error) {
-    await audit(actor, 'ERROR', 'EMAIL', user.id, `Failed to send verification email to ${user.email}`, { email: user.email, error: String(error) })
-  }
-
-  redirect('/users')
+export async function resendOwnVerificationEmail() {
+  const actor = await requireUser()
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: actor.id } })
+  if (user.emailVerifiedAt) redirect('/account')
+  await sendVerificationAndAudit(actor, user, '/account')
 }
 
 export async function updateEmailPreferences(fd: FormData) {
