@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { aliasTypeOptions, confidenceOptions } from '@/lib/taxonomy'
-import { Button, HelpTooltip } from '@/components/ui'
+import { Button, HelpTooltip, SuggestionDatalist } from '@/components/ui'
 
 type Alias = {
   id?: string
@@ -46,9 +46,11 @@ export function ConfidenceSelect({
 export function PlantAliasFields({
   aliases = [],
   submitLabel = 'Save changes',
+  sourceSuggestions = [],
 }: {
   aliases?: Alias[]
   submitLabel?: string
+  sourceSuggestions?: string[]
 }) {
   const [rows, setRows] = useState<Alias[]>(aliases.length > 0 ? aliases : [{}])
 
@@ -58,6 +60,7 @@ export function PlantAliasFields({
 
   return (
     <div className="lg:col-span-4">
+      <SuggestionDatalist id="alias-source-suggestions" suggestions={sourceSuggestions} />
       <div className="mb-2">
         <h3 className="font-serif text-lg font-semibold">Aliases and alternate names</h3>
         <p className="text-sm text-stone-600">
@@ -90,7 +93,7 @@ export function PlantAliasFields({
                 <span>Source</span>
                 <HelpTooltip>Where this alternate name came from: a seller label, registry, publication, website, grower note, or your own observation.</HelpTooltip>
               </span>
-              <input className={control} name="aliasSource" defaultValue={alias.source || ''} />
+              <input className={control} name="aliasSource" defaultValue={alias.source || ''} list="alias-source-suggestions" />
             </label>
             <label className="grid gap-1 text-sm font-medium text-stone-800 lg:col-span-4">
               Notes

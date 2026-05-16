@@ -1,10 +1,11 @@
 import { prisma } from '@/lib/prisma'
 import { updatePlantDefinition, deletePlantDefinition } from '@/app/actions'
-import { Button, Card, Field, HelpTooltip, TextArea } from '@/components/ui'
+import { Button, Card, Field, HelpTooltip, SuggestionDatalist, TextArea } from '@/components/ui'
 import { ConfidenceSelect, PlantAliasFields } from '@/components/PlantAliasFields'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { requireAdminUser } from '@/lib/auth'
 import { PlantImage } from '@/components/PlantImage'
+import { rankedSuggestions } from '@/lib/suggestions'
 
 const selectClass = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
 
@@ -25,7 +26,7 @@ export default async function EditPlant({
   await requireAdminUser()
   const { id } = await params
   const { uploadError } = await searchParams
-  const [plant, bodies, typePhotos] = await Promise.all([
+  const [plant, bodies, typePhotos, definitionSuggestionRows] = await Promise.all([
     prisma.plantDefinition.findUniqueOrThrow({
       where: { id },
       include: {
@@ -38,24 +39,53 @@ export default async function EditPlant({
       where: { entityType: 'PLANT_DEFINITION', entityId: id },
       orderBy: [{ isType: 'desc' }, { createdAt: 'desc' }],
     }),
+    prisma.plantDefinition.findMany({
+      select: {
+        genus: true,
+        species: true,
+        hybridNotation: true,
+        cultivarName: true,
+        authority: true,
+        acquisitionLabel: true,
+        provisionalTaxon: true,
+        aliases: { select: { source: true } },
+      },
+    }),
   ])
   const currentTypePhoto = typePhotos[0]
+  const definitionSuggestions = {
+    genus: rankedSuggestions(definitionSuggestionRows.map((definition) => definition.genus)),
+    species: rankedSuggestions(definitionSuggestionRows.map((definition) => definition.species)),
+    hybridNotation: rankedSuggestions(definitionSuggestionRows.map((definition) => definition.hybridNotation)),
+    cultivarName: rankedSuggestions(definitionSuggestionRows.map((definition) => definition.cultivarName)),
+    authority: rankedSuggestions(definitionSuggestionRows.map((definition) => definition.authority)),
+    acquisitionLabel: rankedSuggestions(definitionSuggestionRows.map((definition) => definition.acquisitionLabel)),
+    provisionalTaxon: rankedSuggestions(definitionSuggestionRows.map((definition) => definition.provisionalTaxon)),
+    aliasSource: rankedSuggestions(definitionSuggestionRows.flatMap((definition) => definition.aliases.map((alias) => alias.source))),
+  }
 
   return (
     <div className="space-y-6">
       <h2 className="text-3xl font-bold">Edit Plant Definition</h2>
       <Card>
         <form action={updatePlantDefinition} className="grid max-w-6xl gap-x-3 gap-y-2 lg:grid-cols-4">
+          <SuggestionDatalist id="definition-genus-suggestions" suggestions={definitionSuggestions.genus} />
+          <SuggestionDatalist id="definition-species-suggestions" suggestions={definitionSuggestions.species} />
+          <SuggestionDatalist id="definition-hybrid-notation-suggestions" suggestions={definitionSuggestions.hybridNotation} />
+          <SuggestionDatalist id="definition-cultivar-name-suggestions" suggestions={definitionSuggestions.cultivarName} />
+          <SuggestionDatalist id="definition-authority-suggestions" suggestions={definitionSuggestions.authority} />
+          <SuggestionDatalist id="definition-acquisition-label-suggestions" suggestions={definitionSuggestions.acquisitionLabel} />
+          <SuggestionDatalist id="definition-provisional-taxon-suggestions" suggestions={definitionSuggestions.provisionalTaxon} />
           <input type="hidden" name="id" value={id} />
-          <Field label="Genus" name="genus" required defaultValue={plant.genus} />
-          <Field label="Species" name="species" required defaultValue={plant.species} />
-          <Field label="Hybrid notation" help="Use for botanical hybrid markers or formula context, such as x, grex, or parentage notation that belongs with the name." name="hybridNotation" defaultValue={plant.hybridNotation} />
-          <Field label="Cultivar name" help="The named cultivated variety, usually written in single quotes, such as 'Morning Glow'. Leave blank for unnamed species or clones." name="cultivarName" defaultValue={plant.cultivarName} />
-          <Field label="Authority" help="The author citation for the scientific name, such as (L.f.) R.Br. It records who validly published the name or combination." name="authority" defaultValue={plant.authority} />
+          <Field label="Genus" name="genus" required defaultValue={plant.genus} list="definition-genus-suggestions" />
+          <Field label="Species" name="species" required defaultValue={plant.species} list="definition-species-suggestions" />
+          <Field label="Hybrid notation" help="Use for botanical hybrid markers or formula context, such as x, grex, or parentage notation that belongs with the name." name="hybridNotation" defaultValue={plant.hybridNotation} list="definition-hybrid-notation-suggestions" />
+          <Field label="Cultivar name" help="The named cultivated variety, usually written in single quotes, such as 'Morning Glow'. Leave blank for unnamed species or clones." name="cultivarName" defaultValue={plant.cultivarName} list="definition-cultivar-name-suggestions" />
+          <Field label="Authority" help="The author citation for the scientific name, such as (L.f.) R.Br. It records who validly published the name or combination." name="authority" defaultValue={plant.authority} list="definition-authority-suggestions" />
           <Field label="Cultivar registration number" help="Use when a formal cultivar registry or governing body assigns a registration number to the cultivar." name="cultivarRegistrationNumber" defaultValue={plant.cultivarRegistrationNumber} />
           <ConfidenceSelect name="confidence" defaultValue={plant.confidence} />
-          <Field label="Acquisition label" help="The name or label the plant arrived with, even if you later determine a different accepted name." name="acquisitionLabel" defaultValue={plant.acquisitionLabel} />
-          <Field label="Provisional taxon" help="A cautious working identification when the accepted name is not settled yet. Useful for 'probably this' or awaiting confirmation." name="provisionalTaxon" defaultValue={plant.provisionalTaxon} />
+          <Field label="Acquisition label" help="The name or label the plant arrived with, even if you later determine a different accepted name." name="acquisitionLabel" defaultValue={plant.acquisitionLabel} list="definition-acquisition-label-suggestions" />
+          <Field label="Provisional taxon" help="A cautious working identification when the accepted name is not settled yet. Useful for 'probably this' or awaiting confirmation." name="provisionalTaxon" defaultValue={plant.provisionalTaxon} list="definition-provisional-taxon-suggestions" />
           <Field label="Wikipedia URL" help="Optional quick reference link for the species or genus entry." name="wikipediaUrl" type="url" defaultValue={plant.wikipediaUrl} />
           <Field label="iNaturalist URL" help="Optional link to an iNaturalist taxon page for observations, common names, and community references." name="inaturalistUrl" type="url" defaultValue={plant.inaturalistUrl} />
           <Field label="POWO URL" help="Optional Plants of the World Online link for accepted names, synonyms, and distribution data." name="powoUrl" type="url" defaultValue={plant.powoUrl} />
@@ -76,7 +106,7 @@ export default async function EditPlant({
           </label>
           <TextArea label="Description" name="description" defaultValue={plant.description} wrapperClassName="lg:col-span-2" />
           <TextArea label="Notes" name="notes" defaultValue={plant.notes} wrapperClassName="lg:col-span-2" />
-          <PlantAliasFields aliases={plant.aliases} submitLabel="Save changes" />
+          <PlantAliasFields aliases={plant.aliases} submitLabel="Save changes" sourceSuggestions={definitionSuggestions.aliasSource} />
         </form>
       </Card>
       <Card>

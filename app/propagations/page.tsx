@@ -1,15 +1,16 @@
 import { createPropagationEvent, deletePropagationEvent } from '@/app/actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { PlantImage } from '@/components/PlantImage'
-import { AddPanel, Button, Card, Field, HelpTooltip, TextArea } from '@/components/ui'
+import { AddPanel, Button, Card, Field, HelpTooltip, SuggestionDatalist, TextArea } from '@/components/ui'
 import { canCreate, getCurrentUser, isAdmin } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { rankedSuggestions } from '@/lib/suggestions'
 import { fmtDate, plantName } from '@/lib/utils'
 import Link from 'next/link'
 
 export default async function Propagations() {
   const user = await getCurrentUser()
-  const [instances, events] = await Promise.all([
+  const [instances, events, instanceSuggestionRows] = await Promise.all([
     prisma.plantInstance.findMany({
       where: { status: 'ACTIVE' },
       include: { plantDefinition: true },
@@ -22,7 +23,11 @@ export default async function Propagations() {
       },
       orderBy: { date: 'desc' },
     }),
+    prisma.plantInstance.findMany({
+      select: { location: true },
+    }),
   ])
+  const locationSuggestions = rankedSuggestions(instanceSuggestionRows.map((instance) => instance.location))
 
   const instanceIds = Array.from(new Set(events.flatMap((event) => [
     ...event.parents.map((parent) => parent.parentPlantInstanceId),
@@ -43,6 +48,7 @@ export default async function Propagations() {
 
       {canCreate(user) && (
         <AddPanel label="Add propagation event">
+          <SuggestionDatalist id="propagation-location-suggestions" suggestions={locationSuggestions} />
           <form action={createPropagationEvent} className="grid max-w-5xl gap-x-3 gap-y-2 lg:grid-cols-4">
             <label className="grid gap-1 text-sm font-medium">
               <span className="flex items-center gap-1.5">
@@ -86,7 +92,7 @@ export default async function Propagations() {
             <p className="rounded-md border border-[#d6dfc9] bg-[#f5f4e8] px-3 py-2 text-sm text-stone-700 lg:col-span-2">
               Child plant IDs will be generated from the parent definition, propagation date, method, and sequence.
             </p>
-            <Field label="Child location" name="location" />
+            <Field label="Child location" name="location" list="propagation-location-suggestions" />
             <label className="grid gap-1 text-sm font-medium">
               <span className="flex items-center gap-1.5">
                 <span>Success status</span>

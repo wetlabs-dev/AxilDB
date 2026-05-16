@@ -1,9 +1,10 @@
 import { prisma } from '@/lib/prisma'
 import { createPlantDefinition, followEntity, unfollowEntity } from '@/app/actions'
-import { AddPanel, Button, Card, Field, HelpTooltip, TextArea, LinkButton } from '@/components/ui'
+import { AddPanel, Button, Card, Field, HelpTooltip, TextArea, LinkButton, SuggestionDatalist } from '@/components/ui'
 import { ConfidenceSelect, PlantAliasFields } from '@/components/PlantAliasFields'
 import { PlantImage } from '@/components/PlantImage'
 import { canCreate, getCurrentUser, isAdmin } from '@/lib/auth'
+import { rankedSuggestions } from '@/lib/suggestions'
 import { plantName, taxonomyLabel } from '@/lib/utils'
 import Link from 'next/link'
 
@@ -29,6 +30,16 @@ export default async function Plants() {
       : [],
   ])
   const followsByDefinitionId = new Map(follows.map((follow) => [follow.entityId, follow]))
+  const definitionSuggestions = {
+    genus: rankedSuggestions(plants.map((plant) => plant.genus)),
+    species: rankedSuggestions(plants.map((plant) => plant.species)),
+    hybridNotation: rankedSuggestions(plants.map((plant) => plant.hybridNotation)),
+    cultivarName: rankedSuggestions(plants.map((plant) => plant.cultivarName)),
+    authority: rankedSuggestions(plants.map((plant) => plant.authority)),
+    acquisitionLabel: rankedSuggestions(plants.map((plant) => plant.acquisitionLabel)),
+    provisionalTaxon: rankedSuggestions(plants.map((plant) => plant.provisionalTaxon)),
+    aliasSource: rankedSuggestions(plants.flatMap((plant) => plant.aliases.map((alias) => alias.source))),
+  }
   const instanceIds = plants.flatMap((plant) => plant.instances.map((instance) => instance.id))
   const [definitionPhotos, typePhotos] = await Promise.all([
     prisma.photo.findMany({
@@ -58,16 +69,23 @@ export default async function Plants() {
 
       {canCreate(user) && (
         <AddPanel label="Add plant definition">
+          <SuggestionDatalist id="definition-genus-suggestions" suggestions={definitionSuggestions.genus} />
+          <SuggestionDatalist id="definition-species-suggestions" suggestions={definitionSuggestions.species} />
+          <SuggestionDatalist id="definition-hybrid-notation-suggestions" suggestions={definitionSuggestions.hybridNotation} />
+          <SuggestionDatalist id="definition-cultivar-name-suggestions" suggestions={definitionSuggestions.cultivarName} />
+          <SuggestionDatalist id="definition-authority-suggestions" suggestions={definitionSuggestions.authority} />
+          <SuggestionDatalist id="definition-acquisition-label-suggestions" suggestions={definitionSuggestions.acquisitionLabel} />
+          <SuggestionDatalist id="definition-provisional-taxon-suggestions" suggestions={definitionSuggestions.provisionalTaxon} />
           <form action={createPlantDefinition} className="grid max-w-6xl gap-x-3 gap-y-2 lg:grid-cols-4">
-            <Field label="Genus" name="genus" required />
-            <Field label="Species" name="species" required />
-            <Field label="Hybrid notation" help="Use for botanical hybrid markers or formula context, such as x, grex, or parentage notation that belongs with the name." name="hybridNotation" />
-            <Field label="Cultivar name" help="The named cultivated variety, usually written in single quotes, such as 'Morning Glow'. Leave blank for unnamed species or clones." name="cultivarName" />
-            <Field label="Authority" help="The author citation for the scientific name, such as (L.f.) R.Br. It records who validly published the name or combination." name="authority" />
+            <Field label="Genus" name="genus" required list="definition-genus-suggestions" />
+            <Field label="Species" name="species" required list="definition-species-suggestions" />
+            <Field label="Hybrid notation" help="Use for botanical hybrid markers or formula context, such as x, grex, or parentage notation that belongs with the name." name="hybridNotation" list="definition-hybrid-notation-suggestions" />
+            <Field label="Cultivar name" help="The named cultivated variety, usually written in single quotes, such as 'Morning Glow'. Leave blank for unnamed species or clones." name="cultivarName" list="definition-cultivar-name-suggestions" />
+            <Field label="Authority" help="The author citation for the scientific name, such as (L.f.) R.Br. It records who validly published the name or combination." name="authority" list="definition-authority-suggestions" />
             <Field label="Cultivar registration number" help="Use when a formal cultivar registry or governing body assigns a registration number to the cultivar." name="cultivarRegistrationNumber" />
             <ConfidenceSelect name="confidence" />
-            <Field label="Acquisition label" help="The name or label the plant arrived with, even if you later determine a different accepted name." name="acquisitionLabel" />
-            <Field label="Provisional taxon" help="A cautious working identification when the accepted name is not settled yet. Useful for 'probably this' or awaiting confirmation." name="provisionalTaxon" />
+            <Field label="Acquisition label" help="The name or label the plant arrived with, even if you later determine a different accepted name." name="acquisitionLabel" list="definition-acquisition-label-suggestions" />
+            <Field label="Provisional taxon" help="A cautious working identification when the accepted name is not settled yet. Useful for 'probably this' or awaiting confirmation." name="provisionalTaxon" list="definition-provisional-taxon-suggestions" />
             <Field label="Wikipedia URL" help="Optional quick reference link for the species or genus entry." name="wikipediaUrl" type="url" />
             <Field label="iNaturalist URL" help="Optional link to an iNaturalist taxon page for observations, common names, and community references." name="inaturalistUrl" type="url" />
             <Field label="POWO URL" help="Optional Plants of the World Online link for accepted names, synonyms, and distribution data." name="powoUrl" type="url" />
@@ -88,7 +106,7 @@ export default async function Plants() {
             </label>
             <TextArea label="Description" name="description" wrapperClassName="lg:col-span-2" />
             <TextArea label="Notes" name="notes" wrapperClassName="lg:col-span-2" />
-            <PlantAliasFields submitLabel="Create plant definition" />
+            <PlantAliasFields submitLabel="Create plant definition" sourceSuggestions={definitionSuggestions.aliasSource} />
           </form>
         </AddPanel>
       )}

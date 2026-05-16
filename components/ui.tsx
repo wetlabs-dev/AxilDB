@@ -59,6 +59,18 @@ export function GhostLink({ href, children }: any) {
 
 export { HelpTooltip }
 
+export function SuggestionDatalist({ id, suggestions }: { id: string; suggestions: string[] }) {
+  if (suggestions.length === 0) return null
+
+  return (
+    <datalist id={id}>
+      {suggestions.map((suggestion) => (
+        <option key={suggestion} value={suggestion} />
+      ))}
+    </datalist>
+  )
+}
+
 function LabelText({ label, help }: { label: string; help?: string }) {
   return (
     <span className="flex min-w-0 items-center gap-1.5">

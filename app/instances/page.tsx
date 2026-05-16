@@ -1,21 +1,29 @@
 import { createPlantInstance } from '@/app/actions'
 import { PlantImage } from '@/components/PlantImage'
-import { AddPanel, Button, Card, Field, HelpTooltip, TextArea } from '@/components/ui'
+import { AddPanel, Button, Card, Field, HelpTooltip, SuggestionDatalist, TextArea } from '@/components/ui'
 import { canCreate, getCurrentUser, isAdmin } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { rankedSuggestions } from '@/lib/suggestions'
 import { plantName } from '@/lib/utils'
 import Link from 'next/link'
 
 export default async function Instances() {
   const user = await getCurrentUser()
-  const [instances, defs] = await Promise.all([
+  const [instances, defs, instanceSuggestionRows] = await Promise.all([
     prisma.plantInstance.findMany({
       where: { status: 'ACTIVE' },
       include: { plantDefinition: true },
       orderBy: { plantId: 'asc' },
     }),
     prisma.plantDefinition.findMany({ orderBy: { genus: 'asc' } }),
+    prisma.plantInstance.findMany({
+      select: { location: true, source: true, distributor: true, stockNumber: true },
+    }),
   ])
+  const locationSuggestions = rankedSuggestions(instanceSuggestionRows.map((instance) => instance.location))
+  const sourceSuggestions = rankedSuggestions(instanceSuggestionRows.map((instance) => instance.source))
+  const distributorSuggestions = rankedSuggestions(instanceSuggestionRows.map((instance) => instance.distributor))
+  const stockNumberSuggestions = rankedSuggestions(instanceSuggestionRows.map((instance) => instance.stockNumber))
 
   const photos = await prisma.photo.findMany({
     where: { entityType: 'PLANT_INSTANCE', entityId: { in: instances.map((item) => item.id) } },
@@ -32,6 +40,10 @@ export default async function Instances() {
 
       {canCreate(user) && (
         <AddPanel label="Add plant instance">
+          <SuggestionDatalist id="instance-location-suggestions" suggestions={locationSuggestions} />
+          <SuggestionDatalist id="instance-source-suggestions" suggestions={sourceSuggestions} />
+          <SuggestionDatalist id="instance-distributor-suggestions" suggestions={distributorSuggestions} />
+          <SuggestionDatalist id="instance-stock-number-suggestions" suggestions={stockNumberSuggestions} />
           <form action={createPlantInstance} className="grid max-w-5xl gap-x-3 gap-y-2 lg:grid-cols-4">
             <label className="grid gap-1 text-sm font-medium">
               Plant definition
@@ -56,12 +68,12 @@ export default async function Instances() {
             <p className="rounded-md border border-[#d6dfc9] bg-[#f5f4e8] px-3 py-2 text-sm text-stone-700 lg:col-span-2">
               Plant ID will be generated automatically from the plant definition, relevant date, and record type.
             </p>
-            <Field label="Location" name="location" />
+            <Field label="Location" name="location" list="instance-location-suggestions" />
             <Field label="Acquisition date" help="When this physical plant entered your collection." name="acquisitionDate" type="date" />
             <Field label="Propagation date" help="When this plant was propagated, if it was created from another plant." name="propagationDate" type="date" />
-            <Field label="Source/propagator" help="Who produced or propagated the plant, or the immediate source of the plant material." name="source" />
-            <Field label="Distributor" help="The seller, vendor, swap partner, or organization that distributed the plant to you." name="distributor" />
-            <Field label="Stock number" help="Optional vendor, nursery, or collection stock number from the original source." name="stockNumber" />
+            <Field label="Source/propagator" help="Who produced or propagated the plant, or the immediate source of the plant material." name="source" list="instance-source-suggestions" />
+            <Field label="Distributor" help="The seller, vendor, swap partner, or organization that distributed the plant to you." name="distributor" list="instance-distributor-suggestions" />
+            <Field label="Stock number" help="Optional vendor, nursery, or collection stock number from the original source." name="stockNumber" list="instance-stock-number-suggestions" />
             <Field label="Purchase price" help="Optional cost record for your own collection tracking." name="purchasePrice" type="number" />
             <TextArea label="Notes" help="Initial observation or context to add to the plant's note history at creation." name="note" wrapperClassName="lg:col-span-2" />
             <Button className="justify-self-start lg:col-span-4">Create instance</Button>
