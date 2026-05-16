@@ -126,3 +126,13 @@ export function reminderEmail(title: string, recordUrl: string, lines: string[])
     actionUrl: recordUrl,
   })
 }
+
+export function followNotificationEmail(title: string, recordUrl: string, lines: string[]) {
+  return renderBrandedEmail({
+    title,
+    preview: 'Something changed in a plant record you follow.',
+    body: lines,
+    actionLabel: 'Open update',
+    actionUrl: recordUrl,
+  })
+}

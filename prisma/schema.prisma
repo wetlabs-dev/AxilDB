@@ -29,6 +29,8 @@ model User {
   emailTokens     EmailToken[]
   emailPreference EmailPreference?
   reminders       Reminder[]
+  follows         Follow[]
+  followNotifications FollowNotification[]
 
   @@index([role])
   @@index([emailVerifiedAt])
@@ -96,12 +98,53 @@ model EmailPreference {
   plantCheckInReminders Boolean  @default(true)
   bloomCycleReminders   Boolean  @default(true)
   propagationFollowUps  Boolean  @default(true)
+  followNotifications   Boolean  @default(true)
   quietHoursStart       String?
   quietHoursEnd         String?
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Follow {
+  id         String   @id @default(cuid())
+  userId     String
+  scope      String
+  entityType String
+  entityId   String
+  label      String
+  createdAt  DateTime @default(now())
+
+  user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notifications FollowNotification[]
+
+  @@unique([userId, scope, entityType, entityId])
+  @@index([userId])
+  @@index([scope, entityType, entityId])
+}
+
+model FollowNotification {
+  id         String   @id @default(cuid())
+  followId   String
+  userId     String
+  eventType  String
+  subject    String
+  body       String?
+  recordUrl  String
+  status     String   @default("PENDING")
+  error      String?
+  sentAt     DateTime?
+  createdAt  DateTime @default(now())
+
+  follow Follow @relation(fields: [followId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([followId])
+  @@index([userId])
+  @@index([eventType])
+  @@index([status])
+  @@index([sentAt])
 }
 
 model PlantDefinition {

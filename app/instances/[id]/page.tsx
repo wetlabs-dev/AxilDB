@@ -13,6 +13,8 @@ import {
   completeReminder,
   pauseReminder,
   deleteReminder,
+  followEntity,
+  unfollowEntity,
 } from '@/app/actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { PlantImage } from '@/components/PlantImage'
@@ -100,6 +102,20 @@ export default async function InstanceDetail({
       })
     : []
 
+  const follows = user
+    ? await prisma.follow.findMany({
+        where: {
+          userId: user.id,
+          OR: [
+            { scope: 'SPECIMEN', entityType: 'PLANT_INSTANCE', entityId: id },
+            { scope: 'LINEAGE', entityType: 'PLANT_INSTANCE', entityId: id },
+            { scope: 'TYPE', entityType: 'PLANT_DEFINITION', entityId: i.plantDefinitionId },
+          ],
+        },
+      })
+    : []
+  const followByScope = new Map(follows.map((follow) => [follow.scope, follow]))
+
   const instanceReminders = reminders.filter((reminder) => reminder.entityType === 'PLANT_INSTANCE')
   const remindersByBloomId = reminders
     .filter((reminder) => reminder.entityType === 'BLOOM_EVENT')
@@ -125,6 +141,41 @@ export default async function InstanceDetail({
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
+        {user && (
+          <Card>
+            <h3 className="font-bold">Follow updates</h3>
+            <p className="mt-1 text-sm text-stone-600">
+              Get emails when this specimen, its type, or this connected lineage changes.
+            </p>
+            <div className="mt-4 grid gap-2">
+              {[
+                ['SPECIMEN', 'PLANT_INSTANCE', id, 'Follow specimen', 'Following specimen'],
+                ['LINEAGE', 'PLANT_INSTANCE', id, 'Follow lineage', 'Following lineage'],
+                ['TYPE', 'PLANT_DEFINITION', i.plantDefinitionId, 'Follow plant type', 'Following plant type'],
+              ].map(([scope, entityType, entityId, followLabel, followedLabel]) => {
+                const existing = followByScope.get(scope)
+                return existing ? (
+                  <form key={scope} action={unfollowEntity}>
+                    <input type="hidden" name="id" value={existing.id} />
+                    <input type="hidden" name="back" value={`/instances/${id}`} />
+                    <Button className="w-full border border-stone-300 bg-white/70 text-stone-800 hover:bg-white">
+                      {followedLabel}
+                    </Button>
+                  </form>
+                ) : (
+                  <form key={scope} action={followEntity}>
+                    <input type="hidden" name="scope" value={scope} />
+                    <input type="hidden" name="entityType" value={entityType} />
+                    <input type="hidden" name="entityId" value={entityId} />
+                    <input type="hidden" name="back" value={`/instances/${id}`} />
+                    <Button className="w-full">{followLabel}</Button>
+                  </form>
+                )
+              })}
+            </div>
+          </Card>
+        )}
+
         <Card>
           <h3 className="font-bold">Identity</h3>
           <p className="font-medium">{plantName(i.plantDefinition)}</p>

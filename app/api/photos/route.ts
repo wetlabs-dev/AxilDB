@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { audit, requireCreateUser } from '@/lib/auth'
+import { notifyFollowers } from '@/lib/follows'
 import { mkdir, writeFile } from 'fs/promises'
 import path from 'path'
 import sharp from 'sharp'
@@ -76,6 +77,44 @@ export async function POST(req: Request) {
         ]))[1]
       : await prisma.photo.create({ data })
     await audit(user, 'CREATE', 'PHOTO', photo.id, `Uploaded photo for ${entityType} ${entityId}`, { filename, originalBytes: original.length, storedBytes: bytes.length, maxDimension: MAX_PHOTO_DIMENSION, source, sourceUrl })
+
+    if (entityType === 'PLANT_INSTANCE') {
+      const instance = await prisma.plantInstance.findUnique({ where: { id: entityId } })
+      if (instance) {
+        await notifyFollowers(prisma, {
+          actorUserId: user.id,
+          eventType: 'PHOTO',
+          subject: `New photo for ${instance.plantId}`,
+          body: caption || 'A new specimen photo was added.',
+          recordPath: `/instances/${entityId}`,
+          plantInstanceIds: [entityId],
+          plantDefinitionIds: [instance.plantDefinitionId],
+        })
+      }
+    } else if (entityType === 'BLOOM_EVENT') {
+      const bloom = await prisma.bloomEvent.findUnique({ where: { id: entityId }, include: { plantInstance: true } })
+      if (bloom) {
+        await notifyFollowers(prisma, {
+          actorUserId: user.id,
+          eventType: 'PHOTO',
+          subject: `New bloom photo for ${bloom.plantInstance.plantId}`,
+          body: caption || 'A new bloom photo was added.',
+          recordPath: `/instances/${bloom.plantInstanceId}#bloom-${bloom.id}`,
+          plantInstanceIds: [bloom.plantInstanceId],
+          plantDefinitionIds: [bloom.plantInstance.plantDefinitionId],
+        })
+      }
+    } else if (entityType === 'PLANT_DEFINITION') {
+      await notifyFollowers(prisma, {
+        actorUserId: user.id,
+        eventType: 'PHOTO',
+        subject: 'New plant type image',
+        body: caption || 'A plant definition type image was added.',
+        recordPath: `/plants/${entityId}/edit`,
+        plantDefinitionIds: [entityId],
+      })
+    }
+
     return redirectBack(req, back)
   } catch (error) {
     console.error('Photo upload failed', { entityType, entityId, filename: file.name, type: file.type, error })

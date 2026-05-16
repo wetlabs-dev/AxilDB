@@ -8,6 +8,7 @@ import {
   BarChart3,
   Bell,
   BookOpen,
+  Eye,
   FileText,
   Flower2,
   GitBranch,
@@ -34,6 +35,7 @@ const baseItems = [
   ['/labels', 'Bulk Tags', Tag],
   ['/search', 'Search', Search],
   ['/reminders', 'Reminders', Bell],
+  ['/following', 'Following', Eye],
   ['/archived', 'Archived Plants', Archive],
 ] as const
 

@@ -28,6 +28,7 @@ It is designed for real collection work: messy taxonomy, acquisition names, alia
 - SMTP-ready email foundation with welcome/verification emails, secure single-use tokens, branded HTML/plain-text templates, and user email preferences.
 - User reminders for general tasks, plant check-ins, bloom follow-ups, and propagation follow-ups, with one-time or recurring schedules.
 - Reminder delivery history and a lightweight scheduled reminder worker.
+- Followed plant updates for individual specimens, plant types, and connected lineages, with email notifications for blooms, propagations, sport updates, photos, notes, archives, and new specimens of followed types.
 - Read-only browsing for unauthenticated visitors.
 - Admin-only edit/delete tools, users page, governing bodies page, and audit log.
 - Confirmation modals for destructive delete actions.
@@ -153,6 +154,7 @@ Core models:
 - `EmailToken`: hashed single-use tokens for email verification, password resets, and magic links.
 - `EmailPreference`: user-configurable email categories, timezone, and quiet-hours settings.
 - `Reminder` and `ReminderDelivery`: reminder scheduling metadata and delivery history.
+- `Follow` and `FollowNotification`: event-based subscriptions and delivery history for followed specimens, plant types, and lineages.
 - `GoverningBody`: registration or standards organizations.
 
 The schema intentionally uses string fields rather than Prisma enums for many domain states. This keeps taxonomy, sport states, propagation methods, and future horticultural vocabulary easier to evolve.
@@ -250,6 +252,8 @@ Current email foundation:
 - Reminder creation from the reminders page, plant instance pages, and bloom events.
 - Reminder delivery history for sent, failed, and skipped reminder emails.
 - Scheduled Docker worker for due reminder delivery.
+- Follow/unfollow controls on plant definitions and specimen detail pages.
+- Event-based follow notifications with a delivery history on the Following page.
 - Quiet botanical branded HTML and plain-text templates.
 - SMTP/log delivery abstraction.
 

@@ -7,7 +7,9 @@ import path from 'path'
 import { prisma } from '@/lib/prisma'
 import { audit, isAdmin, requireAdminUser, requireCreateUser, requireUser } from '@/lib/auth'
 import { createDemoData } from '@/lib/demo-data'
+import { notifyFollowers } from '@/lib/follows'
 import { generatePlantId } from '@/lib/plant-id'
+import { plantName } from '@/lib/utils'
 
 const val = (fd: FormData, k: string) =>
   String(fd.get(k) || '').trim() || undefined
@@ -91,6 +93,58 @@ async function cleanupOrphanPropagationEvents() {
   })
 
   await prisma.propagationEvent.deleteMany({ where: { id: { in: orphanIds } } })
+}
+
+async function followLabel(entityType: string, entityId: string) {
+  if (entityType === 'PLANT_INSTANCE') {
+    const instance = await prisma.plantInstance.findUnique({
+      where: { id: entityId },
+      include: { plantDefinition: true },
+    })
+    return instance ? `${instance.plantId} · ${plantName(instance.plantDefinition)}` : entityId
+  }
+
+  if (entityType === 'PLANT_DEFINITION') {
+    const definition = await prisma.plantDefinition.findUnique({ where: { id: entityId } })
+    return definition ? plantName(definition) : entityId
+  }
+
+  return entityId
+}
+
+export async function followEntity(fd: FormData) {
+  const user = await requireUser()
+  const scope = val(fd, 'scope')!
+  const entityType = val(fd, 'entityType')!
+  const entityId = val(fd, 'entityId')!
+  const destination = back(fd)
+  const label = val(fd, 'label') || await followLabel(entityType, entityId)
+
+  const follow = await prisma.follow.upsert({
+    where: { userId_scope_entityType_entityId: { userId: user.id, scope, entityType, entityId } },
+    update: { label },
+    create: { userId: user.id, scope, entityType, entityId, label },
+  })
+
+  await audit(user, 'CREATE', 'FOLLOW', follow.id, `Followed ${label}`)
+  revalidateDestination(destination)
+  redirect(destination)
+}
+
+export async function unfollowEntity(fd: FormData) {
+  const user = await requireUser()
+  const id = val(fd, 'id')!
+  const destination = back(fd)
+  const follow = await prisma.follow.findUniqueOrThrow({ where: { id } })
+
+  if (follow.userId !== user.id && !isAdmin(user)) {
+    throw new Error('You do not have permission to remove this follow.')
+  }
+
+  await prisma.follow.delete({ where: { id } })
+  await audit(user, 'DELETE', 'FOLLOW', id, `Unfollowed ${follow.label}`, follow)
+  revalidateDestination(destination)
+  redirect(destination)
 }
 
 export async function createGoverningBody(fd: FormData) {
@@ -253,6 +307,15 @@ export async function createPlantInstance(fd: FormData) {
   }
 
   await audit(user, 'CREATE', 'PLANT_INSTANCE', instance.id, `Created plant instance ${instance.plantId}`)
+  await notifyFollowers(prisma, {
+    actorUserId: user.id,
+    eventType: 'NEW_PLANT',
+    subject: `New ${instance.instanceType.toLowerCase()} plant: ${instance.plantId}`,
+    body: `${instance.plantId} was added to ${plantName(await prisma.plantDefinition.findUniqueOrThrow({ where: { id: plantDefinitionId } }))}.`,
+    recordPath: `/instances/${instance.id}`,
+    plantInstanceIds: [instance.id],
+    plantDefinitionIds: [plantDefinitionId],
+  })
 
   redirect('/instances')
 }
@@ -310,6 +373,14 @@ export async function archivePlantInstance(fd: FormData) {
     },
   })
   await audit(user, 'ARCHIVE', 'PLANT_INSTANCE', id, `Archived plant instance ${instance.plantId}`)
+  await notifyFollowers(prisma, {
+    actorUserId: user.id,
+    eventType: 'ARCHIVE',
+    subject: `${instance.plantId} was archived`,
+    body: instance.archiveReason || 'A plant you follow was archived.',
+    recordPath: `/instances/${id}`,
+    plantInstanceIds: [id],
+  })
 
   redirect(`/instances/${id}`)
 }
@@ -333,6 +404,20 @@ export async function addNote(fd: FormData) {
     data: { entityType: val(fd, 'entityType')!, entityId: val(fd, 'entityId')!, note: val(fd, 'note')! },
   })
   await audit(user, 'CREATE', 'NOTE', note.id, `Added note to ${note.entityType} ${note.entityId}`)
+  if (note.entityType === 'PLANT_INSTANCE') {
+    const instance = await prisma.plantInstance.findUnique({ where: { id: note.entityId } })
+    if (instance) {
+      await notifyFollowers(prisma, {
+        actorUserId: user.id,
+        eventType: 'NOTE',
+        subject: `New note on ${instance.plantId}`,
+        body: note.note,
+        recordPath: `/instances/${instance.id}`,
+        plantInstanceIds: [instance.id],
+        plantDefinitionIds: [instance.plantDefinitionId],
+      })
+    }
+  }
 
   redirect(back(fd))
 }
@@ -458,6 +543,15 @@ export async function markSportCandidate(fd: FormData) {
   }
 
   await audit(user, 'UPDATE', 'PLANT_INSTANCE', id, `Marked plant instance ${instance.plantId} as a suspected sport`)
+  await notifyFollowers(prisma, {
+    actorUserId: user.id,
+    eventType: 'SPORT',
+    subject: `${instance.plantId} was marked as a suspected sport`,
+    body: observation || 'A plant you follow has a new sport observation.',
+    recordPath: `/instances/${id}`,
+    plantInstanceIds: [id],
+    plantDefinitionIds: [instance.plantDefinitionId],
+  })
   redirect(`/instances/${id}`)
 }
 
@@ -486,6 +580,15 @@ export async function markSportReverted(fd: FormData) {
   })
 
   await audit(user, 'UPDATE', 'PLANT_INSTANCE', id, `Marked plant instance ${instance.plantId} as reverted`)
+  await notifyFollowers(prisma, {
+    actorUserId: user.id,
+    eventType: 'SPORT',
+    subject: `${instance.plantId} was marked reverted`,
+    body: observation || 'A followed sport line appears to have reverted.',
+    recordPath: `/instances/${id}`,
+    plantInstanceIds: [id],
+    plantDefinitionIds: [instance.plantDefinitionId],
+  })
   redirect(back(fd) || `/instances/${id}`)
 }
 
@@ -593,6 +696,18 @@ export async function openBloomEvent(fd: FormData) {
     },
   })
   await audit(user, 'CREATE', 'BLOOM_EVENT', bloom.id, `Opened bloom event for plant instance ${plantInstanceId}`)
+  const instance = await prisma.plantInstance.findUnique({ where: { id: plantInstanceId } })
+  if (instance) {
+    await notifyFollowers(prisma, {
+      actorUserId: user.id,
+      eventType: 'BLOOM',
+      subject: `New bloom on ${instance.plantId}`,
+      body: val(fd, 'notes') || 'A plant you follow has a newly opened bloom event.',
+      recordPath: `/instances/${plantInstanceId}#bloom-${bloom.id}`,
+      plantInstanceIds: [plantInstanceId],
+      plantDefinitionIds: [instance.plantDefinitionId],
+    })
+  }
 
   revalidatePath(`/instances/${plantInstanceId}`)
   redirect(`/instances/${plantInstanceId}`)
@@ -612,6 +727,18 @@ export async function updateBloomPeak(fd: FormData) {
     },
   })
   await audit(user, 'UPDATE', 'BLOOM_EVENT', id, `Updated bloom peak for plant instance ${plantInstanceId}`)
+  const instance = await prisma.plantInstance.findUnique({ where: { id: plantInstanceId } })
+  if (instance) {
+    await notifyFollowers(prisma, {
+      actorUserId: user.id,
+      eventType: 'BLOOM',
+      subject: `Bloom peak updated for ${instance.plantId}`,
+      body: val(fd, 'notes') || 'A bloom event was updated for a plant you follow.',
+      recordPath: `/instances/${plantInstanceId}#bloom-${id}`,
+      plantInstanceIds: [plantInstanceId],
+      plantDefinitionIds: [instance.plantDefinitionId],
+    })
+  }
 
   revalidatePath(`/instances/${plantInstanceId}`)
   redirect(`/instances/${plantInstanceId}`)
@@ -627,6 +754,18 @@ export async function closeBloomEvent(fd: FormData) {
     data: { bloomEndDate: date(val(fd, 'bloomEndDate'))!, notes: val(fd, 'notes') },
   })
   await audit(user, 'UPDATE', 'BLOOM_EVENT', id, `Closed bloom event for plant instance ${plantInstanceId}`)
+  const instance = await prisma.plantInstance.findUnique({ where: { id: plantInstanceId } })
+  if (instance) {
+    await notifyFollowers(prisma, {
+      actorUserId: user.id,
+      eventType: 'BLOOM',
+      subject: `Bloom closed for ${instance.plantId}`,
+      body: val(fd, 'notes') || 'A bloom event was closed for a plant you follow.',
+      recordPath: `/instances/${plantInstanceId}#bloom-${id}`,
+      plantInstanceIds: [plantInstanceId],
+      plantDefinitionIds: [instance.plantDefinitionId],
+    })
+  }
 
   revalidatePath(`/instances/${plantInstanceId}`)
   redirect(`/instances/${plantInstanceId}`)
@@ -703,6 +842,7 @@ export async function createPropagationEvent(fd: FormData) {
   })
 
   const childCodes: string[] = []
+  const childIds: string[] = []
 
   for (let index = 0; index < childCount; index += 1) {
     const plantId = await generatePlantId(prisma, {
@@ -725,12 +865,22 @@ export async function createPropagationEvent(fd: FormData) {
         sportDescription: childSportDescription,
       },
     })
+    childIds.push(child.id)
 
     await prisma.propagationChild.create({
       data: { propagationEventId: event.id, childPlantInstanceId: child.id },
     })
   }
   await audit(user, 'CREATE', 'PROPAGATION_EVENT', event.id, `Created ${method} propagation event`, { childCodes })
+  await notifyFollowers(prisma, {
+    actorUserId: user.id,
+    eventType: 'PROPAGATION',
+    subject: `New ${method.toLowerCase()} propagation from ${parentPlant.plantId}`,
+    body: `Created child plants: ${childCodes.join(', ')}`,
+    recordPath: '/propagations',
+    plantInstanceIds: [parent1, ...childIds],
+    plantDefinitionIds: [parentPlant.plantDefinitionId],
+  })
 
   redirect('/propagations')
 }
@@ -793,6 +943,18 @@ export async function createSportStabilityRecord(fd: FormData) {
   })
 
   await audit(user, 'CREATE', 'SPORT_STABILITY_RECORD', record.id, `Added sport stability record`)
+  const instance = await prisma.plantInstance.findUnique({ where: { id: plantInstanceId } })
+  if (instance) {
+    await notifyFollowers(prisma, {
+      actorUserId: user.id,
+      eventType: 'SPORT',
+      subject: `Sport stability updated for ${instance.plantId}`,
+      body: val(fd, 'notes') || `Sport status is now ${nextStatus.toLowerCase()}.`,
+      recordPath: `/instances/${plantInstanceId}`,
+      plantInstanceIds: [plantInstanceId],
+      plantDefinitionIds: [instance.plantDefinitionId],
+    })
+  }
 
   redirect(back(fd))
 }

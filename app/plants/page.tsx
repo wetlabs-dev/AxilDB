@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
-import { createPlantDefinition } from '@/app/actions'
-import { AddPanel, Card, Field, HelpTooltip, TextArea, LinkButton } from '@/components/ui'
+import { createPlantDefinition, followEntity, unfollowEntity } from '@/app/actions'
+import { AddPanel, Button, Card, Field, HelpTooltip, TextArea, LinkButton } from '@/components/ui'
 import { ConfidenceSelect, PlantAliasFields } from '@/components/PlantAliasFields'
 import { PlantImage } from '@/components/PlantImage'
 import { canCreate, getCurrentUser, isAdmin } from '@/lib/auth'
@@ -11,7 +11,7 @@ const selectClass = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1
 
 export default async function Plants() {
   const user = await getCurrentUser()
-  const [plants, bodies] = await Promise.all([
+  const [plants, bodies, follows] = await Promise.all([
     prisma.plantDefinition.findMany({
       include: {
         governingBody: true,
@@ -22,7 +22,13 @@ export default async function Plants() {
       orderBy: [{ genus: 'asc' }, { species: 'asc' }],
     }),
     prisma.governingBody.findMany({ orderBy: { name: 'asc' } }),
+    user
+      ? prisma.follow.findMany({
+          where: { userId: user.id, scope: 'TYPE', entityType: 'PLANT_DEFINITION' },
+        })
+      : [],
   ])
+  const followsByDefinitionId = new Map(follows.map((follow) => [follow.entityId, follow]))
   const instanceIds = plants.flatMap((plant) => plant.instances.map((instance) => instance.id))
   const [definitionPhotos, typePhotos] = await Promise.all([
     prisma.photo.findMany({
@@ -132,6 +138,27 @@ export default async function Plants() {
                 </Link>
               )}
               </div>
+              {user && (
+                <div className="mt-3">
+                  {followsByDefinitionId.get(plant.id) ? (
+                    <form action={unfollowEntity}>
+                      <input type="hidden" name="id" value={followsByDefinitionId.get(plant.id)!.id} />
+                      <input type="hidden" name="back" value="/plants" />
+                      <Button className="w-full border border-stone-300 bg-white/70 px-3 py-1.5 text-xs text-stone-800 hover:bg-white">
+                        Following type
+                      </Button>
+                    </form>
+                  ) : (
+                    <form action={followEntity}>
+                      <input type="hidden" name="scope" value="TYPE" />
+                      <input type="hidden" name="entityType" value="PLANT_DEFINITION" />
+                      <input type="hidden" name="entityId" value={plant.id} />
+                      <input type="hidden" name="back" value="/plants" />
+                      <Button className="w-full px-3 py-1.5 text-xs">Follow type</Button>
+                    </form>
+                  )}
+                </div>
+              )}
             </div>
           </Card>
           )
