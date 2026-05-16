@@ -13,6 +13,7 @@ import { plantName } from '@/lib/utils'
 
 const val = (fd: FormData, k: string) =>
   String(fd.get(k) || '').trim() || undefined
+const speciesVal = (fd: FormData, k = 'species') => val(fd, k)?.toLowerCase()
 
 const date = (s?: string) => (s ? new Date(s) : undefined)
 const dec = (s?: string) => (s ? s : undefined)
@@ -193,7 +194,7 @@ export async function createPlantDefinition(fd: FormData) {
   const definition = await prisma.plantDefinition.create({
     data: {
       genus: val(fd, 'genus')!,
-      species: val(fd, 'species')!,
+      species: speciesVal(fd)!,
       hybridNotation: val(fd, 'hybridNotation'),
       cultivarName: val(fd, 'cultivarName'),
       authority: val(fd, 'authority'),
@@ -224,7 +225,7 @@ export async function updatePlantDefinition(fd: FormData) {
     where: { id },
     data: {
       genus: val(fd, 'genus')!,
-      species: val(fd, 'species')!,
+      species: speciesVal(fd)!,
       hybridNotation: val(fd, 'hybridNotation'),
       cultivarName: val(fd, 'cultivarName'),
       authority: val(fd, 'authority'),
@@ -971,7 +972,7 @@ export async function createCultivarFromSport(fd: FormData) {
   const def = await prisma.plantDefinition.create({
     data: {
       genus: val(fd, 'genus') || inst.plantDefinition.genus,
-      species: val(fd, 'species') || inst.plantDefinition.species,
+      species: speciesVal(fd) || inst.plantDefinition.species,
       hybridNotation: val(fd, 'hybridNotation') || inst.plantDefinition.hybridNotation,
       cultivarName: val(fd, 'cultivarName')!,
       authority: val(fd, 'authority'),
