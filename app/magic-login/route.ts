@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
 
   if (!user) return NextResponse.redirect(appUrl('/login?magic=expired'))
 
-  if (user.role === 'ADMIN' && user.twoFactor?.enabledAt) {
+  if (user.twoFactor?.enabledAt) {
     await createTwoFactorChallenge(user.id)
     await audit({ id: user.id, email: user.email, role: user.role }, '2FA_CHALLENGE', 'USER', user.id, `${user.email} started two-factor sign in by magic link`)
     return NextResponse.redirect(appUrl('/two-factor'))

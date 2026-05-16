@@ -78,6 +78,17 @@ input[type="file"] {
   text-overflow: ellipsis;
 }
 
+input[type="date"],
+input[type="datetime-local"],
+input[type="time"] {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
 form {
   min-width: 0;
 }

@@ -89,7 +89,7 @@ export async function login(fd: FormData) {
     redirect('/login?error=1')
   }
 
-  if (user.role === 'ADMIN' && user.twoFactor?.enabledAt) {
+  if (user.twoFactor?.enabledAt) {
     await createTwoFactorChallenge(user.id)
     await audit({ id: user.id, email: user.email, role: user.role }, '2FA_CHALLENGE', 'USER', user.id, `${user.email} started two-factor sign in`)
     redirect('/two-factor')
