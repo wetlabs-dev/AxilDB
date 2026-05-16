@@ -54,6 +54,15 @@ const activityStyles: Record<ActivityKind, { label: string; className: string; i
     imageClassName: 'bg-stone-200 text-stone-500 grayscale',
   },
 }
+const activityKinds = Object.keys(activityStyles) as ActivityKind[]
+
+function activityHref(activityTake: number, kind?: ActivityKind) {
+  const params = new URLSearchParams()
+  if (kind) params.set('type', kind)
+  if (activityTake !== 12) params.set('activity', String(activityTake))
+  const qs = params.toString()
+  return qs ? `/?${qs}` : '/'
+}
 
 function ActivityCard({
   item,
@@ -93,14 +102,16 @@ function ActivityCard({
 export default async function Dashboard({
   searchParams,
 }: {
-  searchParams: Promise<{ activity?: string }>
+  searchParams: Promise<{ activity?: string; type?: string }>
 }) {
   const sp = await searchParams
   const activityTake = Math.min(Math.max(Number(sp.activity || 12) || 12, 12), 48)
+  const activeKind = activityKinds.includes(sp.type as ActivityKind) ? (sp.type as ActivityKind) : undefined
+  const queryTake = activeKind ? Math.max(activityTake * 4, 48) : activityTake
   const [active, recentProps, blooms, sports, acquired, archived] = await Promise.all([
     prisma.plantInstance.count({ where: { status: 'ACTIVE' } }),
     prisma.propagationEvent.findMany({
-      take: activityTake,
+      take: activeKind && activeKind !== 'propagation' ? 0 : queryTake,
       orderBy: { date: 'desc' },
       include: {
         parents: { include: { parentPlantInstance: { include: { plantDefinition: true } } } },
@@ -108,25 +119,25 @@ export default async function Dashboard({
       },
     }),
     prisma.bloomEvent.findMany({
-      take: activityTake,
+      take: activeKind && activeKind !== 'bloom' ? 0 : queryTake,
       orderBy: { bloomStartDate: 'desc' },
       include: { plantInstance: { include: { plantDefinition: true } } },
     }),
     prisma.plantInstance.findMany({
       where: { OR: [{ isSportCandidate: true }, { sportStatus: { not: 'NONE' } }] },
-      take: activityTake,
+      take: activeKind && activeKind !== 'sport' ? 0 : queryTake,
       include: { plantDefinition: true },
       orderBy: { updatedAt: 'desc' },
     }),
     prisma.plantInstance.findMany({
       where: { instanceType: 'MOTHER' },
-      take: activityTake,
+      take: activeKind && activeKind !== 'acquired' ? 0 : queryTake,
       orderBy: [{ acquisitionDate: 'desc' }, { createdAt: 'desc' }],
       include: { plantDefinition: true },
     }),
     prisma.plantInstance.findMany({
       where: { status: 'ARCHIVED' },
-      take: activityTake,
+      take: activeKind && activeKind !== 'archive' ? 0 : queryTake,
       orderBy: { archiveDate: 'desc' },
       include: { plantDefinition: true },
     }),
@@ -223,6 +234,7 @@ export default async function Dashboard({
     })),
   ]
     .sort((a, b) => b.date.getTime() - a.date.getTime())
+    .filter((item) => !activeKind || item.kind === activeKind)
     .slice(0, activityTake)
 
   const stats = [
@@ -264,10 +276,27 @@ export default async function Dashboard({
             <p className="mt-1 text-sm text-stone-600">The latest propagations, blooms, sport notes, acquisitions, and archive actions in one stream.</p>
           </div>
           <div className="flex flex-wrap gap-2 text-xs">
+            {activeKind && (
+              <Link
+                href={activityHref(activityTake)}
+                className="rounded-full border border-stone-300 bg-white/70 px-2 py-1 font-medium text-stone-700 transition hover:bg-white"
+              >
+                All activity
+              </Link>
+            )}
             {Object.entries(activityStyles).map(([kind, style]) => (
-              <span key={kind} className={cn('rounded-full border px-2 py-1 font-medium', style.className)}>
+              <Link
+                key={kind}
+                href={activityHref(activityTake, activeKind === kind ? undefined : (kind as ActivityKind))}
+                aria-pressed={activeKind === kind}
+                className={cn(
+                  'rounded-full border px-2 py-1 font-medium transition hover:-translate-y-0.5 hover:shadow-sm',
+                  style.className,
+                  activeKind === kind ? 'ring-2 ring-[#2f6b45]/35' : 'opacity-80 hover:opacity-100',
+                )}
+              >
                 {style.label}
-              </span>
+              </Link>
             ))}
           </div>
         </div>
@@ -279,7 +308,7 @@ export default async function Dashboard({
         </div>
         {activity.length >= activityTake && activityTake < 48 && (
           <div className="mt-5 flex justify-center">
-            <Link className="rounded-md border border-stone-300 bg-white/60 px-4 py-2 text-sm font-medium text-stone-800 transition hover:bg-white" href={`/?activity=${activityTake + 12}`}>
+            <Link className="rounded-md border border-stone-300 bg-white/60 px-4 py-2 text-sm font-medium text-stone-800 transition hover:bg-white" href={activityHref(activityTake + 12, activeKind)}>
               Load 12 more
             </Link>
           </div>
