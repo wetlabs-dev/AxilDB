@@ -1,13 +1,37 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 export function HelpTooltip({ children }: { children: string }) {
   const [open, setOpen] = useState(false)
+  const [position, setPosition] = useState({ left: 16, top: 16, width: 256 })
   const ref = useRef<HTMLSpanElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  const tooltipRef = useRef<HTMLSpanElement>(null)
+
+  const updatePosition = useCallback(() => {
+    const button = buttonRef.current
+    if (!button) return
+
+    const margin = 12
+    const rect = button.getBoundingClientRect()
+    const width = Math.min(320, window.innerWidth - margin * 2)
+    const tooltipHeight = tooltipRef.current?.offsetHeight || 112
+    const preferredTop = rect.bottom + 10
+    const top = preferredTop + tooltipHeight + margin > window.innerHeight
+      ? Math.max(margin, rect.top - tooltipHeight - 10)
+      : preferredTop
+    const left = Math.min(
+      window.innerWidth - width - margin,
+      Math.max(margin, rect.left + rect.width / 2 - width / 2),
+    )
+
+    setPosition({ left, top, width })
+  }, [])
 
   useEffect(() => {
     if (!open) return
+    updatePosition()
 
     function closeIfOutside(event: PointerEvent) {
       if (!ref.current?.contains(event.target as Node)) setOpen(false)
@@ -19,15 +43,24 @@ export function HelpTooltip({ children }: { children: string }) {
 
     document.addEventListener('pointerdown', closeIfOutside)
     document.addEventListener('keydown', closeOnEscape)
+    window.addEventListener('resize', updatePosition)
+    window.addEventListener('scroll', updatePosition, true)
     return () => {
       document.removeEventListener('pointerdown', closeIfOutside)
       document.removeEventListener('keydown', closeOnEscape)
+      window.removeEventListener('resize', updatePosition)
+      window.removeEventListener('scroll', updatePosition, true)
     }
-  }, [open])
+  }, [open, updatePosition])
+
+  useEffect(() => {
+    if (open) updatePosition()
+  }, [open, children, updatePosition])
 
   return (
     <span ref={ref} className="relative inline-block">
       <button
+        ref={buttonRef}
         type="button"
         aria-label="Field help"
         aria-expanded={open}
@@ -37,7 +70,11 @@ export function HelpTooltip({ children }: { children: string }) {
         ?
       </button>
       {open && (
-        <span className="help-tooltip absolute left-1/2 top-6 z-30 w-64 -translate-x-1/2 rounded-md border border-stone-200 bg-[#fffaf0] p-3 text-xs font-normal leading-5 text-stone-700 shadow-xl">
+        <span
+          ref={tooltipRef}
+          className="help-tooltip fixed z-50 rounded-lg border border-[#8fa58f]/50 bg-[#edf3e6] p-3 text-xs font-normal leading-5 text-[#233429] shadow-[0_14px_38px_rgba(47,38,24,0.22)]"
+          style={{ left: position.left, top: position.top, width: position.width }}
+        >
           {children}
         </span>
       )}
