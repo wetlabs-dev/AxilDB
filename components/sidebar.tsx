@@ -25,20 +25,35 @@ import {
   Users,
 } from 'lucide-react'
 
-const baseItems = [
-  ['/', 'Dashboard', Home],
-  ['/plants', 'Plant Definitions', Leaf],
-  ['/instances', 'Plant Instances', Sprout],
-  ['/propagations', 'Propagations', GitBranch],
-  ['/blooms', 'Bloom Tracker', Flower2],
-  ['/gallery', 'Gallery', Images],
-  ['/graphs', 'Lineage Graphs', BarChart3],
-  ['/sports', 'Sport Review', ShieldCheck],
-  ['/labels', 'Bulk Tags', Tag],
-  ['/search', 'Search', Search],
-  ['/reminders', 'Reminders', Bell],
-  ['/following', 'Following', Eye],
-  ['/archived', 'Archived Plants', Archive],
+const navSections = [
+  {
+    label: 'Home',
+    items: [
+      ['/', 'Dashboard', Home],
+      ['/search', 'Search', Search],
+    ],
+  },
+  {
+    label: 'Collection',
+    items: [
+      ['/plants', 'Plant Definitions', Leaf],
+      ['/instances', 'Plant Instances', Sprout],
+      ['/propagations', 'Propagations', GitBranch],
+      ['/blooms', 'Bloom Tracker', Flower2],
+    ],
+  },
+  {
+    label: 'Review',
+    items: [
+      ['/gallery', 'Gallery', Images],
+      ['/reminders', 'Reminders', Bell],
+      ['/following', 'Following', Eye],
+      ['/sports', 'Sport Review', ShieldCheck],
+      ['/graphs', 'Lineage Graphs', BarChart3],
+      ['/labels', 'Bulk Tags', Tag],
+      ['/archived', 'Archived Plants', Archive],
+    ],
+  },
 ] as const
 
 const adminItems = [
@@ -50,16 +65,31 @@ const adminItems = [
 
 export async function Sidebar() {
   const user = await getCurrentUser()
-  const items = isAdmin(user) ? [...baseItems, ...adminItems] : baseItems
 
   const nav = (
-    <nav className="grid gap-1">
-      {items.map(([href, label, Icon]) => (
-        <GhostLink key={href} href={href}>
-          <Icon className="h-4 w-4 shrink-0" />
-          <span>{label}</span>
-        </GhostLink>
+    <nav className="grid gap-4">
+      {navSections.map((section) => (
+        <div key={section.label} className="grid gap-1">
+          <p className="px-3 text-[0.65rem] font-bold uppercase tracking-[0.16em] text-stone-500">{section.label}</p>
+          {section.items.map(([href, label, Icon]) => (
+            <GhostLink key={href} href={href}>
+              <Icon className="h-4 w-4 shrink-0" />
+              <span>{label}</span>
+            </GhostLink>
+          ))}
+        </div>
       ))}
+      {isAdmin(user) && (
+        <div className="grid gap-1 border-t border-stone-200 pt-4">
+          <p className="px-3 text-[0.65rem] font-bold uppercase tracking-[0.16em] text-stone-500">Admin</p>
+          {adminItems.map(([href, label, Icon]) => (
+            <GhostLink key={href} href={href}>
+              <Icon className="h-4 w-4 shrink-0" />
+              <span>{label}</span>
+            </GhostLink>
+          ))}
+        </div>
+      )}
     </nav>
   )
 
