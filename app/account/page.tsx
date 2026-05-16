@@ -1,4 +1,5 @@
 import { resendOwnVerificationEmail, updateAccount, updateEmailPreferences } from '@/app/auth-actions'
+import Link from 'next/link'
 import { Card, Field, Button } from '@/components/ui'
 import { requireUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -12,7 +13,7 @@ export default async function Account({
   const sp = await searchParams
   const account = await prisma.user.findUnique({
     where: { id: user.id },
-    include: { emailPreference: true },
+    include: { emailPreference: true, twoFactor: true },
   })
   const preferences = account?.emailPreference
 
@@ -20,6 +21,12 @@ export default async function Account({
     <div className="space-y-6">
       <h2 className="text-3xl font-bold">Account</h2>
       <Card>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-stone-200 bg-white/50 p-3 text-sm text-stone-700">
+          <span>Two-factor authentication: {account?.twoFactor?.enabledAt ? 'enabled' : 'not enabled'}</span>
+          <Link href="/account/security" className="rounded-md border border-stone-300 bg-white/60 px-3 py-1.5 text-xs font-medium text-stone-900 hover:bg-[#f5f0e2]">
+            Manage security
+          </Link>
+        </div>
         {sp.emailStatus === 'sent' && <p className="mb-3 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900">Verification email sent.</p>}
         {sp.emailStatus === 'limited' && <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">Please wait a bit before requesting another verification email.</p>}
         {sp.emailStatus === 'error' && <p className="mb-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">AxilDB could not send the verification email. Check the audit log and app logs for details.</p>}

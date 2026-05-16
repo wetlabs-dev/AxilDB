@@ -1,11 +1,12 @@
 'use server'
 
 import { redirect } from 'next/navigation'
-import { audit, clearSession, createSession, getCurrentUser, hashPassword, requireAdminUser, requireUser, verifyPassword } from '@/lib/auth'
+import { audit, clearSession, consumeTwoFactorChallenge, createSession, createTwoFactorChallenge, getCurrentUser, getTwoFactorChallenge, hashPassword, markCurrentSessionTwoFactorVerified, requireAdminUser, requireUser, verifyPassword } from '@/lib/auth'
 import { sendEmail, appUrl } from '@/lib/email'
 import { consumeEmailToken, createEmailToken, emailTokenPurposes, expireOutstandingEmailTokens, type EmailTokenPurpose } from '@/lib/email-tokens'
 import { magicLoginEmail, passwordResetEmail, welcomeEmail } from '@/lib/email-templates'
 import { prisma } from '@/lib/prisma'
+import { decryptTotpSecret, encryptTotpSecret, generateTotpSecret, verifyTotp } from '@/lib/totp'
 
 const val = (fd: FormData, key: string) => String(fd.get(key) || '').trim()
 
@@ -82,15 +83,76 @@ async function sendVerificationAndAudit(
 export async function login(fd: FormData) {
   const email = val(fd, 'email').toLowerCase()
   const password = val(fd, 'password')
-  const user = await prisma.user.findUnique({ where: { email } })
+  const user = await prisma.user.findUnique({ where: { email }, include: { twoFactor: true } })
 
   if (!user || !verifyPassword(password, user.passwordHash)) {
     redirect('/login?error=1')
   }
 
+  if (user.role === 'ADMIN' && user.twoFactor?.enabledAt) {
+    await createTwoFactorChallenge(user.id)
+    await audit({ id: user.id, email: user.email, role: user.role }, '2FA_CHALLENGE', 'USER', user.id, `${user.email} started two-factor sign in`)
+    redirect('/two-factor')
+  }
+
   await createSession(user.id)
   await audit({ id: user.id, email: user.email, role: user.role }, 'LOGIN', 'USER', user.id, `${user.email} signed in`)
+  redirect(user.role === 'ADMIN' && !user.twoFactor?.enabledAt ? '/account/security?setup=required' : '/')
+}
+
+export async function verifyTwoFactorLogin(fd: FormData) {
+  const code = val(fd, 'code')
+  const challenge = await getTwoFactorChallenge()
+
+  if (!challenge?.user.twoFactor?.enabledAt) redirect('/login?twoFactor=expired')
+
+  const secret = decryptTotpSecret(challenge.user.twoFactor.secretCiphertext)
+  if (!verifyTotp(secret, code)) redirect('/two-factor?error=1')
+
+  await consumeTwoFactorChallenge(challenge.id)
+  await createSession(challenge.user.id, { twoFactorVerifiedAt: new Date() })
+  await audit(
+    { id: challenge.user.id, email: challenge.user.email, role: challenge.user.role },
+    'LOGIN',
+    'USER',
+    challenge.user.id,
+    `${challenge.user.email} signed in with two-factor authentication`,
+  )
   redirect('/')
+}
+
+export async function confirmTwoFactorSetup(fd: FormData) {
+  const user = await requireUser()
+  const code = val(fd, 'code')
+  const setup = await prisma.userTwoFactor.findUnique({ where: { userId: user.id } })
+
+  if (!setup) redirect('/account/security?twoFactor=missing')
+
+  const secret = decryptTotpSecret(setup.secretCiphertext)
+  if (!verifyTotp(secret, code)) redirect('/account/security?twoFactor=invalid')
+
+  await prisma.userTwoFactor.update({
+    where: { userId: user.id },
+    data: { enabledAt: new Date() },
+  })
+  await markCurrentSessionTwoFactorVerified()
+  await audit(user, 'ENABLE_2FA', 'USER', user.id, `${user.email} enabled two-factor authentication`)
+  redirect('/account/security?twoFactor=enabled')
+}
+
+export async function resetTwoFactorSetup() {
+  const user = await requireUser()
+  const existing = await prisma.userTwoFactor.findUnique({ where: { userId: user.id } })
+  if (existing?.enabledAt && !user.twoFactorVerifiedAt) redirect('/login?twoFactor=expired')
+
+  const secret = generateTotpSecret()
+  await prisma.userTwoFactor.upsert({
+    where: { userId: user.id },
+    create: { userId: user.id, secretCiphertext: encryptTotpSecret(secret) },
+    update: { secretCiphertext: encryptTotpSecret(secret), enabledAt: null },
+  })
+  await audit(user, 'RESET_2FA_SETUP', 'USER', user.id, `${user.email} reset two-factor setup`)
+  redirect('/account/security?twoFactor=reset')
 }
 
 export async function logout() {

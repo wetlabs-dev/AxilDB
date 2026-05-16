@@ -17,36 +17,65 @@ model GoverningBody {
 }
 
 model User {
-  id              String           @id @default(cuid())
-  email           String           @unique
-  emailVerifiedAt DateTime?
-  passwordHash    String
-  role            String           @default("LOGGER")
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  sessions        Session[]
-  auditLogs       AuditLog[]
-  emailTokens     EmailToken[]
-  emailPreference EmailPreference?
-  reminders       Reminder[]
-  follows         Follow[]
+  id                  String               @id @default(cuid())
+  email               String               @unique
+  emailVerifiedAt     DateTime?
+  passwordHash        String
+  role                String               @default("LOGGER")
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  sessions            Session[]
+  auditLogs           AuditLog[]
+  emailTokens         EmailToken[]
+  emailPreference     EmailPreference?
+  reminders           Reminder[]
+  follows             Follow[]
   followNotifications FollowNotification[]
+  twoFactor           UserTwoFactor?
+  twoFactorChallenges TwoFactorChallenge[]
 
   @@index([role])
   @@index([emailVerifiedAt])
 }
 
 model Session {
-  id        String   @id @default(cuid())
-  tokenHash String   @unique
-  userId    String
-  expiresAt DateTime
-  createdAt DateTime @default(now())
+  id                  String    @id @default(cuid())
+  tokenHash           String    @unique
+  userId              String
+  expiresAt           DateTime
+  twoFactorVerifiedAt DateTime?
+  createdAt           DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+model UserTwoFactor {
+  id               String    @id @default(cuid())
+  userId           String    @unique
+  secretCiphertext String
+  enabledAt        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model TwoFactorChallenge {
+  id         String    @id @default(cuid())
+  tokenHash  String    @unique
+  userId     String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([consumedAt])
 }
 
 model AuditLog {
@@ -125,17 +154,17 @@ model Follow {
 }
 
 model FollowNotification {
-  id         String   @id @default(cuid())
-  followId   String
-  userId     String
-  eventType  String
-  subject    String
-  body       String?
-  recordUrl  String
-  status     String   @default("PENDING")
-  error      String?
-  sentAt     DateTime?
-  createdAt  DateTime @default(now())
+  id        String    @id @default(cuid())
+  followId  String
+  userId    String
+  eventType String
+  subject   String
+  body      String?
+  recordUrl String
+  status    String    @default("PENDING")
+  error     String?
+  sentAt    DateTime?
+  createdAt DateTime  @default(now())
 
   follow Follow @relation(fields: [followId], references: [id], onDelete: Cascade)
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -361,17 +390,17 @@ model Reminder {
 }
 
 model ReminderDelivery {
-  id           String   @id @default(cuid())
-  reminderId   String
-  userId       String?
-  recipient    String
-  subject      String
-  status       String   @default("PENDING")
-  provider     String?
-  providerId   String?
-  error        String?
-  sentAt       DateTime?
-  createdAt    DateTime @default(now())
+  id         String    @id @default(cuid())
+  reminderId String
+  userId     String?
+  recipient  String
+  subject    String
+  status     String    @default("PENDING")
+  provider   String?
+  providerId String?
+  error      String?
+  sentAt     DateTime?
+  createdAt  DateTime  @default(now())
 
   reminder Reminder @relation(fields: [reminderId], references: [id], onDelete: Cascade)
 
