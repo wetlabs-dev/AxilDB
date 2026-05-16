@@ -4,13 +4,21 @@ import { AddPanel, Card, Field, Button } from '@/components/ui'
 import { requireAdminUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-export default async function Users() {
+export default async function Users({
+  searchParams,
+}: {
+  searchParams: Promise<{ emailStatus?: string }>
+}) {
   const currentUser = await requireAdminUser()
+  const sp = await searchParams
   const users = await prisma.user.findMany({ orderBy: { email: 'asc' } })
 
   return (
     <div className="space-y-6">
       <h2 className="text-3xl font-bold">Users</h2>
+      {sp.emailStatus === 'sent' && <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900">Verification email sent.</p>}
+      {sp.emailStatus === 'limited' && <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">Please wait a bit before requesting another verification email for that user.</p>}
+      {sp.emailStatus === 'error' && <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">AxilDB could not send the verification email. Check the audit log and app logs for details.</p>}
       <AddPanel label="Add user">
         <form action={createUser} className="grid max-w-4xl gap-x-3 gap-y-2 md:grid-cols-3">
           <Field label="Email" name="email" type="email" required />

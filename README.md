@@ -235,20 +235,23 @@ Current email foundation:
 
 - Welcome email for newly created users.
 - Email verification token generation and verification page.
+- Self-service resend verification from the account page.
+- Password reset request and completion screens.
+- Magic login link request and consumption route.
 - Secure random single-use tokens stored only as SHA-256 hashes.
 - Token purpose, expiration, and used-at tracking.
+- Basic auth-email cooldowns for verification, reset, and magic-link requests.
+- Visible success/limit/error feedback for auth email flows.
 - User email preferences on the account page.
 - Quiet botanical branded HTML and plain-text templates.
 - SMTP/log delivery abstraction.
 
 Planned next email steps:
 
-- Password reset request and completion screens.
-- Magic login link request and consumption screens.
 - Reminder creation UI tied to plant instances and bloom events.
 - Scheduled reminder sending job.
 - Reminder delivery history UI.
-- Basic auth-email anti-abuse protections such as cooldowns and request throttling.
+- Stronger anti-abuse protections such as IP-aware throttling and optional CAPTCHA if the app becomes public-write.
 
 ## Licensing and Branding
 
