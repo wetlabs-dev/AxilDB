@@ -9,12 +9,17 @@ import {
   deletePhoto,
   markSportCandidate,
   markSportReverted,
+  createReminder,
+  completeReminder,
+  pauseReminder,
+  deleteReminder,
 } from '@/app/actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { PlantImage } from '@/components/PlantImage'
-import { Button, Card, Field, TextArea } from '@/components/ui'
+import { Button, Card, Field, Select, TextArea } from '@/components/ui'
 import { canCreate, getCurrentUser, isAdmin } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { recurrenceLabel, reminderCategories, reminderCategoryLabel, reminderRecurrences } from '@/lib/reminders'
 import { fmtDate, plantName, taxonomyLabel } from '@/lib/utils'
 import Link from 'next/link'
 import QRCode from 'qrcode'
@@ -81,6 +86,29 @@ export default async function InstanceDetail({
     acc[photo.entityId].push(photo)
     return acc
   }, {})
+
+  const reminders = user
+    ? await prisma.reminder.findMany({
+        where: {
+          userId: user.id,
+          OR: [
+            { entityType: 'PLANT_INSTANCE', entityId: id },
+            { entityType: 'BLOOM_EVENT', entityId: { in: i.blooms.map((b) => b.id) } },
+          ],
+        },
+        orderBy: [{ completedAt: 'asc' }, { pausedAt: 'asc' }, { nextSendAt: 'asc' }, { dueAt: 'desc' }],
+      })
+    : []
+
+  const instanceReminders = reminders.filter((reminder) => reminder.entityType === 'PLANT_INSTANCE')
+  const remindersByBloomId = reminders
+    .filter((reminder) => reminder.entityType === 'BLOOM_EVENT')
+    .reduce<Record<string, typeof reminders>>((acc, reminder) => {
+      if (!reminder.entityId) return acc
+      if (!acc[reminder.entityId]) acc[reminder.entityId] = []
+      acc[reminder.entityId].push(reminder)
+      return acc
+    }, {})
 
   const qr = await QRCode.toDataURL(
     `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.axildb.com'}/instances/${id}`
@@ -227,6 +255,81 @@ export default async function InstanceDetail({
         </Card>
 
         <Card>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="font-bold">Reminders</h3>
+              <p className="text-sm text-stone-600">Send yourself plant check-in emails tied to this specimen.</p>
+            </div>
+            <Link className="text-sm font-medium underline" href="/reminders">All reminders</Link>
+          </div>
+
+          {user ? (
+            <form action={createReminder} className="mt-4 grid gap-2 rounded-xl border border-stone-200 bg-white/60 p-3">
+              <input type="hidden" name="entityType" value="PLANT_INSTANCE" />
+              <input type="hidden" name="entityId" value={id} />
+              <input type="hidden" name="back" value={`/instances/${id}`} />
+              <Field label="Title" name="title" defaultValue={`Check ${i.plantId}`} required />
+              <Field label="Send at" help="The first date and time AxilDB should email this reminder." name="dueAt" type="datetime-local" required />
+              <Select label="Category" name="category" defaultValue="PLANT_CHECK_IN">
+                {reminderCategories.map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </Select>
+              <Select label="Repeat" name="rrule" defaultValue="">
+                {reminderRecurrences.map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </Select>
+              <TextArea label="Notes" name="body" />
+              <Button>Create reminder</Button>
+            </form>
+          ) : (
+            <p className="mt-4 text-sm text-stone-600">Sign in to schedule reminders.</p>
+          )}
+
+          <div className="mt-4 space-y-3">
+            {instanceReminders.length === 0 && <p className="text-sm text-stone-600">No reminders for this plant yet.</p>}
+            {instanceReminders.map((reminder) => (
+              <div key={reminder.id} className="rounded-lg border border-stone-200 bg-white/60 p-3 text-sm">
+                <p className="font-medium">{reminder.title}</p>
+                <p className="text-stone-600">
+                  {reminderCategoryLabel(reminder.category)} · Due {fmtDate(reminder.nextSendAt || reminder.dueAt)} · {recurrenceLabel(reminder.rrule)}
+                </p>
+                {reminder.body && <p className="mt-1 whitespace-pre-wrap text-stone-700">{reminder.body}</p>}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {!reminder.completedAt && !reminder.pausedAt && (
+                    <>
+                      <form action={completeReminder}>
+                        <input type="hidden" name="id" value={reminder.id} />
+                        <input type="hidden" name="back" value={`/instances/${id}`} />
+                        <Button className="px-3 py-1.5 text-xs">Complete</Button>
+                      </form>
+                      <form action={pauseReminder}>
+                        <input type="hidden" name="id" value={reminder.id} />
+                        <input type="hidden" name="back" value={`/instances/${id}`} />
+                        <Button className="border border-stone-300 bg-white/70 px-3 py-1.5 text-xs text-stone-800 hover:bg-white">Pause</Button>
+                      </form>
+                    </>
+                  )}
+                  <form action={deleteReminder}>
+                    <input type="hidden" name="id" value={reminder.id} />
+                    <input type="hidden" name="back" value={`/instances/${id}`} />
+                    <ConfirmDeleteButton
+                      className="px-3 py-1.5 text-xs"
+                      title="Delete reminder?"
+                      message="This deletes the reminder and its delivery history."
+                      confirmLabel="Delete reminder"
+                    >
+                      Delete
+                    </ConfirmDeleteButton>
+                  </form>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <Card>
           <h3 className="font-bold">Bloom tracker</h3>
           <p className="mb-4 text-sm text-neutral-600">
             Open a bloom when it starts, mark peak later, then close it when finished. Photos can be added to the bloom event at any stage.
@@ -255,7 +358,7 @@ export default async function InstanceDetail({
                   : 'Open'
 
               return (
-                <div key={b.id} className="rounded-xl border p-4">
+                <div key={b.id} id={`bloom-${b.id}`} className="rounded-xl border p-4">
                   <div className="mb-3 flex items-start justify-between gap-3">
                     <div>
                       <p className="font-bold">Bloom started {fmtDate(b.bloomStartDate)}</p>
@@ -305,6 +408,40 @@ export default async function InstanceDetail({
                     <Field label="Caption" name="caption" />
                     <Button>Add bloom photo</Button>
                   </form>}
+
+                  {user && (
+                    <div className="mt-4 rounded-xl bg-neutral-50 p-3">
+                      <p className="mb-2 text-sm font-medium">Bloom reminders</p>
+                      <form action={createReminder} className="grid gap-2">
+                        <input type="hidden" name="entityType" value="BLOOM_EVENT" />
+                        <input type="hidden" name="entityId" value={b.id} />
+                        <input type="hidden" name="category" value="BLOOM_CYCLE" />
+                        <input type="hidden" name="back" value={`/instances/${id}#bloom-${b.id}`} />
+                        <Field label="Title" name="title" defaultValue={`Follow up on bloom for ${i.plantId}`} required />
+                        <Field label="Send at" help="Useful for checking peak bloom, closure, or photo follow-up." name="dueAt" type="datetime-local" required />
+                        <Select label="Repeat" name="rrule" defaultValue="">
+                          {reminderRecurrences.map(([value, label]) => (
+                            <option key={value} value={value}>{label}</option>
+                          ))}
+                        </Select>
+                        <TextArea label="Notes" name="body" />
+                        <Button>Create bloom reminder</Button>
+                      </form>
+
+                      {(remindersByBloomId[b.id] || []).length > 0 && (
+                        <div className="mt-3 space-y-2 border-t border-stone-200 pt-3">
+                          {(remindersByBloomId[b.id] || []).map((reminder) => (
+                            <div key={reminder.id} className="text-sm">
+                              <p className="font-medium">{reminder.title}</p>
+                              <p className="text-stone-600">
+                                Due {fmtDate(reminder.nextSendAt || reminder.dueAt)} · {recurrenceLabel(reminder.rrule)}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {(photosByBloomId[b.id] || []).length > 0 && (
                     <div className="mt-4 grid grid-cols-2 gap-3">

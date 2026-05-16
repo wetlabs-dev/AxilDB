@@ -11,7 +11,8 @@
     "prisma:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
-    "db:bootstrap": "tsx prisma/bootstrap.ts"
+    "db:bootstrap": "tsx prisma/bootstrap.ts",
+    "email:send-reminders": "tsx scripts/send-reminders.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

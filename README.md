@@ -26,6 +26,8 @@ It is designed for real collection work: messy taxonomy, acquisition names, alia
 - Archive/restore workflow for plants that leave the active collection.
 - Local user accounts with admin/logger roles.
 - SMTP-ready email foundation with welcome/verification emails, secure single-use tokens, branded HTML/plain-text templates, and user email preferences.
+- User reminders for general tasks, plant check-ins, bloom follow-ups, and propagation follow-ups, with one-time or recurring schedules.
+- Reminder delivery history and a lightweight scheduled reminder worker.
 - Read-only browsing for unauthenticated visitors.
 - Admin-only edit/delete tools, users page, governing bodies page, and audit log.
 - Confirmation modals for destructive delete actions.
@@ -56,6 +58,7 @@ Production is managed with Docker Compose:
 - `db`: Postgres 16 database with a persistent Docker volume.
 - `migrate`: one-shot setup container that runs Prisma schema sync and bootstraps the initial admin user.
 - `app`: Next.js production server exposed internally on port 3000.
+- `reminders`: scheduled worker that checks for due reminders and sends email through the configured SMTP provider.
 
 Persistent production data lives in Docker volumes and bind mounts:
 
@@ -194,6 +197,7 @@ SMTP_USER=
 SMTP_PASSWORD=
 SMTP_FROM="AxilDB <no-reply@axildb.com>"
 SMTP_REPLY_TO=
+REMINDER_WORKER_INTERVAL_SECONDS=300
 ```
 
 Set `EMAIL_DELIVERY_MODE=smtp` and provide SMTP credentials to send real email. Docker Compose loads app-level email settings from `/etc/axildb/axildb.env` on the server, so SMTP credentials do not need to live in the repository.
@@ -243,14 +247,17 @@ Current email foundation:
 - Basic auth-email cooldowns for verification, reset, and magic-link requests.
 - Visible success/limit/error feedback for auth email flows.
 - User email preferences on the account page.
+- Reminder creation from the reminders page, plant instance pages, and bloom events.
+- Reminder delivery history for sent, failed, and skipped reminder emails.
+- Scheduled Docker worker for due reminder delivery.
 - Quiet botanical branded HTML and plain-text templates.
 - SMTP/log delivery abstraction.
 
 Planned next email steps:
 
-- Reminder creation UI tied to plant instances and bloom events.
-- Scheduled reminder sending job.
-- Reminder delivery history UI.
+- More detailed reminder presets for propagation follow-up and bloom-cycle timing.
+- In-app reminder notifications alongside email.
+- Better quiet-hours handling for reminder delivery windows.
 - Stronger anti-abuse protections such as IP-aware throttling and optional CAPTCHA if the app becomes public-write.
 
 ## Licensing and Branding

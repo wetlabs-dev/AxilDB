@@ -6,6 +6,7 @@ import { Button, GhostLink } from './ui'
 import {
   Archive,
   BarChart3,
+  Bell,
   BookOpen,
   FileText,
   Flower2,
@@ -32,6 +33,7 @@ const baseItems = [
   ['/sports', 'Sport Review', ShieldCheck],
   ['/labels', 'Bulk Tags', Tag],
   ['/search', 'Search', Search],
+  ['/reminders', 'Reminders', Bell],
   ['/archived', 'Archived Plants', Archive],
 ] as const
 

@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { unlink } from 'fs/promises'
 import path from 'path'
 import { prisma } from '@/lib/prisma'
-import { audit, requireAdminUser, requireCreateUser } from '@/lib/auth'
+import { audit, isAdmin, requireAdminUser, requireCreateUser, requireUser } from '@/lib/auth'
 import { createDemoData } from '@/lib/demo-data'
 import { generatePlantId } from '@/lib/plant-id'
 
@@ -15,6 +15,7 @@ const val = (fd: FormData, k: string) =>
 const date = (s?: string) => (s ? new Date(s) : undefined)
 const dec = (s?: string) => (s ? s : undefined)
 const back = (fd: FormData) => val(fd, 'back') || '/'
+const revalidateDestination = (destination: string) => revalidatePath(destination.split('#')[0] || '/')
 const boundedInt = (value: string | undefined, fallback: number, min: number, max: number) => {
   const parsed = Number(value)
   if (!Number.isFinite(parsed)) return fallback
@@ -334,6 +335,102 @@ export async function addNote(fd: FormData) {
   await audit(user, 'CREATE', 'NOTE', note.id, `Added note to ${note.entityType} ${note.entityId}`)
 
   redirect(back(fd))
+}
+
+async function requireReminderAccess(id: string) {
+  const user = await requireUser()
+  const reminder = await prisma.reminder.findUniqueOrThrow({ where: { id } })
+
+  if (reminder.userId !== user.id && !isAdmin(user)) {
+    throw new Error('You do not have permission to manage this reminder.')
+  }
+
+  return { user, reminder }
+}
+
+export async function createReminder(fd: FormData) {
+  const user = await requireUser()
+  const dueAt = date(val(fd, 'dueAt'))
+  const destination = back(fd)
+
+  if (!dueAt || Number.isNaN(dueAt.getTime())) {
+    throw new Error('A valid reminder date is required.')
+  }
+
+  const reminder = await prisma.reminder.create({
+    data: {
+      userId: user.id,
+      title: val(fd, 'title') || 'AxilDB reminder',
+      body: val(fd, 'body'),
+      category: val(fd, 'category') || 'GENERAL',
+      entityType: val(fd, 'entityType'),
+      entityId: val(fd, 'entityId'),
+      dueAt,
+      nextSendAt: dueAt,
+      rrule: val(fd, 'rrule'),
+    },
+  })
+
+  await audit(user, 'CREATE', 'REMINDER', reminder.id, `Created reminder ${reminder.title}`)
+  revalidateDestination(destination)
+  redirect(destination)
+}
+
+export async function completeReminder(fd: FormData) {
+  const id = val(fd, 'id')!
+  const destination = back(fd)
+  const { user, reminder } = await requireReminderAccess(id)
+
+  await prisma.reminder.update({
+    where: { id },
+    data: { completedAt: new Date(), nextSendAt: null },
+  })
+
+  await audit(user, 'COMPLETE', 'REMINDER', id, `Completed reminder ${reminder.title}`)
+  revalidateDestination(destination)
+  redirect(destination)
+}
+
+export async function pauseReminder(fd: FormData) {
+  const id = val(fd, 'id')!
+  const destination = back(fd)
+  const { user, reminder } = await requireReminderAccess(id)
+
+  await prisma.reminder.update({
+    where: { id },
+    data: { pausedAt: new Date(), nextSendAt: null },
+  })
+
+  await audit(user, 'PAUSE', 'REMINDER', id, `Paused reminder ${reminder.title}`)
+  revalidateDestination(destination)
+  redirect(destination)
+}
+
+export async function resumeReminder(fd: FormData) {
+  const id = val(fd, 'id')!
+  const destination = back(fd)
+  const { user, reminder } = await requireReminderAccess(id)
+
+  await prisma.reminder.update({
+    where: { id },
+    data: { pausedAt: null, nextSendAt: reminder.nextSendAt || reminder.dueAt },
+  })
+
+  await audit(user, 'RESUME', 'REMINDER', id, `Resumed reminder ${reminder.title}`)
+  revalidateDestination(destination)
+  redirect(destination)
+}
+
+export async function deleteReminder(fd: FormData) {
+  const id = val(fd, 'id')!
+  const destination = back(fd)
+  const { user, reminder } = await requireReminderAccess(id)
+
+  await prisma.reminder.delete({ where: { id } })
+
+  await audit(user, 'DELETE', 'REMINDER', id, `Deleted reminder ${reminder.title}`, reminder)
+  revalidateDestination(destination)
+  redirect(destination)
 }
 
 export async function markSportCandidate(fd: FormData) {
