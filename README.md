@@ -196,7 +196,38 @@ SMTP_FROM="AxilDB <no-reply@axildb.com>"
 SMTP_REPLY_TO=
 ```
 
-Set `EMAIL_DELIVERY_MODE=smtp` and provide SMTP credentials to send real email.
+Set `EMAIL_DELIVERY_MODE=smtp` and provide SMTP credentials to send real email. Docker Compose loads app-level email settings from `/etc/axildb/axildb.env` on the server, so SMTP credentials do not need to live in the repository.
+
+For Amazon SES in `us-east-2`, create the server config file:
+
+```bash
+sudo mkdir -p /etc/axildb
+sudo nano /etc/axildb/axildb.env
+```
+
+Example SES STARTTLS config:
+
+```text
+EMAIL_DELIVERY_MODE=smtp
+SMTP_HOST=email-smtp.us-east-2.amazonaws.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your-ses-smtp-user
+SMTP_PASSWORD=your-ses-smtp-password
+SMTP_FROM=AxilDB <no-reply@axildb.com>
+SMTP_REPLY_TO=
+```
+
+Then restrict the file permissions:
+
+```bash
+sudo chown root:root /etc/axildb/axildb.env
+sudo chmod 600 /etc/axildb/axildb.env
+```
+
+Use `SMTP_SECURE=false` for SES STARTTLS ports such as 587 or 2587. Use `SMTP_SECURE=true` only for TLS wrapper ports such as 465 or 2465.
+
+The `SMTP_FROM` address must be a sender/domain identity verified in SES. If the SES account is still in sandbox mode, recipient addresses must also be verified.
 
 Recommended production provider: Amazon SES. It fits well with the AWS/Lightsail deployment, is intended for application and transactional email, supports SMTP credentials, and avoids tying AxilDB to a personal mailbox. Gmail SMTP can work for small testing, especially with Google Workspace and app passwords, but it is less ideal as the long-term sender for app-auth and reminder emails.
 
