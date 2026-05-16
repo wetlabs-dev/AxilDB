@@ -4,6 +4,7 @@ import { plantName, fmtDate, taxonomyLabel } from '@/lib/utils'
 import Link from 'next/link'
 
 const control = 'rounded-md border border-stone-300 bg-[#fffdf7] px-3 py-2 text-sm shadow-inner shadow-stone-200/30 outline-none focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
+const contains = (value: string) => ({ contains: value, mode: 'insensitive' as const })
 
 export default async function SearchPage({
   searchParams,
@@ -19,19 +20,19 @@ export default async function SearchPage({
   const definitionSearch = q
     ? {
         OR: [
-          { genus: { contains: q } },
-          { species: { contains: q } },
-          { cultivarName: { contains: q } },
-          { authority: { contains: q } },
-          { acquisitionLabel: { contains: q } },
-          { provisionalTaxon: { contains: q } },
-          { wikipediaUrl: { contains: q } },
-          { inaturalistUrl: { contains: q } },
-          { powoUrl: { contains: q } },
-          { gbifUrl: { contains: q } },
-          { description: { contains: q } },
-          { notes: { contains: q } },
-          { aliases: { some: { OR: [{ name: { contains: q } }, { source: { contains: q } }, { notes: { contains: q } }] } } },
+          { genus: contains(q) },
+          { species: contains(q) },
+          { cultivarName: contains(q) },
+          { authority: contains(q) },
+          { acquisitionLabel: contains(q) },
+          { provisionalTaxon: contains(q) },
+          { wikipediaUrl: contains(q) },
+          { inaturalistUrl: contains(q) },
+          { powoUrl: contains(q) },
+          { gbifUrl: contains(q) },
+          { description: contains(q) },
+          { notes: contains(q) },
+          { aliases: { some: { OR: [{ name: contains(q) }, { source: contains(q) }, { notes: contains(q) }] } } },
         ],
       }
     : {}
@@ -45,10 +46,10 @@ export default async function SearchPage({
         q
           ? {
               OR: [
-                { plantId: { contains: q } },
-                { location: { contains: q } },
-                { source: { contains: q } },
-                { stockNumber: { contains: q } },
+                { plantId: contains(q) },
+                { location: contains(q) },
+                { source: contains(q) },
+                { stockNumber: contains(q) },
                 { plantDefinition: definitionSearch },
               ],
             }
