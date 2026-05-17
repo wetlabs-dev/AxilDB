@@ -182,13 +182,13 @@ export function SidebarClient({
       <summary className="cursor-pointer list-none font-medium text-stone-800">{currentName}</summary>
       <div className="mt-2 grid gap-1">
         {collections.map((collection) => (
-          <Link
+          <a
             key={collection.id}
             href={collectionPath(collection.slug)}
             className="rounded-md px-2 py-1 text-stone-700 hover:bg-[#d6dfc9]/60"
           >
             {collection.name}
-          </Link>
+          </a>
         ))}
         <Link href="/collections" className="rounded-md px-2 py-1 text-[#2f6b45] hover:bg-[#d6dfc9]/60">
           Manage collections
