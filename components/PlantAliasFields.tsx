@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { X } from 'lucide-react'
 import { aliasTypeOptions, confidenceOptions } from '@/lib/taxonomy'
 import { Button, HelpTooltip, SuggestionDatalist } from '@/components/ui'
 
@@ -13,7 +14,16 @@ type Alias = {
   notes?: string | null
 }
 
+type AliasRow = Alias & { rowKey: string }
+
 const control = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
+
+function createRow(alias: Alias = {}): AliasRow {
+  return {
+    ...alias,
+    rowKey: alias.id || globalThis.crypto?.randomUUID?.() || `alias-${Date.now()}-${Math.random()}`,
+  }
+}
 
 export function ConfidenceSelect({
   name,
@@ -53,10 +63,17 @@ export function PlantAliasFields({
   sourceSuggestions?: string[]
 }) {
   const rootRef = useRef<HTMLDivElement>(null)
-  const [rows, setRows] = useState<Alias[]>(aliases.length > 0 ? aliases : [{}])
+  const [rows, setRows] = useState<AliasRow[]>(() => (aliases.length > 0 ? aliases.map(createRow) : [createRow()]))
 
   function addAliasRow() {
-    setRows((current) => [...current, {}])
+    setRows((current) => [...current, createRow()])
+  }
+
+  function removeAliasRow(index: number) {
+    setRows((current) => {
+      const nextRows = current.filter((_, rowIndex) => rowIndex !== index)
+      return nextRows.length > 0 ? nextRows : [createRow()]
+    })
   }
 
   useEffect(() => {
@@ -64,7 +81,7 @@ export function PlantAliasFields({
       const detail = (event as CustomEvent<{ aliases?: Alias[]; form?: HTMLFormElement }>).detail
       if (detail?.form && rootRef.current && !detail.form.contains(rootRef.current)) return
       const nextRows = detail?.aliases?.filter((alias) => alias.name?.trim()) || []
-      setRows(nextRows.length > 0 ? nextRows : [{}])
+      setRows(nextRows.length > 0 ? nextRows.map(createRow) : [createRow()])
     }
 
     window.addEventListener('axildb:replace-aliases', replaceAliases)
@@ -82,7 +99,18 @@ export function PlantAliasFields({
       </div>
       <div className="grid gap-2">
         {rows.map((alias, index) => (
-          <div key={alias.id || index} className="grid gap-2 rounded-lg border border-stone-200 bg-[#fffdf7]/70 p-2.5 lg:grid-cols-[minmax(13rem,1.6fr)_minmax(8rem,.9fr)_minmax(8rem,.9fr)_minmax(11rem,1fr)]">
+          <div key={alias.rowKey} className="grid gap-2 rounded-lg border border-stone-200 bg-[#fffdf7]/70 p-2.5 lg:grid-cols-[minmax(13rem,1.6fr)_minmax(8rem,.9fr)_minmax(8rem,.9fr)_minmax(11rem,1fr)]">
+            <div className="flex items-center justify-between gap-2 lg:col-span-4">
+              <span className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Alias {index + 1}</span>
+              <button
+                type="button"
+                onClick={() => removeAliasRow(index)}
+                className="inline-flex items-center gap-1 rounded-md border border-stone-300 bg-white/70 px-2 py-1 text-xs font-semibold text-stone-700 shadow-sm transition hover:bg-white"
+              >
+                <X className="h-3 w-3" />
+                Remove
+              </button>
+            </div>
             <label className="grid gap-1 text-sm font-medium text-stone-800">
               Name
               <input className={control} name="aliasName" defaultValue={alias.name || ''} />

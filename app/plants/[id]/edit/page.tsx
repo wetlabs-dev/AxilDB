@@ -6,7 +6,7 @@ import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { requireAdminUser } from '@/lib/auth'
 import { PlantImage } from '@/components/PlantImage'
 import { rankedSuggestions } from '@/lib/suggestions'
-import { AIDescriptionField } from '@/components/AIDescriptionField'
+import { AIDescriptionField, AIMagicFillButton } from '@/components/AIDescriptionField'
 
 const selectClass = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
 
@@ -64,6 +64,7 @@ export default async function EditPlant({
     provisionalTaxon: rankedSuggestions(definitionSuggestionRows.map((definition) => definition.provisionalTaxon)),
     aliasSource: rankedSuggestions(definitionSuggestionRows.flatMap((definition) => definition.aliases.map((alias) => alias.source))),
   }
+  const governingBodyOptions = bodies.map((body) => ({ id: body.id, name: body.name, abbreviation: body.abbreviation }))
 
   return (
     <div className="space-y-6">
@@ -82,15 +83,13 @@ export default async function EditPlant({
           <Field label="Species" name="species" required defaultValue={plant.species} list="definition-species-suggestions" autoCapitalize="none" />
           <Field label="Hybrid notation" help="Use for botanical hybrid markers or formula context, such as x, grex, or parentage notation that belongs with the name." name="hybridNotation" defaultValue={plant.hybridNotation} list="definition-hybrid-notation-suggestions" />
           <Field label="Cultivar name" help="The named cultivated variety, usually written in single quotes, such as 'Morning Glow'. Leave blank for unnamed species or clones." name="cultivarName" defaultValue={plant.cultivarName} list="definition-cultivar-name-suggestions" />
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-lg border border-[#d6dfc9] bg-[#f7f4e8]/80 px-3 py-2 text-sm text-stone-700 lg:col-span-4">
+            <span className="min-w-0">Update the core name first, then let AxilDB draft taxonomy metadata and suggested aliases.</span>
+            <AIMagicFillButton governingBodies={governingBodyOptions} />
+          </div>
           <Field label="Authority" help="The author citation for the scientific name, such as (L.f.) R.Br. It records who validly published the name or combination." name="authority" defaultValue={plant.authority} list="definition-authority-suggestions" />
           <Field label="Cultivar registration number" help="Use when a formal cultivar registry or governing body assigns a registration number to the cultivar." name="cultivarRegistrationNumber" defaultValue={plant.cultivarRegistrationNumber} />
           <ConfidenceSelect name="confidence" defaultValue={plant.confidence} />
-          <Field label="Acquisition label" help="The name or label the plant arrived with, even if you later determine a different accepted name." name="acquisitionLabel" defaultValue={plant.acquisitionLabel} list="definition-acquisition-label-suggestions" />
-          <Field label="Provisional taxon" help="A cautious working identification when the accepted name is not settled yet. Useful for 'probably this' or awaiting confirmation." name="provisionalTaxon" defaultValue={plant.provisionalTaxon} list="definition-provisional-taxon-suggestions" />
-          <Field label="Wikipedia URL" help="Optional quick reference link for the species or genus entry." name="wikipediaUrl" type="url" defaultValue={plant.wikipediaUrl} />
-          <Field label="iNaturalist URL" help="Optional link to an iNaturalist taxon page for observations, common names, and community references." name="inaturalistUrl" type="url" defaultValue={plant.inaturalistUrl} />
-          <Field label="POWO URL" help="Optional Plants of the World Online link for accepted names, synonyms, and distribution data." name="powoUrl" type="url" defaultValue={plant.powoUrl} />
-          <Field label="GBIF URL" help="Optional GBIF link for occurrence records, taxonomy backbone data, and biodiversity references." name="gbifUrl" type="url" defaultValue={plant.gbifUrl} />
           <label className="grid gap-1 text-sm font-medium text-stone-800">
             <span className="flex items-center gap-1.5">
               <span>Governing body</span>
@@ -105,11 +104,13 @@ export default async function EditPlant({
               ))}
             </select>
           </label>
-          <AIDescriptionField
-            defaultValue={plant.description}
-            wrapperClassName="lg:col-span-2"
-            governingBodies={bodies.map((body) => ({ id: body.id, name: body.name, abbreviation: body.abbreviation }))}
-          />
+          <Field label="Acquisition label" help="The name or label the plant arrived with, even if you later determine a different accepted name." name="acquisitionLabel" defaultValue={plant.acquisitionLabel} list="definition-acquisition-label-suggestions" wrapperClassName="lg:col-span-2" />
+          <Field label="Provisional taxon" help="A cautious working identification when the accepted name is not settled yet. Useful for 'probably this' or awaiting confirmation." name="provisionalTaxon" defaultValue={plant.provisionalTaxon} list="definition-provisional-taxon-suggestions" wrapperClassName="lg:col-span-2" />
+          <Field label="Wikipedia URL" help="Optional quick reference link for the species or genus entry." name="wikipediaUrl" type="url" defaultValue={plant.wikipediaUrl} />
+          <Field label="iNaturalist URL" help="Optional link to an iNaturalist taxon page for observations, common names, and community references." name="inaturalistUrl" type="url" defaultValue={plant.inaturalistUrl} />
+          <Field label="POWO URL" help="Optional Plants of the World Online link for accepted names, synonyms, and distribution data." name="powoUrl" type="url" defaultValue={plant.powoUrl} />
+          <Field label="GBIF URL" help="Optional GBIF link for occurrence records, taxonomy backbone data, and biodiversity references." name="gbifUrl" type="url" defaultValue={plant.gbifUrl} />
+          <AIDescriptionField defaultValue={plant.description} wrapperClassName="lg:col-span-2" />
           <TextArea label="Notes" name="notes" defaultValue={plant.notes} wrapperClassName="lg:col-span-2" />
           <PlantAliasFields aliases={plant.aliases} submitLabel="Save changes" sourceSuggestions={definitionSuggestions.aliasSource} />
         </form>

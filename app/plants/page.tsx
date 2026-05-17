@@ -3,7 +3,7 @@ import { createPlantDefinition, followEntity, unfollowEntity } from '@/app/actio
 import { AddPanel, Button, Card, Field, HelpTooltip, TextArea, LinkButton, SuggestionDatalist } from '@/components/ui'
 import { ConfidenceSelect, PlantAliasFields } from '@/components/PlantAliasFields'
 import { PlantImage } from '@/components/PlantImage'
-import { AIDescriptionField } from '@/components/AIDescriptionField'
+import { AIDescriptionField, AIMagicFillButton } from '@/components/AIDescriptionField'
 import { canCreate, getCurrentUser, isAdmin } from '@/lib/auth'
 import { rankedSuggestions } from '@/lib/suggestions'
 import { plantName, taxonomyLabel } from '@/lib/utils'
@@ -41,6 +41,7 @@ export default async function Plants() {
     provisionalTaxon: rankedSuggestions(plants.map((plant) => plant.provisionalTaxon)),
     aliasSource: rankedSuggestions(plants.flatMap((plant) => plant.aliases.map((alias) => alias.source))),
   }
+  const governingBodyOptions = bodies.map((body) => ({ id: body.id, name: body.name, abbreviation: body.abbreviation }))
   const instanceIds = plants.flatMap((plant) => plant.instances.map((instance) => instance.id))
   const [definitionPhotos, typePhotos] = await Promise.all([
     prisma.photo.findMany({
@@ -82,15 +83,13 @@ export default async function Plants() {
             <Field label="Species" name="species" required list="definition-species-suggestions" autoCapitalize="none" />
             <Field label="Hybrid notation" help="Use for botanical hybrid markers or formula context, such as x, grex, or parentage notation that belongs with the name." name="hybridNotation" list="definition-hybrid-notation-suggestions" />
             <Field label="Cultivar name" help="The named cultivated variety, usually written in single quotes, such as 'Morning Glow'. Leave blank for unnamed species or clones." name="cultivarName" list="definition-cultivar-name-suggestions" />
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-lg border border-[#d6dfc9] bg-[#f7f4e8]/80 px-3 py-2 text-sm text-stone-700 lg:col-span-4">
+              <span className="min-w-0">Enter the core name first, then let AxilDB draft taxonomy metadata and suggested aliases.</span>
+              <AIMagicFillButton governingBodies={governingBodyOptions} />
+            </div>
             <Field label="Authority" help="The author citation for the scientific name, such as (L.f.) R.Br. It records who validly published the name or combination." name="authority" list="definition-authority-suggestions" />
             <Field label="Cultivar registration number" help="Use when a formal cultivar registry or governing body assigns a registration number to the cultivar." name="cultivarRegistrationNumber" />
             <ConfidenceSelect name="confidence" />
-            <Field label="Acquisition label" help="The name or label the plant arrived with, even if you later determine a different accepted name." name="acquisitionLabel" list="definition-acquisition-label-suggestions" />
-            <Field label="Provisional taxon" help="A cautious working identification when the accepted name is not settled yet. Useful for 'probably this' or awaiting confirmation." name="provisionalTaxon" list="definition-provisional-taxon-suggestions" />
-            <Field label="Wikipedia URL" help="Optional quick reference link for the species or genus entry." name="wikipediaUrl" type="url" />
-            <Field label="iNaturalist URL" help="Optional link to an iNaturalist taxon page for observations, common names, and community references." name="inaturalistUrl" type="url" />
-            <Field label="POWO URL" help="Optional Plants of the World Online link for accepted names, synonyms, and distribution data." name="powoUrl" type="url" />
-            <Field label="GBIF URL" help="Optional GBIF link for occurrence records, taxonomy backbone data, and biodiversity references." name="gbifUrl" type="url" />
             <label className="grid gap-1 text-sm font-medium text-stone-800">
               <span className="flex items-center gap-1.5">
                 <span>Governing body</span>
@@ -105,10 +104,13 @@ export default async function Plants() {
                 ))}
               </select>
             </label>
-            <AIDescriptionField
-              wrapperClassName="lg:col-span-2"
-              governingBodies={bodies.map((body) => ({ id: body.id, name: body.name, abbreviation: body.abbreviation }))}
-            />
+            <Field label="Acquisition label" help="The name or label the plant arrived with, even if you later determine a different accepted name." name="acquisitionLabel" list="definition-acquisition-label-suggestions" wrapperClassName="lg:col-span-2" />
+            <Field label="Provisional taxon" help="A cautious working identification when the accepted name is not settled yet. Useful for 'probably this' or awaiting confirmation." name="provisionalTaxon" list="definition-provisional-taxon-suggestions" wrapperClassName="lg:col-span-2" />
+            <Field label="Wikipedia URL" help="Optional quick reference link for the species or genus entry." name="wikipediaUrl" type="url" />
+            <Field label="iNaturalist URL" help="Optional link to an iNaturalist taxon page for observations, common names, and community references." name="inaturalistUrl" type="url" />
+            <Field label="POWO URL" help="Optional Plants of the World Online link for accepted names, synonyms, and distribution data." name="powoUrl" type="url" />
+            <Field label="GBIF URL" help="Optional GBIF link for occurrence records, taxonomy backbone data, and biodiversity references." name="gbifUrl" type="url" />
+            <AIDescriptionField wrapperClassName="lg:col-span-2" />
             <TextArea label="Notes" name="notes" wrapperClassName="lg:col-span-2" />
             <PlantAliasFields submitLabel="Create plant definition" sourceSuggestions={definitionSuggestions.aliasSource} />
           </form>

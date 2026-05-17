@@ -134,7 +134,9 @@ export async function POST(req: Request) {
       'Prefer authoritative URLs. POWO should be Plants of the World Online, GBIF should be gbif.org, iNaturalist should be an iNaturalist taxon page, Wikipedia should be a relevant article if one exists.',
       'Use one of the provided governingBodies by name or abbreviation only when it clearly applies; otherwise null.',
       'Keep description factual and under 40 words.',
-      'Aliases may include synonyms, obsolete taxonomy, common names, trade names, misapplied names, and shorthand.',
+      'Return 1 to 6 useful aliases when meaningful synonyms, obsolete names, common names, trade names, misapplied names, or shorthand labels are known. Do not fabricate aliases if none are known.',
+      'For common houseplants or horticultural taxa, include widely used common names as aliases.',
+      'If you change the accepted genus or species from the supplied input, aliases must include the original supplied binomial.',
       'Allowed aliasType values: SYNONYM, TRADE_NAME, OBSOLETE_TAXONOMY, COMMON_NAME, MISAPPLIED_NAME, SHORTHAND.',
       'Allowed confidence values: CONFIRMED, PROBABLE, UNCERTAIN, TRADE_ASSUMED, DISPUTED.',
     ],
@@ -180,6 +182,18 @@ export async function POST(req: Request) {
     }
 
     const fields = normalizeFields(extractJson(outputText(payload)), originalName)
+    const acceptedBinomial = `${fields.genus || genus} ${fields.species || species}`.trim().toLowerCase()
+    const originalBinomial = `${genus} ${species}`.trim().toLowerCase()
+    if (acceptedBinomial !== originalBinomial && !fields.aliases.some((alias: { name: string }) => alias.name.toLowerCase() === originalBinomial)) {
+      fields.aliases.unshift({
+        name: `${genus} ${species}`,
+        aliasType: 'OBSOLETE_TAXONOMY',
+        confidence: 'PROBABLE',
+        source: 'AxilDB AI draft',
+        notes: 'Original submitted name before accepted-name correction.',
+      })
+      fields.aliases = fields.aliases.slice(0, 8)
+    }
     await audit(user, 'GENERATE', 'AI_MAGIC_FILL', null, `Generated magic fill for ${originalName}`, { model, reviewNote: fields.reviewNote })
     return NextResponse.json({ fields })
   } catch (error) {
