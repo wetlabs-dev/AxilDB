@@ -4,7 +4,8 @@ import { AddPanel, Button, Card, Field, HelpTooltip, TextArea, LinkButton, Sugge
 import { ConfidenceSelect, PlantAliasFields } from '@/components/PlantAliasFields'
 import { PlantImage } from '@/components/PlantImage'
 import { AIDescriptionField, AIMagicFillButton } from '@/components/AIDescriptionField'
-import { canCreate, getCurrentUser, isAdmin } from '@/lib/auth'
+import { getCurrentUser } from '@/lib/auth'
+import { canCreateInCollection, canEditInCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { rankedSuggestions } from '@/lib/suggestions'
 import { plantName, taxonomyLabel } from '@/lib/utils'
 import Link from 'next/link'
@@ -13,8 +14,12 @@ const selectClass = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1
 
 export default async function Plants() {
   const user = await getCurrentUser()
+  const context = await requireCollectionViewer()
+  const { collection } = context
+  const collectionWhere = { collectionId: collection.id }
   const [plants, bodies, follows] = await Promise.all([
     prisma.plantDefinition.findMany({
+      where: collectionWhere,
       include: {
         governingBody: true,
         aliases: { orderBy: { name: 'asc' } },
@@ -23,10 +28,10 @@ export default async function Plants() {
       },
       orderBy: [{ genus: 'asc' }, { species: 'asc' }],
     }),
-    prisma.governingBody.findMany({ orderBy: { name: 'asc' } }),
+    prisma.governingBody.findMany({ where: collectionWhere, orderBy: { name: 'asc' } }),
     user
       ? prisma.follow.findMany({
-          where: { userId: user.id, scope: 'TYPE', entityType: 'PLANT_DEFINITION' },
+          where: { ...collectionWhere, userId: user.id, scope: 'TYPE', entityType: 'PLANT_DEFINITION' },
         })
       : [],
   ])
@@ -46,16 +51,16 @@ export default async function Plants() {
   const plantIds = plants.map((plant) => plant.id)
   const [definitionPhotos, typePhotos, followCounts] = await Promise.all([
     prisma.photo.findMany({
-      where: { entityType: 'PLANT_DEFINITION', entityId: { in: plantIds }, isType: true },
+      where: { ...collectionWhere, entityType: 'PLANT_DEFINITION', entityId: { in: plantIds }, isType: true },
       orderBy: { createdAt: 'desc' },
     }),
     prisma.photo.findMany({
-      where: { entityType: 'PLANT_INSTANCE', entityId: { in: instanceIds }, isType: true },
+      where: { ...collectionWhere, entityType: 'PLANT_INSTANCE', entityId: { in: instanceIds }, isType: true },
       orderBy: { createdAt: 'desc' },
     }),
     prisma.follow.groupBy({
       by: ['entityId'],
-      where: { scope: 'TYPE', entityType: 'PLANT_DEFINITION', entityId: { in: plantIds } },
+      where: { ...collectionWhere, scope: 'TYPE', entityType: 'PLANT_DEFINITION', entityId: { in: plantIds } },
       _count: { _all: true },
     }),
   ])
@@ -73,10 +78,10 @@ export default async function Plants() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold">Plant Definitions</h2>
-        <LinkButton href="/search">Search</LinkButton>
+        <LinkButton href={collectionPath(collection.slug, '/search')}>Search</LinkButton>
       </div>
 
-      {canCreate(user) && (
+      {canCreateInCollection(user, context) && (
         <AddPanel label="Add plant definition">
           <SuggestionDatalist id="definition-genus-suggestions" suggestions={definitionSuggestions.genus} />
           <SuggestionDatalist id="definition-species-suggestions" suggestions={definitionSuggestions.species} />
@@ -86,6 +91,7 @@ export default async function Plants() {
           <SuggestionDatalist id="definition-acquisition-label-suggestions" suggestions={definitionSuggestions.acquisitionLabel} />
           <SuggestionDatalist id="definition-provisional-taxon-suggestions" suggestions={definitionSuggestions.provisionalTaxon} />
           <form action={createPlantDefinition} className="grid max-w-6xl gap-x-3 gap-y-2 lg:grid-cols-4">
+            <input type="hidden" name="collectionSlug" value={collection.slug} />
             <Field label="Genus" name="genus" required list="definition-genus-suggestions" />
             <Field label="Species" name="species" required list="definition-species-suggestions" autoCapitalize="none" />
             <Field label="Hybrid notation" help="Use for botanical hybrid markers or formula context, such as x, grex, or parentage notation that belongs with the name." name="hybridNotation" list="definition-hybrid-notation-suggestions" />
@@ -166,8 +172,8 @@ export default async function Plants() {
                   {followCountByDefinitionId.get(plant.id) || 0} follower{(followCountByDefinitionId.get(plant.id) || 0) === 1 ? '' : 's'}
                 </p>
                 </div>
-              {isAdmin(user) && (
-                <Link className="rounded-md border px-2 py-1 text-xs" href={`/plants/${plant.id}/edit`}>
+              {canEditInCollection(user, context) && (
+                <Link className="rounded-md border px-2 py-1 text-xs" href={collectionPath(collection.slug, `/plants/${plant.id}/edit`)}>
                   Edit
                 </Link>
               )}
@@ -177,7 +183,7 @@ export default async function Plants() {
                   {followsByDefinitionId.get(plant.id) ? (
                     <form action={unfollowEntity}>
                       <input type="hidden" name="id" value={followsByDefinitionId.get(plant.id)!.id} />
-                      <input type="hidden" name="back" value="/plants" />
+                      <input type="hidden" name="back" value={collectionPath(collection.slug, '/plants')} />
                       <Button className="w-full border border-stone-300 bg-white/70 px-3 py-1.5 text-xs text-stone-800 hover:bg-white">
                         Following type · {followCountByDefinitionId.get(plant.id) || 0}
                       </Button>
@@ -187,7 +193,8 @@ export default async function Plants() {
                       <input type="hidden" name="scope" value="TYPE" />
                       <input type="hidden" name="entityType" value="PLANT_DEFINITION" />
                       <input type="hidden" name="entityId" value={plant.id} />
-                      <input type="hidden" name="back" value="/plants" />
+                      <input type="hidden" name="collectionSlug" value={collection.slug} />
+                      <input type="hidden" name="back" value={collectionPath(collection.slug, '/plants')} />
                       <Button className="w-full px-3 py-1.5 text-xs">Follow type · {followCountByDefinitionId.get(plant.id) || 0}</Button>
                     </form>
                   )}

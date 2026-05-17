@@ -1,7 +1,7 @@
 import { deletePlantInstance, restorePlantInstance, updatePlantInstance } from '@/app/actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { Button, Card, Field, SuggestionDatalist, TextArea } from '@/components/ui'
-import { requireAdminUser } from '@/lib/auth'
+import { requireCollectionAdmin } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
 import { rankedSuggestions } from '@/lib/suggestions'
 import { dateInput, plantName } from '@/lib/utils'
@@ -9,12 +9,13 @@ import { dateInput, plantName } from '@/lib/utils'
 const selectClass = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
 
 export default async function EditInstance({ params }: { params: Promise<{ id: string }> }) {
-  await requireAdminUser()
+  const { collection } = await requireCollectionAdmin()
   const { id } = await params
   const [instance, definitions, instanceSuggestionRows] = await Promise.all([
-    prisma.plantInstance.findUniqueOrThrow({ where: { id } }),
-    prisma.plantDefinition.findMany({ orderBy: { genus: 'asc' } }),
+    prisma.plantInstance.findFirstOrThrow({ where: { id, collectionId: collection.id } }),
+    prisma.plantDefinition.findMany({ where: { collectionId: collection.id }, orderBy: { genus: 'asc' } }),
     prisma.plantInstance.findMany({
+      where: { collectionId: collection.id },
       select: { location: true, source: true, distributor: true, stockNumber: true },
     }),
   ])
@@ -33,6 +34,7 @@ export default async function EditInstance({ params }: { params: Promise<{ id: s
           <SuggestionDatalist id="instance-distributor-suggestions" suggestions={distributorSuggestions} />
           <SuggestionDatalist id="instance-stock-number-suggestions" suggestions={stockNumberSuggestions} />
           <input type="hidden" name="id" value={id} />
+          <input type="hidden" name="collectionSlug" value={collection.slug} />
           <label className="grid gap-1 text-sm font-medium text-stone-800">
             Plant definition
             <select className={selectClass} name="plantDefinitionId" defaultValue={instance.plantDefinitionId}>
@@ -78,6 +80,7 @@ export default async function EditInstance({ params }: { params: Promise<{ id: s
           <h3 className="font-bold">Restore</h3>
           <form action={restorePlantInstance}>
             <input type="hidden" name="id" value={id} />
+            <input type="hidden" name="collectionSlug" value={collection.slug} />
             <Button>Restore active</Button>
           </form>
         </Card>
@@ -86,6 +89,7 @@ export default async function EditInstance({ params }: { params: Promise<{ id: s
           <p className="mb-3 text-sm">Deletes this physical plant record. Related blooms and sport records cascade.</p>
           <form action={deletePlantInstance}>
             <input type="hidden" name="id" value={id} />
+            <input type="hidden" name="collectionSlug" value={collection.slug} />
             <ConfirmDeleteButton
               title="Delete plant instance?"
               message={`This will permanently delete ${instance.plantId}, including related bloom and sport records.`}

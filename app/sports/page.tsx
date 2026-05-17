@@ -1,27 +1,32 @@
 import { createSportStabilityRecord, markSportReverted } from '@/app/actions'
 import { PlantImage } from '@/components/PlantImage'
 import { Button, Card, Field, LinkButton, TextArea } from '@/components/ui'
-import { canCreate, getCurrentUser, isAdmin } from '@/lib/auth'
+import { getCurrentUser } from '@/lib/auth'
+import { canCreateInCollection, canEditInCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
 import { plantName } from '@/lib/utils'
 import Link from 'next/link'
 
 export default async function SportReview() {
   const user = await getCurrentUser()
+  const context = await requireCollectionViewer()
+  const { collection } = context
+  const collectionWhere = { collectionId: collection.id }
   const [sports, events] = await Promise.all([
     prisma.plantInstance.findMany({
-      where: { OR: [{ isSportCandidate: true }, { sportStatus: { not: 'NONE' } }] },
+      where: { ...collectionWhere, OR: [{ isSportCandidate: true }, { sportStatus: { not: 'NONE' } }] },
       include: { plantDefinition: true, sportRecords: { include: { propagationEvent: true }, orderBy: { generationNumber: 'desc' } } },
       orderBy: { updatedAt: 'desc' },
     }),
     prisma.propagationEvent.findMany({
+      where: collectionWhere,
       include: { children: { include: { childPlantInstance: true } } },
       orderBy: { date: 'desc' },
     }),
   ])
 
   const photos = await prisma.photo.findMany({
-    where: { entityType: 'PLANT_INSTANCE', entityId: { in: sports.map((sport) => sport.id) } },
+    where: { ...collectionWhere, entityType: 'PLANT_INSTANCE', entityId: { in: sports.map((sport) => sport.id) } },
     orderBy: [{ isCover: 'desc' }, { createdAt: 'desc' }],
   })
   const photoByInstance = photos.reduce<Record<string, string>>((acc, photo) => {
@@ -43,7 +48,7 @@ export default async function SportReview() {
 
           return (
             <Card key={sport.id} className="flex h-full flex-col overflow-hidden p-0">
-              <Link href={`/instances/${sport.id}`} className="block flex-1">
+              <Link href={collectionPath(collection.slug, `/instances/${sport.id}`)} className="block flex-1">
                 <div className="aspect-[4/3]">
                   <PlantImage src={photoByInstance[sport.id]} alt={sport.plantId} />
                 </div>
@@ -57,14 +62,15 @@ export default async function SportReview() {
               </Link>
 
               <div className="space-y-3 border-t border-stone-200 p-3 text-xs">
-                {isAdmin(user) && eligible && <LinkButton className="w-full px-2 py-1.5 text-xs" href={`/sports/${sport.id}/cultivar`}>Create cultivar</LinkButton>}
+                {canEditInCollection(user, context) && eligible && <LinkButton className="w-full px-2 py-1.5 text-xs" href={collectionPath(collection.slug, `/sports/${sport.id}/cultivar`)}>Create cultivar</LinkButton>}
 
-                {canCreate(user) && sport.sportStatus !== 'REVERTED' && (
+                {canCreateInCollection(user, context) && sport.sportStatus !== 'REVERTED' && (
                   <details className="rounded-md border border-stone-200 bg-white/60 p-2">
                     <summary className="cursor-pointer font-medium">Add stability record</summary>
                     <form action={createSportStabilityRecord} className="mt-3 grid gap-2">
                       <input type="hidden" name="plantInstanceId" value={sport.id} />
-                      <input type="hidden" name="back" value="/sports" />
+                      <input type="hidden" name="collectionSlug" value={collection.slug} />
+                      <input type="hidden" name="back" value={collectionPath(collection.slug, '/sports')} />
                       <label className="grid gap-1 text-xs font-medium">
                         Propagation event
                         <select className="rounded-md border px-2 py-1 font-normal" name="propagationEventId">
@@ -83,12 +89,13 @@ export default async function SportReview() {
                   </details>
                 )}
 
-                {canCreate(user) && !['REVERTED', 'REGISTERED'].includes(sport.sportStatus) && (
+                {canCreateInCollection(user, context) && !['REVERTED', 'REGISTERED'].includes(sport.sportStatus) && (
                   <details className="rounded-md border border-stone-200 bg-white/60 p-2">
                     <summary className="cursor-pointer font-medium">Mark reverted</summary>
                     <form action={markSportReverted} className="mt-3 grid gap-2">
                       <input type="hidden" name="id" value={sport.id} />
-                      <input type="hidden" name="back" value="/sports" />
+                      <input type="hidden" name="collectionSlug" value={collection.slug} />
+                      <input type="hidden" name="back" value={collectionPath(collection.slug, '/sports')} />
                       <TextArea label="Reversion notes" help="Explain why this plant or branch should stop carrying the sport line forward." name="observation" />
                       <Button className="px-3 py-1.5 text-xs">Mark reverted</Button>
                     </form>

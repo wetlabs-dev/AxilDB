@@ -156,14 +156,15 @@ const definitions: DefinitionInput[] = [
   },
 ]
 
-export async function createDemoData() {
+export async function createDemoData(collectionId: string) {
   const batch = `DEMO-${new Date().toISOString().replace(/[-:]/g, '').slice(0, 13)}`
 
   const avsa = await prisma.governingBody.upsert({
-    where: { id: 'demo-avsa' },
+    where: { id: `demo-avsa-${collectionId}` },
     update: {},
     create: {
-      id: 'demo-avsa',
+      id: `demo-avsa-${collectionId}`,
+      collectionId,
       name: 'African Violet Society of America',
       abbreviation: 'AVSA',
       website: 'https://africanvioletsocietyofamerica.org/',
@@ -176,6 +177,7 @@ export async function createDemoData() {
   for (const item of definitions) {
     const definition = await prisma.plantDefinition.create({
       data: {
+        collectionId,
         genus: item.genus,
         species: item.species,
         hybridNotation: item.hybridNotation,
@@ -191,7 +193,7 @@ export async function createDemoData() {
         governingBodyId: item.code === 'STR' ? avsa.id : undefined,
         description: `${item.description} Batch ${batch}.`,
         notes: `Sample record generated for app evaluation in ${batch}.`,
-        aliases: { create: item.aliases || [] },
+        aliases: { create: (item.aliases || []).map((alias) => ({ ...alias, collectionId })) },
       },
     })
     definitionsByCode.set(item.code, definition)
@@ -200,6 +202,7 @@ export async function createDemoData() {
   const instance = async (code: string, suffix: string, data: Record<string, unknown>) =>
     prisma.plantInstance.create({
       data: {
+        collectionId,
         plantDefinitionId: definitionsByCode.get(code)!.id,
         plantId: `${code}-${batch}-${suffix}`,
         instanceType: suffix.includes('P') || suffix.includes('C') || suffix.includes('D') ? 'PROPAGATION' : 'MOTHER',
@@ -252,6 +255,7 @@ export async function createDemoData() {
   async function propagation(parent: typeof dtrMother, code: string, method: string, date: string, childSuffixes: string[], notes: string, childData: Record<string, unknown> = {}) {
     const event = await prisma.propagationEvent.create({
       data: {
+        collectionId,
         method,
         date: d(date),
         successStatus: 'SUCCESS',
@@ -304,18 +308,18 @@ export async function createDemoData() {
 
   await prisma.bloomEvent.createMany({
     data: [
-      { plantInstanceId: phrMother.id, bloomStartDate: d('2025-04-28'), peakBloomDate: d('2025-05-08'), bloomEndDate: d('2025-05-19'), flowerCount: 2, firstBloom: false, notes: 'Clean orange pouch, strong presentation.' },
-      { plantInstanceId: catMother.id, bloomStartDate: d('2025-12-12'), peakBloomDate: d('2025-12-20'), bloomEndDate: d('2026-01-02'), flowerCount: 3, firstBloom: true, notes: 'First bloom in collection.' },
-      { plantInstanceId: strMother.id, bloomStartDate: d('2025-08-03'), peakBloomDate: d('2025-08-11'), bloomEndDate: d('2025-08-24'), flowerCount: 14, firstBloom: false, notes: 'Compact violet flush under lights.' },
-      { plantInstanceId: begMother.id, bloomStartDate: d('2025-09-01'), peakBloomDate: d('2025-09-13'), flowerCount: 24, firstBloom: true, notes: 'Pending closure; active bloom demo.' },
+      { collectionId, plantInstanceId: phrMother.id, bloomStartDate: d('2025-04-28'), peakBloomDate: d('2025-05-08'), bloomEndDate: d('2025-05-19'), flowerCount: 2, firstBloom: false, notes: 'Clean orange pouch, strong presentation.' },
+      { collectionId, plantInstanceId: catMother.id, bloomStartDate: d('2025-12-12'), peakBloomDate: d('2025-12-20'), bloomEndDate: d('2026-01-02'), flowerCount: 3, firstBloom: true, notes: 'First bloom in collection.' },
+      { collectionId, plantInstanceId: strMother.id, bloomStartDate: d('2025-08-03'), peakBloomDate: d('2025-08-11'), bloomEndDate: d('2025-08-24'), flowerCount: 14, firstBloom: false, notes: 'Compact violet flush under lights.' },
+      { collectionId, plantInstanceId: begMother.id, bloomStartDate: d('2025-09-01'), peakBloomDate: d('2025-09-13'), flowerCount: 24, firstBloom: true, notes: 'Pending closure; active bloom demo.' },
     ],
   })
 
   await prisma.note.createMany({
     data: [
-      { entityType: 'PLANT_INSTANCE', entityId: dtrMother.id, note: 'Demo note: seller label retained even though accepted taxonomy differs.' },
-      { entityType: 'PLANT_INSTANCE', entityId: sport.id, note: 'Demo note: compare leaf pattern against P1 and P3 before declaring stable.' },
-      { entityType: 'PLANT_INSTANCE', entityId: monMother.id, note: 'Demo note: pole attachment improved after moving closer to east window.' },
+      { collectionId, entityType: 'PLANT_INSTANCE', entityId: dtrMother.id, note: 'Demo note: seller label retained even though accepted taxonomy differs.' },
+      { collectionId, entityType: 'PLANT_INSTANCE', entityId: sport.id, note: 'Demo note: compare leaf pattern against P1 and P3 before declaring stable.' },
+      { collectionId, entityType: 'PLANT_INSTANCE', entityId: monMother.id, note: 'Demo note: pole attachment improved after moving closer to east window.' },
     ],
   })
 

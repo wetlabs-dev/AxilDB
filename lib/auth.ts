@@ -164,9 +164,18 @@ async function assertAdminTwoFactorReady(user: AuthUser) {
   if (!user.twoFactorVerifiedAt) redirect('/login?twoFactor=expired')
 }
 
-export async function audit(user: AuthUser | null, action: string, entityType: string, entityId?: string | null, summary?: string, metadata?: unknown) {
+export async function audit(
+  user: AuthUser | null,
+  action: string,
+  entityType: string,
+  entityId?: string | null,
+  summary?: string,
+  metadata?: unknown,
+  collectionId?: string | null,
+) {
   await prisma.auditLog.create({
     data: {
+      collectionId,
       userId: user?.id,
       userEmail: user?.email,
       userRole: user?.role,

@@ -1,18 +1,19 @@
 import { populateDemoData } from '@/app/actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { Card } from '@/components/ui'
-import { requireAdminUser } from '@/lib/auth'
+import { requireCollectionAdmin } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
 
 export default async function AdminToolsPage() {
-  await requireAdminUser()
+  const { collection } = await requireCollectionAdmin()
+  const collectionWhere = { collectionId: collection.id }
 
   const [definitions, instances, propagations, demoBatches] = await Promise.all([
-    prisma.plantDefinition.count(),
-    prisma.plantInstance.count(),
-    prisma.propagationEvent.count(),
+    prisma.plantDefinition.count({ where: collectionWhere }),
+    prisma.plantInstance.count({ where: collectionWhere }),
+    prisma.propagationEvent.count({ where: collectionWhere }),
     prisma.auditLog.findMany({
-      where: { entityType: 'DEMO_DATA' },
+      where: { entityType: 'DEMO_DATA', collectionId: collection.id },
       orderBy: { createdAt: 'desc' },
       take: 5,
     }),
@@ -48,6 +49,7 @@ export default async function AdminToolsPage() {
           Existing records are left untouched.
         </p>
         <form action={populateDemoData} className="mt-4">
+          <input type="hidden" name="collectionSlug" value={collection.slug} />
           <ConfirmDeleteButton
             title="Populate demo data?"
             message="This will add a new batch of sample plant definitions, instances, propagation events, notes, and bloom records. Existing data will not be deleted."

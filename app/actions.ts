@@ -5,7 +5,14 @@ import { revalidatePath } from 'next/cache'
 import { unlink } from 'fs/promises'
 import path from 'path'
 import { prisma } from '@/lib/prisma'
-import { audit, isAdmin, requireAdminUser, requireCreateUser, requireUser } from '@/lib/auth'
+import { audit, isAdmin, requireUser } from '@/lib/auth'
+import {
+  collectionPath,
+  getCurrentCollectionSlug,
+  requireCollectionAdmin,
+  requireCollectionLogger,
+  requireCollectionViewer,
+} from '@/lib/collections'
 import { createDemoData } from '@/lib/demo-data'
 import { notifyFollowers } from '@/lib/follows'
 import { generatePlantId } from '@/lib/plant-id'
@@ -18,6 +25,7 @@ const speciesVal = (fd: FormData, k = 'species') => val(fd, k)?.toLowerCase()
 const date = (s?: string) => (s ? new Date(s) : undefined)
 const dec = (s?: string) => (s ? s : undefined)
 const back = (fd: FormData) => val(fd, 'back') || '/'
+const collectionSlug = async (fd: FormData) => val(fd, 'collectionSlug') || await getCurrentCollectionSlug()
 const revalidateDestination = (destination: string) => revalidatePath(destination.split('#')[0] || '/')
 const boundedInt = (value: string | undefined, fallback: number, min: number, max: number) => {
   const parsed = Number(value)
@@ -115,6 +123,7 @@ async function followLabel(entityType: string, entityId: string) {
 
 export async function followEntity(fd: FormData) {
   const user = await requireUser()
+  const context = await requireCollectionViewer(await collectionSlug(fd))
   const scope = val(fd, 'scope')!
   const entityType = val(fd, 'entityType')!
   const entityId = val(fd, 'entityId')!
@@ -124,10 +133,10 @@ export async function followEntity(fd: FormData) {
   const follow = await prisma.follow.upsert({
     where: { userId_scope_entityType_entityId: { userId: user.id, scope, entityType, entityId } },
     update: { label },
-    create: { userId: user.id, scope, entityType, entityId, label },
+    create: { collectionId: context.collection.id, userId: user.id, scope, entityType, entityId, label },
   })
 
-  await audit(user, 'CREATE', 'FOLLOW', follow.id, `Followed ${label}`)
+  await audit(user, 'CREATE', 'FOLLOW', follow.id, `Followed ${label}`, undefined, context.collection.id)
   revalidateDestination(destination)
   redirect(destination)
 }
@@ -143,30 +152,33 @@ export async function unfollowEntity(fd: FormData) {
   }
 
   await prisma.follow.delete({ where: { id } })
-  await audit(user, 'DELETE', 'FOLLOW', id, `Unfollowed ${follow.label}`, follow)
+  await audit(user, 'DELETE', 'FOLLOW', id, `Unfollowed ${follow.label}`, follow, follow.collectionId)
   revalidateDestination(destination)
   redirect(destination)
 }
 
 export async function createGoverningBody(fd: FormData) {
-  const user = await requireAdminUser()
+  const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const body = await prisma.governingBody.create({
     data: {
+      collectionId: collection.id,
       name: val(fd, 'name')!,
       abbreviation: val(fd, 'abbreviation'),
       website: val(fd, 'website'),
       notes: val(fd, 'notes'),
     },
   })
-  await audit(user, 'CREATE', 'GOVERNING_BODY', body.id, `Created governing body ${body.name}`)
+  await audit(user, 'CREATE', 'GOVERNING_BODY', body.id, `Created governing body ${body.name}`, undefined, collection.id)
 
-  redirect('/settings')
+  redirect(collectionPath(collection.slug, '/settings'))
 }
 
 export async function updateGoverningBody(fd: FormData) {
-  const user = await requireAdminUser()
+  const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
+  const id = val(fd, 'id')!
+  const existing = await prisma.governingBody.findFirstOrThrow({ where: { id, collectionId: collection.id } })
   const body = await prisma.governingBody.update({
-    where: { id: val(fd, 'id')! },
+    where: { id: existing.id },
     data: {
       name: val(fd, 'name')!,
       abbreviation: val(fd, 'abbreviation'),
@@ -174,25 +186,27 @@ export async function updateGoverningBody(fd: FormData) {
       notes: val(fd, 'notes'),
     },
   })
-  await audit(user, 'UPDATE', 'GOVERNING_BODY', body.id, `Updated governing body ${body.name}`)
+  await audit(user, 'UPDATE', 'GOVERNING_BODY', body.id, `Updated governing body ${body.name}`, undefined, collection.id)
 
-  redirect('/settings')
+  redirect(collectionPath(collection.slug, '/settings'))
 }
 
 export async function deleteGoverningBody(fd: FormData) {
-  const user = await requireAdminUser()
+  const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const id = val(fd, 'id')!
-  const body = await prisma.governingBody.findUnique({ where: { id } })
+  const body = await prisma.governingBody.findFirst({ where: { id, collectionId: collection.id } })
+  if (!body) throw new Error('Governing body not found in this collection.')
   await cleanupGenericEntity('GOVERNING_BODY', id)
   await prisma.governingBody.delete({ where: { id } })
-  await audit(user, 'DELETE', 'GOVERNING_BODY', id, `Deleted governing body ${body?.name || id}`)
-  redirect('/settings')
+  await audit(user, 'DELETE', 'GOVERNING_BODY', id, `Deleted governing body ${body?.name || id}`, undefined, collection.id)
+  redirect(collectionPath(collection.slug, '/settings'))
 }
 
 export async function createPlantDefinition(fd: FormData) {
-  const user = await requireCreateUser()
+  const { user, collection } = await requireCollectionLogger(await collectionSlug(fd))
   const definition = await prisma.plantDefinition.create({
     data: {
+      collectionId: collection.id,
       genus: val(fd, 'genus')!,
       species: speciesVal(fd)!,
       hybridNotation: val(fd, 'hybridNotation'),
@@ -209,17 +223,18 @@ export async function createPlantDefinition(fd: FormData) {
       gbifUrl: val(fd, 'gbifUrl'),
       description: val(fd, 'description'),
       notes: val(fd, 'notes'),
-      aliases: { create: aliasRows(fd) },
+      aliases: { create: aliasRows(fd).map((alias) => ({ ...alias, collectionId: collection.id })) },
     },
   })
-  await audit(user, 'CREATE', 'PLANT_DEFINITION', definition.id, `Created plant definition ${definition.genus} ${definition.species}`)
+  await audit(user, 'CREATE', 'PLANT_DEFINITION', definition.id, `Created plant definition ${definition.genus} ${definition.species}`, undefined, collection.id)
 
-  redirect('/plants')
+  redirect(collectionPath(collection.slug, '/plants'))
 }
 
 export async function updatePlantDefinition(fd: FormData) {
-  const user = await requireAdminUser()
+  const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const id = val(fd, 'id')!
+  await prisma.plantDefinition.findFirstOrThrow({ where: { id, collectionId: collection.id }, select: { id: true } })
 
   const definition = await prisma.plantDefinition.update({
     where: { id },
@@ -242,22 +257,23 @@ export async function updatePlantDefinition(fd: FormData) {
       notes: val(fd, 'notes'),
       aliases: {
         deleteMany: {},
-        create: aliasRows(fd),
+        create: aliasRows(fd).map((alias) => ({ ...alias, collectionId: collection.id })),
       },
     },
   })
-  await audit(user, 'UPDATE', 'PLANT_DEFINITION', id, `Updated plant definition ${definition.genus} ${definition.species}`)
+  await audit(user, 'UPDATE', 'PLANT_DEFINITION', id, `Updated plant definition ${definition.genus} ${definition.species}`, undefined, collection.id)
 
-  redirect(`/plants/${id}/edit`)
+  redirect(collectionPath(collection.slug, `/plants/${id}/edit`))
 }
 
 export async function deletePlantDefinition(fd: FormData) {
-  const user = await requireAdminUser()
+  const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const id = val(fd, 'id')!
-  const definition = await prisma.plantDefinition.findUnique({ where: { id } })
+  const definition = await prisma.plantDefinition.findFirst({ where: { id, collectionId: collection.id } })
+  if (!definition) throw new Error('Plant definition not found in this collection.')
 
   const instances = await prisma.plantInstance.findMany({
-    where: { plantDefinitionId: id },
+    where: { collectionId: collection.id, plantDefinitionId: id },
     select: { id: true },
   })
 
@@ -268,14 +284,15 @@ export async function deletePlantDefinition(fd: FormData) {
   await cleanupGenericEntity('PLANT_DEFINITION', id)
   await prisma.plantDefinition.delete({ where: { id } })
   await cleanupOrphanPropagationEvents()
-  await audit(user, 'DELETE', 'PLANT_DEFINITION', id, `Deleted plant definition ${definition ? `${definition.genus} ${definition.species}` : id}`)
+  await audit(user, 'DELETE', 'PLANT_DEFINITION', id, `Deleted plant definition ${definition ? `${definition.genus} ${definition.species}` : id}`, undefined, collection.id)
 
-  redirect('/plants')
+  redirect(collectionPath(collection.slug, '/plants'))
 }
 
 export async function createPlantInstance(fd: FormData) {
-  const user = await requireCreateUser()
+  const { user, collection } = await requireCollectionLogger(await collectionSlug(fd))
   const plantDefinitionId = val(fd, 'plantDefinitionId')!
+  await prisma.plantDefinition.findFirstOrThrow({ where: { id: plantDefinitionId, collectionId: collection.id }, select: { id: true } })
   const instanceType = val(fd, 'instanceType')!
   const acquisitionDate = date(val(fd, 'acquisitionDate'))
   const propagationDate = date(val(fd, 'propagationDate'))
@@ -287,6 +304,7 @@ export async function createPlantInstance(fd: FormData) {
 
   const instance = await prisma.plantInstance.create({
     data: {
+      collectionId: collection.id,
       plantDefinitionId,
       plantId,
       instanceType,
@@ -303,27 +321,29 @@ export async function createPlantInstance(fd: FormData) {
   const note = val(fd, 'note')
   if (note) {
     await prisma.note.create({
-      data: { entityType: 'PLANT_INSTANCE', entityId: instance.id, note },
+      data: { collectionId: collection.id, entityType: 'PLANT_INSTANCE', entityId: instance.id, note },
     })
   }
 
-  await audit(user, 'CREATE', 'PLANT_INSTANCE', instance.id, `Created plant instance ${instance.plantId}`)
+  await audit(user, 'CREATE', 'PLANT_INSTANCE', instance.id, `Created plant instance ${instance.plantId}`, undefined, collection.id)
   await notifyFollowers(prisma, {
     actorUserId: user.id,
     eventType: 'NEW_PLANT',
     subject: `New ${instance.instanceType.toLowerCase()} plant: ${instance.plantId}`,
-    body: `${instance.plantId} was added to ${plantName(await prisma.plantDefinition.findUniqueOrThrow({ where: { id: plantDefinitionId } }))}.`,
-    recordPath: `/instances/${instance.id}`,
+    body: `${instance.plantId} was added to ${plantName(await prisma.plantDefinition.findFirstOrThrow({ where: { id: plantDefinitionId, collectionId: collection.id } }))}.`,
+    collectionId: collection.id,
+    recordPath: collectionPath(collection.slug, `/instances/${instance.id}`),
     plantInstanceIds: [instance.id],
     plantDefinitionIds: [plantDefinitionId],
   })
 
-  redirect('/instances')
+  redirect(collectionPath(collection.slug, '/instances'))
 }
 
 export async function updatePlantInstance(fd: FormData) {
-  const user = await requireAdminUser()
+  const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const id = val(fd, 'id')!
+  await prisma.plantInstance.findFirstOrThrow({ where: { id, collectionId: collection.id }, select: { id: true } })
 
   const instance = await prisma.plantInstance.update({
     where: { id },
@@ -342,27 +362,29 @@ export async function updatePlantInstance(fd: FormData) {
       archiveNotes: val(fd, 'archiveNotes'),
     },
   })
-  await audit(user, 'UPDATE', 'PLANT_INSTANCE', id, `Updated plant instance ${instance.plantId}`)
+  await audit(user, 'UPDATE', 'PLANT_INSTANCE', id, `Updated plant instance ${instance.plantId}`, undefined, collection.id)
 
-  redirect(`/instances/${id}`)
+  redirect(collectionPath(collection.slug, `/instances/${id}`))
 }
 
 export async function deletePlantInstance(fd: FormData) {
-  const user = await requireAdminUser()
+  const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const id = val(fd, 'id')!
-  const instance = await prisma.plantInstance.findUnique({ where: { id } })
+  const instance = await prisma.plantInstance.findFirst({ where: { id, collectionId: collection.id } })
+  if (!instance) throw new Error('Plant instance not found in this collection.')
 
   await cleanupPlantInstanceDependents(id)
   await prisma.plantInstance.delete({ where: { id } })
   await cleanupOrphanPropagationEvents()
-  await audit(user, 'DELETE', 'PLANT_INSTANCE', id, `Deleted plant instance ${instance?.plantId || id}`)
+  await audit(user, 'DELETE', 'PLANT_INSTANCE', id, `Deleted plant instance ${instance?.plantId || id}`, undefined, collection.id)
 
-  redirect('/instances')
+  redirect(collectionPath(collection.slug, '/instances'))
 }
 
 export async function archivePlantInstance(fd: FormData) {
-  const user = await requireAdminUser()
+  const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const id = val(fd, 'id')!
+  await prisma.plantInstance.findFirstOrThrow({ where: { id, collectionId: collection.id }, select: { id: true } })
 
   const instance = await prisma.plantInstance.update({
     where: { id },
@@ -373,47 +395,50 @@ export async function archivePlantInstance(fd: FormData) {
       archiveNotes: val(fd, 'archiveNotes'),
     },
   })
-  await audit(user, 'ARCHIVE', 'PLANT_INSTANCE', id, `Archived plant instance ${instance.plantId}`)
+  await audit(user, 'ARCHIVE', 'PLANT_INSTANCE', id, `Archived plant instance ${instance.plantId}`, undefined, collection.id)
   await notifyFollowers(prisma, {
+    collectionId: collection.id,
     actorUserId: user.id,
     eventType: 'ARCHIVE',
     subject: `${instance.plantId} was archived`,
     body: instance.archiveReason || 'A plant you follow was archived.',
-    recordPath: `/instances/${id}`,
+    recordPath: collectionPath(collection.slug, `/instances/${id}`),
     plantInstanceIds: [id],
   })
 
-  redirect(`/instances/${id}`)
+  redirect(collectionPath(collection.slug, `/instances/${id}`))
 }
 
 export async function restorePlantInstance(fd: FormData) {
-  const user = await requireAdminUser()
+  const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const id = val(fd, 'id')!
+  await prisma.plantInstance.findFirstOrThrow({ where: { id, collectionId: collection.id }, select: { id: true } })
 
   const instance = await prisma.plantInstance.update({
     where: { id },
     data: { status: 'ACTIVE', archiveDate: null, archiveReason: null, archiveNotes: null },
   })
-  await audit(user, 'RESTORE', 'PLANT_INSTANCE', id, `Restored plant instance ${instance.plantId}`)
+  await audit(user, 'RESTORE', 'PLANT_INSTANCE', id, `Restored plant instance ${instance.plantId}`, undefined, collection.id)
 
-  redirect(`/instances/${id}`)
+  redirect(collectionPath(collection.slug, `/instances/${id}`))
 }
 
 export async function addNote(fd: FormData) {
-  const user = await requireCreateUser()
+  const { user, collection } = await requireCollectionLogger(await collectionSlug(fd))
   const note = await prisma.note.create({
-    data: { entityType: val(fd, 'entityType')!, entityId: val(fd, 'entityId')!, note: val(fd, 'note')! },
+    data: { collectionId: collection.id, entityType: val(fd, 'entityType')!, entityId: val(fd, 'entityId')!, note: val(fd, 'note')! },
   })
-  await audit(user, 'CREATE', 'NOTE', note.id, `Added note to ${note.entityType} ${note.entityId}`)
+  await audit(user, 'CREATE', 'NOTE', note.id, `Added note to ${note.entityType} ${note.entityId}`, undefined, collection.id)
   if (note.entityType === 'PLANT_INSTANCE') {
-    const instance = await prisma.plantInstance.findUnique({ where: { id: note.entityId } })
+    const instance = await prisma.plantInstance.findFirst({ where: { id: note.entityId, collectionId: collection.id } })
     if (instance) {
       await notifyFollowers(prisma, {
+        collectionId: collection.id,
         actorUserId: user.id,
         eventType: 'NOTE',
         subject: `New note on ${instance.plantId}`,
         body: note.note,
-        recordPath: `/instances/${instance.id}`,
+        recordPath: collectionPath(collection.slug, `/instances/${instance.id}`),
         plantInstanceIds: [instance.id],
         plantDefinitionIds: [instance.plantDefinitionId],
       })
@@ -436,6 +461,7 @@ async function requireReminderAccess(id: string) {
 
 export async function createReminder(fd: FormData) {
   const user = await requireUser()
+  const context = await requireCollectionViewer(await collectionSlug(fd))
   const dueAt = date(val(fd, 'dueAt'))
   const destination = back(fd)
 
@@ -445,6 +471,7 @@ export async function createReminder(fd: FormData) {
 
   const reminder = await prisma.reminder.create({
     data: {
+      collectionId: context.collection.id,
       userId: user.id,
       title: val(fd, 'title') || 'AxilDB reminder',
       body: val(fd, 'body'),
@@ -457,7 +484,7 @@ export async function createReminder(fd: FormData) {
     },
   })
 
-  await audit(user, 'CREATE', 'REMINDER', reminder.id, `Created reminder ${reminder.title}`)
+  await audit(user, 'CREATE', 'REMINDER', reminder.id, `Created reminder ${reminder.title}`, undefined, context.collection.id)
   revalidateDestination(destination)
   redirect(destination)
 }
@@ -472,7 +499,7 @@ export async function completeReminder(fd: FormData) {
     data: { completedAt: new Date(), nextSendAt: null },
   })
 
-  await audit(user, 'COMPLETE', 'REMINDER', id, `Completed reminder ${reminder.title}`)
+  await audit(user, 'COMPLETE', 'REMINDER', id, `Completed reminder ${reminder.title}`, undefined, reminder.collectionId)
   revalidateDestination(destination)
   redirect(destination)
 }
@@ -487,7 +514,7 @@ export async function pauseReminder(fd: FormData) {
     data: { pausedAt: new Date(), nextSendAt: null },
   })
 
-  await audit(user, 'PAUSE', 'REMINDER', id, `Paused reminder ${reminder.title}`)
+  await audit(user, 'PAUSE', 'REMINDER', id, `Paused reminder ${reminder.title}`, undefined, reminder.collectionId)
   revalidateDestination(destination)
   redirect(destination)
 }
@@ -502,7 +529,7 @@ export async function resumeReminder(fd: FormData) {
     data: { pausedAt: null, nextSendAt: reminder.nextSendAt || reminder.dueAt },
   })
 
-  await audit(user, 'RESUME', 'REMINDER', id, `Resumed reminder ${reminder.title}`)
+  await audit(user, 'RESUME', 'REMINDER', id, `Resumed reminder ${reminder.title}`, undefined, reminder.collectionId)
   revalidateDestination(destination)
   redirect(destination)
 }
@@ -514,16 +541,17 @@ export async function deleteReminder(fd: FormData) {
 
   await prisma.reminder.delete({ where: { id } })
 
-  await audit(user, 'DELETE', 'REMINDER', id, `Deleted reminder ${reminder.title}`, reminder)
+  await audit(user, 'DELETE', 'REMINDER', id, `Deleted reminder ${reminder.title}`, reminder, reminder.collectionId)
   revalidateDestination(destination)
   redirect(destination)
 }
 
 export async function markSportCandidate(fd: FormData) {
-  const user = await requireCreateUser()
+  const { user, collection } = await requireCollectionLogger(await collectionSlug(fd))
   const id = val(fd, 'id')!
   const observation = val(fd, 'observation')
 
+  await prisma.plantInstance.findFirstOrThrow({ where: { id, collectionId: collection.id }, select: { id: true } })
   const instance = await prisma.plantInstance.update({
     where: { id },
     data: {
@@ -536,6 +564,7 @@ export async function markSportCandidate(fd: FormData) {
   if (observation) {
     await prisma.note.create({
       data: {
+        collectionId: collection.id,
         entityType: 'PLANT_INSTANCE',
         entityId: id,
         note: `Sport suspected: ${observation}`,
@@ -543,24 +572,26 @@ export async function markSportCandidate(fd: FormData) {
     })
   }
 
-  await audit(user, 'UPDATE', 'PLANT_INSTANCE', id, `Marked plant instance ${instance.plantId} as a suspected sport`)
+  await audit(user, 'UPDATE', 'PLANT_INSTANCE', id, `Marked plant instance ${instance.plantId} as a suspected sport`, undefined, collection.id)
   await notifyFollowers(prisma, {
+    collectionId: collection.id,
     actorUserId: user.id,
     eventType: 'SPORT',
     subject: `${instance.plantId} was marked as a suspected sport`,
     body: observation || 'A plant you follow has a new sport observation.',
-    recordPath: `/instances/${id}`,
+    recordPath: collectionPath(collection.slug, `/instances/${id}`),
     plantInstanceIds: [id],
     plantDefinitionIds: [instance.plantDefinitionId],
   })
-  redirect(`/instances/${id}`)
+  redirect(collectionPath(collection.slug, `/instances/${id}`))
 }
 
 export async function markSportReverted(fd: FormData) {
-  const user = await requireCreateUser()
+  const { user, collection } = await requireCollectionLogger(await collectionSlug(fd))
   const id = val(fd, 'id')!
   const observation = val(fd, 'observation')
 
+  await prisma.plantInstance.findFirstOrThrow({ where: { id, collectionId: collection.id }, select: { id: true } })
   const instance = await prisma.plantInstance.update({
     where: { id },
     data: {
@@ -572,6 +603,7 @@ export async function markSportReverted(fd: FormData) {
 
   await prisma.note.create({
     data: {
+      collectionId: collection.id,
       entityType: 'PLANT_INSTANCE',
       entityId: id,
       note: observation
@@ -580,13 +612,14 @@ export async function markSportReverted(fd: FormData) {
     },
   })
 
-  await audit(user, 'UPDATE', 'PLANT_INSTANCE', id, `Marked plant instance ${instance.plantId} as reverted`)
+  await audit(user, 'UPDATE', 'PLANT_INSTANCE', id, `Marked plant instance ${instance.plantId} as reverted`, undefined, collection.id)
   await notifyFollowers(prisma, {
+    collectionId: collection.id,
     actorUserId: user.id,
     eventType: 'SPORT',
     subject: `${instance.plantId} was marked reverted`,
     body: observation || 'A followed sport line appears to have reverted.',
-    recordPath: `/instances/${id}`,
+    recordPath: collectionPath(collection.slug, `/instances/${id}`),
     plantInstanceIds: [id],
     plantDefinitionIds: [instance.plantDefinitionId],
   })
@@ -594,18 +627,19 @@ export async function markSportReverted(fd: FormData) {
 }
 
 export async function deleteNote(fd: FormData) {
-  const user = await requireAdminUser()
+  const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const id = val(fd, 'id')!
-  const note = await prisma.note.findUnique({ where: { id } })
+  const note = await prisma.note.findFirst({ where: { id, collectionId: collection.id } })
+  if (!note) throw new Error('Note not found in this collection.')
   await prisma.note.delete({ where: { id } })
-  await audit(user, 'DELETE', 'NOTE', id, `Deleted note ${id}`, note)
+  await audit(user, 'DELETE', 'NOTE', id, `Deleted note ${id}`, note, collection.id)
   redirect(back(fd))
 }
 
 export async function setCoverPhoto(fd: FormData) {
-  const user = await requireAdminUser()
+  const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const id = val(fd, 'id')!
-  const photo = await prisma.photo.findUniqueOrThrow({ where: { id } })
+  const photo = await prisma.photo.findFirstOrThrow({ where: { id, collectionId: collection.id } })
 
   if (photo.entityType !== 'PLANT_INSTANCE') {
     throw new Error('Only plant instance photos can be selected as cover photos.')
@@ -613,7 +647,7 @@ export async function setCoverPhoto(fd: FormData) {
 
   await prisma.$transaction([
     prisma.photo.updateMany({
-      where: { entityType: 'PLANT_INSTANCE', entityId: photo.entityId },
+      where: { collectionId: collection.id, entityType: 'PLANT_INSTANCE', entityId: photo.entityId },
       data: { isCover: false },
     }),
     prisma.photo.update({
@@ -622,33 +656,33 @@ export async function setCoverPhoto(fd: FormData) {
     }),
   ])
 
-  await audit(user, 'UPDATE', 'PHOTO', id, `Selected cover photo for plant instance ${photo.entityId}`)
+  await audit(user, 'UPDATE', 'PHOTO', id, `Selected cover photo for plant instance ${photo.entityId}`, undefined, collection.id)
   redirect(back(fd))
 }
 
 export async function setTypePhoto(fd: FormData) {
-  const user = await requireAdminUser()
+  const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const id = val(fd, 'id')!
-  const photo = await prisma.photo.findUniqueOrThrow({ where: { id } })
+  const photo = await prisma.photo.findFirstOrThrow({ where: { id, collectionId: collection.id } })
 
   if (photo.entityType !== 'PLANT_INSTANCE') {
     throw new Error('Only plant instance photos can be selected as type photos.')
   }
 
-  const instance = await prisma.plantInstance.findUniqueOrThrow({
-    where: { id: photo.entityId },
+  const instance = await prisma.plantInstance.findFirstOrThrow({
+    where: { id: photo.entityId, collectionId: collection.id },
     select: { plantDefinitionId: true },
   })
 
   const siblingInstances = await prisma.plantInstance.findMany({
-    where: { plantDefinitionId: instance.plantDefinitionId },
+    where: { collectionId: collection.id, plantDefinitionId: instance.plantDefinitionId },
     select: { id: true },
   })
   const siblingIds = siblingInstances.map((item) => item.id)
 
   await prisma.$transaction([
     prisma.photo.updateMany({
-      where: { entityType: 'PLANT_INSTANCE', entityId: { in: siblingIds } },
+      where: { collectionId: collection.id, entityType: 'PLANT_INSTANCE', entityId: { in: siblingIds } },
       data: { isType: false },
     }),
     prisma.photo.update({
@@ -657,15 +691,15 @@ export async function setTypePhoto(fd: FormData) {
     }),
   ])
 
-  await audit(user, 'UPDATE', 'PHOTO', id, `Selected type photo for plant definition ${instance.plantDefinitionId}`)
+  await audit(user, 'UPDATE', 'PHOTO', id, `Selected type photo for plant definition ${instance.plantDefinitionId}`, undefined, collection.id)
   redirect(back(fd))
 }
 
 export async function deletePhoto(fd: FormData) {
-  const user = await requireAdminUser()
+  const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const id = val(fd, 'id')!
   const destination = back(fd)
-  const photo = await prisma.photo.findUniqueOrThrow({ where: { id } })
+  const photo = await prisma.photo.findFirstOrThrow({ where: { id, collectionId: collection.id } })
   const samePathCount = await prisma.photo.count({ where: { path: photo.path } })
 
   await prisma.photo.delete({ where: { id } })
@@ -679,43 +713,46 @@ export async function deletePhoto(fd: FormData) {
     }
   }
 
-  await audit(user, 'DELETE', 'PHOTO', id, `Deleted photo for ${photo.entityType} ${photo.entityId}`, photo)
+  await audit(user, 'DELETE', 'PHOTO', id, `Deleted photo for ${photo.entityType} ${photo.entityId}`, photo, collection.id)
   revalidatePath(destination)
   redirect(destination)
 }
 
 export async function openBloomEvent(fd: FormData) {
-  const user = await requireCreateUser()
+  const { user, collection } = await requireCollectionLogger(await collectionSlug(fd))
   const plantInstanceId = val(fd, 'plantInstanceId')!
+  await prisma.plantInstance.findFirstOrThrow({ where: { id: plantInstanceId, collectionId: collection.id }, select: { id: true } })
 
   const bloom = await prisma.bloomEvent.create({
     data: {
+      collectionId: collection.id,
       plantInstanceId,
       bloomStartDate: date(val(fd, 'bloomStartDate'))!,
       firstBloom: !!fd.get('firstBloom'),
       notes: val(fd, 'notes'),
     },
   })
-  await audit(user, 'CREATE', 'BLOOM_EVENT', bloom.id, `Opened bloom event for plant instance ${plantInstanceId}`)
-  const instance = await prisma.plantInstance.findUnique({ where: { id: plantInstanceId } })
+  await audit(user, 'CREATE', 'BLOOM_EVENT', bloom.id, `Opened bloom event for plant instance ${plantInstanceId}`, undefined, collection.id)
+  const instance = await prisma.plantInstance.findFirst({ where: { id: plantInstanceId, collectionId: collection.id } })
   if (instance) {
     await notifyFollowers(prisma, {
+      collectionId: collection.id,
       actorUserId: user.id,
       eventType: 'BLOOM',
       subject: `New bloom on ${instance.plantId}`,
       body: val(fd, 'notes') || 'A plant you follow has a newly opened bloom event.',
-      recordPath: `/instances/${plantInstanceId}#bloom-${bloom.id}`,
+      recordPath: collectionPath(collection.slug, `/instances/${plantInstanceId}#bloom-${bloom.id}`),
       plantInstanceIds: [plantInstanceId],
       plantDefinitionIds: [instance.plantDefinitionId],
     })
   }
 
-  revalidatePath(`/instances/${plantInstanceId}`)
-  redirect(`/instances/${plantInstanceId}`)
+  revalidatePath(collectionPath(collection.slug, `/instances/${plantInstanceId}`))
+  redirect(collectionPath(collection.slug, `/instances/${plantInstanceId}`))
 }
 
 export async function updateBloomPeak(fd: FormData) {
-  const user = await requireAdminUser()
+  const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const id = val(fd, 'id')!
   const plantInstanceId = val(fd, 'plantInstanceId')!
 
@@ -727,26 +764,27 @@ export async function updateBloomPeak(fd: FormData) {
       notes: val(fd, 'notes'),
     },
   })
-  await audit(user, 'UPDATE', 'BLOOM_EVENT', id, `Updated bloom peak for plant instance ${plantInstanceId}`)
-  const instance = await prisma.plantInstance.findUnique({ where: { id: plantInstanceId } })
+  await audit(user, 'UPDATE', 'BLOOM_EVENT', id, `Updated bloom peak for plant instance ${plantInstanceId}`, undefined, collection.id)
+  const instance = await prisma.plantInstance.findFirst({ where: { id: plantInstanceId, collectionId: collection.id } })
   if (instance) {
     await notifyFollowers(prisma, {
+      collectionId: collection.id,
       actorUserId: user.id,
       eventType: 'BLOOM',
       subject: `Bloom peak updated for ${instance.plantId}`,
       body: val(fd, 'notes') || 'A bloom event was updated for a plant you follow.',
-      recordPath: `/instances/${plantInstanceId}#bloom-${id}`,
+      recordPath: collectionPath(collection.slug, `/instances/${plantInstanceId}#bloom-${id}`),
       plantInstanceIds: [plantInstanceId],
       plantDefinitionIds: [instance.plantDefinitionId],
     })
   }
 
-  revalidatePath(`/instances/${plantInstanceId}`)
-  redirect(`/instances/${plantInstanceId}`)
+  revalidatePath(collectionPath(collection.slug, `/instances/${plantInstanceId}`))
+  redirect(collectionPath(collection.slug, `/instances/${plantInstanceId}`))
 }
 
 export async function closeBloomEvent(fd: FormData) {
-  const user = await requireAdminUser()
+  const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const id = val(fd, 'id')!
   const plantInstanceId = val(fd, 'plantInstanceId')!
 
@@ -754,22 +792,23 @@ export async function closeBloomEvent(fd: FormData) {
     where: { id },
     data: { bloomEndDate: date(val(fd, 'bloomEndDate'))!, notes: val(fd, 'notes') },
   })
-  await audit(user, 'UPDATE', 'BLOOM_EVENT', id, `Closed bloom event for plant instance ${plantInstanceId}`)
-  const instance = await prisma.plantInstance.findUnique({ where: { id: plantInstanceId } })
+  await audit(user, 'UPDATE', 'BLOOM_EVENT', id, `Closed bloom event for plant instance ${plantInstanceId}`, undefined, collection.id)
+  const instance = await prisma.plantInstance.findFirst({ where: { id: plantInstanceId, collectionId: collection.id } })
   if (instance) {
     await notifyFollowers(prisma, {
+      collectionId: collection.id,
       actorUserId: user.id,
       eventType: 'BLOOM',
       subject: `Bloom closed for ${instance.plantId}`,
       body: val(fd, 'notes') || 'A bloom event was closed for a plant you follow.',
-      recordPath: `/instances/${plantInstanceId}#bloom-${id}`,
+      recordPath: collectionPath(collection.slug, `/instances/${plantInstanceId}#bloom-${id}`),
       plantInstanceIds: [plantInstanceId],
       plantDefinitionIds: [instance.plantDefinitionId],
     })
   }
 
-  revalidatePath(`/instances/${plantInstanceId}`)
-  redirect(`/instances/${plantInstanceId}`)
+  revalidatePath(collectionPath(collection.slug, `/instances/${plantInstanceId}`))
+  redirect(collectionPath(collection.slug, `/instances/${plantInstanceId}`))
 }
 
 export async function createBloomEvent(fd: FormData) {
@@ -777,9 +816,10 @@ export async function createBloomEvent(fd: FormData) {
 }
 
 export async function updateBloomEvent(fd: FormData) {
-  const user = await requireAdminUser()
+  const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const id = val(fd, 'id')!
   const plantInstanceId = val(fd, 'plantInstanceId')!
+  await prisma.bloomEvent.findFirstOrThrow({ where: { id, collectionId: collection.id }, select: { id: true } })
 
   await prisma.bloomEvent.update({
     where: { id },
@@ -792,25 +832,26 @@ export async function updateBloomEvent(fd: FormData) {
       notes: val(fd, 'notes'),
     },
   })
-  await audit(user, 'UPDATE', 'BLOOM_EVENT', id, `Updated bloom event for plant instance ${plantInstanceId}`)
+  await audit(user, 'UPDATE', 'BLOOM_EVENT', id, `Updated bloom event for plant instance ${plantInstanceId}`, undefined, collection.id)
 
-  redirect(`/instances/${plantInstanceId}`)
+  redirect(collectionPath(collection.slug, `/instances/${plantInstanceId}`))
 }
 
 export async function deleteBloomEvent(fd: FormData) {
-  const user = await requireAdminUser()
+  const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const id = val(fd, 'id')!
   const plantInstanceId = val(fd, 'plantInstanceId')!
+  await prisma.bloomEvent.findFirstOrThrow({ where: { id, collectionId: collection.id }, select: { id: true } })
 
   await cleanupGenericEntity('BLOOM_EVENT', id)
   await prisma.bloomEvent.delete({ where: { id } })
-  await audit(user, 'DELETE', 'BLOOM_EVENT', id, `Deleted bloom event for plant instance ${plantInstanceId}`)
+  await audit(user, 'DELETE', 'BLOOM_EVENT', id, `Deleted bloom event for plant instance ${plantInstanceId}`, undefined, collection.id)
 
-  redirect(`/instances/${plantInstanceId}`)
+  redirect(collectionPath(collection.slug, `/instances/${plantInstanceId}`))
 }
 
 export async function createPropagationEvent(fd: FormData) {
-  const user = await requireCreateUser()
+  const { user, collection } = await requireCollectionLogger(await collectionSlug(fd))
   const method = val(fd, 'method')!
   const parent1 = val(fd, 'parent1')!
   const parent2 = val(fd, 'parent2')
@@ -821,7 +862,10 @@ export async function createPropagationEvent(fd: FormData) {
     throw new Error('Sexual reproduction requires two parent plants.')
   }
 
-  const parentPlant = await prisma.plantInstance.findUniqueOrThrow({ where: { id: parent1 } })
+  const parentPlant = await prisma.plantInstance.findFirstOrThrow({ where: { id: parent1, collectionId: collection.id } })
+  if (parent2) {
+    await prisma.plantInstance.findFirstOrThrow({ where: { id: parent2, collectionId: collection.id }, select: { id: true } })
+  }
   const childSportStatus = isSportLine(parentPlant.sportStatus) ? 'CANDIDATE' : 'NONE'
   const childSportDescription = isSportLine(parentPlant.sportStatus)
     ? `Derived from sport line ${parentPlant.plantId}. Confirm whether the trait propagates true.`
@@ -829,6 +873,7 @@ export async function createPropagationEvent(fd: FormData) {
 
   const event = await prisma.propagationEvent.create({
     data: {
+      collectionId: collection.id,
       method,
       date: eventDate,
       notes: val(fd, 'notes'),
@@ -856,6 +901,7 @@ export async function createPropagationEvent(fd: FormData) {
 
     const child = await prisma.plantInstance.create({
       data: {
+        collectionId: collection.id,
         plantDefinitionId: parentPlant.plantDefinitionId,
         plantId,
         instanceType: 'PROPAGATION',
@@ -872,23 +918,25 @@ export async function createPropagationEvent(fd: FormData) {
       data: { propagationEventId: event.id, childPlantInstanceId: child.id },
     })
   }
-  await audit(user, 'CREATE', 'PROPAGATION_EVENT', event.id, `Created ${method} propagation event`, { childCodes })
+  await audit(user, 'CREATE', 'PROPAGATION_EVENT', event.id, `Created ${method} propagation event`, { childCodes }, collection.id)
   await notifyFollowers(prisma, {
+    collectionId: collection.id,
     actorUserId: user.id,
     eventType: 'PROPAGATION',
     subject: `New ${method.toLowerCase()} propagation from ${parentPlant.plantId}`,
     body: `Created child plants: ${childCodes.join(', ')}`,
-    recordPath: '/propagations',
+    recordPath: collectionPath(collection.slug, '/propagations'),
     plantInstanceIds: [parent1, ...childIds],
     plantDefinitionIds: [parentPlant.plantDefinitionId],
   })
 
-  redirect('/propagations')
+  redirect(collectionPath(collection.slug, '/propagations'))
 }
 
 export async function updatePropagationEvent(fd: FormData) {
-  const user = await requireAdminUser()
+  const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const id = val(fd, 'id')!
+  await prisma.propagationEvent.findFirstOrThrow({ where: { id, collectionId: collection.id }, select: { id: true } })
 
   const event = await prisma.propagationEvent.update({
     where: { id },
@@ -899,26 +947,29 @@ export async function updatePropagationEvent(fd: FormData) {
       notes: val(fd, 'notes'),
     },
   })
-  await audit(user, 'UPDATE', 'PROPAGATION_EVENT', id, `Updated ${event.method} propagation event`)
+  await audit(user, 'UPDATE', 'PROPAGATION_EVENT', id, `Updated ${event.method} propagation event`, undefined, collection.id)
 
-  redirect('/propagations')
+  redirect(collectionPath(collection.slug, '/propagations'))
 }
 
 export async function deletePropagationEvent(fd: FormData) {
-  const user = await requireAdminUser()
+  const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const id = val(fd, 'id')!
-  const event = await prisma.propagationEvent.findUnique({ where: { id } })
+  const event = await prisma.propagationEvent.findFirst({ where: { id, collectionId: collection.id } })
+  if (!event) redirect(collectionPath(collection.slug, '/propagations'))
 
   await cleanupGenericEntity('PROPAGATION_EVENT', id)
   await prisma.propagationEvent.delete({ where: { id } })
-  await audit(user, 'DELETE', 'PROPAGATION_EVENT', id, `Deleted ${event?.method || ''} propagation event`)
+  await audit(user, 'DELETE', 'PROPAGATION_EVENT', id, `Deleted ${event?.method || ''} propagation event`, event, collection.id)
 
-  redirect('/propagations')
+  redirect(collectionPath(collection.slug, '/propagations'))
 }
 
 export async function createSportStabilityRecord(fd: FormData) {
-  const user = await requireCreateUser()
+  const { user, collection } = await requireCollectionLogger(await collectionSlug(fd))
   const plantInstanceId = val(fd, 'plantInstanceId')!
+  await prisma.plantInstance.findFirstOrThrow({ where: { id: plantInstanceId, collectionId: collection.id }, select: { id: true } })
+  await prisma.propagationEvent.findFirstOrThrow({ where: { id: val(fd, 'propagationEventId')!, collectionId: collection.id }, select: { id: true } })
   const propagatedTrue = !!fd.get('propagatedTrue')
   const record = await prisma.sportStabilityRecord.create({
     data: {
@@ -943,15 +994,16 @@ export async function createSportStabilityRecord(fd: FormData) {
     data: { isSportCandidate: nextStatus !== 'REVERTED', sportStatus: nextStatus },
   })
 
-  await audit(user, 'CREATE', 'SPORT_STABILITY_RECORD', record.id, `Added sport stability record`)
-  const instance = await prisma.plantInstance.findUnique({ where: { id: plantInstanceId } })
+  await audit(user, 'CREATE', 'SPORT_STABILITY_RECORD', record.id, `Added sport stability record`, undefined, collection.id)
+  const instance = await prisma.plantInstance.findFirst({ where: { id: plantInstanceId, collectionId: collection.id } })
   if (instance) {
     await notifyFollowers(prisma, {
+      collectionId: collection.id,
       actorUserId: user.id,
       eventType: 'SPORT',
       subject: `Sport stability updated for ${instance.plantId}`,
       body: val(fd, 'notes') || `Sport status is now ${nextStatus.toLowerCase()}.`,
-      recordPath: `/instances/${plantInstanceId}`,
+      recordPath: collectionPath(collection.slug, `/instances/${plantInstanceId}`),
       plantInstanceIds: [plantInstanceId],
       plantDefinitionIds: [instance.plantDefinitionId],
     })
@@ -961,16 +1013,17 @@ export async function createSportStabilityRecord(fd: FormData) {
 }
 
 export async function createCultivarFromSport(fd: FormData) {
-  const user = await requireAdminUser()
+  const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const plantInstanceId = val(fd, 'plantInstanceId')!
 
-  const inst = await prisma.plantInstance.findUniqueOrThrow({
-    where: { id: plantInstanceId },
+  const inst = await prisma.plantInstance.findFirstOrThrow({
+    where: { id: plantInstanceId, collectionId: collection.id },
     include: { plantDefinition: true },
   })
 
   const def = await prisma.plantDefinition.create({
     data: {
+      collectionId: collection.id,
       genus: val(fd, 'genus') || inst.plantDefinition.genus,
       species: speciesVal(fd) || inst.plantDefinition.species,
       hybridNotation: val(fd, 'hybridNotation') || inst.plantDefinition.hybridNotation,
@@ -988,20 +1041,20 @@ export async function createCultivarFromSport(fd: FormData) {
     where: { id: plantInstanceId },
     data: { plantDefinitionId: def.id, sportStatus: 'REGISTERED', isSportCandidate: false },
   })
-  await audit(user, 'CREATE', 'PLANT_DEFINITION', def.id, `Created cultivar ${def.cultivarName} from sport ${inst.plantId}`)
-  await audit(user, 'UPDATE', 'PLANT_INSTANCE', plantInstanceId, `Reassigned sport ${inst.plantId} to new cultivar ${def.cultivarName}`)
+  await audit(user, 'CREATE', 'PLANT_DEFINITION', def.id, `Created cultivar ${def.cultivarName} from sport ${inst.plantId}`, undefined, collection.id)
+  await audit(user, 'UPDATE', 'PLANT_INSTANCE', plantInstanceId, `Reassigned sport ${inst.plantId} to new cultivar ${def.cultivarName}`, undefined, collection.id)
 
-  redirect(`/instances/${plantInstanceId}`)
+  redirect(collectionPath(collection.slug, `/instances/${plantInstanceId}`))
 }
 
-export async function populateDemoData() {
-  const user = await requireAdminUser()
-  const result = await createDemoData()
-  await audit(user, 'CREATE', 'DEMO_DATA', result.batch, `Populated demo data batch ${result.batch}`, result)
+export async function populateDemoData(fd?: FormData) {
+  const { user, collection } = await requireCollectionAdmin(fd ? await collectionSlug(fd) : await getCurrentCollectionSlug())
+  const result = await createDemoData(collection.id)
+  await audit(user, 'CREATE', 'DEMO_DATA', result.batch, `Populated demo data batch ${result.batch}`, result, collection.id)
 
-  revalidatePath('/')
-  revalidatePath('/plants')
-  revalidatePath('/instances')
-  revalidatePath('/propagations')
-  redirect('/admin-tools')
+  revalidatePath(collectionPath(collection.slug, '/'))
+  revalidatePath(collectionPath(collection.slug, '/plants'))
+  revalidatePath(collectionPath(collection.slug, '/instances'))
+  revalidatePath(collectionPath(collection.slug, '/propagations'))
+  redirect(collectionPath(collection.slug, '/admin-tools'))
 }

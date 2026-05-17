@@ -2,7 +2,8 @@ import { createPropagationEvent, deletePropagationEvent } from '@/app/actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { PlantImage } from '@/components/PlantImage'
 import { AddPanel, Button, Card, Field, HelpTooltip, SuggestionDatalist, TextArea } from '@/components/ui'
-import { canCreate, getCurrentUser, isAdmin } from '@/lib/auth'
+import { getCurrentUser } from '@/lib/auth'
+import { canCreateInCollection, canEditInCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
 import { rankedSuggestions } from '@/lib/suggestions'
 import { fmtDate, plantName } from '@/lib/utils'
@@ -10,13 +11,17 @@ import Link from 'next/link'
 
 export default async function Propagations() {
   const user = await getCurrentUser()
+  const context = await requireCollectionViewer()
+  const { collection } = context
+  const collectionWhere = { collectionId: collection.id }
   const [instances, events, instanceSuggestionRows] = await Promise.all([
     prisma.plantInstance.findMany({
-      where: { status: 'ACTIVE' },
+      where: { ...collectionWhere, status: 'ACTIVE' },
       include: { plantDefinition: true },
       orderBy: { plantId: 'asc' },
     }),
     prisma.propagationEvent.findMany({
+      where: collectionWhere,
       include: {
         parents: { include: { parentPlantInstance: { include: { plantDefinition: true } } } },
         children: { include: { childPlantInstance: { include: { plantDefinition: true } } } },
@@ -24,6 +29,7 @@ export default async function Propagations() {
       orderBy: { date: 'desc' },
     }),
     prisma.plantInstance.findMany({
+      where: collectionWhere,
       select: { location: true },
     }),
   ])
@@ -34,7 +40,7 @@ export default async function Propagations() {
     ...event.children.map((child) => child.childPlantInstanceId),
   ])))
   const photos = await prisma.photo.findMany({
-    where: { entityType: 'PLANT_INSTANCE', entityId: { in: instanceIds } },
+    where: { ...collectionWhere, entityType: 'PLANT_INSTANCE', entityId: { in: instanceIds } },
     orderBy: [{ isCover: 'desc' }, { createdAt: 'desc' }],
   })
   const photoByInstance = photos.reduce<Record<string, string>>((acc, photo) => {
@@ -46,10 +52,11 @@ export default async function Propagations() {
     <div className="space-y-6">
       <h2 className="text-3xl font-bold">Propagations</h2>
 
-      {canCreate(user) && (
+      {canCreateInCollection(user, context) && (
         <AddPanel label="Add propagation event">
           <SuggestionDatalist id="propagation-location-suggestions" suggestions={locationSuggestions} />
           <form action={createPropagationEvent} className="grid max-w-5xl gap-x-3 gap-y-2 lg:grid-cols-4">
+            <input type="hidden" name="collectionSlug" value={collection.slug} />
             <label className="grid gap-1 text-sm font-medium">
               <span className="flex items-center gap-1.5">
                 <span>Method</span>
@@ -119,7 +126,7 @@ export default async function Propagations() {
 
           return (
             <Card key={event.id} className="flex h-full flex-col overflow-hidden p-0">
-              <Link href={firstChild ? `/instances/${firstChild.id}` : '/propagations'} className="block flex-1">
+              <Link href={firstChild ? collectionPath(collection.slug, `/instances/${firstChild.id}`) : collectionPath(collection.slug, '/propagations')} className="block flex-1">
                 <div className="aspect-[4/3]">
                   <PlantImage src={image} alt={firstChild?.plantId || event.method} />
                 </div>
@@ -135,11 +142,12 @@ export default async function Propagations() {
                   </p>
                 </div>
               </Link>
-              {isAdmin(user) && (
+              {canEditInCollection(user, context) && (
                 <div className="flex flex-wrap gap-2 border-t border-stone-200 p-3">
-                  <Link className="rounded-md border px-2 py-1 text-xs" href={`/propagations/${event.id}/edit`}>Edit</Link>
+                  <Link className="rounded-md border px-2 py-1 text-xs" href={collectionPath(collection.slug, `/propagations/${event.id}/edit`)}>Edit</Link>
                   <form action={deletePropagationEvent}>
                     <input type="hidden" name="id" value={event.id} />
+                    <input type="hidden" name="collectionSlug" value={collection.slug} />
                     <ConfirmDeleteButton title="Delete propagation event?" message="This will permanently delete the propagation event and its parent/child links. Child plant instances will remain.">
                       Delete
                     </ConfirmDeleteButton>

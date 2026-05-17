@@ -1,10 +1,13 @@
 import { PhotoGallery, type GalleryPhoto } from '@/components/PhotoGallery'
+import { collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
 import { fmtDate, plantName } from '@/lib/utils'
 
 export default async function GalleryPage() {
+  const { collection } = await requireCollectionViewer()
+  const collectionWhere = { collectionId: collection.id }
   const photos = await prisma.photo.findMany({
-    where: { entityType: { in: ['PLANT_INSTANCE', 'BLOOM_EVENT'] } },
+    where: { ...collectionWhere, entityType: { in: ['PLANT_INSTANCE', 'BLOOM_EVENT'] } },
     orderBy: { createdAt: 'desc' },
   })
 
@@ -17,11 +20,11 @@ export default async function GalleryPage() {
 
   const [instances, blooms] = await Promise.all([
     prisma.plantInstance.findMany({
-      where: { id: { in: instanceIds } },
+      where: { ...collectionWhere, id: { in: instanceIds } },
       include: { plantDefinition: true },
     }),
     prisma.bloomEvent.findMany({
-      where: { id: { in: bloomIds } },
+      where: { ...collectionWhere, id: { in: bloomIds } },
       include: { plantInstance: { include: { plantDefinition: true } } },
     }),
   ])
@@ -41,7 +44,7 @@ export default async function GalleryPage() {
         kind: 'Specimen',
         plantId: instance.plantId,
         plantName: plantName(instance.plantDefinition),
-        instanceHref: `/instances/${instance.id}`,
+        instanceHref: collectionPath(collection.slug, `/instances/${instance.id}`),
         isCover: photo.isCover,
         isType: photo.isType,
       }]
@@ -57,7 +60,7 @@ export default async function GalleryPage() {
       kind: 'Bloom',
       plantId: bloom.plantInstance.plantId,
       plantName: plantName(bloom.plantInstance.plantDefinition),
-      instanceHref: `/instances/${bloom.plantInstance.id}`,
+      instanceHref: collectionPath(collection.slug, `/instances/${bloom.plantInstance.id}`),
       bloomDate: fmtDate(bloom.bloomStartDate),
       isCover: photo.isCover,
       isType: photo.isType,

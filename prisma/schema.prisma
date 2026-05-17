@@ -8,12 +8,16 @@ datasource db {
 }
 
 model GoverningBody {
+  collectionId     String?
   id               String            @id @default(cuid())
   name             String
   abbreviation     String?
   website          String?
   notes            String?
+  collection       Collection?       @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   plantDefinitions PlantDefinition[]
+
+  @@index([collectionId])
 }
 
 model User {
@@ -33,9 +37,56 @@ model User {
   followNotifications FollowNotification[]
   twoFactor           UserTwoFactor?
   twoFactorChallenges TwoFactorChallenge[]
+  memberships         CollectionMembership[]
 
   @@index([role])
   @@index([emailVerifiedAt])
+}
+
+model Collection {
+  id                  String                 @id @default(cuid())
+  name                String
+  slug                String                 @unique
+  visibility          String                 @default("PRIVATE")
+  description         String?
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+
+  memberships         CollectionMembership[]
+  auditLogs           AuditLog[]
+  follows             Follow[]
+  followNotifications FollowNotification[]
+  plantDefinitions    PlantDefinition[]
+  plantAliases        PlantAlias[]
+  plantInstances      PlantInstance[]
+  propagationEvents   PropagationEvent[]
+  notes               Note[]
+  photos              Photo[]
+  bloomEvents         BloomEvent[]
+  reminders           Reminder[]
+  reminderDeliveries  ReminderDelivery[]
+  governingBodies     GoverningBody[]
+
+  @@index([visibility])
+}
+
+model CollectionMembership {
+  id           String   @id @default(cuid())
+  collectionId String
+  userId       String
+  role         String   @default("VIEWER")
+  status       String   @default("PENDING")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, userId])
+  @@index([collectionId])
+  @@index([userId])
+  @@index([role])
+  @@index([status])
 }
 
 model Session {
@@ -98,6 +149,7 @@ model TwoFactorRecoveryCode {
 
 model AuditLog {
   id         String   @id @default(cuid())
+  collectionId String?
   userId     String?
   userEmail  String?
   userRole   String?
@@ -108,8 +160,10 @@ model AuditLog {
   metadata   String?
   createdAt  DateTime @default(now())
 
+  collection Collection? @relation(fields: [collectionId], references: [id], onDelete: SetNull)
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
+  @@index([collectionId])
   @@index([userId])
   @@index([entityType, entityId])
   @@index([createdAt])
@@ -156,6 +210,7 @@ model EmailPreference {
 
 model Follow {
   id         String   @id @default(cuid())
+  collectionId String?
   userId     String
   scope      String
   entityType String
@@ -163,16 +218,19 @@ model Follow {
   label      String
   createdAt  DateTime @default(now())
 
+  collection    Collection?           @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   notifications FollowNotification[]
 
   @@unique([userId, scope, entityType, entityId])
+  @@index([collectionId])
   @@index([userId])
   @@index([scope, entityType, entityId])
 }
 
 model FollowNotification {
   id        String    @id @default(cuid())
+  collectionId String?
   followId  String
   userId    String
   eventType String
@@ -184,9 +242,11 @@ model FollowNotification {
   sentAt    DateTime?
   createdAt DateTime  @default(now())
 
+  collection Collection? @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   follow Follow @relation(fields: [followId], references: [id], onDelete: Cascade)
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([collectionId])
   @@index([followId])
   @@index([userId])
   @@index([eventType])
@@ -196,6 +256,7 @@ model FollowNotification {
 
 model PlantDefinition {
   id                         String   @id @default(cuid())
+  collectionId               String?
   genus                      String
   species                    String
   hybridNotation             String?
@@ -215,16 +276,19 @@ model PlantDefinition {
   createdAt                  DateTime @default(now())
   updatedAt                  DateTime @updatedAt
 
+  collection    Collection?      @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   governingBody GoverningBody?  @relation(fields: [governingBodyId], references: [id], onDelete: SetNull)
   instances     PlantInstance[]
   aliases       PlantAlias[]
 
+  @@index([collectionId])
   @@index([governingBodyId])
   @@index([confidence])
 }
 
 model PlantAlias {
   id                String   @id @default(cuid())
+  collectionId      String?
   plantDefinitionId String
   name              String
   aliasType         String   @default("SYNONYM")
@@ -234,8 +298,10 @@ model PlantAlias {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
+  collection      Collection?      @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   plantDefinition PlantDefinition @relation(fields: [plantDefinitionId], references: [id], onDelete: Cascade)
 
+  @@index([collectionId])
   @@index([plantDefinitionId])
   @@index([aliasType])
   @@index([confidence])
@@ -243,6 +309,7 @@ model PlantAlias {
 
 model PlantInstance {
   id                String    @id @default(cuid())
+  collectionId      String?
   plantDefinitionId String
   plantId           String    @unique
   instanceType      String
@@ -263,12 +330,14 @@ model PlantInstance {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
+  collection      Collection?              @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   plantDefinition PlantDefinition        @relation(fields: [plantDefinitionId], references: [id], onDelete: Cascade)
   parentLinks     ParentageLink[]
   childLinks      PropagationChild[]
   blooms          BloomEvent[]
   sportRecords    SportStabilityRecord[]
 
+  @@index([collectionId])
   @@index([plantDefinitionId])
   @@index([status])
   @@index([instanceType])
@@ -277,6 +346,7 @@ model PlantInstance {
 
 model PropagationEvent {
   id            String   @id @default(cuid())
+  collectionId  String?
   method        String
   date          DateTime
   notes         String?
@@ -284,10 +354,12 @@ model PropagationEvent {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  collection   Collection?            @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   parents      ParentageLink[]
   children     PropagationChild[]
   sportRecords SportStabilityRecord[]
 
+  @@index([collectionId])
   @@index([date])
   @@index([method])
   @@index([successStatus])
@@ -320,17 +392,22 @@ model PropagationChild {
 
 model Note {
   id         String   @id @default(cuid())
+  collectionId String?
   entityType String
   entityId   String
   note       String
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
+  collection Collection? @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@index([collectionId])
   @@index([entityType, entityId])
 }
 
 model Photo {
   id         String   @id @default(cuid())
+  collectionId String?
   entityType String
   entityId   String
   filename   String
@@ -342,6 +419,9 @@ model Photo {
   isType     Boolean  @default(false)
   createdAt  DateTime @default(now())
 
+  collection Collection? @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@index([collectionId])
   @@index([entityType, entityId])
   @@index([isCover])
   @@index([isType])
@@ -349,6 +429,7 @@ model Photo {
 
 model BloomEvent {
   id              String    @id @default(cuid())
+  collectionId    String?
   plantInstanceId String
   bloomStartDate  DateTime
   peakBloomDate   DateTime?
@@ -359,8 +440,10 @@ model BloomEvent {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
+  collection    Collection?    @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   plantInstance PlantInstance @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
 
+  @@index([collectionId])
   @@index([plantInstanceId])
 }
 
@@ -382,6 +465,7 @@ model SportStabilityRecord {
 
 model Reminder {
   id          String    @id @default(cuid())
+  collectionId String?
   userId      String
   title       String
   body        String?
@@ -397,9 +481,11 @@ model Reminder {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
+  collection Collection?        @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   deliveries ReminderDelivery[]
 
+  @@index([collectionId])
   @@index([userId])
   @@index([category])
   @@index([entityType, entityId])
@@ -409,6 +495,7 @@ model Reminder {
 
 model ReminderDelivery {
   id         String    @id @default(cuid())
+  collectionId String?
   reminderId String
   userId     String?
   recipient  String
@@ -420,8 +507,10 @@ model ReminderDelivery {
   sentAt     DateTime?
   createdAt  DateTime  @default(now())
 
+  collection Collection? @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   reminder Reminder @relation(fields: [reminderId], references: [id], onDelete: Cascade)
 
+  @@index([collectionId])
   @@index([reminderId])
   @@index([userId])
   @@index([status])

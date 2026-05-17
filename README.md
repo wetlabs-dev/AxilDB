@@ -8,6 +8,7 @@ It is designed for real collection work: messy taxonomy, acquisition names, alia
 
 - Public splash page at `https://axildb.com`.
 - Main application at `https://app.axildb.com`.
+- Multi-collection workspaces at `/c/[collectionSlug]`, with private/public visibility and collection-scoped memberships.
 - Plant definitions with genus, species, hybrid notation, cultivar name, authority, governing body, registration number, confidence, provisional taxon, acquisition label, reference URLs, notes, and aliases.
 - Alias tracking for synonyms, old taxonomy, trade names, common names, shorthand, and misapplied names.
 - Plant instances with generated plant IDs, acquisition/propagation dates, source/distributor metadata, location, archive status, notes, and photos.
@@ -24,24 +25,50 @@ It is designed for real collection work: messy taxonomy, acquisition names, alia
 - QR label generation and bulk PDF label export.
 - Collection search across definitions, instances, aliases, notes, source metadata, and plant IDs.
 - Archive/restore workflow for plants that leave the active collection.
-- Local user accounts with viewer/logger/admin roles and self-service viewer registration.
+- Local user accounts with self-service viewer registration.
+- Collection roles for owners, admins, loggers, and viewers, with member approval and role-management tools.
 - QR-code two-factor authentication with one-time recovery codes, compatible with Apple Passwords and standard authenticator apps.
 - SMTP-ready email foundation with welcome/verification emails, secure single-use tokens, branded HTML/plain-text templates, and user email preferences.
 - User reminders for general tasks, plant check-ins, bloom follow-ups, and propagation follow-ups, with one-time or recurring schedules.
 - Reminder delivery history and a lightweight scheduled reminder worker.
 - Followed plant updates for individual specimens, plant types, and connected lineages, with email notifications for blooms, propagations, sport updates, photos, notes, archives, and new specimens of followed types.
 - Follower counts on followable plant types, specimens, and lineages.
-- Read-only browsing for unauthenticated visitors.
+- Read-only browsing for public collections by unauthenticated visitors.
 - Admin-only edit/delete tools, users page, governing bodies page, and audit log.
 - Confirmation modals for destructive delete actions.
 - Demo data generator for populating realistic test records.
 
-## Roles
+## Collections And Roles
 
-- **Unauthenticated visitors** can browse and explore the application in read-only mode.
-- **Viewers** can create their own accounts, manage email preferences, and follow plant types, specimens, or lineages for update emails.
-- **Loggers** can add records such as plants, blooms, propagations, notes, photos, and sport observations.
-- **Admins** can create, edit, delete, archive/restore, manage users, manage governing bodies, select cover/type photos, and review audit logs.
+AxilDB now treats plant records as belonging to a **Collection**. Existing installs are backfilled into a default private collection:
+
+```text
+Name: AxilDB
+Slug: axildb
+Visibility: private
+```
+
+Collection routes use:
+
+```text
+/c/[collectionSlug]/...
+```
+
+Legacy app routes redirect to the default collection, for example `/plants` redirects to `/c/axildb/plants`.
+
+Collection visibility:
+
+- **Public collections** can be browsed read-only without signing in.
+- **Private collections** require active collection membership.
+
+Collection roles:
+
+- **Viewer** can view the collection, follow records, and manage their own reminders/preferences.
+- **Logger** can add records such as plants, blooms, propagations, notes, photos, and sport observations.
+- **Admin** can edit, delete, archive/restore, manage governing bodies, select cover/type photos, review audit logs, and run collection admin tools.
+- **Owner** can manage collection settings and members, approve membership requests, promote/demote roles, and add/remove owners. AxilDB prevents removing the final owner.
+
+Global site roles still exist for account-level administration, but normal plant work is collection-scoped through collection memberships.
 
 The bootstrap script creates the first admin user:
 
@@ -52,9 +79,13 @@ Password: password
 
 Change this password after the first deployment.
 
+The bootstrap script also creates the default collection and makes existing global admins owners of that collection. It backfills existing records with the default `collectionId`.
+
 ## Architecture
 
 AxilDB is a Next.js app using the App Router, React server components, server actions, Prisma, Postgres, and Caddy.
+
+Tenant-like collection context is handled by middleware. Requests to `/c/[slug]/...` are rewritten internally to the existing App Router pages while an `x-axildb-collection` request header carries the current collection slug. Server components and server actions load the current collection, check membership, and scope queries by `collectionId`.
 
 Production is managed with Docker Compose:
 
@@ -144,6 +175,8 @@ docker compose up -d --build
 
 Core models:
 
+- `Collection`: tenant-like workspace with slug, name, visibility, and description.
+- `CollectionMembership`: user membership, collection role, and pending/active/rejected status.
 - `PlantDefinition`: taxonomic/cultivar definition and reference metadata.
 - `PlantAlias`: alternate names with type, source, confidence, and notes.
 - `PlantInstance`: an individual plant/specimen in the collection.
@@ -160,6 +193,8 @@ Core models:
 - `Reminder` and `ReminderDelivery`: reminder scheduling metadata and delivery history.
 - `Follow` and `FollowNotification`: event-based subscriptions and delivery history for followed specimens, plant types, and lineages.
 - `GoverningBody`: registration or standards organizations.
+
+Most domain records carry `collectionId`, including plant definitions, aliases, plant instances, propagations, blooms, notes, photos, reminders, follows, governing bodies, and audit logs. Suggestions/autocomplete, search, gallery, lineage graphs, labels, dashboard activity, and follow counts are scoped per collection.
 
 The schema intentionally uses string fields rather than Prisma enums for many domain states. This keeps taxonomy, sport states, propagation methods, and future horticultural vocabulary easier to evolve.
 
@@ -339,6 +374,8 @@ If the Ko-fi handle changes, update `NEXT_PUBLIC_DONATE_URL` in `.env` or `docke
 ## Future Hardening Ideas
 
 - Switch production schema changes from `prisma db push` to Prisma migrations.
+- Add privacy-focused automated tests for collection boundaries and public/private behavior.
+- Add sitewide verified/reference plant definitions that collections can link to or fork.
 - Add documented backup and restore commands for Postgres and uploaded files.
 - Move uploads to durable object storage.
 - Add automated tests for auth, permissions, plant ID generation, uploads, destructive actions, sport logic, and lineage graph construction.

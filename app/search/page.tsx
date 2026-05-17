@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { Card, Button } from '@/components/ui'
+import { collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { plantName, fmtDate, taxonomyLabel } from '@/lib/utils'
 import Link from 'next/link'
 
@@ -12,6 +13,7 @@ export default async function SearchPage({
   searchParams: Promise<{ q?: string; status?: string; type?: string; sport?: string }>
 }) {
   const sp = await searchParams
+  const { collection } = await requireCollectionViewer()
   const q = (sp.q || '').trim()
   const status = sp.status || ''
   const type = sp.type || ''
@@ -41,6 +43,7 @@ export default async function SearchPage({
     where: {
       AND: [
         status ? { status } : {},
+        { collectionId: collection.id },
         type ? { instanceType: type } : {},
         sport ? { sportStatus: sport } : {},
         q
@@ -61,7 +64,7 @@ export default async function SearchPage({
   })
 
   const defs = await prisma.plantDefinition.findMany({
-    where: definitionSearch,
+    where: { collectionId: collection.id, ...definitionSearch },
     include: {
       aliases: { orderBy: { name: 'asc' } },
       _count: { select: { instances: true } },
@@ -103,7 +106,7 @@ export default async function SearchPage({
           <h3 className="mb-3 font-bold">Plant instances</h3>
           {instances.map((instance) => (
             <p key={instance.id} className="border-t border-stone-200 py-2 text-sm">
-              <Link className="font-bold underline" href={`/instances/${instance.id}`}>
+              <Link className="font-bold underline" href={collectionPath(collection.slug, `/instances/${instance.id}`)}>
                 {instance.plantId}
               </Link>{' '}
               · {plantName(instance.plantDefinition)} · {instance.status} · {fmtDate(instance.propagationDate || instance.acquisitionDate)}
@@ -115,7 +118,7 @@ export default async function SearchPage({
           {defs.map((definition) => (
             <div key={definition.id} className="border-t border-stone-200 py-2 text-sm">
               <p>
-                <Link className="font-bold underline" href={`/plants/${definition.id}/edit`}>
+                <Link className="font-bold underline" href={collectionPath(collection.slug, `/plants/${definition.id}/edit`)}>
                   {plantName(definition)}
                 </Link>{' '}
                 · {definition._count.instances} instance(s) · {taxonomyLabel(definition.confidence)}

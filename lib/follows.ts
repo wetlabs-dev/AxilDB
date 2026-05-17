@@ -3,6 +3,7 @@ import { followNotificationEmail } from '@/lib/email-templates'
 import { appUrl, sendEmail } from '@/lib/email'
 
 type NotifyFollowersInput = {
+  collectionId?: string | null
   actorUserId?: string | null
   eventType: string
   subject: string
@@ -22,13 +23,14 @@ export function followScopeLabel(scope?: string | null) {
   return followScopes.find(([value]) => value === scope)?.[1] || 'Follow'
 }
 
-async function connectedLineageIds(prisma: PrismaClient, seedIds: string[]) {
+async function connectedLineageIds(prisma: PrismaClient, seedIds: string[], collectionId?: string | null) {
   const seen = new Set(seedIds)
   let frontier = [...seedIds]
 
   while (frontier.length > 0) {
     const links = await prisma.propagationEvent.findMany({
       where: {
+        ...(collectionId ? { collectionId } : {}),
         OR: [
           { parents: { some: { parentPlantInstanceId: { in: frontier } } } },
           { children: { some: { childPlantInstanceId: { in: frontier } } } },
@@ -64,7 +66,7 @@ async function connectedLineageIds(prisma: PrismaClient, seedIds: string[]) {
 export async function notifyFollowers(prisma: PrismaClient, input: NotifyFollowersInput) {
   const plantInstanceIds = [...new Set(input.plantInstanceIds || [])]
   const plantDefinitionIds = [...new Set(input.plantDefinitionIds || [])]
-  const lineageIds = plantInstanceIds.length > 0 ? await connectedLineageIds(prisma, plantInstanceIds) : []
+  const lineageIds = plantInstanceIds.length > 0 ? await connectedLineageIds(prisma, plantInstanceIds, input.collectionId) : []
 
   const filters = [
     ...plantInstanceIds.map((id) => ({ scope: 'SPECIMEN', entityType: 'PLANT_INSTANCE', entityId: id })),
@@ -75,7 +77,7 @@ export async function notifyFollowers(prisma: PrismaClient, input: NotifyFollowe
   if (filters.length === 0) return
 
   const follows = await prisma.follow.findMany({
-    where: { OR: filters },
+    where: { ...(input.collectionId ? { collectionId: input.collectionId } : {}), OR: filters },
     include: { user: { include: { emailPreference: true } } },
   })
 
@@ -88,6 +90,7 @@ export async function notifyFollowers(prisma: PrismaClient, input: NotifyFollowe
       await prisma.followNotification.create({
         data: {
           followId: follow.id,
+          collectionId: input.collectionId || follow.collectionId,
           userId: follow.userId,
           eventType: input.eventType,
           subject: input.subject,
@@ -115,6 +118,7 @@ export async function notifyFollowers(prisma: PrismaClient, input: NotifyFollowe
       await prisma.followNotification.create({
         data: {
           followId: follow.id,
+          collectionId: input.collectionId || follow.collectionId,
           userId: follow.userId,
           eventType: input.eventType,
           subject: input.subject,
@@ -130,6 +134,7 @@ export async function notifyFollowers(prisma: PrismaClient, input: NotifyFollowe
       await prisma.followNotification.create({
         data: {
           followId: follow.id,
+          collectionId: input.collectionId || follow.collectionId,
           userId: follow.userId,
           eventType: input.eventType,
           subject: input.subject,

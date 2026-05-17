@@ -19,7 +19,8 @@ import {
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { PlantImage } from '@/components/PlantImage'
 import { Button, Card, Field, Select, TextArea } from '@/components/ui'
-import { canCreate, getCurrentUser, isAdmin } from '@/lib/auth'
+import { getCurrentUser } from '@/lib/auth'
+import { canCreateInCollection, canEditInCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
 import { recurrenceLabel, reminderCategories, reminderCategoryLabel, reminderRecurrences } from '@/lib/reminders'
 import { fmtDate, plantName, taxonomyLabel } from '@/lib/utils'
@@ -33,9 +34,12 @@ export default async function InstanceDetail({
 }) {
   const { id } = await params
   const user = await getCurrentUser()
+  const context = await requireCollectionViewer()
+  const { collection } = context
+  const collectionWhere = { collectionId: collection.id }
 
-  const i = await prisma.plantInstance.findUniqueOrThrow({
-    where: { id },
+  const i = await prisma.plantInstance.findFirstOrThrow({
+    where: { id, ...collectionWhere },
     include: {
       plantDefinition: { include: { aliases: { orderBy: { name: 'asc' } } } },
       blooms: {
@@ -64,18 +68,19 @@ export default async function InstanceDetail({
   })
 
   const notes = await prisma.note.findMany({
-    where: { entityType: 'PLANT_INSTANCE', entityId: id },
+    where: { ...collectionWhere, entityType: 'PLANT_INSTANCE', entityId: id },
     orderBy: { createdAt: 'desc' },
   })
 
   const photos = await prisma.photo.findMany({
-    where: { entityType: 'PLANT_INSTANCE', entityId: id },
+    where: { ...collectionWhere, entityType: 'PLANT_INSTANCE', entityId: id },
     orderBy: [{ isCover: 'desc' }, { isType: 'desc' }, { createdAt: 'desc' }],
   })
 
   const bloomPhotos = await prisma.photo.findMany({
     where: {
       entityType: 'BLOOM_EVENT',
+      collectionId: collection.id,
       entityId: {
         in: i.blooms.map((b) => b.id),
       },
@@ -93,6 +98,7 @@ export default async function InstanceDetail({
     ? await prisma.reminder.findMany({
         where: {
           userId: user.id,
+          collectionId: collection.id,
           OR: [
             { entityType: 'PLANT_INSTANCE', entityId: id },
             { entityType: 'BLOOM_EVENT', entityId: { in: i.blooms.map((b) => b.id) } },
@@ -106,6 +112,7 @@ export default async function InstanceDetail({
     ? await prisma.follow.findMany({
         where: {
           userId: user.id,
+          collectionId: collection.id,
           OR: [
             { scope: 'SPECIMEN', entityType: 'PLANT_INSTANCE', entityId: id },
             { scope: 'LINEAGE', entityType: 'PLANT_INSTANCE', entityId: id },
@@ -123,6 +130,7 @@ export default async function InstanceDetail({
         { scope: 'LINEAGE', entityType: 'PLANT_INSTANCE', entityId: id },
         { scope: 'TYPE', entityType: 'PLANT_DEFINITION', entityId: i.plantDefinitionId },
       ],
+      collectionId: collection.id,
     },
     _count: { _all: true },
   })
@@ -140,7 +148,7 @@ export default async function InstanceDetail({
     }, {})
 
   const qr = await QRCode.toDataURL(
-    `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.axildb.com'}/instances/${id}`
+    `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.axildb.com'}${collectionPath(collection.slug, `/instances/${id}`)}`
   )
 
   return (
@@ -171,7 +179,7 @@ export default async function InstanceDetail({
                 return existing ? (
                   <form key={scope} action={unfollowEntity}>
                     <input type="hidden" name="id" value={existing.id} />
-                    <input type="hidden" name="back" value={`/instances/${id}`} />
+                    <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}`)} />
                     <Button className="w-full border border-stone-300 bg-white/70 text-stone-800 hover:bg-white">
                       {followedLabel} · {count}
                     </Button>
@@ -181,7 +189,8 @@ export default async function InstanceDetail({
                     <input type="hidden" name="scope" value={scope} />
                     <input type="hidden" name="entityType" value={entityType} />
                     <input type="hidden" name="entityId" value={entityId} />
-                    <input type="hidden" name="back" value={`/instances/${id}`} />
+                    <input type="hidden" name="collectionSlug" value={collection.slug} />
+                    <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}`)} />
                     <Button className="w-full">{followLabel} · {count}</Button>
                   </form>
                 )
@@ -212,7 +221,7 @@ export default async function InstanceDetail({
           <p>Propagated: {fmtDate(i.propagationDate)}</p>
           <p>Source: {i.source || '—'}</p>
           <p>Stock: {i.stockNumber || '—'}</p>
-          <Link className="mt-3 inline-block underline" href={`/graphs?root=${i.id}`}>
+          <Link className="mt-3 inline-block underline" href={collectionPath(collection.slug, `/graphs?root=${i.id}`)}>
             View lineage graph
           </Link>
           {i.plantDefinition.aliases.length > 0 && (
@@ -231,7 +240,7 @@ export default async function InstanceDetail({
           <h3 className="font-bold">Sport / mutation</h3>
           <p>Status: {i.sportStatus}</p>
           <p className="text-sm text-stone-700">{i.sportDescription || 'No sport observations yet.'}</p>
-          {canCreate(user) && i.sportStatus === 'NONE' && (
+          {canCreateInCollection(user, context) && i.sportStatus === 'NONE' && (
             <form action={markSportCandidate} className="mt-4 grid gap-2 rounded-lg border border-stone-200 bg-white/60 p-3">
               <input type="hidden" name="id" value={id} />
               <TextArea label="Why do you suspect this is a sport?" help="Describe the visible difference you are tracking, such as flower color, leaf variegation, growth habit, or another trait that may propagate true." name="observation" />
@@ -246,10 +255,10 @@ export default async function InstanceDetail({
                   ? 'This plant is marked reverted, so future propagations from it will not inherit sport candidate status.'
                   : 'Propagations from this plant will enter Sport Review as candidate sports. Add true-to-type stability records there; three confirmed generations marks the line stable.'}
               </p>
-              {canCreate(user) && !['REVERTED', 'REGISTERED'].includes(i.sportStatus) && (
+              {canCreateInCollection(user, context) && !['REVERTED', 'REGISTERED'].includes(i.sportStatus) && (
                 <form action={markSportReverted} className="mt-4 grid gap-2 rounded-lg border border-stone-200 bg-white/60 p-3">
                   <input type="hidden" name="id" value={id} />
-                  <input type="hidden" name="back" value={`/instances/${id}`} />
+                  <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}`)} />
                   <TextArea label="Why is this reverted?" help="Use when this branch appears to have returned to the original cultivar or no longer shows the suspected sport trait." name="observation" />
                   <Button>Mark reverted</Button>
                 </form>
@@ -268,9 +277,9 @@ export default async function InstanceDetail({
           )}
         </Card>
 
-        {(isAdmin(user) || i.status !== 'ACTIVE') && <Card>
+        {(canEditInCollection(user, context) || i.status !== 'ACTIVE') && <Card>
           <h3 className="font-bold">Archive</h3>
-          {isAdmin(user) && i.status === 'ACTIVE' ? (
+          {canEditInCollection(user, context) && i.status === 'ACTIVE' ? (
             <form action={archivePlantInstance} className="grid gap-2">
               <input type="hidden" name="id" value={id} />
               <Field label="Reason" help="Short reason this plant left active collection, such as sold, discarded, died, duplicate, or gifted." name="archiveReason" />
@@ -292,7 +301,7 @@ export default async function InstanceDetail({
           .flatMap((l) => l.propagationEvent.children)
           .map((c) => (
             <p key={c.id}>
-              <Link className="underline" href={`/instances/${c.childPlantInstanceId}`}>
+              <Link className="underline" href={collectionPath(collection.slug, `/instances/${c.childPlantInstanceId}`)}>
                 {c.childPlantInstance.plantId}
               </Link>
             </p>
@@ -302,10 +311,11 @@ export default async function InstanceDetail({
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <h3 className="font-bold">Add note</h3>
-          {canCreate(user) && <form action={addNote} className="grid gap-2">
+          {canCreateInCollection(user, context) && <form action={addNote} className="grid gap-2">
             <input type="hidden" name="entityType" value="PLANT_INSTANCE" />
             <input type="hidden" name="entityId" value={id} />
-            <input type="hidden" name="back" value={`/instances/${id}`} />
+            <input type="hidden" name="collectionSlug" value={collection.slug} />
+            <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}`)} />
             <TextArea label="Note" name="note" />
             <Button>Add note</Button>
           </form>}
@@ -325,14 +335,15 @@ export default async function InstanceDetail({
               <h3 className="font-bold">Reminders</h3>
               <p className="text-sm text-stone-600">Send yourself plant check-in emails tied to this specimen.</p>
             </div>
-            <Link className="text-sm font-medium underline" href="/reminders">All reminders</Link>
+            <Link className="text-sm font-medium underline" href={collectionPath(collection.slug, '/reminders')}>All reminders</Link>
           </div>
 
           {user ? (
             <form action={createReminder} className="mt-4 grid gap-2 rounded-xl border border-stone-200 bg-white/60 p-3">
               <input type="hidden" name="entityType" value="PLANT_INSTANCE" />
               <input type="hidden" name="entityId" value={id} />
-              <input type="hidden" name="back" value={`/instances/${id}`} />
+              <input type="hidden" name="collectionSlug" value={collection.slug} />
+              <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}`)} />
               <Field label="Title" name="title" defaultValue={`Check ${i.plantId}`} required />
               <Field label="Send at" help="The first date and time AxilDB should email this reminder." name="dueAt" type="datetime-local" required />
               <Select label="Category" name="category" defaultValue="PLANT_CHECK_IN">
@@ -366,19 +377,19 @@ export default async function InstanceDetail({
                     <>
                       <form action={completeReminder}>
                         <input type="hidden" name="id" value={reminder.id} />
-                        <input type="hidden" name="back" value={`/instances/${id}`} />
+                        <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}`)} />
                         <Button className="px-3 py-1.5 text-xs">Complete</Button>
                       </form>
                       <form action={pauseReminder}>
                         <input type="hidden" name="id" value={reminder.id} />
-                        <input type="hidden" name="back" value={`/instances/${id}`} />
+                        <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}`)} />
                         <Button className="border border-stone-300 bg-white/70 px-3 py-1.5 text-xs text-stone-800 hover:bg-white">Pause</Button>
                       </form>
                     </>
                   )}
                   <form action={deleteReminder}>
                     <input type="hidden" name="id" value={reminder.id} />
-                    <input type="hidden" name="back" value={`/instances/${id}`} />
+                    <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}`)} />
                     <ConfirmDeleteButton
                       className="px-3 py-1.5 text-xs"
                       title="Delete reminder?"
@@ -400,8 +411,9 @@ export default async function InstanceDetail({
             Open a bloom when it starts, mark peak later, then close it when finished. Photos can be added to the bloom event at any stage.
           </p>
 
-          {canCreate(user) && <form action={openBloomEvent} className="grid gap-2 rounded-xl border p-4">
+          {canCreateInCollection(user, context) && <form action={openBloomEvent} className="grid gap-2 rounded-xl border p-4">
             <input type="hidden" name="plantInstanceId" value={id} />
+            <input type="hidden" name="collectionSlug" value={collection.slug} />
             <Field label="Bloom start" help="The date the bloom event began, usually when the first flower opened or the bud clearly started opening." name="bloomStartDate" type="date" required />
             <label className="text-sm">
               <input type="checkbox" name="firstBloom" /> First bloom
@@ -439,7 +451,7 @@ export default async function InstanceDetail({
                   {b.firstBloom && <p className="mt-2 text-sm font-medium">First bloom</p>}
                   {b.notes && <p className="mt-2 text-sm whitespace-pre-wrap">{b.notes}</p>}
 
-                  {isAdmin(user) && !b.peakBloomDate && (
+                  {canEditInCollection(user, context) && !b.peakBloomDate && (
                     <form action={updateBloomPeak} className="mt-4 grid gap-2 rounded-xl bg-neutral-50 p-3">
                       <input type="hidden" name="id" value={b.id} />
                       <input type="hidden" name="plantInstanceId" value={id} />
@@ -450,7 +462,7 @@ export default async function InstanceDetail({
                     </form>
                   )}
 
-                  {isAdmin(user) && !b.bloomEndDate && (
+                  {canEditInCollection(user, context) && !b.bloomEndDate && (
                     <form action={closeBloomEvent} className="mt-4 grid gap-2 rounded-xl bg-neutral-50 p-3">
                       <input type="hidden" name="id" value={b.id} />
                       <input type="hidden" name="plantInstanceId" value={id} />
@@ -460,7 +472,7 @@ export default async function InstanceDetail({
                     </form>
                   )}
 
-                  {canCreate(user) && <form
+                  {canCreateInCollection(user, context) && <form
                     action="/api/photos"
                     method="post"
                     encType="multipart/form-data"
@@ -468,7 +480,8 @@ export default async function InstanceDetail({
                   >
                     <input type="hidden" name="entityType" value="BLOOM_EVENT" />
                     <input type="hidden" name="entityId" value={b.id} />
-                    <input type="hidden" name="back" value={`/instances/${id}`} />
+                    <input type="hidden" name="collectionSlug" value={collection.slug} />
+                    <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}`)} />
                     <input name="photo" type="file" accept="image/*" className="rounded-lg border p-2" />
                     <Field label="Caption" name="caption" />
                     <Button>Add bloom photo</Button>
@@ -481,7 +494,8 @@ export default async function InstanceDetail({
                         <input type="hidden" name="entityType" value="BLOOM_EVENT" />
                         <input type="hidden" name="entityId" value={b.id} />
                         <input type="hidden" name="category" value="BLOOM_CYCLE" />
-                        <input type="hidden" name="back" value={`/instances/${id}#bloom-${b.id}`} />
+                        <input type="hidden" name="collectionSlug" value={collection.slug} />
+                        <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}#bloom-${b.id}`)} />
                         <Field label="Title" name="title" defaultValue={`Follow up on bloom for ${i.plantId}`} required />
                         <Field label="Send at" help="Useful for checking peak bloom, closure, or photo follow-up." name="dueAt" type="datetime-local" required />
                         <Select label="Repeat" name="rrule" defaultValue="">
@@ -517,10 +531,10 @@ export default async function InstanceDetail({
                           </div>
                           <figcaption className="space-y-2 p-2 text-xs">
                             <p>{p.caption || 'Untitled bloom photo'}</p>
-                            {isAdmin(user) && (
+                            {canEditInCollection(user, context) && (
                               <form action={deletePhoto}>
                                 <input type="hidden" name="id" value={p.id} />
-                                <input type="hidden" name="back" value={`/instances/${id}`} />
+                                <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}`)} />
                                 <ConfirmDeleteButton
                                   className="px-2 py-1 text-xs"
                                   title="Delete bloom photo?"
@@ -548,7 +562,7 @@ export default async function InstanceDetail({
         <p className="mt-1 text-sm text-stone-600">
           Choose one cover photo for this specimen card. Admins can also mark one specimen photo as the type photo for the plant definition.
         </p>
-        {canCreate(user) && <form
+        {canCreateInCollection(user, context) && <form
           action="/api/photos"
           method="post"
           encType="multipart/form-data"
@@ -556,7 +570,8 @@ export default async function InstanceDetail({
         >
           <input type="hidden" name="entityType" value="PLANT_INSTANCE" />
           <input type="hidden" name="entityId" value={id} />
-          <input type="hidden" name="back" value={`/instances/${id}`} />
+          <input type="hidden" name="collectionSlug" value={collection.slug} />
+          <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}`)} />
           <input name="photo" type="file" accept="image/*" className="rounded-lg border p-2" />
           <Field label="Caption" name="caption" />
           <Button>Upload photo</Button>
@@ -576,16 +591,16 @@ export default async function InstanceDetail({
                     {p.isCover ? 'Cover photo' : 'Not cover'} · {p.isType ? 'Type photo' : 'Not type'}
                   </p>
                 </div>
-                {isAdmin(user) && (
+                {canEditInCollection(user, context) && (
                   <div className="flex flex-wrap gap-2">
                     <form action={setCoverPhoto}>
                       <input type="hidden" name="id" value={p.id} />
-                      <input type="hidden" name="back" value={`/instances/${id}`} />
+                      <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}`)} />
                       <Button className="px-3 py-1.5 text-xs" disabled={p.isCover}>Set cover</Button>
                     </form>
                     <form action={setTypePhoto}>
                       <input type="hidden" name="id" value={p.id} />
-                      <input type="hidden" name="back" value={`/instances/${id}`} />
+                      <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}`)} />
                       <Button className="px-3 py-1.5 text-xs" disabled={p.isType}>Set type</Button>
                     </form>
                   </div>

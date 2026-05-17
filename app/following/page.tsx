@@ -2,15 +2,16 @@ import { unfollowEntity } from '@/app/actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { Card } from '@/components/ui'
 import { requireUser } from '@/lib/auth'
+import { collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { followScopeLabel } from '@/lib/follows'
 import { prisma } from '@/lib/prisma'
 import { fmtDate } from '@/lib/utils'
 import Link from 'next/link'
 
-function followPath(follow: { scope: string; entityType: string; entityId: string }) {
-  if (follow.entityType === 'PLANT_INSTANCE') return `/instances/${follow.entityId}`
-  if (follow.entityType === 'PLANT_DEFINITION') return '/plants'
-  return '/'
+function followPath(slug: string, follow: { scope: string; entityType: string; entityId: string }) {
+  if (follow.entityType === 'PLANT_INSTANCE') return collectionPath(slug, `/instances/${follow.entityId}`)
+  if (follow.entityType === 'PLANT_DEFINITION') return collectionPath(slug, '/plants')
+  return collectionPath(slug)
 }
 
 export default async function FollowingPage({
@@ -19,9 +20,10 @@ export default async function FollowingPage({
   searchParams: Promise<{ registered?: string }>
 }) {
   const user = await requireUser()
+  const { collection } = await requireCollectionViewer()
   const sp = await searchParams
   const follows = await prisma.follow.findMany({
-    where: { userId: user.id },
+    where: { userId: user.id, collectionId: collection.id },
     include: {
       notifications: {
         orderBy: { createdAt: 'desc' },
@@ -32,7 +34,7 @@ export default async function FollowingPage({
   })
 
   const recentNotifications = await prisma.followNotification.findMany({
-    where: { userId: user.id },
+    where: { userId: user.id, collectionId: collection.id },
     include: { follow: true },
     orderBy: { createdAt: 'desc' },
     take: 30,
@@ -67,13 +69,13 @@ export default async function FollowingPage({
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#2f6b45]">{followScopeLabel(follow.scope)}</p>
                   <h3 className="mt-1 font-serif text-xl font-bold">{follow.label}</h3>
                   <p className="text-sm text-stone-600">Following since {fmtDate(follow.createdAt)}</p>
-                  <Link className="mt-2 inline-block text-sm font-medium underline" href={followPath(follow)}>
+                  <Link className="mt-2 inline-block text-sm font-medium underline" href={followPath(collection.slug, follow)}>
                     Open record
                   </Link>
                 </div>
                 <form action={unfollowEntity}>
                   <input type="hidden" name="id" value={follow.id} />
-                  <input type="hidden" name="back" value="/following" />
+                  <input type="hidden" name="back" value={collectionPath(collection.slug, '/following')} />
                   <ConfirmDeleteButton
                     className="px-3 py-1.5 text-xs"
                     title="Unfollow?"

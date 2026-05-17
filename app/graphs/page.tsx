@@ -4,6 +4,7 @@ import { getLineageGraph } from '@/lib/lineage'
 import { prisma } from '@/lib/prisma'
 import { plantName } from '@/lib/utils'
 import Link from 'next/link'
+import { collectionPath, requireCollectionViewer } from '@/lib/collections'
 
 const contains = (value: string) => ({ contains: value, mode: 'insensitive' as const })
 
@@ -13,9 +14,11 @@ export default async function Graphs({
   searchParams: Promise<{ root?: string; q?: string }>
 }) {
   const sp = await searchParams
+  const { collection } = await requireCollectionViewer()
   const q = (sp.q || '').trim()
   const roots = await prisma.plantInstance.findMany({
     where: {
+      collectionId: collection.id,
       status: 'ACTIVE',
       ...(q
         ? {
@@ -34,10 +37,10 @@ export default async function Graphs({
   })
   const root = sp.root || roots[0]?.id
   const [graph, selected] = await Promise.all([
-    root ? getLineageGraph(root) : Promise.resolve({ nodes: [], edges: [] }),
+    root ? getLineageGraph(root, collection.id) : Promise.resolve({ nodes: [], edges: [] }),
     root
-      ? prisma.plantInstance.findUnique({
-          where: { id: root },
+      ? prisma.plantInstance.findFirst({
+          where: { id: root, collectionId: collection.id },
           include: { plantDefinition: true },
         })
       : Promise.resolve(null),
@@ -77,7 +80,7 @@ export default async function Graphs({
                         ? 'border-[#2f6b45] bg-[#d6dfc9] text-[#1f472f] shadow-sm'
                         : 'border-transparent hover:border-stone-200 hover:bg-white/60'
                     }`}
-                    href={`/graphs?root=${item.id}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
+                    href={`${collectionPath(collection.slug, '/graphs')}?root=${item.id}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
                   >
                     <span className="block font-semibold">{item.plantId}</span>
                     <span className="line-clamp-2 text-xs text-stone-600">{plantName(item.plantDefinition)}</span>
@@ -93,7 +96,7 @@ export default async function Graphs({
           {selected && (
             <div className="rounded-lg border border-stone-200 bg-[#fffaf0]/82 px-4 py-3 text-sm shadow-sm">
               <span className="font-semibold">Selected:</span>{' '}
-              <Link className="font-semibold text-[#2f6b45] underline decoration-[#8fa58f] underline-offset-2" href={`/instances/${selected.id}`}>
+              <Link className="font-semibold text-[#2f6b45] underline decoration-[#8fa58f] underline-offset-2" href={collectionPath(collection.slug, `/instances/${selected.id}`)}>
                 {selected.plantId}
               </Link>{' '}
               · {plantName(selected.plantDefinition)}

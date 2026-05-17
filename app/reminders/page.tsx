@@ -8,6 +8,7 @@ import {
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { Button, Card, Field, Select, TextArea } from '@/components/ui'
 import { requireUser } from '@/lib/auth'
+import { collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
 import {
   entityLabel,
@@ -32,8 +33,9 @@ function reminderStatus(reminder: {
 
 export default async function RemindersPage() {
   const user = await requireUser()
+  const { collection } = await requireCollectionViewer()
   const reminders = await prisma.reminder.findMany({
-    where: { userId: user.id },
+    where: { userId: user.id, collectionId: collection.id },
     include: {
       deliveries: {
         orderBy: { createdAt: 'desc' },
@@ -54,17 +56,17 @@ export default async function RemindersPage() {
 
   const blooms = bloomIds.length
     ? await prisma.bloomEvent.findMany({
-        where: { id: { in: bloomIds } },
+        where: { id: { in: bloomIds }, collectionId: collection.id },
         include: { plantInstance: true },
       })
     : []
 
   const bloomPathById = new Map(
-    blooms.map((bloom) => [bloom.id, `/instances/${bloom.plantInstanceId}#bloom-${bloom.id}`])
+    blooms.map((bloom) => [bloom.id, collectionPath(collection.slug, `/instances/${bloom.plantInstanceId}#bloom-${bloom.id}`)])
   )
 
   const recordPath = (entityType?: string | null, entityId?: string | null) => {
-    if (entityType === 'PLANT_INSTANCE' && entityId) return `/instances/${entityId}`
+    if (entityType === 'PLANT_INSTANCE' && entityId) return collectionPath(collection.slug, `/instances/${entityId}`)
     if (entityType === 'BLOOM_EVENT' && entityId) return bloomPathById.get(entityId)
     return undefined
   }
@@ -81,7 +83,8 @@ export default async function RemindersPage() {
       <Card>
         <h3 className="font-bold">Add reminder</h3>
         <form action={createReminder} className="mt-4 grid gap-3 md:max-w-3xl md:grid-cols-2">
-          <input type="hidden" name="back" value="/reminders" />
+          <input type="hidden" name="collectionSlug" value={collection.slug} />
+          <input type="hidden" name="back" value={collectionPath(collection.slug, '/reminders')} />
           <Field label="Title" name="title" required />
           <Field label="Send at" help="The first date and time this reminder should be emailed." name="dueAt" type="datetime-local" required />
           <Select label="Category" name="category" defaultValue="GENERAL">

@@ -1,10 +1,10 @@
 import { Card } from '@/components/ui'
-import { requireAdminUser } from '@/lib/auth'
+import { requireCollectionAdmin } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
 
 export default async function AuditLog() {
-  await requireAdminUser()
-  const logs = await prisma.auditLog.findMany({ orderBy: { createdAt: 'desc' }, take: 200 })
+  const { collection } = await requireCollectionAdmin()
+  const logs = await prisma.auditLog.findMany({ where: { collectionId: collection.id }, orderBy: { createdAt: 'desc' }, take: 200 })
 
   return (
     <div className="space-y-6">

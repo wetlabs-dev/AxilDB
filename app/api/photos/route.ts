@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { audit, requireCreateUser } from '@/lib/auth'
+import { audit } from '@/lib/auth'
+import { collectionPath, getCurrentCollectionSlug, requireCollectionLogger } from '@/lib/collections'
 import { notifyFollowers } from '@/lib/follows'
 import { mkdir, writeFile } from 'fs/promises'
 import path from 'path'
@@ -21,7 +22,6 @@ function redirectBack(req: Request, back: string, uploadError?: string) {
 }
 
 export async function POST(req: Request) {
-  const user = await requireCreateUser()
   let form: FormData
   try {
     form = await req.formData()
@@ -36,6 +36,8 @@ export async function POST(req: Request) {
   const source = String(form.get('source') || '') || undefined
   const sourceUrl = String(form.get('sourceUrl') || '') || undefined
   const back = String(form.get('back') || '/')
+  const context = await requireCollectionLogger(String(form.get('collectionSlug') || '') || await getCurrentCollectionSlug())
+  const { user, collection } = context
   if (!file || !entityType || !entityId) return redirectBack(req, back, 'missing_photo')
   if (file.type && !SUPPORTED_IMAGE_TYPES.has(file.type)) return redirectBack(req, back, 'unsupported_format')
   const original = Buffer.from(await file.arrayBuffer())
@@ -61,6 +63,7 @@ export async function POST(req: Request) {
     const filename = `${Date.now()}-${parsed.name || 'photo'}.jpg`
     await writeFile(path.join(process.cwd(), 'public', 'uploads', filename), bytes)
     const data = {
+      collectionId: collection.id,
       entityType,
       entityId,
       filename,
@@ -72,45 +75,48 @@ export async function POST(req: Request) {
     }
     const photo = entityType === 'PLANT_DEFINITION'
       ? (await prisma.$transaction([
-          prisma.photo.updateMany({ where: { entityType: 'PLANT_DEFINITION', entityId }, data: { isType: false } }),
+          prisma.photo.updateMany({ where: { collectionId: collection.id, entityType: 'PLANT_DEFINITION', entityId }, data: { isType: false } }),
           prisma.photo.create({ data }),
         ]))[1]
       : await prisma.photo.create({ data })
-    await audit(user, 'CREATE', 'PHOTO', photo.id, `Uploaded photo for ${entityType} ${entityId}`, { filename, originalBytes: original.length, storedBytes: bytes.length, maxDimension: MAX_PHOTO_DIMENSION, source, sourceUrl })
+    await audit(user, 'CREATE', 'PHOTO', photo.id, `Uploaded photo for ${entityType} ${entityId}`, { filename, originalBytes: original.length, storedBytes: bytes.length, maxDimension: MAX_PHOTO_DIMENSION, source, sourceUrl }, collection.id)
 
     if (entityType === 'PLANT_INSTANCE') {
-      const instance = await prisma.plantInstance.findUnique({ where: { id: entityId } })
+      const instance = await prisma.plantInstance.findFirst({ where: { id: entityId, collectionId: collection.id } })
       if (instance) {
         await notifyFollowers(prisma, {
+          collectionId: collection.id,
           actorUserId: user.id,
           eventType: 'PHOTO',
           subject: `New photo for ${instance.plantId}`,
           body: caption || 'A new specimen photo was added.',
-          recordPath: `/instances/${entityId}`,
+          recordPath: collectionPath(collection.slug, `/instances/${entityId}`),
           plantInstanceIds: [entityId],
           plantDefinitionIds: [instance.plantDefinitionId],
         })
       }
     } else if (entityType === 'BLOOM_EVENT') {
-      const bloom = await prisma.bloomEvent.findUnique({ where: { id: entityId }, include: { plantInstance: true } })
+      const bloom = await prisma.bloomEvent.findFirst({ where: { id: entityId, collectionId: collection.id }, include: { plantInstance: true } })
       if (bloom) {
         await notifyFollowers(prisma, {
+          collectionId: collection.id,
           actorUserId: user.id,
           eventType: 'PHOTO',
           subject: `New bloom photo for ${bloom.plantInstance.plantId}`,
           body: caption || 'A new bloom photo was added.',
-          recordPath: `/instances/${bloom.plantInstanceId}#bloom-${bloom.id}`,
+          recordPath: collectionPath(collection.slug, `/instances/${bloom.plantInstanceId}#bloom-${bloom.id}`),
           plantInstanceIds: [bloom.plantInstanceId],
           plantDefinitionIds: [bloom.plantInstance.plantDefinitionId],
         })
       }
     } else if (entityType === 'PLANT_DEFINITION') {
       await notifyFollowers(prisma, {
+        collectionId: collection.id,
         actorUserId: user.id,
         eventType: 'PHOTO',
         subject: 'New plant type image',
         body: caption || 'A plant definition type image was added.',
-        recordPath: `/plants/${entityId}/edit`,
+        recordPath: collectionPath(collection.slug, `/plants/${entityId}/edit`),
         plantDefinitionIds: [entityId],
       })
     }

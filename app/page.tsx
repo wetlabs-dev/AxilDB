@@ -1,5 +1,6 @@
 import { PlantImage } from '@/components/PlantImage'
 import { Card } from '@/components/ui'
+import { collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
 import { cn, fmtDate, plantName } from '@/lib/utils'
 import { Archive, Flower2, GitBranch, Leaf, Sparkles, Sprout } from 'lucide-react'
@@ -56,12 +57,13 @@ const activityStyles: Record<ActivityKind, { label: string; className: string; i
 }
 const activityKinds = Object.keys(activityStyles) as ActivityKind[]
 
-function activityHref(activityTake: number, kind?: ActivityKind) {
+function activityHref(slug: string, activityTake: number, kind?: ActivityKind) {
   const params = new URLSearchParams()
   if (kind) params.set('type', kind)
   if (activityTake !== 12) params.set('activity', String(activityTake))
   const qs = params.toString()
-  return qs ? `/?${qs}` : '/'
+  const path = qs ? `/?${qs}` : '/'
+  return collectionPath(slug, path)
 }
 
 function ActivityCard({
@@ -105,12 +107,15 @@ export default async function Dashboard({
   searchParams: Promise<{ activity?: string; type?: string }>
 }) {
   const sp = await searchParams
+  const { collection } = await requireCollectionViewer()
+  const collectionWhere = { collectionId: collection.id }
   const activityTake = Math.min(Math.max(Number(sp.activity || 12) || 12, 12), 48)
   const activeKind = activityKinds.includes(sp.type as ActivityKind) ? (sp.type as ActivityKind) : undefined
   const queryTake = activeKind ? Math.max(activityTake * 4, 48) : activityTake
   const [active, recentProps, blooms, sports, acquired, archived] = await Promise.all([
-    prisma.plantInstance.count({ where: { status: 'ACTIVE' } }),
+    prisma.plantInstance.count({ where: { ...collectionWhere, status: 'ACTIVE' } }),
     prisma.propagationEvent.findMany({
+      where: collectionWhere,
       take: activeKind && activeKind !== 'propagation' ? 0 : queryTake,
       orderBy: { date: 'desc' },
       include: {
@@ -119,24 +124,25 @@ export default async function Dashboard({
       },
     }),
     prisma.bloomEvent.findMany({
+      where: collectionWhere,
       take: activeKind && activeKind !== 'bloom' ? 0 : queryTake,
       orderBy: { bloomStartDate: 'desc' },
       include: { plantInstance: { include: { plantDefinition: true } } },
     }),
     prisma.plantInstance.findMany({
-      where: { OR: [{ isSportCandidate: true }, { sportStatus: { not: 'NONE' } }] },
+      where: { ...collectionWhere, OR: [{ isSportCandidate: true }, { sportStatus: { not: 'NONE' } }] },
       take: activeKind && activeKind !== 'sport' ? 0 : queryTake,
       include: { plantDefinition: true },
       orderBy: { updatedAt: 'desc' },
     }),
     prisma.plantInstance.findMany({
-      where: { instanceType: 'MOTHER' },
+      where: { ...collectionWhere, instanceType: 'MOTHER' },
       take: activeKind && activeKind !== 'acquired' ? 0 : queryTake,
       orderBy: [{ acquisitionDate: 'desc' }, { createdAt: 'desc' }],
       include: { plantDefinition: true },
     }),
     prisma.plantInstance.findMany({
-      where: { status: 'ARCHIVED' },
+      where: { ...collectionWhere, status: 'ARCHIVED' },
       take: activeKind && activeKind !== 'archive' ? 0 : queryTake,
       orderBy: { archiveDate: 'desc' },
       include: { plantDefinition: true },
@@ -157,11 +163,11 @@ export default async function Dashboard({
 
   const [coverPhotos, bloomPhotos] = await Promise.all([
     prisma.photo.findMany({
-      where: { entityType: 'PLANT_INSTANCE', entityId: { in: instanceIds } },
+      where: { ...collectionWhere, entityType: 'PLANT_INSTANCE', entityId: { in: instanceIds } },
       orderBy: [{ isCover: 'desc' }, { createdAt: 'desc' }],
     }),
     prisma.photo.findMany({
-      where: { entityType: 'BLOOM_EVENT', entityId: { in: bloomIds } },
+      where: { ...collectionWhere, entityType: 'BLOOM_EVENT', entityId: { in: bloomIds } },
       orderBy: { createdAt: 'desc' },
     }),
   ])
@@ -184,7 +190,7 @@ export default async function Dashboard({
       return {
         id: event.id,
         kind: 'propagation' as const,
-        href: firstChild ? `/instances/${firstChild.id}` : '/propagations',
+        href: firstChild ? collectionPath(collection.slug, `/instances/${firstChild.id}`) : collectionPath(collection.slug, '/propagations'),
         date: event.date,
         title: firstChild?.plantId || event.method,
         subtitle: `${event.method.replaceAll('_', ' ')} · ${event.successStatus.toLowerCase()}`,
@@ -195,7 +201,7 @@ export default async function Dashboard({
     ...blooms.map((bloom) => ({
       id: bloom.id,
       kind: 'bloom' as const,
-      href: `/instances/${bloom.plantInstanceId}`,
+      href: collectionPath(collection.slug, `/instances/${bloom.plantInstanceId}`),
       date: bloom.bloomStartDate,
       title: bloom.plantInstance.plantId,
       subtitle: plantName(bloom.plantInstance.plantDefinition),
@@ -205,7 +211,7 @@ export default async function Dashboard({
     ...sports.map((sport) => ({
       id: sport.id,
       kind: 'sport' as const,
-      href: `/instances/${sport.id}`,
+      href: collectionPath(collection.slug, `/instances/${sport.id}`),
       date: sport.updatedAt,
       title: sport.plantId,
       subtitle: `${sport.sportStatus.replaceAll('_', ' ').toLowerCase()} · ${plantName(sport.plantDefinition)}`,
@@ -215,7 +221,7 @@ export default async function Dashboard({
     ...acquired.map((item) => ({
       id: item.id,
       kind: 'acquired' as const,
-      href: `/instances/${item.id}`,
+      href: collectionPath(collection.slug, `/instances/${item.id}`),
       date: item.acquisitionDate || item.createdAt,
       title: item.plantId,
       subtitle: plantName(item.plantDefinition),
@@ -225,7 +231,7 @@ export default async function Dashboard({
     ...archived.map((item) => ({
       id: item.id,
       kind: 'archive' as const,
-      href: `/instances/${item.id}`,
+      href: collectionPath(collection.slug, `/instances/${item.id}`),
       date: item.archiveDate || item.updatedAt,
       title: item.plantId,
       subtitle: item.archiveReason || plantName(item.plantDefinition),
@@ -238,10 +244,10 @@ export default async function Dashboard({
     .slice(0, activityTake)
 
   const stats = [
-    ['Active plants', active, Leaf, '/instances'],
-    ['Recent propagations', recentProps.length, GitBranch, '/propagations'],
-    ['Recent blooms', blooms.length, Flower2, '/blooms'],
-    ['Sport candidates', sports.length, Sprout, '/sports'],
+    ['Active plants', active, Leaf, collectionPath(collection.slug, '/instances')],
+    ['Recent propagations', recentProps.length, GitBranch, collectionPath(collection.slug, '/propagations')],
+    ['Recent blooms', blooms.length, Flower2, collectionPath(collection.slug, '/blooms')],
+    ['Sport candidates', sports.length, Sprout, collectionPath(collection.slug, '/sports')],
   ] as const
 
   return (
@@ -278,7 +284,7 @@ export default async function Dashboard({
           <div className="flex flex-wrap gap-2 text-xs">
             {activeKind && (
               <Link
-                href={activityHref(activityTake)}
+                href={activityHref(collection.slug, activityTake)}
                 className="rounded-full border border-stone-300 bg-white/70 px-2 py-1 font-medium text-stone-700 transition hover:bg-white"
               >
                 All activity
@@ -287,7 +293,7 @@ export default async function Dashboard({
             {Object.entries(activityStyles).map(([kind, style]) => (
               <Link
                 key={kind}
-                href={activityHref(activityTake, activeKind === kind ? undefined : (kind as ActivityKind))}
+                href={activityHref(collection.slug, activityTake, activeKind === kind ? undefined : (kind as ActivityKind))}
                 aria-pressed={activeKind === kind}
                 className={cn(
                   'rounded-full border px-2 py-1 font-medium transition hover:-translate-y-0.5 hover:shadow-sm',
@@ -308,7 +314,7 @@ export default async function Dashboard({
         </div>
         {activity.length >= activityTake && activityTake < 48 && (
           <div className="mt-5 flex justify-center">
-            <Link className="rounded-md border border-stone-300 bg-white/60 px-4 py-2 text-sm font-medium text-stone-800 transition hover:bg-white" href={activityHref(activityTake + 12, activeKind)}>
+            <Link className="rounded-md border border-stone-300 bg-white/60 px-4 py-2 text-sm font-medium text-stone-800 transition hover:bg-white" href={activityHref(collection.slug, activityTake + 12, activeKind)}>
               Load 12 more
             </Link>
           </div>

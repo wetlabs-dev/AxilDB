@@ -2,6 +2,48 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 const marketingHosts = new Set(['axildb.com', 'www.axildb.com'])
 const publicFile = /\.(.*)$/
+const defaultCollectionSlug = 'axildb'
+const collectionRoutePrefixes = [
+  '/',
+  '/plants',
+  '/instances',
+  '/propagations',
+  '/blooms',
+  '/gallery',
+  '/graphs',
+  '/search',
+  '/following',
+  '/reminders',
+  '/settings',
+  '/members',
+  '/sports',
+  '/labels',
+  '/archived',
+  '/audit',
+  '/admin-tools',
+]
+const globalPrefixes = [
+  '/api',
+  '/uploads',
+  '/login',
+  '/register',
+  '/forgot-password',
+  '/reset-password',
+  '/magic-login',
+  '/verify-email',
+  '/two-factor',
+  '/account',
+  '/users',
+  '/collections',
+]
+
+function isCollectionRoute(pathname: string) {
+  return collectionRoutePrefixes.some((prefix) => pathname === prefix || (prefix !== '/' && pathname.startsWith(`${prefix}/`)))
+}
+
+function isGlobalRoute(pathname: string) {
+  return globalPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
+}
 
 export function middleware(request: NextRequest) {
   const host = request.headers.get('host')?.split(':')[0] || ''
@@ -9,6 +51,25 @@ export function middleware(request: NextRequest) {
 
   if (host === 'app.axildb.com' && pathname === '/splash') {
     const url = new URL('/', 'https://axildb.com')
+    return NextResponse.redirect(url)
+  }
+
+  if (pathname.startsWith('/c/')) {
+    const [, , slug, ...rest] = pathname.split('/')
+    const url = request.nextUrl.clone()
+    url.pathname = `/${rest.join('/')}` || '/'
+    const requestHeaders = new Headers(request.headers)
+    requestHeaders.set('x-axildb-collection', decodeURIComponent(slug || defaultCollectionSlug))
+    return NextResponse.rewrite(url, {
+      request: {
+        headers: requestHeaders,
+      },
+    })
+  }
+
+  if (!marketingHosts.has(host) && !pathname.startsWith('/_next') && !publicFile.test(pathname) && !isGlobalRoute(pathname) && isCollectionRoute(pathname)) {
+    const url = request.nextUrl.clone()
+    url.pathname = `/c/${defaultCollectionSlug}${pathname === '/' ? '' : pathname}`
     return NextResponse.redirect(url)
   }
 

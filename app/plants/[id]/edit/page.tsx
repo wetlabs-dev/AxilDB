@@ -3,10 +3,10 @@ import { updatePlantDefinition, deletePlantDefinition } from '@/app/actions'
 import { Button, Card, Field, HelpTooltip, SuggestionDatalist, TextArea } from '@/components/ui'
 import { ConfidenceSelect, PlantAliasFields } from '@/components/PlantAliasFields'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
-import { requireAdminUser } from '@/lib/auth'
 import { PlantImage } from '@/components/PlantImage'
 import { rankedSuggestions } from '@/lib/suggestions'
 import { AIDescriptionField, AIMagicFillButton } from '@/components/AIDescriptionField'
+import { collectionPath, requireCollectionAdmin } from '@/lib/collections'
 
 const selectClass = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
 
@@ -24,23 +24,24 @@ export default async function EditPlant({
   params: Promise<{ id: string }>
   searchParams: Promise<{ uploadError?: string }>
 }) {
-  await requireAdminUser()
+  const { collection } = await requireCollectionAdmin()
   const { id } = await params
   const { uploadError } = await searchParams
   const [plant, bodies, typePhotos, definitionSuggestionRows] = await Promise.all([
-    prisma.plantDefinition.findUniqueOrThrow({
-      where: { id },
+    prisma.plantDefinition.findFirstOrThrow({
+      where: { id, collectionId: collection.id },
       include: {
         aliases: { orderBy: { name: 'asc' } },
         _count: { select: { instances: true } },
       },
     }),
-    prisma.governingBody.findMany({ orderBy: { name: 'asc' } }),
+    prisma.governingBody.findMany({ where: { collectionId: collection.id }, orderBy: { name: 'asc' } }),
     prisma.photo.findMany({
-      where: { entityType: 'PLANT_DEFINITION', entityId: id },
+      where: { collectionId: collection.id, entityType: 'PLANT_DEFINITION', entityId: id },
       orderBy: [{ isType: 'desc' }, { createdAt: 'desc' }],
     }),
     prisma.plantDefinition.findMany({
+      where: { collectionId: collection.id },
       select: {
         genus: true,
         species: true,
@@ -79,6 +80,7 @@ export default async function EditPlant({
           <SuggestionDatalist id="definition-acquisition-label-suggestions" suggestions={definitionSuggestions.acquisitionLabel} />
           <SuggestionDatalist id="definition-provisional-taxon-suggestions" suggestions={definitionSuggestions.provisionalTaxon} />
           <input type="hidden" name="id" value={id} />
+          <input type="hidden" name="collectionSlug" value={collection.slug} />
           <Field label="Genus" name="genus" required defaultValue={plant.genus} list="definition-genus-suggestions" />
           <Field label="Species" name="species" required defaultValue={plant.species} list="definition-species-suggestions" autoCapitalize="none" />
           <Field label="Hybrid notation" help="Use for botanical hybrid markers or formula context, such as x, grex, or parentage notation that belongs with the name." name="hybridNotation" defaultValue={plant.hybridNotation} list="definition-hybrid-notation-suggestions" />
@@ -153,7 +155,8 @@ export default async function EditPlant({
           <form action="/api/photos" method="post" encType="multipart/form-data" className="grid max-w-2xl gap-2 self-start">
             <input type="hidden" name="entityType" value="PLANT_DEFINITION" />
             <input type="hidden" name="entityId" value={id} />
-            <input type="hidden" name="back" value={`/plants/${id}/edit`} />
+            <input type="hidden" name="collectionSlug" value={collection.slug} />
+            <input type="hidden" name="back" value={collectionPath(collection.slug, `/plants/${id}/edit`)} />
             <label className="grid gap-1 text-sm font-medium text-stone-800">
               Image file
               <input name="photo" type="file" accept="image/*" className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm" />
@@ -170,6 +173,7 @@ export default async function EditPlant({
         <p className="mb-3 text-sm">Delete is only safe when no instances use this definition. Current instances: {plant._count.instances}</p>
         <form action={deletePlantDefinition}>
           <input type="hidden" name="id" value={id} />
+          <input type="hidden" name="collectionSlug" value={collection.slug} />
           <ConfirmDeleteButton
             title="Delete plant definition?"
             message={`This will permanently delete ${plant.genus} ${plant.species}${plant.cultivarName ? ` '${plant.cultivarName}'` : ''}. Related instances may also be affected.`}

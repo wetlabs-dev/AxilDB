@@ -1,7 +1,8 @@
 import { createPlantInstance } from '@/app/actions'
 import { PlantImage } from '@/components/PlantImage'
 import { AddPanel, Button, Card, Field, HelpTooltip, SuggestionDatalist, TextArea } from '@/components/ui'
-import { canCreate, getCurrentUser, isAdmin } from '@/lib/auth'
+import { getCurrentUser } from '@/lib/auth'
+import { canCreateInCollection, canEditInCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
 import { rankedSuggestions } from '@/lib/suggestions'
 import { plantName } from '@/lib/utils'
@@ -9,14 +10,18 @@ import Link from 'next/link'
 
 export default async function Instances() {
   const user = await getCurrentUser()
+  const context = await requireCollectionViewer()
+  const { collection } = context
+  const collectionWhere = { collectionId: collection.id }
   const [instances, defs, instanceSuggestionRows] = await Promise.all([
     prisma.plantInstance.findMany({
-      where: { status: 'ACTIVE' },
+      where: { ...collectionWhere, status: 'ACTIVE' },
       include: { plantDefinition: true },
       orderBy: { plantId: 'asc' },
     }),
-    prisma.plantDefinition.findMany({ orderBy: { genus: 'asc' } }),
+    prisma.plantDefinition.findMany({ where: collectionWhere, orderBy: { genus: 'asc' } }),
     prisma.plantInstance.findMany({
+      where: collectionWhere,
       select: { location: true, source: true, distributor: true, stockNumber: true },
     }),
   ])
@@ -26,7 +31,7 @@ export default async function Instances() {
   const stockNumberSuggestions = rankedSuggestions(instanceSuggestionRows.map((instance) => instance.stockNumber))
 
   const photos = await prisma.photo.findMany({
-    where: { entityType: 'PLANT_INSTANCE', entityId: { in: instances.map((item) => item.id) } },
+    where: { ...collectionWhere, entityType: 'PLANT_INSTANCE', entityId: { in: instances.map((item) => item.id) } },
     orderBy: [{ isCover: 'desc' }, { createdAt: 'desc' }],
   })
   const photoByInstance = photos.reduce<Record<string, string>>((acc, photo) => {
@@ -38,13 +43,14 @@ export default async function Instances() {
     <div className="space-y-6">
       <h2 className="text-3xl font-bold">Plant Instances</h2>
 
-      {canCreate(user) && (
+      {canCreateInCollection(user, context) && (
         <AddPanel label="Add plant instance">
           <SuggestionDatalist id="instance-location-suggestions" suggestions={locationSuggestions} />
           <SuggestionDatalist id="instance-source-suggestions" suggestions={sourceSuggestions} />
           <SuggestionDatalist id="instance-distributor-suggestions" suggestions={distributorSuggestions} />
           <SuggestionDatalist id="instance-stock-number-suggestions" suggestions={stockNumberSuggestions} />
           <form action={createPlantInstance} className="grid max-w-5xl gap-x-3 gap-y-2 lg:grid-cols-4">
+            <input type="hidden" name="collectionSlug" value={collection.slug} />
             <label className="grid gap-1 text-sm font-medium">
               Plant definition
               <select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="plantDefinitionId" required>
@@ -84,7 +90,7 @@ export default async function Instances() {
       <div className="grid auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
         {instances.map((instance) => (
           <Card key={instance.id} className="flex h-full flex-col overflow-hidden p-0">
-            <Link href={`/instances/${instance.id}`} className="block flex-1">
+            <Link href={collectionPath(collection.slug, `/instances/${instance.id}`)} className="block flex-1">
               <div className="aspect-[4/3]">
                 <PlantImage src={photoByInstance[instance.id]} alt={instance.plantId} />
               </div>
@@ -95,8 +101,8 @@ export default async function Instances() {
               </div>
             </Link>
             <div className="flex gap-2 border-t border-stone-200 p-3">
-              {isAdmin(user) && <Link className="rounded-md border px-2 py-1 text-xs" href={`/instances/${instance.id}/edit`}>Edit</Link>}
-              <Link className="rounded-md border px-2 py-1 text-xs" href={`/labels/${instance.id}`}>Label</Link>
+              {canEditInCollection(user, context) && <Link className="rounded-md border px-2 py-1 text-xs" href={collectionPath(collection.slug, `/instances/${instance.id}/edit`)}>Edit</Link>}
+              <Link className="rounded-md border px-2 py-1 text-xs" href={collectionPath(collection.slug, `/labels/${instance.id}`)}>Label</Link>
             </div>
           </Card>
         ))}

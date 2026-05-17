@@ -1,22 +1,26 @@
 import { PlantImage } from '@/components/PlantImage'
 import { Card } from '@/components/ui'
+import { collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
 import { fmtDate, plantName } from '@/lib/utils'
 import Link from 'next/link'
 
 export default async function Blooms() {
+  const { collection } = await requireCollectionViewer()
+  const collectionWhere = { collectionId: collection.id }
   const blooms = await prisma.bloomEvent.findMany({
+    where: collectionWhere,
     include: { plantInstance: { include: { plantDefinition: true } } },
     orderBy: { bloomStartDate: 'desc' },
   })
 
   const [bloomPhotos, instancePhotos] = await Promise.all([
     prisma.photo.findMany({
-      where: { entityType: 'BLOOM_EVENT', entityId: { in: blooms.map((bloom) => bloom.id) } },
+      where: { ...collectionWhere, entityType: 'BLOOM_EVENT', entityId: { in: blooms.map((bloom) => bloom.id) } },
       orderBy: { createdAt: 'desc' },
     }),
     prisma.photo.findMany({
-      where: { entityType: 'PLANT_INSTANCE', entityId: { in: blooms.map((bloom) => bloom.plantInstanceId) } },
+      where: { ...collectionWhere, entityType: 'PLANT_INSTANCE', entityId: { in: blooms.map((bloom) => bloom.plantInstanceId) } },
       orderBy: [{ isCover: 'desc' }, { createdAt: 'desc' }],
     }),
   ])
@@ -39,7 +43,7 @@ export default async function Blooms() {
           const image = bloomPhotoByEvent[bloom.id] || photoByInstance[bloom.plantInstanceId]
 
           return (
-            <Link key={bloom.id} href={`/instances/${bloom.plantInstanceId}`} className="group block h-full">
+            <Link key={bloom.id} href={collectionPath(collection.slug, `/instances/${bloom.plantInstanceId}`)} className="group block h-full">
               <Card className="flex h-full flex-col overflow-hidden p-0 transition group-hover:-translate-y-0.5 group-hover:shadow-[0_14px_36px_rgba(47,38,24,0.10)]">
                 <div className="aspect-[4/3]">
                   <PlantImage src={image} alt={bloom.plantInstance.plantId} />
