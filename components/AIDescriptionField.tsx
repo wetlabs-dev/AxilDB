@@ -100,15 +100,18 @@ export function AIDescriptionField({
           <span>Description</span>
           <HelpTooltip>A short botanical summary for the plant definition. You can write this yourself or generate a draft from the genus, species, and cultivar.</HelpTooltip>
         </span>
-        <button
-          type="button"
-          onClick={generateDescription}
-          disabled={loading}
-          className="inline-flex items-center gap-1.5 rounded-md border border-[#8fa58f]/50 bg-[#edf3e6] px-2 py-1 text-xs font-semibold text-[#2f6b45] shadow-sm transition hover:bg-[#d6dfc9]/80 disabled:cursor-wait disabled:opacity-70"
-        >
-          <Sparkles className="h-3.5 w-3.5" />
-          {loading ? 'Writing...' : 'AI draft'}
-        </button>
+        <span className="flex min-w-0 flex-wrap items-center justify-end gap-2">
+          {status && <span className="min-w-0 text-xs font-normal text-stone-600 md:text-right">{status}</span>}
+          <button
+            type="button"
+            onClick={generateDescription}
+            disabled={loading}
+            className="inline-flex items-center gap-1.5 rounded-md border border-[#8fa58f]/50 bg-[#edf3e6] px-2 py-1 text-xs font-semibold text-[#2f6b45] shadow-sm transition hover:bg-[#d6dfc9]/80 disabled:cursor-wait disabled:opacity-70"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            {loading ? 'Writing...' : 'AI draft'}
+          </button>
+        </span>
       </span>
       <textarea
         ref={textareaRef}
@@ -116,7 +119,6 @@ export function AIDescriptionField({
         name="description"
         defaultValue={defaultValue ?? ''}
       />
-      {status && <span className="text-xs font-normal text-stone-600">{status}</span>}
     </label>
   )
 }
@@ -183,7 +185,8 @@ export function AIMagicFillButton({
   }
 
   return (
-    <div className={cn('flex min-w-0 flex-wrap items-center gap-2', className)}>
+    <div className={cn('flex min-w-0 flex-wrap items-center justify-end gap-2', className)}>
+      {status && <span className="min-w-0 text-xs font-normal text-stone-600 md:text-right">{status}</span>}
       <button
         ref={buttonRef}
         type="button"
@@ -194,7 +197,6 @@ export function AIMagicFillButton({
         <Sparkles className="h-4 w-4" />
         {loading ? 'Filling...' : 'Magic fill'}
       </button>
-      {status && <span className="min-w-0 text-xs font-normal text-stone-600">{status}</span>}
     </div>
   )
 }
