@@ -203,6 +203,9 @@ SMTP_PASSWORD=
 SMTP_FROM="AxilDB <no-reply@axildb.com>"
 SMTP_REPLY_TO=
 REMINDER_WORKER_INTERVAL_SECONDS=300
+OPENAI_API_KEY=
+OPENAI_DESCRIPTION_MODEL=gpt-5.5
+OPENAI_DESCRIPTION_HOURLY_LIMIT=20
 ```
 
 Set `TOTP_ENCRYPTION_KEY` to a long random secret in production. It encrypts authenticator app secrets before they are stored in the database. On Ubuntu, a good value can be generated with:
@@ -246,6 +249,32 @@ Use `SMTP_SECURE=false` for SES STARTTLS ports such as 587 or 2587. Use `SMTP_SE
 The `SMTP_FROM` address must be a sender/domain identity verified in SES. If the SES account is still in sandbox mode, recipient addresses must also be verified.
 
 Recommended production provider: Amazon SES. It fits well with the AWS/Lightsail deployment, is intended for application and transactional email, supports SMTP credentials, and avoids tying AxilDB to a personal mailbox. Gmail SMTP can work for small testing, especially with Google Workspace and app passwords, but it is less ideal as the long-term sender for app-auth and reminder emails.
+
+## Optional OpenAI Description Drafting
+
+Plant definition forms include an optional AI draft button beside the description field. The button calls OpenAI from the server, using the genus, species, and cultivar fields to draft a description under 40 words. The API key is never sent to the browser.
+
+To enable it, create an OpenAI API key in the OpenAI Platform dashboard and add it to the server-level config file that Docker Compose already loads:
+
+```bash
+sudo nano /etc/axildb/axildb.env
+```
+
+Add:
+
+```text
+OPENAI_API_KEY=sk-your-api-key
+OPENAI_DESCRIPTION_MODEL=gpt-5.5
+OPENAI_DESCRIPTION_HOURLY_LIMIT=20
+```
+
+Then redeploy/recreate the app container so the environment changes are loaded:
+
+```bash
+docker compose up -d --build
+```
+
+`OPENAI_DESCRIPTION_HOURLY_LIMIT` is a lightweight per-user in-process limit for the description button. For stricter cost control, also set project usage limits in the OpenAI Platform billing settings.
 
 Current email foundation:
 

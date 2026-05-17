@@ -6,6 +6,7 @@ import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { requireAdminUser } from '@/lib/auth'
 import { PlantImage } from '@/components/PlantImage'
 import { rankedSuggestions } from '@/lib/suggestions'
+import { AIDescriptionField } from '@/components/AIDescriptionField'
 
 const selectClass = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
 
@@ -104,7 +105,7 @@ export default async function EditPlant({
               ))}
             </select>
           </label>
-          <TextArea label="Description" name="description" defaultValue={plant.description} wrapperClassName="lg:col-span-2" />
+          <AIDescriptionField defaultValue={plant.description} wrapperClassName="lg:col-span-2" />
           <TextArea label="Notes" name="notes" defaultValue={plant.notes} wrapperClassName="lg:col-span-2" />
           <PlantAliasFields aliases={plant.aliases} submitLabel="Save changes" sourceSuggestions={definitionSuggestions.aliasSource} />
         </form>

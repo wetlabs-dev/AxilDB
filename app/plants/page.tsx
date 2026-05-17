@@ -3,6 +3,7 @@ import { createPlantDefinition, followEntity, unfollowEntity } from '@/app/actio
 import { AddPanel, Button, Card, Field, HelpTooltip, TextArea, LinkButton, SuggestionDatalist } from '@/components/ui'
 import { ConfidenceSelect, PlantAliasFields } from '@/components/PlantAliasFields'
 import { PlantImage } from '@/components/PlantImage'
+import { AIDescriptionField } from '@/components/AIDescriptionField'
 import { canCreate, getCurrentUser, isAdmin } from '@/lib/auth'
 import { rankedSuggestions } from '@/lib/suggestions'
 import { plantName, taxonomyLabel } from '@/lib/utils'
@@ -104,7 +105,7 @@ export default async function Plants() {
                 ))}
               </select>
             </label>
-            <TextArea label="Description" name="description" wrapperClassName="lg:col-span-2" />
+            <AIDescriptionField wrapperClassName="lg:col-span-2" />
             <TextArea label="Notes" name="notes" wrapperClassName="lg:col-span-2" />
             <PlantAliasFields submitLabel="Create plant definition" sourceSuggestions={definitionSuggestions.aliasSource} />
           </form>
