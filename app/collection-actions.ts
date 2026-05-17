@@ -80,6 +80,10 @@ export async function updateCollection(fd: FormData) {
   })
   await audit(user, 'UPDATE', 'COLLECTION', collection.id, `Updated collection ${updated.name}`, updated, collection.id)
   revalidatePath('/collections')
+  revalidatePath(collectionPath(collection.slug))
+  revalidatePath(collectionPath(collection.slug, '/collection-settings'))
+  revalidatePath(collectionPath(updated.slug))
+  revalidatePath(collectionPath(updated.slug, '/collection-settings'))
   redirect(collectionPath(updated.slug, '/collection-settings'))
 }
 
