@@ -14,6 +14,7 @@ const collectionRoutePrefixes = [
   '/search',
   '/following',
   '/reminders',
+  '/collection-settings',
   '/settings',
   '/members',
   '/sports',

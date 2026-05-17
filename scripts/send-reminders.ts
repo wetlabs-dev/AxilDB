@@ -4,25 +4,32 @@ import { reminderEmail } from '../lib/email-templates'
 import { nextOccurrence, reminderCategoryLabel, reminderPreferenceKey } from '../lib/reminders'
 
 const prisma = new PrismaClient()
+const defaultCollectionSlug = 'axildb'
 
-async function recordUrl(reminder: { entityType: string | null; entityId: string | null }) {
+function collectionPath(slug: string | null | undefined, path = '/') {
+  const collectionSlug = slug || defaultCollectionSlug
+  const normalized = path.startsWith('/') ? path : `/${path}`
+  return `/c/${collectionSlug}${normalized === '/' ? '' : normalized}`
+}
+
+async function recordUrl(reminder: { entityType: string | null; entityId: string | null; collection?: { slug: string } | null }) {
   if (reminder.entityType === 'PLANT_INSTANCE' && reminder.entityId) {
-    return appUrl(`/instances/${reminder.entityId}`)
+    return appUrl(collectionPath(reminder.collection?.slug, `/instances/${reminder.entityId}`))
   }
 
   if (reminder.entityType === 'BLOOM_EVENT' && reminder.entityId) {
     const bloom = await prisma.bloomEvent.findUnique({
       where: { id: reminder.entityId },
-      select: { id: true, plantInstanceId: true },
+      select: { id: true, plantInstanceId: true, collection: { select: { slug: true } } },
     })
-    if (bloom) return appUrl(`/instances/${bloom.plantInstanceId}#bloom-${bloom.id}`)
+    if (bloom) return appUrl(collectionPath(bloom.collection?.slug || reminder.collection?.slug, `/instances/${bloom.plantInstanceId}#bloom-${bloom.id}`))
   }
 
   if (reminder.entityType === 'PROPAGATION_EVENT' && reminder.entityId) {
-    return appUrl('/propagations')
+    return appUrl(collectionPath(reminder.collection?.slug, '/propagations'))
   }
 
-  return appUrl('/reminders')
+  return appUrl(collectionPath(reminder.collection?.slug, '/reminders'))
 }
 
 async function finishReminder(id: string, dueAt: Date, rrule: string | null) {
@@ -53,6 +60,7 @@ async function main() {
       nextSendAt: { lte: now },
     },
     include: {
+      collection: { select: { id: true, name: true, slug: true } },
       user: {
         include: { emailPreference: true },
       },
@@ -70,6 +78,7 @@ async function main() {
       await prisma.reminderDelivery.create({
         data: {
           reminderId: reminder.id,
+          collectionId: reminder.collectionId,
           userId: reminder.userId,
           recipient: reminder.user.email,
           subject: reminder.title,
@@ -85,6 +94,7 @@ async function main() {
       await prisma.reminderDelivery.create({
         data: {
           reminderId: reminder.id,
+          collectionId: reminder.collectionId,
           userId: reminder.userId,
           recipient: reminder.user.email,
           subject: reminder.title,
@@ -99,8 +109,9 @@ async function main() {
     const url = await recordUrl(reminder)
     const template = reminderEmail(reminder.title, url, [
       reminder.body || 'A reminder you scheduled in AxilDB is ready.',
+      reminder.collection ? `Collection: ${reminder.collection.name}.` : '',
       `Category: ${reminderCategoryLabel(reminder.category)}.`,
-    ])
+    ].filter(Boolean))
 
     try {
       const result = await sendEmail({
@@ -113,6 +124,7 @@ async function main() {
       await prisma.reminderDelivery.create({
         data: {
           reminderId: reminder.id,
+          collectionId: reminder.collectionId,
           userId: reminder.userId,
           recipient: reminder.user.email,
           subject: reminder.title,
@@ -129,6 +141,7 @@ async function main() {
       await prisma.reminderDelivery.create({
         data: {
           reminderId: reminder.id,
+          collectionId: reminder.collectionId,
           userId: reminder.userId,
           recipient: reminder.user.email,
           subject: reminder.title,

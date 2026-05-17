@@ -80,7 +80,7 @@ export async function updateCollection(fd: FormData) {
   })
   await audit(user, 'UPDATE', 'COLLECTION', collection.id, `Updated collection ${updated.name}`, updated, collection.id)
   revalidatePath('/collections')
-  redirect(collectionPath(updated.slug, '/settings'))
+  redirect(collectionPath(updated.slug, '/collection-settings'))
 }
 
 export async function requestMembership(fd: FormData) {

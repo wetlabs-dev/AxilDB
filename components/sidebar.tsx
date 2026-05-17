@@ -58,6 +58,7 @@ const navSections = [
 ] as const
 
 const adminItems = [
+  ['/collection-settings', 'Collection Settings', Settings],
   ['/settings', 'Governing Bodies', Settings],
   ['/members', 'Collection Members', Users],
   ['/admin-tools', 'Admin Tools', FlaskConical],
