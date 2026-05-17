@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { aliasTypeOptions, confidenceOptions } from '@/lib/taxonomy'
 import { Button, HelpTooltip, SuggestionDatalist } from '@/components/ui'
 
@@ -52,14 +52,27 @@ export function PlantAliasFields({
   submitLabel?: string
   sourceSuggestions?: string[]
 }) {
+  const rootRef = useRef<HTMLDivElement>(null)
   const [rows, setRows] = useState<Alias[]>(aliases.length > 0 ? aliases : [{}])
 
   function addAliasRow() {
     setRows((current) => [...current, {}])
   }
 
+  useEffect(() => {
+    function replaceAliases(event: Event) {
+      const detail = (event as CustomEvent<{ aliases?: Alias[]; form?: HTMLFormElement }>).detail
+      if (detail?.form && rootRef.current && !detail.form.contains(rootRef.current)) return
+      const nextRows = detail?.aliases?.filter((alias) => alias.name?.trim()) || []
+      setRows(nextRows.length > 0 ? nextRows : [{}])
+    }
+
+    window.addEventListener('axildb:replace-aliases', replaceAliases)
+    return () => window.removeEventListener('axildb:replace-aliases', replaceAliases)
+  }, [])
+
   return (
-    <div className="lg:col-span-4">
+    <div ref={rootRef} className="lg:col-span-4">
       <SuggestionDatalist id="alias-source-suggestions" suggestions={sourceSuggestions} />
       <div className="mb-2">
         <h3 className="font-serif text-lg font-semibold">Aliases and alternate names</h3>

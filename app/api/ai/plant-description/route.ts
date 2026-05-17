@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { audit, requireCreateUser } from '@/lib/auth'
 
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses'
-const DEFAULT_MODEL = 'gpt-5.5'
+const DEFAULT_MODEL = 'gpt-5.4-mini'
 const requestLog = new Map<string, number[]>()
 
 function trimmedString(value: unknown, maxLength = 120) {

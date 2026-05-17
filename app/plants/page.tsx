@@ -105,7 +105,10 @@ export default async function Plants() {
                 ))}
               </select>
             </label>
-            <AIDescriptionField wrapperClassName="lg:col-span-2" />
+            <AIDescriptionField
+              wrapperClassName="lg:col-span-2"
+              governingBodies={bodies.map((body) => ({ id: body.id, name: body.name, abbreviation: body.abbreviation }))}
+            />
             <TextArea label="Notes" name="notes" wrapperClassName="lg:col-span-2" />
             <PlantAliasFields submitLabel="Create plant definition" sourceSuggestions={definitionSuggestions.aliasSource} />
           </form>

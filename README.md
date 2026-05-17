@@ -204,8 +204,10 @@ SMTP_FROM="AxilDB <no-reply@axildb.com>"
 SMTP_REPLY_TO=
 REMINDER_WORKER_INTERVAL_SECONDS=300
 OPENAI_API_KEY=
-OPENAI_DESCRIPTION_MODEL=gpt-5.5
+OPENAI_DESCRIPTION_MODEL=gpt-5.4-mini
 OPENAI_DESCRIPTION_HOURLY_LIMIT=20
+OPENAI_MAGIC_FILL_MODEL=gpt-5.4-mini
+OPENAI_MAGIC_FILL_HOURLY_LIMIT=10
 ```
 
 Set `TOTP_ENCRYPTION_KEY` to a long random secret in production. It encrypts authenticator app secrets before they are stored in the database. On Ubuntu, a good value can be generated with:
@@ -250,9 +252,9 @@ The `SMTP_FROM` address must be a sender/domain identity verified in SES. If the
 
 Recommended production provider: Amazon SES. It fits well with the AWS/Lightsail deployment, is intended for application and transactional email, supports SMTP credentials, and avoids tying AxilDB to a personal mailbox. Gmail SMTP can work for small testing, especially with Google Workspace and app passwords, but it is less ideal as the long-term sender for app-auth and reminder emails.
 
-## Optional OpenAI Description Drafting
+## Optional OpenAI Plant Definition Drafting
 
-Plant definition forms include an optional AI draft button beside the description field. The button calls OpenAI from the server, using the genus, species, and cultivar fields to draft a description under 40 words. The API key is never sent to the browser.
+Plant definition forms include optional OpenAI buttons beside the description field. **AI draft** uses the genus, species, and cultivar fields to draft a description under 40 words. **Magic fill** asks OpenAI for a structured plant definition draft: accepted genus/species, authority, cultivar registration number, governing body, taxonomy/reference URLs, description, and aliases. The API key is never sent to the browser, and generated data is never saved automatically; review it before saving.
 
 To enable it, create an OpenAI API key in the OpenAI Platform dashboard and add it to the server-level config file that Docker Compose already loads:
 
@@ -264,8 +266,10 @@ Add:
 
 ```text
 OPENAI_API_KEY=sk-your-api-key
-OPENAI_DESCRIPTION_MODEL=gpt-5.5
+OPENAI_DESCRIPTION_MODEL=gpt-5.4-mini
 OPENAI_DESCRIPTION_HOURLY_LIMIT=20
+OPENAI_MAGIC_FILL_MODEL=gpt-5.4-mini
+OPENAI_MAGIC_FILL_HOURLY_LIMIT=10
 ```
 
 Then redeploy/recreate the app container so the environment changes are loaded:
@@ -274,7 +278,7 @@ Then redeploy/recreate the app container so the environment changes are loaded:
 docker compose up -d --build
 ```
 
-`OPENAI_DESCRIPTION_HOURLY_LIMIT` is a lightweight per-user in-process limit for the description button. For stricter cost control, also set project usage limits in the OpenAI Platform billing settings.
+`OPENAI_DESCRIPTION_HOURLY_LIMIT` and `OPENAI_MAGIC_FILL_HOURLY_LIMIT` are lightweight per-user in-process limits for the two OpenAI buttons. For stricter cost control, also set project usage limits in the OpenAI Platform billing settings.
 
 Current email foundation:
 

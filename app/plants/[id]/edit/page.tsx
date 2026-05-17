@@ -105,7 +105,11 @@ export default async function EditPlant({
               ))}
             </select>
           </label>
-          <AIDescriptionField defaultValue={plant.description} wrapperClassName="lg:col-span-2" />
+          <AIDescriptionField
+            defaultValue={plant.description}
+            wrapperClassName="lg:col-span-2"
+            governingBodies={bodies.map((body) => ({ id: body.id, name: body.name, abbreviation: body.abbreviation }))}
+          />
           <TextArea label="Notes" name="notes" defaultValue={plant.notes} wrapperClassName="lg:col-span-2" />
           <PlantAliasFields aliases={plant.aliases} submitLabel="Save changes" sourceSuggestions={definitionSuggestions.aliasSource} />
         </form>
