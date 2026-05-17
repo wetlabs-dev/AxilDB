@@ -1,4 +1,3 @@
-import { updateCollection } from '@/app/collection-actions'
 import { Button, Card, Field, Select, TextArea } from '@/components/ui'
 import { requireCollectionOwner } from '@/lib/collections'
 
@@ -15,7 +14,7 @@ export default async function CollectionSettingsPage() {
       </div>
 
       <Card>
-        <form action={updateCollection} className="grid max-w-4xl gap-x-3 gap-y-3 lg:grid-cols-3">
+        <form action="/api/collections/update" method="post" className="grid max-w-4xl gap-x-3 gap-y-3 lg:grid-cols-3">
           <input type="hidden" name="collectionSlug" value={collection.slug} />
           <Field label="Name" name="name" defaultValue={collection.name} required />
           <Field label="Slug" name="slug" defaultValue={collection.slug} required />

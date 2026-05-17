@@ -59,7 +59,7 @@ export async function createCollection(fd: FormData) {
   redirect(collectionPath(collection.slug))
 }
 
-export async function updateCollection(fd: FormData) {
+export async function saveCollectionSettings(fd: FormData) {
   const slug = val(fd, 'collectionSlug')
   const { user, collection } = await requireCollectionOwner(slug)
   const requestedSlug = slugify(val(fd, 'slug') || collection.slug)
@@ -84,6 +84,11 @@ export async function updateCollection(fd: FormData) {
   revalidatePath(collectionPath(collection.slug, '/collection-settings'))
   revalidatePath(collectionPath(updated.slug))
   revalidatePath(collectionPath(updated.slug, '/collection-settings'))
+  return { collection, updated }
+}
+
+export async function updateCollection(fd: FormData) {
+  const { updated } = await saveCollectionSettings(fd)
   redirect(collectionPath(updated.slug, '/collection-settings'))
 }
 
