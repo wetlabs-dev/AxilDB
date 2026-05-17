@@ -43,16 +43,23 @@ export default async function Plants() {
   }
   const governingBodyOptions = bodies.map((body) => ({ id: body.id, name: body.name, abbreviation: body.abbreviation }))
   const instanceIds = plants.flatMap((plant) => plant.instances.map((instance) => instance.id))
-  const [definitionPhotos, typePhotos] = await Promise.all([
+  const plantIds = plants.map((plant) => plant.id)
+  const [definitionPhotos, typePhotos, followCounts] = await Promise.all([
     prisma.photo.findMany({
-      where: { entityType: 'PLANT_DEFINITION', entityId: { in: plants.map((plant) => plant.id) }, isType: true },
+      where: { entityType: 'PLANT_DEFINITION', entityId: { in: plantIds }, isType: true },
       orderBy: { createdAt: 'desc' },
     }),
     prisma.photo.findMany({
       where: { entityType: 'PLANT_INSTANCE', entityId: { in: instanceIds }, isType: true },
       orderBy: { createdAt: 'desc' },
     }),
+    prisma.follow.groupBy({
+      by: ['entityId'],
+      where: { scope: 'TYPE', entityType: 'PLANT_DEFINITION', entityId: { in: plantIds } },
+      _count: { _all: true },
+    }),
   ])
+  const followCountByDefinitionId = new Map(followCounts.map((follow) => [follow.entityId, follow._count._all]))
   const typePhotoByDefinition = definitionPhotos.reduce<Record<string, string>>((acc, photo) => {
     if (!acc[photo.entityId]) acc[photo.entityId] = photo.path
     return acc
@@ -121,11 +128,11 @@ export default async function Plants() {
         {plants.map((plant) => {
           const typePhoto = typePhotoByDefinition[plant.id] || plant.instances.map((instance) => typePhotoByInstance[instance.id]).find(Boolean)
           return (
-          <Card key={plant.id} className="flex h-full flex-col overflow-hidden p-0">
-            <div className="aspect-[4/3]">
-              <PlantImage src={typePhoto} alt={plantName(plant)} />
-            </div>
-            <div className="min-h-0 flex-1 overflow-hidden p-3">
+            <Card key={plant.id} className="flex h-full flex-col overflow-hidden p-0">
+              <div className="aspect-[4/3]">
+                <PlantImage src={typePhoto} alt={plantName(plant)} />
+              </div>
+              <div className="min-h-0 flex-1 overflow-hidden p-3">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                   <span className="line-clamp-2 text-sm font-bold leading-tight">{plantName(plant)}</span>
@@ -155,6 +162,9 @@ export default async function Plants() {
                   </div>
                 )}
                 <p className="line-clamp-2 text-sm text-stone-600">{plant.description}</p>
+                <p className="mt-2 text-xs font-medium text-stone-500">
+                  {followCountByDefinitionId.get(plant.id) || 0} follower{(followCountByDefinitionId.get(plant.id) || 0) === 1 ? '' : 's'}
+                </p>
                 </div>
               {isAdmin(user) && (
                 <Link className="rounded-md border px-2 py-1 text-xs" href={`/plants/${plant.id}/edit`}>
@@ -169,7 +179,7 @@ export default async function Plants() {
                       <input type="hidden" name="id" value={followsByDefinitionId.get(plant.id)!.id} />
                       <input type="hidden" name="back" value="/plants" />
                       <Button className="w-full border border-stone-300 bg-white/70 px-3 py-1.5 text-xs text-stone-800 hover:bg-white">
-                        Following type
+                        Following type · {followCountByDefinitionId.get(plant.id) || 0}
                       </Button>
                     </form>
                   ) : (
@@ -178,13 +188,13 @@ export default async function Plants() {
                       <input type="hidden" name="entityType" value="PLANT_DEFINITION" />
                       <input type="hidden" name="entityId" value={plant.id} />
                       <input type="hidden" name="back" value="/plants" />
-                      <Button className="w-full px-3 py-1.5 text-xs">Follow type</Button>
+                      <Button className="w-full px-3 py-1.5 text-xs">Follow type · {followCountByDefinitionId.get(plant.id) || 0}</Button>
                     </form>
                   )}
                 </div>
               )}
             </div>
-          </Card>
+            </Card>
           )
         })}
       </div>

@@ -24,12 +24,13 @@ It is designed for real collection work: messy taxonomy, acquisition names, alia
 - QR label generation and bulk PDF label export.
 - Collection search across definitions, instances, aliases, notes, source metadata, and plant IDs.
 - Archive/restore workflow for plants that leave the active collection.
-- Local user accounts with admin/logger roles.
+- Local user accounts with viewer/logger/admin roles and self-service viewer registration.
 - QR-code two-factor authentication with one-time recovery codes, compatible with Apple Passwords and standard authenticator apps.
 - SMTP-ready email foundation with welcome/verification emails, secure single-use tokens, branded HTML/plain-text templates, and user email preferences.
 - User reminders for general tasks, plant check-ins, bloom follow-ups, and propagation follow-ups, with one-time or recurring schedules.
 - Reminder delivery history and a lightweight scheduled reminder worker.
 - Followed plant updates for individual specimens, plant types, and connected lineages, with email notifications for blooms, propagations, sport updates, photos, notes, archives, and new specimens of followed types.
+- Follower counts on followable plant types, specimens, and lineages.
 - Read-only browsing for unauthenticated visitors.
 - Admin-only edit/delete tools, users page, governing bodies page, and audit log.
 - Confirmation modals for destructive delete actions.
@@ -38,6 +39,7 @@ It is designed for real collection work: messy taxonomy, acquisition names, alia
 ## Roles
 
 - **Unauthenticated visitors** can browse and explore the application in read-only mode.
+- **Viewers** can create their own accounts, manage email preferences, and follow plant types, specimens, or lineages for update emails.
 - **Loggers** can add records such as plants, blooms, propagations, notes, photos, and sport observations.
 - **Admins** can create, edit, delete, archive/restore, manage users, manage governing bodies, select cover/type photos, and review audit logs.
 

@@ -13,8 +13,13 @@ function followPath(follow: { scope: string; entityType: string; entityId: strin
   return '/'
 }
 
-export default async function FollowingPage() {
+export default async function FollowingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ registered?: string }>
+}) {
   const user = await requireUser()
+  const sp = await searchParams
   const follows = await prisma.follow.findMany({
     where: { userId: user.id },
     include: {
@@ -41,6 +46,11 @@ export default async function FollowingPage() {
           Follow plant specimens, plant types, or lineages to get email updates when related records change.
         </p>
       </div>
+      {sp.registered && (
+        <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900">
+          Your viewer account is ready. Check your email when you can to verify the address for follow notifications and account recovery.
+        </p>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)]">
         <div className="grid gap-4">

@@ -23,7 +23,7 @@ const features = [
   ['Photo-backed records', 'Choose cover photos for specimen cards, type photos for definitions, and keep uploads space-conscious.', Camera],
   ['Bloom history', 'Log bloom starts, peaks, closures, flower counts, first blooms, notes, and bloom photos over time.', Flower2],
   ['QR plant tags', 'Generate printable QR labels with standard plant IDs that link directly to each record.', QrCode],
-  ['Role-aware access', 'Let visitors browse, loggers add records, and admins edit, delete, manage users, and review audit logs.', LockKeyhole],
+  ['Role-aware access', 'Let visitors browse, viewers follow records, loggers add records, and admins manage the collection.', LockKeyhole],
   ['Collection search', 'Search plants by generated IDs, cultivars, aliases, old taxonomy, common names, notes, and sources.', Search],
   ['Activity timeline', 'Review recent propagations, blooms, sport observations, acquisitions, and archive actions in one chronological feed.', History],
   ['Admin tools', 'Seed realistic demo data, manage governing bodies, review audit history, and keep collection records tidy as the database grows.', FlaskConical],

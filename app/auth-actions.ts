@@ -9,9 +9,15 @@ import { prisma } from '@/lib/prisma'
 import { decryptTotpSecret, encryptRecoveryCodes, encryptTotpSecret, generateRecoveryCodes, generateTotpSecret, hashRecoveryCode, verifyTotp } from '@/lib/totp'
 
 const val = (fd: FormData, key: string) => String(fd.get(key) || '').trim()
+const roles = new Set(['VIEWER', 'LOGGER', 'ADMIN'])
 
 function checkbox(fd: FormData, key: string) {
   return fd.get(key) === 'on'
+}
+
+function roleFromForm(fd: FormData) {
+  const role = val(fd, 'role').toUpperCase()
+  return roles.has(role) ? role : 'VIEWER'
 }
 
 function authEmailStatusUrl(path: string, status: 'sent' | 'limited' | 'error') {
@@ -268,11 +274,42 @@ export async function updateAccount(fd: FormData) {
   redirect('/account')
 }
 
+export async function registerViewer(fd: FormData) {
+  const email = val(fd, 'email').toLowerCase()
+  const password = val(fd, 'password')
+
+  if (!email || password.length < 8) redirect('/register?error=invalid')
+
+  const existing = await prisma.user.findUnique({ where: { email } })
+  if (existing) redirect('/register?error=exists')
+
+  const user = await prisma.user.create({
+    data: {
+      email,
+      passwordHash: hashPassword(password),
+      role: 'VIEWER',
+      emailPreference: { create: {} },
+    },
+  })
+  await audit({ id: user.id, email: user.email, role: user.role }, 'REGISTER', 'USER', user.id, `Registered viewer account ${email}`, { email, role: 'VIEWER' })
+
+  try {
+    await sendWelcomeVerificationEmail(user)
+    await audit({ id: user.id, email: user.email, role: user.role }, 'SEND', 'EMAIL', user.id, `Sent welcome email to ${email}`, { email, template: 'welcome' })
+  } catch (error) {
+    console.error('Welcome email failed after viewer registration', { email, error })
+    await audit({ id: user.id, email: user.email, role: user.role }, 'ERROR', 'EMAIL', user.id, `Failed to send welcome email to ${email}`, { email, error: String(error) })
+  }
+
+  await createSession(user.id)
+  redirect('/following?registered=1')
+}
+
 export async function createUser(fd: FormData) {
   const actor = await requireAdminUser()
   const email = val(fd, 'email').toLowerCase()
   const password = val(fd, 'password')
-  const role = val(fd, 'role') === 'ADMIN' ? 'ADMIN' : 'LOGGER'
+  const role = roleFromForm(fd)
   const user = await prisma.user.create({
     data: {
       email,
@@ -298,7 +335,7 @@ export async function updateUser(fd: FormData) {
   const actor = await requireAdminUser()
   const id = val(fd, 'id')
   const email = val(fd, 'email').toLowerCase()
-  const role = val(fd, 'role') === 'ADMIN' ? 'ADMIN' : 'LOGGER'
+  const role = roleFromForm(fd)
   const password = val(fd, 'password')
   const data: { email: string; role: string; passwordHash?: string } = { email, role }
   if (password) data.passwordHash = hashPassword(password)

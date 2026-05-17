@@ -25,6 +25,8 @@ export default async function Login({ searchParams }: { searchParams: Promise<{ 
         </form>
         <div className="mt-3 text-sm">
           <Link className="text-[#2f6b45] underline" href="/forgot-password">Forgot password?</Link>
+          <span className="mx-2 text-stone-400">·</span>
+          <Link className="text-[#2f6b45] underline" href="/register">Create viewer account</Link>
         </div>
       </Card>
 

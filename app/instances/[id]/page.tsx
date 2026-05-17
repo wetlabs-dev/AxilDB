@@ -115,6 +115,19 @@ export default async function InstanceDetail({
       })
     : []
   const followByScope = new Map(follows.map((follow) => [follow.scope, follow]))
+  const followCounts = await prisma.follow.groupBy({
+    by: ['scope', 'entityType', 'entityId'],
+    where: {
+      OR: [
+        { scope: 'SPECIMEN', entityType: 'PLANT_INSTANCE', entityId: id },
+        { scope: 'LINEAGE', entityType: 'PLANT_INSTANCE', entityId: id },
+        { scope: 'TYPE', entityType: 'PLANT_DEFINITION', entityId: i.plantDefinitionId },
+      ],
+    },
+    _count: { _all: true },
+  })
+  const followerCount = (scope: string, entityType: string, entityId: string) =>
+    followCounts.find((follow) => follow.scope === scope && follow.entityType === entityType && follow.entityId === entityId)?._count._all || 0
 
   const instanceReminders = reminders.filter((reminder) => reminder.entityType === 'PLANT_INSTANCE')
   const remindersByBloomId = reminders
@@ -154,12 +167,13 @@ export default async function InstanceDetail({
                 ['TYPE', 'PLANT_DEFINITION', i.plantDefinitionId, 'Follow plant type', 'Following plant type'],
               ].map(([scope, entityType, entityId, followLabel, followedLabel]) => {
                 const existing = followByScope.get(scope)
+                const count = followerCount(scope, entityType, entityId)
                 return existing ? (
                   <form key={scope} action={unfollowEntity}>
                     <input type="hidden" name="id" value={existing.id} />
                     <input type="hidden" name="back" value={`/instances/${id}`} />
                     <Button className="w-full border border-stone-300 bg-white/70 text-stone-800 hover:bg-white">
-                      {followedLabel}
+                      {followedLabel} · {count}
                     </Button>
                   </form>
                 ) : (
@@ -168,7 +182,7 @@ export default async function InstanceDetail({
                     <input type="hidden" name="entityType" value={entityType} />
                     <input type="hidden" name="entityId" value={entityId} />
                     <input type="hidden" name="back" value={`/instances/${id}`} />
-                    <Button className="w-full">{followLabel}</Button>
+                    <Button className="w-full">{followLabel} · {count}</Button>
                   </form>
                 )
               })}

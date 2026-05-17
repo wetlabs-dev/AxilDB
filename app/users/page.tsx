@@ -4,6 +4,8 @@ import { AddPanel, Card, Field, Button } from '@/components/ui'
 import { requireAdminUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+const roleOptions = ['VIEWER', 'LOGGER', 'ADMIN']
+
 export default async function Users({
   searchParams,
 }: {
@@ -23,7 +25,12 @@ export default async function Users({
         <form action={createUser} className="grid max-w-4xl gap-x-3 gap-y-2 md:grid-cols-3">
           <Field label="Email" name="email" type="email" required />
           <Field label="Password" name="password" type="password" required />
-          <label className="grid gap-1 text-sm font-medium">Role<select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="role"><option>LOGGER</option><option>ADMIN</option></select></label>
+          <label className="grid gap-1 text-sm font-medium">
+            Role
+            <select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="role" defaultValue="VIEWER">
+              {roleOptions.map((role) => <option key={role}>{role}</option>)}
+            </select>
+          </label>
           <Button className="justify-self-start md:col-span-3">Add user</Button>
         </form>
       </AddPanel>
@@ -35,7 +42,12 @@ export default async function Users({
               <input type="hidden" name="id" value={user.id} />
               <Field label="Email" name="email" type="email" required defaultValue={user.email} />
               <Field label="New password" name="password" type="password" />
-              <label className="grid gap-1 text-sm font-medium">Role<select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="role" defaultValue={user.role}><option>LOGGER</option><option>ADMIN</option></select></label>
+              <label className="grid gap-1 text-sm font-medium">
+                Role
+                <select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="role" defaultValue={user.role}>
+                  {roleOptions.map((role) => <option key={role}>{role}</option>)}
+                </select>
+              </label>
               <Button className="justify-self-start md:col-span-3">Save user</Button>
             </form>
             <div className="mt-3 text-xs text-stone-600">
