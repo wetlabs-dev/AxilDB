@@ -1,5 +1,6 @@
 import {
   BadgeCheck,
+  Bell,
   Camera,
   FlaskConical,
   Flower2,
@@ -8,9 +9,12 @@ import {
   Heart,
   History,
   LockKeyhole,
+  Mail,
   QrCode,
   Search,
   ShieldCheck,
+  Sparkles,
+  Users,
 } from 'lucide-react'
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.axildb.com'
@@ -18,22 +22,27 @@ const githubUrl = process.env.NEXT_PUBLIC_GITHUB_URL || 'https://github.com/wetl
 const donateUrl = process.env.NEXT_PUBLIC_DONATE_URL || 'https://ko-fi.com/wetlabs'
 
 const features = [
+  ['Multi-collection workspaces', 'Keep accession records separated by collection, with public or private visibility and collection-scoped membership.', Users],
   ['Accession records', 'Trace living specimens, generated plant IDs, source details, propagation context, and stable cultivar lines without losing the story.', GitBranch],
-  ['Taxonomy confidence', 'Record accepted names, provisional labels, acquisition names, aliases, sources, and uncertainty.', BadgeCheck],
-  ['Photo-backed records', 'Choose cover photos for specimen cards, type photos for definitions, and keep uploads space-conscious.', Camera],
+  ['Taxonomy confidence', 'Record accepted names, provisional labels, acquisition names, aliases, sources, reference URLs, and uncertainty.', BadgeCheck],
+  ['AI-assisted taxonomy', 'Draft concise descriptions or ask Magic Fill to suggest authority, reference links, aliases, and accepted-name corrections.', Sparkles],
+  ['Photo-backed records', 'Choose specimen cover photos, type images for definitions, and browse the collection gallery in a full-screen viewer.', Camera],
   ['Bloom history', 'Log bloom starts, peaks, closures, flower counts, first blooms, notes, and bloom photos over time.', Flower2],
   ['QR plant tags', 'Generate printable QR labels with standard plant IDs that link directly to each record.', QrCode],
-  ['Role-aware access', 'Let visitors browse, viewers follow records, loggers add records, and admins manage the collection.', LockKeyhole],
-  ['Collection search', 'Search plants by generated IDs, cultivars, aliases, old taxonomy, common names, notes, and sources.', Search],
+  ['Follow notifications', 'Follow plant types, specimens, or lineages and get email updates when relevant blooms, photos, notes, or propagations appear.', Bell],
+  ['Reminder emails', 'Schedule plant check-ins, bloom-cycle reminders, propagation follow-ups, and custom recurring reminders.', Mail],
+  ['Role-aware access', 'Let visitors browse public collections, viewers follow records, loggers add records, and owners manage collection membership.', LockKeyhole],
+  ['Collection search', 'Search plants by generated IDs, cultivars, aliases, old taxonomy, common names, locations, notes, and sources.', Search],
   ['Activity timeline', 'Review recent propagations, blooms, sport observations, acquisitions, and archive actions in one chronological feed.', History],
-  ['Admin tools', 'Seed realistic demo data, manage governing bodies, review audit history, and keep collection records tidy as the database grows.', FlaskConical],
+  ['Admin tools', 'Seed realistic demo data, manage governing bodies, review audit history, enforce 2FA for admins, and keep records tidy.', FlaskConical],
 ] as const
 
 const workflow = [
-  ['Define', 'Capture the accepted identity and any messy synonym, trade-name, reference-link, or confidence context.'],
-  ['Grow', 'Track instances, locations, acquisition history, generated plant IDs, and propagation batches.'],
-  ['Observe', 'Add notes, blooms, cover photos, and suspected sport observations when the plant actually gives you evidence.'],
-  ['Resolve', 'Confirm whether sport traits propagate true, promote stable lines, and share records through QR tags or read-only browsing.'],
+  ['Create a collection', 'Start with a private workspace, invite members when ready, or make a public collection browseable without exposing other data.'],
+  ['Define the plant', 'Capture the accepted identity, aliases, reference links, registration context, and confidence level, with optional AI assistance.'],
+  ['Grow the accession', 'Track specimens, locations, acquisition history, generated plant IDs, photos, and propagation batches.'],
+  ['Observe and follow', 'Add notes, blooms, reminders, and suspected sport observations, while followers receive relevant updates by email.'],
+  ['Resolve and share', 'Confirm whether sport traits propagate true, promote stable lines, and share records through QR tags or public collection browsing.'],
 ] as const
 
 export default function SplashPage() {
@@ -70,8 +79,9 @@ export default function SplashPage() {
             </p>
             <h1 className="text-5xl leading-[1.02] sm:text-6xl lg:text-7xl">A living database for plants with complicated names.</h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-stone-700">
-              AxilDB tracks plant definitions, collection instances, propagations, blooms, taxonomy uncertainty,
-              aliases, generated plant IDs, photos, QR tags, sport stability, and audit history in one self-hosted app.
+              AxilDB tracks collection workspaces, plant definitions, accessioned specimens, propagations, blooms,
+              taxonomy uncertainty, aliases, generated plant IDs, photos, QR tags, sport stability, reminders,
+              follower notifications, and audit history in one self-hosted app.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <a className="inline-flex items-center justify-center rounded-md bg-[#2f6b45] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#255537]" href={appUrl}>
@@ -112,7 +122,7 @@ export default function SplashPage() {
       <section className="mx-auto max-w-7xl px-5 py-16 sm:px-6 lg:px-8">
         <div className="mb-8 max-w-2xl">
           <h2 className="text-3xl">Built for real collection work</h2>
-          <p className="mt-3 text-stone-700">The app is designed around the day-to-day messiness of horticultural records, not just a flat list of names.</p>
+          <p className="mt-3 text-stone-700">The app is designed around the day-to-day messiness of horticultural records, collaboration, and long-lived accession history.</p>
         </div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {features.map(([title, text, Icon]) => (
@@ -150,10 +160,10 @@ export default function SplashPage() {
           <div>
             <h2 className="text-3xl">From label to accession</h2>
             <p className="mt-3 text-stone-700">
-              Keep the seller&apos;s label, your current interpretation, photos, notes, sport evidence, and propagation history together.
+              Keep the seller&apos;s label, your current interpretation, photos, notes, reminders, sport evidence, and propagation history together.
             </p>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {workflow.map(([title, text], index) => (
               <div key={title} className="rounded-lg border border-stone-200 bg-[#fffaf0]/80 p-5">
                 <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-md bg-[#2f6b45] text-sm font-semibold text-white">{index + 1}</div>
