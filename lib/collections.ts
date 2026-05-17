@@ -216,3 +216,10 @@ export async function publicCollectionsForUser(user: AuthUser | null) {
     include: user ? { memberships: { where: { userId: user.id }, take: 1 } } : undefined,
   })
 }
+
+export async function userOwnsAnyCollection(userId: string) {
+  const count = await prisma.collectionMembership.count({
+    where: { userId, role: 'OWNER', status: 'ACTIVE' },
+  })
+  return count > 0
+}

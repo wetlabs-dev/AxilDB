@@ -1,9 +1,12 @@
 import { createCollection } from '@/app/collection-actions'
 import { Button, Card, Field, Select, TextArea } from '@/components/ui'
 import { requireUser } from '@/lib/auth'
+import { userOwnsAnyCollection } from '@/lib/collections'
+import { redirect } from 'next/navigation'
 
 export default async function NewCollectionPage() {
-  await requireUser()
+  const user = await requireUser()
+  if (!(await userOwnsAnyCollection(user.id))) redirect('/collections')
 
   return (
     <div className="space-y-6">

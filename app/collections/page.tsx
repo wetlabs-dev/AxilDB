@@ -2,11 +2,14 @@ import Link from 'next/link'
 import { requestMembership } from '@/app/collection-actions'
 import { Button, Card, LinkButton } from '@/components/ui'
 import { getCurrentUser } from '@/lib/auth'
-import { collectionPath, publicCollectionsForUser } from '@/lib/collections'
+import { collectionPath, publicCollectionsForUser, userOwnsAnyCollection } from '@/lib/collections'
 
 export default async function CollectionsPage() {
   const user = await getCurrentUser()
-  const collections = await publicCollectionsForUser(user)
+  const [collections, canCreateCollections] = await Promise.all([
+    publicCollectionsForUser(user),
+    user ? userOwnsAnyCollection(user.id) : Promise.resolve(false),
+  ])
 
   return (
     <div className="space-y-6">
@@ -15,7 +18,7 @@ export default async function CollectionsPage() {
           <h2 className="text-3xl font-bold">Collections</h2>
           <p className="mt-1 text-sm text-stone-600">Choose a collection workspace or create a new one.</p>
         </div>
-        {user && <LinkButton href="/collections/new">New collection</LinkButton>}
+        {canCreateCollections && <LinkButton href="/collections/new">New collection</LinkButton>}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

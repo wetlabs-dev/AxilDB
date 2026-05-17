@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { audit, requireUser } from '@/lib/auth'
-import { collectionPath, requireCollectionOwner } from '@/lib/collections'
+import { collectionPath, requireCollectionOwner, userOwnsAnyCollection } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
 
 const val = (fd: FormData, key: string) => String(fd.get(key) || '').trim()
@@ -37,6 +37,10 @@ async function assertHasOtherOwner(collectionId: string, userId: string) {
 
 export async function createCollection(fd: FormData) {
   const user = await requireUser()
+  if (!(await userOwnsAnyCollection(user.id))) {
+    throw new Error('Only collection owners can create new collections.')
+  }
+
   const name = val(fd, 'name')
   if (!name) throw new Error('Collection name is required.')
   const slug = await uniqueSlug(val(fd, 'slug') || name)
