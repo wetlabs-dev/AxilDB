@@ -141,6 +141,7 @@ npm run db:push
 npm run db:seed
 npm run db:bootstrap
 npm run backup
+npm run check:collection-scope
 ```
 
 ## Backup And Restore
@@ -259,6 +260,16 @@ Authenticated mutations write audit entries with:
 - timestamp
 
 The audit log is visible to admin users.
+
+## Collection Boundary Checks
+
+AxilDB includes a lightweight static check for collection-owned read queries:
+
+```bash
+npm run check:collection-scope
+```
+
+The check scans collection-owned Prisma `findMany`, `findFirst`, and `count` calls and fails when they do not include `collectionId`, unless the call is in a narrow reviewed allowlist. It is not a replacement for end-to-end privacy tests, but it catches the easiest and riskiest class of tenant-leak regressions.
 
 ## Email
 
@@ -411,7 +422,7 @@ If the Ko-fi handle changes, update `NEXT_PUBLIC_DONATE_URL` in `.env` or `docke
 ## Future Hardening Ideas
 
 - Switch production schema changes from `prisma db push` to Prisma migrations.
-- Add privacy-focused automated tests for collection boundaries and public/private behavior.
+- Add browser/API privacy tests for collection boundaries and public/private behavior.
 - Add sitewide verified/reference plant definitions that collections can link to or fork.
 - Move uploads to durable object storage.
 - Add automated tests for auth, permissions, plant ID generation, uploads, destructive actions, sport logic, and lineage graph construction.
