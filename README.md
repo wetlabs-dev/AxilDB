@@ -144,6 +144,8 @@ npm run backup
 npm run check:collection-scope
 ```
 
+`check:collection-scope` is a static guardrail for the multi-collection model. It flags collection-owned Prisma reads that are missing an explicit collection boundary, including ID-based lookups that could otherwise accidentally cross collection lines.
+
 ## Backup And Restore
 
 Back up before production schema changes, major pulls, or server maintenance. The backup script writes a timestamped folder under `backups/` containing:

@@ -12,14 +12,14 @@ function collectionPath(slug: string | null | undefined, path = '/') {
   return `/c/${collectionSlug}${normalized === '/' ? '' : normalized}`
 }
 
-async function recordUrl(reminder: { entityType: string | null; entityId: string | null; collection?: { slug: string } | null }) {
+async function recordUrl(reminder: { collectionId: string | null; entityType: string | null; entityId: string | null; collection?: { id: string; slug: string } | null }) {
   if (reminder.entityType === 'PLANT_INSTANCE' && reminder.entityId) {
     return appUrl(collectionPath(reminder.collection?.slug, `/instances/${reminder.entityId}`))
   }
 
   if (reminder.entityType === 'BLOOM_EVENT' && reminder.entityId) {
-    const bloom = await prisma.bloomEvent.findUnique({
-      where: { id: reminder.entityId },
+    const bloom = await prisma.bloomEvent.findFirst({
+      where: { id: reminder.entityId, collectionId: reminder.collectionId },
       select: { id: true, plantInstanceId: true, collection: { select: { slug: true } } },
     })
     if (bloom) return appUrl(collectionPath(bloom.collection?.slug || reminder.collection?.slug, `/instances/${bloom.plantInstanceId}#bloom-${bloom.id}`))

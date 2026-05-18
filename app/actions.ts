@@ -146,14 +146,16 @@ export async function unfollowEntity(fd: FormData) {
   const user = await requireUser()
   const id = val(fd, 'id')!
   const destination = back(fd)
-  const follow = await prisma.follow.findUniqueOrThrow({ where: { id }, include: { collection: { select: { slug: true } } } })
-  const context = follow.collectionId ? await requireCollectionViewer(await collectionSlug(fd)) : null
+  const context = await requireCollectionViewer(await collectionSlug(fd))
+  const follow = await prisma.follow.findFirstOrThrow({
+    where: { id, collectionId: context.collection.id },
+    include: { collection: { select: { slug: true } } },
+  })
 
   if (follow.userId !== user.id) {
     if (!follow.collection?.slug) throw new Error('You do not have permission to remove this follow.')
     await requireCollectionAdmin(follow.collection.slug)
   }
-  if (context && context.collection.id !== follow.collectionId) throw new Error('Follow not found in this collection.')
 
   await prisma.follow.delete({ where: { id } })
   await audit(user, 'DELETE', 'FOLLOW', id, `Unfollowed ${follow.label}`, follow, follow.collectionId)
@@ -452,9 +454,13 @@ export async function addNote(fd: FormData) {
   redirect(back(fd))
 }
 
-async function requireReminderAccess(id: string) {
+async function requireReminderAccess(id: string, collectionSlugValue: string) {
   const user = await requireUser()
-  const reminder = await prisma.reminder.findUniqueOrThrow({ where: { id }, include: { collection: { select: { slug: true } } } })
+  const context = await requireCollectionViewer(collectionSlugValue)
+  const reminder = await prisma.reminder.findFirstOrThrow({
+    where: { id, collectionId: context.collection.id },
+    include: { collection: { select: { slug: true } } },
+  })
 
   if (reminder.userId !== user.id) {
     if (!reminder.collection?.slug) throw new Error('You do not have permission to manage this reminder.')
@@ -497,7 +503,7 @@ export async function createReminder(fd: FormData) {
 export async function completeReminder(fd: FormData) {
   const id = val(fd, 'id')!
   const destination = back(fd)
-  const { user, reminder } = await requireReminderAccess(id)
+  const { user, reminder } = await requireReminderAccess(id, await collectionSlug(fd))
 
   await prisma.reminder.update({
     where: { id },
@@ -512,7 +518,7 @@ export async function completeReminder(fd: FormData) {
 export async function pauseReminder(fd: FormData) {
   const id = val(fd, 'id')!
   const destination = back(fd)
-  const { user, reminder } = await requireReminderAccess(id)
+  const { user, reminder } = await requireReminderAccess(id, await collectionSlug(fd))
 
   await prisma.reminder.update({
     where: { id },
@@ -527,7 +533,7 @@ export async function pauseReminder(fd: FormData) {
 export async function resumeReminder(fd: FormData) {
   const id = val(fd, 'id')!
   const destination = back(fd)
-  const { user, reminder } = await requireReminderAccess(id)
+  const { user, reminder } = await requireReminderAccess(id, await collectionSlug(fd))
 
   await prisma.reminder.update({
     where: { id },
@@ -542,7 +548,7 @@ export async function resumeReminder(fd: FormData) {
 export async function deleteReminder(fd: FormData) {
   const id = val(fd, 'id')!
   const destination = back(fd)
-  const { user, reminder } = await requireReminderAccess(id)
+  const { user, reminder } = await requireReminderAccess(id, await collectionSlug(fd))
 
   await prisma.reminder.delete({ where: { id } })
 

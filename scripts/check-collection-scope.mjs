@@ -18,7 +18,7 @@ const collectionModels = [
   'followNotification',
   'auditLog',
 ]
-const readOps = ['findMany', 'findFirst', 'count']
+const readOps = ['findMany', 'findFirst', 'findUnique', 'findUniqueOrThrow', 'count']
 
 const reviewedAllowlist = [
   {
