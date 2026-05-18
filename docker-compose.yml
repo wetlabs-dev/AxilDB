@@ -34,7 +34,7 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql://plants:plants@db:5432/axildb?schema=public
-    command: sh -c "npx prisma db push && npm run db:bootstrap"
+    command: sh -c "npx prisma db push --accept-data-loss && npm run db:bootstrap"
   app:
     build: .
     env_file:
