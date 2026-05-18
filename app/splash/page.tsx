@@ -10,7 +10,6 @@ import {
   History,
   LockKeyhole,
   Mail,
-  QrCode,
   Search,
   ShieldCheck,
   Sparkles,
@@ -28,7 +27,6 @@ const features = [
   ['AI-assisted taxonomy', 'Draft concise descriptions or ask Magic Fill to suggest authority, reference links, aliases, and accepted-name corrections.', Sparkles],
   ['Photo-backed records', 'Choose specimen cover photos, type images for definitions, and browse the collection gallery in a full-screen viewer.', Camera],
   ['Bloom history', 'Log bloom starts, peaks, closures, flower counts, first blooms, notes, and bloom photos over time.', Flower2],
-  ['QR plant tags', 'Generate printable QR labels with standard plant IDs that link directly to each record.', QrCode],
   ['Follow notifications', 'Follow plant types, specimens, or lineages and get email updates when relevant blooms, photos, notes, or propagations appear.', Bell],
   ['Reminder emails', 'Schedule plant check-ins, bloom-cycle reminders, propagation follow-ups, and custom recurring reminders.', Mail],
   ['Role-aware access', 'Let visitors browse public collections, viewers follow records, loggers add records, and owners manage collection membership.', LockKeyhole],
@@ -43,6 +41,7 @@ const workflow = [
   ['Grow the accession', 'Track specimens, locations, acquisition history, generated plant IDs, photos, and propagation batches.'],
   ['Observe and follow', 'Add notes, blooms, reminders, and suspected sport observations, while followers receive relevant updates by email.'],
   ['Resolve and share', 'Confirm whether sport traits propagate true, promote stable lines, and share records through QR tags or public collection browsing.'],
+  ['Keep tending', 'Use the timeline, reminders, and photo history to keep steady habits around plants that are quietly doing well.'],
 ] as const
 
 export default function SplashPage() {
@@ -139,12 +138,21 @@ export default function SplashPage() {
               <img src="/splash-plant-label.png" alt="" className="max-h-full w-full object-contain" />
             </div>
             <div className="p-5">
-              <h3 className="font-serif text-xl">Readable plant tags</h3>
-              <p className="mt-2 text-sm leading-6 text-stone-700">Connect physical labels, generated plant IDs, and QR codes back to the living record.</p>
+              <h3 className="font-serif text-xl">Readable plant tags and QR labels</h3>
+              <p className="mt-2 text-sm leading-6 text-stone-700">Connect physical labels, generated plant IDs, and scannable QR codes back to the living record.</p>
             </div>
           </article>
-          <article className="overflow-hidden rounded-lg border border-stone-200 bg-white/70 shadow-[0_8px_30px_rgba(47,38,24,0.06)] lg:col-span-2">
-            <div className="grid min-h-56 items-center gap-4 bg-[#fffdf7] p-5 md:grid-cols-[.95fr_1.05fr]">
+          <article className="overflow-hidden rounded-lg border border-stone-200 bg-white/70 shadow-[0_8px_30px_rgba(47,38,24,0.06)]">
+            <div className="flex h-56 items-center justify-center bg-[#fffdf7]">
+              <img src="/splash-bloom.png" alt="" className="h-full w-full object-cover object-center mix-blend-multiply" />
+            </div>
+            <div className="p-5">
+              <h3 className="font-serif text-xl">Bloom cycles without guesswork</h3>
+              <p className="mt-2 text-sm leading-6 text-stone-700">Track opening, peak, closure, counts, photos, and reminders as each bloom moves through its cycle.</p>
+            </div>
+          </article>
+          <article className="overflow-hidden rounded-lg border border-stone-200 bg-white/70 shadow-[0_8px_30px_rgba(47,38,24,0.06)]">
+            <div className="grid min-h-56 items-center gap-4 bg-[#fffdf7] p-5">
               <div>
                 <h3 className="font-serif text-2xl">Lineage you can see</h3>
                 <p className="mt-3 text-sm leading-6 text-stone-700">Propagations inherit their parent context, while suspected sports become candidate lines only when observations justify it.</p>
@@ -156,8 +164,8 @@ export default function SplashPage() {
       </section>
 
       <section className="border-y border-stone-200/80 bg-white/45">
-        <div className="mx-auto grid max-w-7xl gap-8 px-5 py-16 sm:px-6 lg:grid-cols-[.85fr_1.15fr] lg:px-8">
-          <div>
+        <div className="mx-auto max-w-7xl px-5 py-16 sm:px-6 lg:px-8">
+          <div className="mb-8 max-w-3xl">
             <h2 className="text-3xl">From label to accession</h2>
             <p className="mt-3 text-stone-700">
               Keep the seller&apos;s label, your current interpretation, photos, notes, reminders, sport evidence, and propagation history together.
