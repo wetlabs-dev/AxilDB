@@ -60,9 +60,15 @@ async function main() {
       nextSendAt: { lte: now },
     },
     include: {
-      collection: { select: { id: true, name: true, slug: true } },
+      collection: { select: { id: true, name: true, slug: true, visibility: true } },
       user: {
-        include: { emailPreference: true },
+        include: {
+          emailPreference: true,
+          memberships: {
+            where: { status: 'ACTIVE' },
+            select: { collectionId: true },
+          },
+        },
       },
     },
     orderBy: { nextSendAt: 'asc' },
@@ -73,6 +79,26 @@ async function main() {
     const preferenceKey = reminderPreferenceKey(reminder.category)
     const preferences = reminder.user.emailPreference as Record<string, unknown> | null
     const preferenceEnabled = preferences?.[preferenceKey] !== false
+    const hasCollectionAccess =
+      reminder.collection?.visibility === 'PUBLIC' ||
+      !reminder.collectionId ||
+      reminder.user.memberships.some((membership) => membership.collectionId === reminder.collectionId)
+
+    if (!hasCollectionAccess) {
+      await prisma.reminderDelivery.create({
+        data: {
+          reminderId: reminder.id,
+          collectionId: reminder.collectionId,
+          userId: reminder.userId,
+          recipient: reminder.user.email,
+          subject: reminder.title,
+          status: 'SKIPPED',
+          error: 'User no longer has access to this private collection.',
+        },
+      })
+      await finishReminder(reminder.id, reminder.nextSendAt || reminder.dueAt, reminder.rrule)
+      continue
+    }
 
     if (!reminder.user.emailVerifiedAt) {
       await prisma.reminderDelivery.create({

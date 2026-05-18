@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { unlink } from 'fs/promises'
 import path from 'path'
 import { prisma } from '@/lib/prisma'
-import { audit, isAdmin, requireUser } from '@/lib/auth'
+import { audit, requireUser } from '@/lib/auth'
 import {
   collectionPath,
   getCurrentCollectionSlug,
@@ -146,11 +146,12 @@ export async function unfollowEntity(fd: FormData) {
   const user = await requireUser()
   const id = val(fd, 'id')!
   const destination = back(fd)
-  const follow = await prisma.follow.findUniqueOrThrow({ where: { id } })
+  const follow = await prisma.follow.findUniqueOrThrow({ where: { id }, include: { collection: { select: { slug: true } } } })
   const context = follow.collectionId ? await requireCollectionViewer(await collectionSlug(fd)) : null
 
-  if (follow.userId !== user.id && !isAdmin(user)) {
-    throw new Error('You do not have permission to remove this follow.')
+  if (follow.userId !== user.id) {
+    if (!follow.collection?.slug) throw new Error('You do not have permission to remove this follow.')
+    await requireCollectionAdmin(follow.collection.slug)
   }
   if (context && context.collection.id !== follow.collectionId) throw new Error('Follow not found in this collection.')
 
@@ -455,7 +456,7 @@ async function requireReminderAccess(id: string) {
   const user = await requireUser()
   const reminder = await prisma.reminder.findUniqueOrThrow({ where: { id }, include: { collection: { select: { slug: true } } } })
 
-  if (reminder.userId !== user.id && !isAdmin(user)) {
+  if (reminder.userId !== user.id) {
     if (!reminder.collection?.slug) throw new Error('You do not have permission to manage this reminder.')
     await requireCollectionAdmin(reminder.collection.slug)
   }
@@ -627,7 +628,7 @@ export async function markSportReverted(fd: FormData) {
     plantInstanceIds: [id],
     plantDefinitionIds: [instance.plantDefinitionId],
   })
-  redirect(back(fd) || `/instances/${id}`)
+  redirect(back(fd) || collectionPath(collection.slug, `/instances/${id}`))
 }
 
 export async function deleteNote(fd: FormData) {

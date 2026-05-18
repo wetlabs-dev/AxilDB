@@ -79,7 +79,7 @@ export async function notifyFollowers(prisma: PrismaClient, input: NotifyFollowe
   const follows = await prisma.follow.findMany({
     where: { ...(input.collectionId ? { collectionId: input.collectionId } : {}), OR: filters },
     include: {
-      collection: { select: { visibility: true } },
+      collection: { select: { name: true, visibility: true } },
       user: {
         include: {
           emailPreference: true,
@@ -142,8 +142,9 @@ export async function notifyFollowers(prisma: PrismaClient, input: NotifyFollowe
     const recordUrl = appUrl(input.recordPath)
     const template = followNotificationEmail(input.subject, recordUrl, [
       input.body || 'A record you follow was updated in AxilDB.',
+      follow.collection ? `Collection: ${follow.collection.name}.` : '',
       `Followed ${followScopeLabel(follow.scope).toLowerCase()}: ${follow.label}.`,
-    ])
+    ].filter(Boolean))
 
     try {
       await sendEmail({
