@@ -55,6 +55,7 @@ Collection routes use:
 ```
 
 Legacy app routes redirect to the default collection, for example `/plants` redirects to `/c/axildb/plants`.
+The default collection is tracked internally, so its slug can be renamed without AxilDB recreating a fresh empty `axildb` collection during bootstrap.
 
 Collection visibility:
 

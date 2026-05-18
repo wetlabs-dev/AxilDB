@@ -6,14 +6,20 @@ import PDFDocument from 'pdfkit'
 import QRCode from 'qrcode'
 import { prisma } from '@/lib/prisma'
 import { plantName, fmtDate } from '@/lib/utils'
-import { collectionPath, DEFAULT_COLLECTION_SLUG } from '@/lib/collections'
+import { collectionPath, ensureDefaultCollection } from '@/lib/collections'
 import { getCurrentUser } from '@/lib/auth'
 export async function GET(req: Request) {
   const url=new URL(req.url)
   const ids=url.searchParams.getAll('id')
   const all=url.searchParams.get('all')==='1'
-  const slug=url.searchParams.get('collectionSlug') || DEFAULT_COLLECTION_SLUG
-  const collection=await prisma.collection.findUnique({where:{slug},select:{id:true,slug:true,visibility:true}})
+  const slug=url.searchParams.get('collectionSlug')
+  const collection=slug
+    ? await prisma.collection.findUnique({where:{slug},select:{id:true,slug:true,visibility:true}})
+    : await ensureDefaultCollection().then(collection=>({
+      id: collection.id,
+      slug: collection.slug,
+      visibility: collection.visibility,
+    }))
   if (!collection) return NextResponse.json({error:'Collection not found'}, {status:404})
   const user=await getCurrentUser()
   if (collection.visibility !== 'PUBLIC') {

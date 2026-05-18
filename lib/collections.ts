@@ -54,27 +54,61 @@ export async function getCurrentCollectionSlug() {
 }
 
 export async function ensureDefaultCollection() {
-  const collection = await prisma.collection.upsert({
-    where: { slug: DEFAULT_COLLECTION_SLUG },
-    update: {},
-    create: {
-      name: 'AxilDB',
-      slug: DEFAULT_COLLECTION_SLUG,
-      visibility: 'PRIVATE',
-      description: 'Default AxilDB collection.',
-    },
+  const existingDefault = await prisma.collection.findFirst({
+    where: { isDefault: true },
+    orderBy: { createdAt: 'asc' },
   })
 
+  const oldestOwnedCollection = existingDefault
+    ? null
+    : await prisma.collection.findFirst({
+        where: { memberships: { some: { role: 'OWNER', status: 'ACTIVE' } } },
+        orderBy: { createdAt: 'asc' },
+      })
+
+  const collection = existingDefault
+    || oldestOwnedCollection
+    || await prisma.collection.findUnique({ where: { slug: DEFAULT_COLLECTION_SLUG } })
+    || await prisma.collection.create({
+      data: {
+        name: 'AxilDB',
+        slug: DEFAULT_COLLECTION_SLUG,
+        visibility: 'PRIVATE',
+        description: 'Default AxilDB collection.',
+        isDefault: true,
+      },
+    })
+
+  await prisma.collection.update({
+    where: { id: collection.id },
+    data: {
+      isDefault: true,
+      ...(!collection.description ? { description: 'Default AxilDB collection.' } : {}),
+    },
+  })
+  await prisma.collection.updateMany({
+    where: { isDefault: true, NOT: { id: collection.id } },
+    data: { isDefault: false },
+  })
+
+  const defaultCollection = await prisma.collection.findUniqueOrThrow({
+    where: { id: collection.id },
+  })
+
+  /*
+   * The default collection is identified by isDefault rather than slug so its
+   * URL slug can be renamed without bootstrap recreating an empty axildb collection.
+   */
   const admins = await prisma.user.findMany({ where: { role: 'ADMIN' }, select: { id: true } })
   for (const admin of admins) {
     await prisma.collectionMembership.upsert({
-      where: { collectionId_userId: { collectionId: collection.id, userId: admin.id } },
+      where: { collectionId_userId: { collectionId: defaultCollection.id, userId: admin.id } },
       update: { role: 'OWNER', status: 'ACTIVE' },
-      create: { collectionId: collection.id, userId: admin.id, role: 'OWNER', status: 'ACTIVE' },
+      create: { collectionId: defaultCollection.id, userId: admin.id, role: 'OWNER', status: 'ACTIVE' },
     })
   }
 
-  return collection
+  return defaultCollection
 }
 
 export async function backfillDefaultCollection(collectionId?: string) {
