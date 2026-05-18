@@ -142,9 +142,12 @@ npm run db:seed
 npm run db:bootstrap
 npm run backup
 npm run check:collection-scope
+npm run check:collection-integrity
 ```
 
 `check:collection-scope` is a static guardrail for the multi-collection model. It flags collection-owned Prisma reads that are missing an explicit collection boundary, including ID-based lookups that could otherwise accidentally cross collection lines.
+
+`check:collection-integrity` is a database guardrail. Run it on the server after schema changes or data repairs to confirm collection-owned records have `collectionId` values and that linked records, photos, notes, follows, reminders, and propagation graph edges do not cross collection boundaries.
 
 ## Backup And Restore
 
