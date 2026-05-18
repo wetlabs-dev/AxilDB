@@ -9,6 +9,7 @@ prisma/*.db
 prisma/*.db-journal
 
 public/uploads
+backups
 
 .DS_Store
 npm-debug.log*

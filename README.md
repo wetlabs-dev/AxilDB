@@ -140,7 +140,44 @@ npm run prisma:generate
 npm run db:push
 npm run db:seed
 npm run db:bootstrap
+npm run backup
 ```
+
+## Backup And Restore
+
+Back up before production schema changes, major pulls, or server maintenance. The backup script writes a timestamped folder under `backups/` containing:
+
+- a compressed Postgres custom-format dump
+- uploaded images from `public/uploads`
+- generated label files from `public/labels`
+- a small manifest with timestamp and git commit
+
+Run on the server from the repo root:
+
+```bash
+npm run backup
+```
+
+Or choose a destination directory:
+
+```bash
+scripts/backup.sh /home/ubuntu/axildb-backups
+```
+
+Copy backup folders off the server periodically. For example:
+
+```bash
+scp -r ubuntu@app.axildb.com:/home/ubuntu/AxilDB/backups/axildb-YYYYMMDDTHHMMSSZ .
+```
+
+Restore is intentionally guarded because it replaces database contents:
+
+```bash
+AXILDB_RESTORE_CONFIRM=YES scripts/restore.sh backups/axildb-YYYYMMDDTHHMMSSZ
+docker compose up -d --build
+```
+
+The restore script restores Postgres and extracts uploaded images/labels. It does not restore Caddy certificates, SMTP config, or other server-level files. Keep `/etc/axildb/axildb.env` backed up separately somewhere secure.
 
 ## Docker Deployment
 
@@ -376,7 +413,6 @@ If the Ko-fi handle changes, update `NEXT_PUBLIC_DONATE_URL` in `.env` or `docke
 - Switch production schema changes from `prisma db push` to Prisma migrations.
 - Add privacy-focused automated tests for collection boundaries and public/private behavior.
 - Add sitewide verified/reference plant definitions that collections can link to or fork.
-- Add documented backup and restore commands for Postgres and uploaded files.
 - Move uploads to durable object storage.
 - Add automated tests for auth, permissions, plant ID generation, uploads, destructive actions, sport logic, and lineage graph construction.
 - Add CSV import/export and duplicate plant definition merge tools.
