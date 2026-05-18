@@ -36,6 +36,7 @@ const globalPrefixes = [
   '/account',
   '/users',
   '/collections',
+  '/collection-access',
 ]
 
 function isCollectionRoute(pathname: string) {

@@ -1,6 +1,6 @@
-import { approveMembership, rejectMembership, removeMembership, updateMembershipRole } from '@/app/collection-actions'
+import { addCollectionMember, approveMembership, rejectMembership, removeMembership, updateMembershipRole } from '@/app/collection-actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
-import { Button, Card } from '@/components/ui'
+import { Button, Card, Field, Select } from '@/components/ui'
 import { requireCollectionOwner } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
 
@@ -18,6 +18,21 @@ export default async function CollectionMembersPage() {
         <h2 className="text-3xl font-bold">Collection Members</h2>
         <p className="mt-1 text-sm text-stone-600">Approve requests and manage roles for {collection.name}.</p>
       </div>
+      <Card>
+        <h3 className="font-serif text-xl font-semibold">Add existing user</h3>
+        <p className="mt-1 text-sm text-stone-600">Owners can add an existing AxilDB account directly to this collection.</p>
+        <form action={addCollectionMember} className="mt-4 grid gap-3 md:grid-cols-[minmax(16rem,1fr)_12rem_auto] md:items-end">
+          <input type="hidden" name="collectionSlug" value={collection.slug} />
+          <Field label="User email" name="email" type="email" required />
+          <Select label="Collection role" name="role" defaultValue="VIEWER">
+            <option value="VIEWER">Viewer</option>
+            <option value="LOGGER">Logger</option>
+            <option value="ADMIN">Admin</option>
+            <option value="OWNER">Owner</option>
+          </Select>
+          <Button>Add member</Button>
+        </form>
+      </Card>
       <div className="grid gap-3">
         {members.map((member) => (
           <Card key={member.id}>

@@ -169,7 +169,7 @@ async function requireCollectionRole(slug: string | undefined, minimumRole: Coll
   const user = context.user
   if (!canViewCollection(user, context)) {
     if (!user) redirect('/login')
-    redirect('/collections')
+    redirect(`/collection-access?slug=${encodeURIComponent(context.collection.slug)}`)
   }
 
   const role = membershipRole(context)
@@ -185,7 +185,7 @@ export async function requireCollectionViewer(slug?: string) {
   const context = await getCollectionContext(slug)
   if (!canViewCollection(context.user, context)) {
     if (!context.user) redirect('/login')
-    redirect('/collections')
+    redirect(`/collection-access?slug=${encodeURIComponent(context.collection.slug)}`)
   }
   return context
 }

@@ -123,6 +123,26 @@ export async function rejectMembership(fd: FormData) {
   redirect(collectionPath(collection.slug, '/members'))
 }
 
+export async function addCollectionMember(fd: FormData) {
+  const { user, collection } = await requireCollectionOwner(val(fd, 'collectionSlug'))
+  const email = val(fd, 'email').toLowerCase()
+  const role = val(fd, 'role')
+  if (!email) throw new Error('Email is required.')
+  if (!roleRank[role]) throw new Error('Invalid role.')
+
+  const memberUser = await prisma.user.findUnique({ where: { email } })
+  if (!memberUser) throw new Error('No user exists with that email address.')
+
+  const membership = await prisma.collectionMembership.upsert({
+    where: { collectionId_userId: { collectionId: collection.id, userId: memberUser.id } },
+    update: { role, status: 'ACTIVE' },
+    create: { collectionId: collection.id, userId: memberUser.id, role, status: 'ACTIVE' },
+  })
+
+  await audit(user, 'CREATE', 'COLLECTION_MEMBERSHIP', membership.id, `Added ${email} to ${collection.name} as ${role}`, membership, collection.id)
+  redirect(collectionPath(collection.slug, '/members'))
+}
+
 export async function updateMembershipRole(fd: FormData) {
   const { user, collection } = await requireCollectionOwner(val(fd, 'collectionSlug'))
   const membershipId = val(fd, 'membershipId')
