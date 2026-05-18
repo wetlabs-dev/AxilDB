@@ -3,6 +3,7 @@ import { Card } from '@/components/ui'
 import { collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
 import { fmtDate, plantName } from '@/lib/utils'
+import { Flower2, Sprout } from 'lucide-react'
 import Link from 'next/link'
 
 export default async function Blooms() {
@@ -37,6 +38,28 @@ export default async function Blooms() {
   return (
     <div className="space-y-6">
       <h2 className="text-3xl font-bold">Bloom Tracker</h2>
+      {blooms.length === 0 && (
+        <Card className="relative overflow-hidden border-[#d6dfc9] bg-[#fffaf0] p-0">
+          <div className="absolute inset-y-0 right-0 hidden w-1/2 bg-[radial-gradient(circle_at_70%_40%,rgba(143,165,143,0.22),transparent_34%),radial-gradient(circle_at_88%_72%,rgba(196,122,90,0.14),transparent_28%)] sm:block" />
+          <div className="relative grid gap-5 p-6 sm:grid-cols-[1fr_auto] sm:items-center sm:p-8">
+            <div className="max-w-xl">
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-[#b8c9aa] bg-[#d6dfc9]/55 text-[#2f6b45]">
+                <Flower2 className="h-7 w-7" />
+              </div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#2f6b45]">No blooms yet</p>
+              <h3 className="mt-2 text-2xl font-bold leading-tight text-stone-950 sm:text-3xl">Nothing in flower right now.</h3>
+              <p className="mt-3 text-sm leading-6 text-stone-700 sm:text-base">
+                Keep tending the collection, and the bloom tracker will fill in as buds open. When a specimen flowers, add a bloom event from its plant record to start building its history.
+              </p>
+            </div>
+            <div className="flex justify-start sm:justify-end">
+              <div className="flex h-24 w-24 items-center justify-center rounded-full border border-[#d6dfc9] bg-[#f5f0e2] text-[#2f6b45] shadow-inner sm:h-32 sm:w-32">
+                <Sprout className="h-12 w-12 sm:h-16 sm:w-16" />
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
       <div className="grid auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
         {blooms.map((bloom) => {
           const status = bloom.bloomEndDate ? 'Closed' : bloom.peakBloomDate ? 'Peaked' : 'Open'
