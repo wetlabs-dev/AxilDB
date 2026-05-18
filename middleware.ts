@@ -35,6 +35,7 @@ const globalPrefixes = [
   '/two-factor',
   '/account',
   '/users',
+  '/server',
   '/collections',
   '/collection-access',
 ]

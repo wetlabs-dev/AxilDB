@@ -29,7 +29,7 @@ const features = [
   ['Bloom history', 'Log bloom starts, peaks, closures, flower counts, first blooms, notes, and bloom photos over time.', Flower2],
   ['Follow notifications', 'Follow plant types, specimens, or lineages and get email updates when relevant blooms, photos, notes, or propagations appear.', Bell],
   ['Reminder emails', 'Schedule plant check-ins, bloom-cycle reminders, propagation follow-ups, and custom recurring reminders.', Mail],
-  ['Role-aware access', 'Let visitors browse public collections, viewers follow records, loggers add records, and owners manage collection membership.', LockKeyhole],
+  ['Role-aware access', 'Let visitors browse public collections, viewers follow records, loggers add records, gardeners tend records, and managers handle membership.', LockKeyhole],
   ['Collection search', 'Search plants by generated IDs, cultivars, aliases, old taxonomy, common names, locations, notes, and sources.', Search],
   ['Activity timeline', 'Review recent propagations, blooms, sport observations, acquisitions, and archive actions in one chronological feed.', History],
   ['Admin tools', 'Seed realistic demo data, manage governing bodies, review audit history, enforce 2FA for admins, and keep records tidy.', FlaskConical],

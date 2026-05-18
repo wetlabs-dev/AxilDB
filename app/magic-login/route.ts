@@ -30,5 +30,5 @@ export async function GET(req: NextRequest) {
 
   await createSession(user.id)
   await audit({ id: user.id, email: user.email, role: user.role }, 'LOGIN', 'USER', user.id, `${user.email} signed in by magic link`)
-  return NextResponse.redirect(appUrl(user.role === 'ADMIN' && !user.twoFactor?.enabledAt ? '/account/security?setup=required' : '/'))
+  return NextResponse.redirect(appUrl(user.role === 'SERVER_ADMIN' && !user.twoFactor?.enabledAt ? '/account/security?setup=required' : '/'))
 }

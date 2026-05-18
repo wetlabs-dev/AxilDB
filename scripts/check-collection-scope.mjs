@@ -33,6 +33,12 @@ const reviewedAllowlist = [
     op: 'count',
     reason: 'Shared-upload cleanup counts duplicate file paths globally before deleting the physical file.',
   },
+  {
+    file: 'app/server/page.tsx',
+    model: 'photo',
+    op: 'count',
+    reason: 'Server management dashboard intentionally shows global photo count for server admins.',
+  },
 ]
 
 function walk(dir) {

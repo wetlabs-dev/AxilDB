@@ -26,7 +26,7 @@ export default async function AccountSecurity({
   }
 
   const enabled = Boolean(setup.enabledAt)
-  if (enabled && user.role === 'ADMIN' && !user.twoFactorVerifiedAt) {
+  if (enabled && user.role === 'SERVER_ADMIN' && !user.twoFactorVerifiedAt) {
     return (
       <div className="space-y-6">
         <h2 className="text-3xl font-bold">Account security</h2>

@@ -17,7 +17,7 @@ async function main() {
       email: 'admin@axildb.com',
       emailVerifiedAt: new Date(),
       passwordHash: hashPassword('password'),
-      role: 'ADMIN',
+      role: 'SERVER_ADMIN',
     },
   })
 
@@ -34,7 +34,7 @@ async function main() {
   const oldestOwnedCollection = existingDefault
     ? null
     : await prisma.collection.findFirst({
-        where: { memberships: { some: { role: 'OWNER', status: 'ACTIVE' } } },
+        where: { memberships: { some: { role: { in: ['OWNER', 'MANAGER'] }, status: 'ACTIVE' } } },
         orderBy: { createdAt: 'asc' },
       })
   const collection = existingDefault
@@ -45,6 +45,7 @@ async function main() {
         name: 'AxilDB',
         slug: 'axildb',
         visibility: 'PRIVATE',
+        status: 'ACTIVE',
         description: 'Default AxilDB collection.',
         isDefault: true,
       },
@@ -65,12 +66,18 @@ async function main() {
     where: { id: collection.id },
   })
 
-  const admins = await prisma.user.findMany({ where: { role: 'ADMIN' }, select: { id: true } })
+  await prisma.collection.updateMany({ where: { status: { not: 'ARCHIVED' } }, data: { status: 'ACTIVE' } })
+  await prisma.user.updateMany({ where: { email: 'admin@axildb.com' }, data: { role: 'SERVER_ADMIN' } })
+  await prisma.user.updateMany({ where: { NOT: { email: 'admin@axildb.com' }, role: { in: ['ADMIN', 'LOGGER', 'VIEWER'] } }, data: { role: 'USER' } })
+  await prisma.collectionMembership.updateMany({ where: { role: 'OWNER' }, data: { role: 'MANAGER' } })
+  await prisma.collectionMembership.updateMany({ where: { role: 'ADMIN' }, data: { role: 'GARDENER' } })
+
+  const admins = await prisma.user.findMany({ where: { role: 'SERVER_ADMIN' }, select: { id: true } })
   for (const user of admins) {
     await prisma.collectionMembership.upsert({
       where: { collectionId_userId: { collectionId: defaultCollection.id, userId: user.id } },
-      update: { role: 'OWNER', status: 'ACTIVE' },
-      create: { collectionId: defaultCollection.id, userId: user.id, role: 'OWNER', status: 'ACTIVE' },
+      update: { role: 'MANAGER', status: 'ACTIVE' },
+      create: { collectionId: defaultCollection.id, userId: user.id, role: 'MANAGER', status: 'ACTIVE' },
     })
   }
 

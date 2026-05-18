@@ -100,12 +100,11 @@ export async function notifyFollowers(prisma: PrismaClient, input: NotifyFollowe
     if (seenUsers.has(follow.userId)) continue
     seenUsers.add(follow.userId)
 
-    const hasPrivateAccess =
-      follow.collection?.visibility === 'PUBLIC' ||
-      !follow.collectionId ||
+    const hasActiveMembership =
+      !!follow.collectionId &&
       follow.user.memberships.some((membership) => membership.collectionId === follow.collectionId)
 
-    if (!hasPrivateAccess) {
+    if (!hasActiveMembership) {
       await prisma.followNotification.create({
         data: {
           followId: follow.id,
@@ -116,7 +115,7 @@ export async function notifyFollowers(prisma: PrismaClient, input: NotifyFollowe
           body: input.body,
           recordUrl: appUrl(input.recordPath),
           status: 'SKIPPED',
-          error: 'User no longer has access to this private collection.',
+          error: 'User is not an active member of this collection.',
         },
       })
       continue

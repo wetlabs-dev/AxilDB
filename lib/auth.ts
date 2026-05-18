@@ -2,6 +2,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { randomBytes, scryptSync, timingSafeEqual, createHash } from 'crypto'
 import { prisma } from '@/lib/prisma'
+import { isServerAdminRole } from '@/lib/roles'
 
 export const SESSION_COOKIE = 'axildb_session'
 export const TWO_FACTOR_COOKIE = 'axildb_2fa'
@@ -130,11 +131,11 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
 }
 
 export function isAdmin(user: AuthUser | null) {
-  return user?.role === 'ADMIN'
+  return isServerAdminRole(user?.role)
 }
 
 export function canCreate(user: AuthUser | null) {
-  return user?.role === 'ADMIN' || user?.role === 'LOGGER'
+  return isServerAdminRole(user?.role)
 }
 
 export async function requireUser() {
@@ -151,8 +152,12 @@ export async function requireCreateUser() {
 }
 
 export async function requireAdminUser() {
+  return requireServerAdmin()
+}
+
+export async function requireServerAdmin() {
   const user = await requireUser()
-  if (!isAdmin(user)) throw new Error('Admin access is required.')
+  if (!isAdmin(user)) throw new Error('Server admin access is required.')
   await assertAdminTwoFactorReady(user)
   return user
 }

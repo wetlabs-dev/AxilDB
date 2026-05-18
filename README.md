@@ -26,7 +26,8 @@ It is designed for real collection work: messy taxonomy, acquisition names, alia
 - Collection search across definitions, instances, aliases, notes, source metadata, and plant IDs.
 - Archive/restore workflow for plants that leave the active collection.
 - Local user accounts with self-service viewer registration.
-- Collection roles for owners, admins, loggers, and viewers, with member approval and role-management tools.
+- Collection roles for managers, gardeners, loggers, and viewers, with member approval, invitations, and role-management tools.
+- Server-admin management area for collection lifecycle, global users, server health checks, and cautious backup guidance.
 - QR-code two-factor authentication with one-time recovery codes, compatible with Apple Passwords and standard authenticator apps.
 - SMTP-ready email foundation with welcome/verification emails, secure single-use tokens, branded HTML/plain-text templates, and user email preferences.
 - User reminders for general tasks, plant check-ins, bloom follow-ups, and propagation follow-ups, with one-time or recurring schedules.
@@ -34,7 +35,8 @@ It is designed for real collection work: messy taxonomy, acquisition names, alia
 - Followed plant updates for individual specimens, plant types, and connected lineages, with email notifications for blooms, propagations, sport updates, photos, notes, archives, and new specimens of followed types.
 - Follower counts on followable plant types, specimens, and lineages.
 - Read-only browsing for public collections by unauthenticated visitors.
-- Admin-only edit/delete tools, users page, governing bodies page, and audit log.
+- Collection-gardener edit/delete tools, governing bodies page, and audit log.
+- Server-admin-only site user management and collection archive/permanent-delete tools.
 - Confirmation modals for destructive delete actions.
 - Demo data generator for populating realistic test records.
 
@@ -62,14 +64,20 @@ Collection visibility:
 - **Public collections** can be browsed read-only without signing in.
 - **Private collections** require active collection membership.
 
+Global roles:
+
+- **User** is the normal account role. Collection permissions come from collection memberships.
+- **Server Admin** can create collections, archive/restore/permanently delete archived collections, manage site users, manage memberships across collections, and view server health/usage panels.
+
 Collection roles:
 
 - **Viewer** can view the collection, follow records, and manage their own reminders/preferences.
 - **Logger** can add records such as plants, blooms, propagations, notes, photos, and sport observations.
-- **Admin** can edit, delete, archive/restore, manage governing bodies, select cover/type photos, review audit logs, and run collection admin tools.
-- **Owner** can manage collection settings and members, approve membership requests, promote/demote roles, and add/remove owners. AxilDB prevents removing the final owner.
+- **Gardener** can edit, delete, archive/restore, manage governing bodies, select cover/type photos, review audit logs, and run collection tools.
+- **Manager** can do gardener work plus manage collection settings, approve/reject membership requests, invite members by email, and change collection member roles. AxilDB prevents removing the final manager.
 
-Global site roles still exist for account-level administration, but normal plant work is collection-scoped through collection memberships.
+Server administration is intentionally separate from collection work. Normal plant work is collection-scoped through collection memberships.
+Public collections are browseable without signing in, but following records requires an active collection membership.
 
 The bootstrap script creates the first admin user:
 
@@ -80,7 +88,7 @@ Password: password
 
 Change this password after the first deployment.
 
-The bootstrap script also creates the default collection and makes existing global admins owners of that collection. It backfills existing records with the default `collectionId`.
+The bootstrap script also creates the default collection, makes `admin@axildb.com` a server admin, converts existing collection owners to managers, converts existing collection admins to gardeners, and backfills existing records with the default `collectionId`.
 
 ## Architecture
 
@@ -152,7 +160,7 @@ npm run check:production
 
 `check:collection-scope` is a static guardrail for the multi-collection model. It flags collection-owned Prisma reads that are missing an explicit collection boundary, including ID-based lookups that could otherwise accidentally cross collection lines.
 
-`check:collection-integrity` is a database guardrail. Run it on the server after schema changes or data repairs to confirm collection-owned records have `collectionId` values, exactly one default collection exists, every collection has an active owner, and linked records, photos, notes, follows, reminders, audit logs, and propagation graph edges do not cross collection boundaries.
+`check:collection-integrity` is a database guardrail. Run it on the server after schema changes or data repairs to confirm collection-owned records have `collectionId` values, exactly one default collection exists, every active collection has an active manager, the initial server admin exists, legacy roles are migrated, and linked records, photos, notes, follows, reminders, audit logs, and propagation graph edges do not cross collection boundaries.
 
 `check:production` runs the repeatable pre-deploy safety pass: TypeScript, collection static scans, the database integrity scan when `DATABASE_URL` is available, and a production build.
 
@@ -232,8 +240,9 @@ docker compose up -d --build
 
 Core models:
 
-- `Collection`: tenant-like workspace with slug, name, visibility, and description.
+- `Collection`: tenant-like workspace with slug, name, visibility, active/archived status, and description.
 - `CollectionMembership`: user membership, collection role, and pending/active/rejected status.
+- `CollectionInvitation`: single-use collection invitation tokens for adding new users by email.
 - `PlantDefinition`: taxonomic/cultivar definition and reference metadata.
 - `PlantAlias`: alternate names with type, source, confidence, and notes.
 - `PlantInstance`: an individual plant/specimen in the collection.

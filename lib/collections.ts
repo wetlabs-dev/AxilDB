@@ -2,13 +2,13 @@ import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getCurrentUser, type AuthUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { collectionRoleAtLeast, collectionRoleRank, isServerAdminRole, normalizeCollectionRole, type CollectionRole } from '@/lib/roles'
 
 export const DEFAULT_COLLECTION_SLUG = 'axildb'
 export const COLLECTION_HEADER = 'x-axildb-collection'
 
-export type CollectionRole = 'OWNER' | 'ADMIN' | 'LOGGER' | 'VIEWER'
 export type CollectionVisibility = 'PUBLIC' | 'PRIVATE'
-export type CollectionStatus = 'PENDING' | 'ACTIVE' | 'REJECTED'
+export type CollectionStatus = 'ACTIVE' | 'ARCHIVED'
 
 export type CollectionContext = {
   collection: {
@@ -16,6 +16,7 @@ export type CollectionContext = {
     name: string
     slug: string
     visibility: string
+    status: string
     description: string | null
   }
   user: AuthUser | null
@@ -24,13 +25,6 @@ export type CollectionContext = {
     role: string
     status: string
   } | null
-}
-
-const roleRank: Record<CollectionRole, number> = {
-  VIEWER: 1,
-  LOGGER: 2,
-  ADMIN: 3,
-  OWNER: 4,
 }
 
 export function collectionPath(slug: string, path = '/') {
@@ -62,7 +56,7 @@ export async function ensureDefaultCollection() {
   const oldestOwnedCollection = existingDefault
     ? null
     : await prisma.collection.findFirst({
-        where: { memberships: { some: { role: 'OWNER', status: 'ACTIVE' } } },
+        where: { memberships: { some: { role: { in: ['OWNER', 'MANAGER'] }, status: 'ACTIVE' } } },
         orderBy: { createdAt: 'asc' },
       })
 
@@ -74,6 +68,7 @@ export async function ensureDefaultCollection() {
         name: 'AxilDB',
         slug: DEFAULT_COLLECTION_SLUG,
         visibility: 'PRIVATE',
+        status: 'ACTIVE',
         description: 'Default AxilDB collection.',
         isDefault: true,
       },
@@ -95,16 +90,18 @@ export async function ensureDefaultCollection() {
     where: { id: collection.id },
   })
 
-  /*
-   * The default collection is identified by isDefault rather than slug so its
-   * URL slug can be renamed without bootstrap recreating an empty axildb collection.
-   */
-  const admins = await prisma.user.findMany({ where: { role: 'ADMIN' }, select: { id: true } })
+  await prisma.collection.updateMany({ where: { status: { not: 'ARCHIVED' } }, data: { status: 'ACTIVE' } })
+  await prisma.user.updateMany({ where: { email: 'admin@axildb.com' }, data: { role: 'SERVER_ADMIN' } })
+  await prisma.user.updateMany({ where: { NOT: { email: 'admin@axildb.com' }, role: { in: ['ADMIN', 'LOGGER', 'VIEWER'] } }, data: { role: 'USER' } })
+  await prisma.collectionMembership.updateMany({ where: { role: 'OWNER' }, data: { role: 'MANAGER' } })
+  await prisma.collectionMembership.updateMany({ where: { role: 'ADMIN' }, data: { role: 'GARDENER' } })
+
+  const admins = await prisma.user.findMany({ where: { role: 'SERVER_ADMIN' }, select: { id: true } })
   for (const admin of admins) {
     await prisma.collectionMembership.upsert({
       where: { collectionId_userId: { collectionId: defaultCollection.id, userId: admin.id } },
-      update: { role: 'OWNER', status: 'ACTIVE' },
-      create: { collectionId: defaultCollection.id, userId: admin.id, role: 'OWNER', status: 'ACTIVE' },
+      update: { role: 'MANAGER', status: 'ACTIVE' },
+      create: { collectionId: defaultCollection.id, userId: admin.id, role: 'MANAGER', status: 'ACTIVE' },
     })
   }
 
@@ -139,7 +136,7 @@ export async function getCollectionContext(slug?: string): Promise<CollectionCon
   const resolvedSlug = slug || (await getCurrentCollectionSlug())
   const collection = await prisma.collection.findUnique({
     where: { slug: resolvedSlug },
-    select: { id: true, name: true, slug: true, visibility: true, description: true },
+    select: { id: true, name: true, slug: true, visibility: true, status: true, description: true },
   })
 
   if (!collection) {
@@ -166,33 +163,40 @@ export function isActiveMember(context: CollectionContext) {
 
 export function membershipRole(context: CollectionContext): CollectionRole | null {
   if (!isActiveMember(context)) return null
-  const role = context.membership?.role as CollectionRole | undefined
-  return role && role in roleRank ? role : null
+  return normalizeCollectionRole(context.membership?.role)
 }
 
 export function canViewCollection(user: AuthUser | null, context: CollectionContext) {
+  if (context.collection.status === 'ARCHIVED') return false
+  if (isServerAdminRole(user?.role)) return true
   if (context.collection.visibility === 'PUBLIC') return true
   if (!user) return false
   return Boolean(membershipRole(context))
 }
 
 export function canCreateInCollection(user: AuthUser | null, context: CollectionContext) {
+  if (context.collection.status === 'ARCHIVED') return false
+  if (isServerAdminRole(user?.role)) return true
   const role = membershipRole(context)
-  return Boolean(user && role && roleRank[role] >= roleRank.LOGGER)
+  return Boolean(user && role && collectionRoleRank[role] >= collectionRoleRank.LOGGER)
 }
 
 export function canEditInCollection(user: AuthUser | null, context: CollectionContext) {
+  if (context.collection.status === 'ARCHIVED') return false
+  if (isServerAdminRole(user?.role)) return true
   const role = membershipRole(context)
-  return Boolean(user && role && roleRank[role] >= roleRank.ADMIN)
+  return Boolean(user && role && collectionRoleRank[role] >= collectionRoleRank.GARDENER)
 }
 
 export function canManageCollection(user: AuthUser | null, context: CollectionContext) {
+  if (context.collection.status === 'ARCHIVED') return false
+  if (isServerAdminRole(user?.role)) return true
   const role = membershipRole(context)
-  return Boolean(user && role && roleRank[role] >= roleRank.OWNER)
+  return Boolean(user && role && collectionRoleRank[role] >= collectionRoleRank.MANAGER)
 }
 
 async function assertCollectionTwoFactorReady(user: AuthUser, role: CollectionRole | null) {
-  if (!role || roleRank[role] < roleRank.ADMIN) return
+  if (!role || collectionRoleRank[role] < collectionRoleRank.GARDENER) return
   const twoFactor = await prisma.userTwoFactor.findUnique({ where: { userId: user.id } })
   if (!twoFactor?.enabledAt) redirect('/account/security?setup=required')
   if (!user.twoFactorVerifiedAt) redirect('/login?twoFactor=expired')
@@ -207,7 +211,12 @@ async function requireCollectionRole(slug: string | undefined, minimumRole: Coll
   }
 
   const role = membershipRole(context)
-  if (!user || !role || roleRank[role] < roleRank[minimumRole]) {
+  if (user && isServerAdminRole(user.role) && context.collection.status !== 'ARCHIVED') {
+    await assertCollectionTwoFactorReady(user, 'MANAGER')
+    return { ...context, user, role: 'MANAGER' as CollectionRole }
+  }
+
+  if (context.collection.status === 'ARCHIVED' || !user || !role || !collectionRoleAtLeast(role, minimumRole)) {
     throw new Error('You do not have permission for this collection.')
   }
 
@@ -221,6 +230,9 @@ export async function requireCollectionViewer(slug?: string) {
     if (!context.user) redirect('/login')
     redirect(`/collection-access?slug=${encodeURIComponent(context.collection.slug)}`)
   }
+  if (context.user && isServerAdminRole(context.user.role)) {
+    await assertCollectionTwoFactorReady(context.user, 'MANAGER')
+  }
   return context
 }
 
@@ -228,24 +240,40 @@ export async function requireCollectionLogger(slug?: string) {
   return requireCollectionRole(slug, 'LOGGER')
 }
 
+export async function requireCollectionGardener(slug?: string) {
+  return requireCollectionRole(slug, 'GARDENER')
+}
+
+export async function requireCollectionManager(slug?: string) {
+  return requireCollectionRole(slug, 'MANAGER')
+}
+
 export async function requireCollectionAdmin(slug?: string) {
-  return requireCollectionRole(slug, 'ADMIN')
+  return requireCollectionGardener(slug)
 }
 
 export async function requireCollectionOwner(slug?: string) {
-  return requireCollectionRole(slug, 'OWNER')
+  return requireCollectionManager(slug)
 }
 
 export async function publicCollectionsForUser(user: AuthUser | null) {
+  if (isServerAdminRole(user?.role)) {
+    return prisma.collection.findMany({
+      where: { status: 'ACTIVE' },
+      orderBy: { name: 'asc' },
+      include: { memberships: { where: { userId: user!.id }, take: 1 } },
+    })
+  }
+
   return prisma.collection.findMany({
     where: user
       ? {
           OR: [
-            { visibility: 'PUBLIC' },
-            { memberships: { some: { userId: user.id, status: 'ACTIVE' } } },
+            { visibility: 'PUBLIC', status: 'ACTIVE' },
+            { status: 'ACTIVE', memberships: { some: { userId: user.id, status: 'ACTIVE' } } },
           ],
         }
-      : { visibility: 'PUBLIC' },
+      : { visibility: 'PUBLIC', status: 'ACTIVE' },
     orderBy: { name: 'asc' },
     include: user ? { memberships: { where: { userId: user.id }, take: 1 } } : undefined,
   })
@@ -253,7 +281,7 @@ export async function publicCollectionsForUser(user: AuthUser | null) {
 
 export async function userOwnsAnyCollection(userId: string) {
   const count = await prisma.collectionMembership.count({
-    where: { userId, role: 'OWNER', status: 'ACTIVE' },
+    where: { userId, role: 'MANAGER', status: 'ACTIVE' },
   })
   return count > 0
 }

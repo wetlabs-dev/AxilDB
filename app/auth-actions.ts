@@ -1,7 +1,7 @@
 'use server'
 
 import { redirect } from 'next/navigation'
-import { audit, clearSession, consumeTwoFactorChallenge, createSession, createTwoFactorChallenge, getCurrentUser, getTwoFactorChallenge, hashPassword, markCurrentSessionTwoFactorVerified, requireAdminUser, requireUser, verifyPassword } from '@/lib/auth'
+import { audit, clearSession, consumeTwoFactorChallenge, createSession, createTwoFactorChallenge, getCurrentUser, getTwoFactorChallenge, hashPassword, hashToken, markCurrentSessionTwoFactorVerified, requireServerAdmin, requireUser, verifyPassword } from '@/lib/auth'
 import { sendEmail, appUrl } from '@/lib/email'
 import { consumeEmailToken, createEmailToken, emailTokenPurposes, expireOutstandingEmailTokens, type EmailTokenPurpose } from '@/lib/email-tokens'
 import { magicLoginEmail, passwordResetEmail, welcomeEmail } from '@/lib/email-templates'
@@ -9,7 +9,7 @@ import { prisma } from '@/lib/prisma'
 import { decryptTotpSecret, encryptRecoveryCodes, encryptTotpSecret, generateRecoveryCodes, generateTotpSecret, hashRecoveryCode, verifyTotp } from '@/lib/totp'
 
 const val = (fd: FormData, key: string) => String(fd.get(key) || '').trim()
-const roles = new Set(['VIEWER', 'LOGGER', 'ADMIN'])
+const roles = new Set(['USER', 'SERVER_ADMIN'])
 
 function checkbox(fd: FormData, key: string) {
   return fd.get(key) === 'on'
@@ -17,7 +17,7 @@ function checkbox(fd: FormData, key: string) {
 
 function roleFromForm(fd: FormData) {
   const role = val(fd, 'role').toUpperCase()
-  return roles.has(role) ? role : 'VIEWER'
+  return roles.has(role) ? role : 'USER'
 }
 
 function authEmailStatusUrl(path: string, status: 'sent' | 'limited' | 'error') {
@@ -103,7 +103,7 @@ export async function login(fd: FormData) {
 
   await createSession(user.id)
   await audit({ id: user.id, email: user.email, role: user.role }, 'LOGIN', 'USER', user.id, `${user.email} signed in`)
-  redirect(user.role === 'ADMIN' && !user.twoFactor?.enabledAt ? '/account/security?setup=required' : '/')
+  redirect(user.role === 'SERVER_ADMIN' && !user.twoFactor?.enabledAt ? '/account/security?setup=required' : '/')
 }
 
 export async function verifyTwoFactorLogin(fd: FormData) {
@@ -205,7 +205,7 @@ export async function regenerateRecoveryCodes() {
   const user = await requireUser()
   const setup = await prisma.userTwoFactor.findUnique({ where: { userId: user.id } })
   if (!setup?.enabledAt) redirect('/account/security?twoFactor=missing')
-  if (user.role === 'ADMIN' && !user.twoFactorVerifiedAt) redirect('/login?twoFactor=expired')
+  if (user.role === 'SERVER_ADMIN' && !user.twoFactorVerifiedAt) redirect('/login?twoFactor=expired')
 
   const recoveryCodes = generateRecoveryCodes()
   await prisma.$transaction(async (tx) => {
@@ -277,6 +277,7 @@ export async function updateAccount(fd: FormData) {
 export async function registerViewer(fd: FormData) {
   const email = val(fd, 'email').toLowerCase()
   const password = val(fd, 'password')
+  const inviteToken = val(fd, 'invite')
 
   if (!email || password.length < 8) redirect('/register?error=invalid')
 
@@ -287,11 +288,32 @@ export async function registerViewer(fd: FormData) {
     data: {
       email,
       passwordHash: hashPassword(password),
-      role: 'VIEWER',
+      role: 'USER',
       emailPreference: { create: {} },
     },
   })
-  await audit({ id: user.id, email: user.email, role: user.role }, 'REGISTER', 'USER', user.id, `Registered viewer account ${email}`, { email, role: 'VIEWER' })
+  await audit({ id: user.id, email: user.email, role: user.role }, 'REGISTER', 'USER', user.id, `Registered viewer account ${email}`, { email, role: 'USER' })
+
+  if (inviteToken) {
+    const invitation = await prisma.collectionInvitation.findUnique({
+      where: { tokenHash: hashToken(inviteToken) },
+      include: { collection: true },
+    })
+    if (invitation && invitation.email === email && invitation.status === 'PENDING' && invitation.expiresAt > new Date()) {
+      await prisma.$transaction([
+        prisma.collectionMembership.upsert({
+          where: { collectionId_userId: { collectionId: invitation.collectionId, userId: user.id } },
+          update: { role: invitation.role, status: 'ACTIVE' },
+          create: { collectionId: invitation.collectionId, userId: user.id, role: invitation.role, status: 'ACTIVE' },
+        }),
+        prisma.collectionInvitation.update({
+          where: { id: invitation.id },
+          data: { status: 'ACCEPTED', acceptedUserId: user.id, acceptedAt: new Date() },
+        }),
+      ])
+      await audit({ id: user.id, email: user.email, role: user.role }, 'ACCEPT', 'COLLECTION_INVITATION', invitation.id, `${email} accepted invitation to ${invitation.collection.name}`, { role: invitation.role }, invitation.collectionId)
+    }
+  }
 
   try {
     await sendWelcomeVerificationEmail(user)
@@ -306,7 +328,7 @@ export async function registerViewer(fd: FormData) {
 }
 
 export async function createUser(fd: FormData) {
-  const actor = await requireAdminUser()
+  const actor = await requireServerAdmin()
   const email = val(fd, 'email').toLowerCase()
   const password = val(fd, 'password')
   const role = roleFromForm(fd)
@@ -328,11 +350,11 @@ export async function createUser(fd: FormData) {
     await audit(actor, 'ERROR', 'EMAIL', user.id, `Failed to send welcome email to ${email}`, { email, error: String(error) })
   }
 
-  redirect('/users')
+  redirect('/server/users')
 }
 
 export async function updateUser(fd: FormData) {
-  const actor = await requireAdminUser()
+  const actor = await requireServerAdmin()
   const id = val(fd, 'id')
   const email = val(fd, 'email').toLowerCase()
   const role = roleFromForm(fd)
@@ -341,15 +363,15 @@ export async function updateUser(fd: FormData) {
   if (password) data.passwordHash = hashPassword(password)
   const user = await prisma.user.update({ where: { id }, data })
   await audit(actor, 'UPDATE', 'USER', id, `Updated user ${user.email}`, { email, role, passwordChanged: !!password })
-  redirect('/users')
+  redirect('/server/users')
 }
 
 export async function resendVerificationEmail(fd: FormData) {
-  const actor = await requireAdminUser()
+  const actor = await requireServerAdmin()
   const id = val(fd, 'id')
   const user = await prisma.user.findUniqueOrThrow({ where: { id } })
-  if (!(await isEmailRequestAllowed(user.email, emailTokenPurposes.emailVerification))) redirect(authEmailStatusUrl('/users', 'limited'))
-  await sendVerificationAndAudit(actor, user, '/users')
+  if (!(await isEmailRequestAllowed(user.email, emailTokenPurposes.emailVerification))) redirect(authEmailStatusUrl('/server/users', 'limited'))
+  await sendVerificationAndAudit(actor, user, '/server/users')
 }
 
 export async function resendOwnVerificationEmail() {
@@ -499,10 +521,10 @@ export async function updateEmailPreferences(fd: FormData) {
 }
 
 export async function deleteUser(fd: FormData) {
-  const actor = await requireAdminUser()
+  const actor = await requireServerAdmin()
   const id = val(fd, 'id')
   if (id === actor.id) throw new Error('You cannot delete your own account.')
   const user = await prisma.user.delete({ where: { id } })
   await audit(actor, 'DELETE', 'USER', id, `Deleted user ${user.email}`, { email: user.email, role: user.role })
-  redirect('/users')
+  redirect('/server/users')
 }

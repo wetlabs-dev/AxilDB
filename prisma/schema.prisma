@@ -25,7 +25,7 @@ model User {
   email               String               @unique
   emailVerifiedAt     DateTime?
   passwordHash        String
-  role                String               @default("LOGGER")
+  role                String               @default("USER")
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   sessions            Session[]
@@ -38,6 +38,9 @@ model User {
   twoFactor           UserTwoFactor?
   twoFactorChallenges TwoFactorChallenge[]
   memberships         CollectionMembership[]
+  archivedCollections Collection[] @relation("CollectionArchivedBy")
+  sentCollectionInvitations CollectionInvitation[] @relation("CollectionInvitationInviter")
+  acceptedCollectionInvitations CollectionInvitation[] @relation("CollectionInvitationAcceptedUser")
 
   @@index([role])
   @@index([emailVerifiedAt])
@@ -48,12 +51,17 @@ model Collection {
   name                String
   slug                String                 @unique
   visibility          String                 @default("PRIVATE")
+  status              String                 @default("ACTIVE")
   isDefault           Boolean                @default(false)
   description         String?
+  archivedAt          DateTime?
+  archivedById        String?
   createdAt           DateTime               @default(now())
   updatedAt           DateTime               @updatedAt
 
+  archivedBy          User?                  @relation("CollectionArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull)
   memberships         CollectionMembership[]
+  invitations         CollectionInvitation[]
   auditLogs           AuditLog[]
   follows             Follow[]
   followNotifications FollowNotification[]
@@ -69,6 +77,7 @@ model Collection {
   governingBodies     GoverningBody[]
 
   @@index([visibility])
+  @@index([status])
   @@index([isDefault])
 }
 
@@ -89,6 +98,30 @@ model CollectionMembership {
   @@index([userId])
   @@index([role])
   @@index([status])
+}
+
+model CollectionInvitation {
+  id             String    @id @default(cuid())
+  collectionId   String
+  email          String
+  role           String    @default("VIEWER")
+  tokenHash      String    @unique
+  status         String    @default("PENDING")
+  inviterId      String
+  acceptedUserId String?
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  inviter      User       @relation("CollectionInvitationInviter", fields: [inviterId], references: [id], onDelete: Cascade)
+  acceptedUser User?      @relation("CollectionInvitationAcceptedUser", fields: [acceptedUserId], references: [id], onDelete: SetNull)
+
+  @@index([collectionId])
+  @@index([email])
+  @@index([status])
+  @@index([expiresAt])
 }
 
 model Session {

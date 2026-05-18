@@ -1,8 +1,8 @@
 import { Button, Card, Field, Select, TextArea } from '@/components/ui'
-import { requireCollectionOwner } from '@/lib/collections'
+import { requireCollectionManager } from '@/lib/collections'
 
 export default async function CollectionSettingsPage() {
-  const { collection } = await requireCollectionOwner()
+  const { collection } = await requireCollectionManager()
 
   return (
     <div className="space-y-6">

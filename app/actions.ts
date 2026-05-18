@@ -130,6 +130,9 @@ export async function followEntity(fd: FormData) {
   const entityId = val(fd, 'entityId')!
   const destination = back(fd)
   const label = val(fd, 'label') || await followLabel(context.collection.id, entityType, entityId)
+  if (context.membership?.status !== 'ACTIVE') {
+    redirect(`/collection-access?slug=${encodeURIComponent(context.collection.slug)}`)
+  }
 
   const follow = await prisma.follow.upsert({
     where: { collectionId_userId_scope_entityType_entityId: { collectionId: context.collection.id, userId: user.id, scope, entityType, entityId } },

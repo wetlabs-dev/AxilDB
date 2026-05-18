@@ -30,17 +30,78 @@ const relationshipChecks = [
     `,
   },
   {
-    label: 'Every collection has at least one active owner',
+    label: 'Every active collection has at least one active manager',
     sql: `
       SELECT COUNT(*)::int AS count
       FROM "Collection" collection
-      WHERE NOT EXISTS (
-        SELECT 1
-        FROM "CollectionMembership" membership
-        WHERE membership."collectionId" = collection.id
-          AND membership.status = 'ACTIVE'
-          AND membership.role = 'OWNER'
-      )
+      WHERE collection.status = 'ACTIVE'
+        AND NOT EXISTS (
+          SELECT 1
+          FROM "CollectionMembership" membership
+          WHERE membership."collectionId" = collection.id
+            AND membership.status = 'ACTIVE'
+            AND membership.role = 'MANAGER'
+        )
+    `,
+  },
+  {
+    label: 'Initial server admin account exists',
+    sql: `
+      SELECT CASE
+        WHEN COUNT(*) FILTER (WHERE email = 'admin@axildb.com' AND role = 'SERVER_ADMIN') = 1 THEN 0
+        ELSE 1
+      END AS count
+      FROM "User"
+    `,
+  },
+  {
+    label: 'Legacy global user roles have been migrated',
+    sql: `
+      SELECT COUNT(*)::int AS count
+      FROM "User"
+      WHERE role IN ('ADMIN', 'LOGGER', 'VIEWER')
+    `,
+  },
+  {
+    label: 'Legacy collection membership roles have been migrated',
+    sql: `
+      SELECT COUNT(*)::int AS count
+      FROM "CollectionMembership"
+      WHERE role IN ('OWNER', 'ADMIN')
+    `,
+  },
+  {
+    label: 'Archived collections are not default collections',
+    sql: `
+      SELECT COUNT(*)::int AS count
+      FROM "Collection"
+      WHERE status = 'ARCHIVED'
+        AND "isDefault" = true
+    `,
+  },
+  {
+    label: 'Active public/private collections use known visibility values',
+    sql: `
+      SELECT COUNT(*)::int AS count
+      FROM "Collection"
+      WHERE status = 'ACTIVE'
+        AND visibility NOT IN ('PUBLIC', 'PRIVATE')
+    `,
+  },
+  {
+    label: 'Collection invitations use known roles',
+    sql: `
+      SELECT COUNT(*)::int AS count
+      FROM "CollectionInvitation"
+      WHERE role NOT IN ('VIEWER', 'LOGGER', 'GARDENER', 'MANAGER')
+    `,
+  },
+  {
+    label: 'Collection invitations stay in known statuses',
+    sql: `
+      SELECT COUNT(*)::int AS count
+      FROM "CollectionInvitation"
+      WHERE status NOT IN ('PENDING', 'ACCEPTED', 'REJECTED')
     `,
   },
   {

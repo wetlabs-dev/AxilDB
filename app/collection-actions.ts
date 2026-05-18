@@ -2,12 +2,16 @@
 
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
-import { audit, requireUser } from '@/lib/auth'
-import { collectionPath, requireCollectionOwner, userOwnsAnyCollection } from '@/lib/collections'
+import { randomBytes, createHash } from 'crypto'
+import { audit, requireServerAdmin, requireUser } from '@/lib/auth'
+import { collectionPath, requireCollectionManager } from '@/lib/collections'
+import { sendEmail, appUrl } from '@/lib/email'
+import { renderBrandedEmail } from '@/lib/email-templates'
 import { prisma } from '@/lib/prisma'
+import { collectionRoles, normalizeCollectionRole } from '@/lib/roles'
 
 const val = (fd: FormData, key: string) => String(fd.get(key) || '').trim()
-const roleRank: Record<string, number> = { VIEWER: 1, LOGGER: 2, ADMIN: 3, OWNER: 4 }
+const validRoles = new Set<string>(collectionRoles)
 
 function slugify(value: string) {
   return value
@@ -28,18 +32,25 @@ async function uniqueSlug(base: string) {
   return slug
 }
 
-async function assertHasOtherOwner(collectionId: string, userId: string) {
-  const ownerCount = await prisma.collectionMembership.count({
-    where: { collectionId, status: 'ACTIVE', role: 'OWNER', NOT: { userId } },
+function tokenHash(token: string) {
+  return createHash('sha256').update(token).digest('hex')
+}
+
+function roleFromForm(fd: FormData) {
+  const role = normalizeCollectionRole(val(fd, 'role'))
+  if (!role || !validRoles.has(role)) throw new Error('Invalid role.')
+  return role
+}
+
+async function assertHasOtherManager(collectionId: string, userId: string) {
+  const managerCount = await prisma.collectionMembership.count({
+    where: { collectionId, status: 'ACTIVE', role: 'MANAGER', NOT: { userId } },
   })
-  if (ownerCount === 0) throw new Error('A collection must keep at least one owner.')
+  if (managerCount === 0) throw new Error('A collection must keep at least one manager.')
 }
 
 export async function createCollection(fd: FormData) {
-  const user = await requireUser()
-  if (!(await userOwnsAnyCollection(user.id))) {
-    throw new Error('Only collection owners can create new collections.')
-  }
+  const user = await requireServerAdmin()
 
   const name = val(fd, 'name')
   if (!name) throw new Error('Collection name is required.')
@@ -50,8 +61,9 @@ export async function createCollection(fd: FormData) {
       name,
       slug,
       visibility: val(fd, 'visibility') === 'PUBLIC' ? 'PUBLIC' : 'PRIVATE',
+      status: 'ACTIVE',
       description: val(fd, 'description'),
-      memberships: { create: { userId: user.id, role: 'OWNER', status: 'ACTIVE' } },
+      memberships: { create: { userId: user.id, role: 'MANAGER', status: 'ACTIVE' } },
     },
   })
 
@@ -61,7 +73,7 @@ export async function createCollection(fd: FormData) {
 
 export async function saveCollectionSettings(fd: FormData) {
   const slug = val(fd, 'collectionSlug')
-  const { user, collection } = await requireCollectionOwner(slug)
+  const { user, collection } = await requireCollectionManager(slug)
   const requestedSlug = slugify(val(fd, 'slug') || collection.slug)
   const duplicate = await prisma.collection.findFirst({
     where: { slug: requestedSlug, NOT: { id: collection.id } },
@@ -106,7 +118,7 @@ export async function requestMembership(fd: FormData) {
 }
 
 export async function approveMembership(fd: FormData) {
-  const { user, collection } = await requireCollectionOwner(val(fd, 'collectionSlug'))
+  const { user, collection } = await requireCollectionManager(val(fd, 'collectionSlug'))
   const membershipId = val(fd, 'membershipId')
   const membership = await prisma.collectionMembership.findFirstOrThrow({ where: { id: membershipId, collectionId: collection.id } })
   await prisma.collectionMembership.update({ where: { id: membership.id }, data: { status: 'ACTIVE' } })
@@ -115,7 +127,7 @@ export async function approveMembership(fd: FormData) {
 }
 
 export async function rejectMembership(fd: FormData) {
-  const { user, collection } = await requireCollectionOwner(val(fd, 'collectionSlug'))
+  const { user, collection } = await requireCollectionManager(val(fd, 'collectionSlug'))
   const membershipId = val(fd, 'membershipId')
   const membership = await prisma.collectionMembership.findFirstOrThrow({ where: { id: membershipId, collectionId: collection.id } })
   await prisma.collectionMembership.update({ where: { id: membership.id }, data: { status: 'REJECTED' } })
@@ -124,11 +136,10 @@ export async function rejectMembership(fd: FormData) {
 }
 
 export async function addCollectionMember(fd: FormData) {
-  const { user, collection } = await requireCollectionOwner(val(fd, 'collectionSlug'))
+  const { user, collection } = await requireCollectionManager(val(fd, 'collectionSlug'))
   const email = val(fd, 'email').toLowerCase()
-  const role = val(fd, 'role')
+  const role = roleFromForm(fd)
   if (!email) throw new Error('Email is required.')
-  if (!roleRank[role]) throw new Error('Invalid role.')
 
   const memberUser = await prisma.user.findUnique({ where: { email } })
   if (!memberUser) throw new Error('No user exists with that email address.')
@@ -144,23 +155,103 @@ export async function addCollectionMember(fd: FormData) {
 }
 
 export async function updateMembershipRole(fd: FormData) {
-  const { user, collection } = await requireCollectionOwner(val(fd, 'collectionSlug'))
+  const { user, collection } = await requireCollectionManager(val(fd, 'collectionSlug'))
   const membershipId = val(fd, 'membershipId')
-  const role = val(fd, 'role')
-  if (!roleRank[role]) throw new Error('Invalid role.')
+  const role = roleFromForm(fd)
   const membership = await prisma.collectionMembership.findFirstOrThrow({ where: { id: membershipId, collectionId: collection.id } })
-  if (membership.role === 'OWNER' && role !== 'OWNER') await assertHasOtherOwner(collection.id, membership.userId)
+  if (normalizeCollectionRole(membership.role) === 'MANAGER' && role !== 'MANAGER') await assertHasOtherManager(collection.id, membership.userId)
   await prisma.collectionMembership.update({ where: { id: membership.id }, data: { role } })
   await audit(user, 'UPDATE', 'COLLECTION_MEMBERSHIP', membership.id, `Changed collection role to ${role}`, membership, collection.id)
   redirect(collectionPath(collection.slug, '/members'))
 }
 
 export async function removeMembership(fd: FormData) {
-  const { user, collection } = await requireCollectionOwner(val(fd, 'collectionSlug'))
+  const { user, collection } = await requireCollectionManager(val(fd, 'collectionSlug'))
   const membershipId = val(fd, 'membershipId')
   const membership = await prisma.collectionMembership.findFirstOrThrow({ where: { id: membershipId, collectionId: collection.id } })
-  if (membership.role === 'OWNER') await assertHasOtherOwner(collection.id, membership.userId)
+  if (normalizeCollectionRole(membership.role) === 'MANAGER') await assertHasOtherManager(collection.id, membership.userId)
   await prisma.collectionMembership.delete({ where: { id: membership.id } })
   await audit(user, 'DELETE', 'COLLECTION_MEMBERSHIP', membership.id, `Removed collection member`, membership, collection.id)
   redirect(collectionPath(collection.slug, '/members'))
+}
+
+export async function inviteCollectionMember(fd: FormData) {
+  const { user, collection } = await requireCollectionManager(val(fd, 'collectionSlug'))
+  const email = val(fd, 'email').toLowerCase()
+  const role = roleFromForm(fd)
+  if (!email) throw new Error('Email is required.')
+
+  const existingUser = await prisma.user.findUnique({ where: { email } })
+  if (existingUser) {
+    const membership = await prisma.collectionMembership.upsert({
+      where: { collectionId_userId: { collectionId: collection.id, userId: existingUser.id } },
+      update: { role, status: 'ACTIVE' },
+      create: { collectionId: collection.id, userId: existingUser.id, role, status: 'ACTIVE' },
+    })
+    await audit(user, 'CREATE', 'COLLECTION_MEMBERSHIP', membership.id, `Added ${email} to ${collection.name} as ${role}`, membership, collection.id)
+    redirect(collectionPath(collection.slug, '/members'))
+  }
+
+  const token = randomBytes(32).toString('base64url')
+  const invitation = await prisma.collectionInvitation.create({
+    data: {
+      collectionId: collection.id,
+      email,
+      role,
+      tokenHash: tokenHash(token),
+      inviterId: user.id,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    },
+  })
+  const inviteUrl = appUrl(`/register?invite=${encodeURIComponent(token)}`)
+  const template = renderBrandedEmail({
+    title: `Join ${collection.name} on AxilDB`,
+    preview: `${user.email} invited you to an AxilDB collection.`,
+    body: [
+      `${user.email} invited you to join ${collection.name} as ${role.toLowerCase()}.`,
+      'Create your account with this single-use link and AxilDB will add you to the collection.',
+    ],
+    actionLabel: 'Accept invitation',
+    actionUrl: inviteUrl,
+  })
+  await sendEmail({ to: email, subject: `Join ${collection.name} on AxilDB`, ...template })
+  await audit(user, 'INVITE', 'COLLECTION_INVITATION', invitation.id, `Invited ${email} to ${collection.name} as ${role}`, { email, role }, collection.id)
+  redirect(collectionPath(collection.slug, '/members'))
+}
+
+export async function archiveCollection(fd: FormData) {
+  const user = await requireServerAdmin()
+  const collectionId = val(fd, 'collectionId')
+  const collection = await prisma.collection.findUniqueOrThrow({ where: { id: collectionId } })
+  if (collection.isDefault) throw new Error('The default collection cannot be archived.')
+  await prisma.collection.update({
+    where: { id: collection.id },
+    data: { status: 'ARCHIVED', archivedAt: new Date(), archivedById: user.id },
+  })
+  await audit(user, 'ARCHIVE', 'COLLECTION', collection.id, `Archived collection ${collection.name}`, collection, collection.id)
+  redirect('/server/collections')
+}
+
+export async function restoreCollection(fd: FormData) {
+  const user = await requireServerAdmin()
+  const collectionId = val(fd, 'collectionId')
+  const collection = await prisma.collection.update({
+    where: { id: collectionId },
+    data: { status: 'ACTIVE', archivedAt: null, archivedById: null },
+  })
+  await audit(user, 'RESTORE', 'COLLECTION', collection.id, `Restored collection ${collection.name}`, collection, collection.id)
+  redirect('/server/collections')
+}
+
+export async function permanentlyDeleteCollection(fd: FormData) {
+  const user = await requireServerAdmin()
+  const collectionId = val(fd, 'collectionId')
+  const confirmSlug = val(fd, 'confirmSlug')
+  const collection = await prisma.collection.findUniqueOrThrow({ where: { id: collectionId } })
+  if (collection.isDefault) throw new Error('The default collection cannot be deleted.')
+  if (collection.status !== 'ARCHIVED') throw new Error('Archive the collection before deleting it permanently.')
+  if (confirmSlug !== collection.slug) throw new Error('Type the collection slug to confirm deletion.')
+  await audit(user, 'DELETE', 'COLLECTION', collection.id, `Permanently deleted collection ${collection.name}`, collection, null)
+  await prisma.collection.delete({ where: { id: collection.id } })
+  redirect('/server/collections')
 }

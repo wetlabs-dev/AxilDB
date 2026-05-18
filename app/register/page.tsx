@@ -7,7 +7,7 @@ import Link from 'next/link'
 export default async function Register({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>
+  searchParams: Promise<{ error?: string; invite?: string }>
 }) {
   const user = await getCurrentUser()
   if (user) redirect('/')
@@ -34,6 +34,7 @@ export default async function Register({
           </p>
         )}
         <form action={registerViewer} className="grid gap-3">
+          {sp.invite && <input type="hidden" name="invite" value={sp.invite} />}
           <Field label="Email" name="email" type="email" required />
           <Field label="Password" name="password" type="password" required minLength={8} />
           <Button>Create viewer account</Button>

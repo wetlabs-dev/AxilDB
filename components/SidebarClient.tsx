@@ -25,6 +25,7 @@ import {
   Tag,
   Users,
 } from 'lucide-react'
+import { collectionRoleAtLeast, collectionRoleLabel, isServerAdminRole } from '@/lib/roles'
 
 export type SidebarCollection = {
   id: string
@@ -40,13 +41,6 @@ export type SidebarCollection = {
 type SidebarUser = {
   email: string
   role: string
-}
-
-const roleRank: Record<string, number> = {
-  VIEWER: 1,
-  LOGGER: 2,
-  ADMIN: 3,
-  OWNER: 4,
 }
 
 const navSections = [
@@ -81,11 +75,11 @@ const navSections = [
 ] as const
 
 const collectionAdminItems = [
-  ['/collection-settings', 'Collection Settings', Settings, 'OWNER'],
-  ['/members', 'Collection Members', Users, 'OWNER'],
-  ['/settings', 'Governing Bodies', Settings, 'ADMIN'],
-  ['/admin-tools', 'Admin Tools', FlaskConical, 'ADMIN'],
-  ['/audit', 'Audit Log', FileText, 'ADMIN'],
+  ['/collection-settings', 'Collection Settings', Settings, 'MANAGER'],
+  ['/members', 'Collection Members', Users, 'MANAGER'],
+  ['/settings', 'Governing Bodies', Settings, 'GARDENER'],
+  ['/admin-tools', 'Collection Tools', FlaskConical, 'GARDENER'],
+  ['/audit', 'Audit Log', FileText, 'GARDENER'],
 ] as const
 
 function collectionPath(slug: string, path = '/') {
@@ -123,8 +117,8 @@ export function SidebarClient({
   const currentCollection = collections.find((collection) => collection.slug === slug)
   const currentName = currentCollection?.name || (initialCollection.slug === slug ? initialCollection.name : slug)
   const role = activeRole(currentCollection)
-  const isSiteAdmin = user?.role === 'ADMIN'
-  const collectionAdminItemsForRole = collectionAdminItems.filter(([, , , minimumRole]) => role && roleRank[role] >= roleRank[minimumRole])
+  const isSiteAdmin = isServerAdminRole(user?.role)
+  const collectionAdminItemsForRole = collectionAdminItems.filter(([, , , minimumRole]) => isSiteAdmin || (role && collectionRoleAtLeast(role, minimumRole)))
   const globalPath = (href: string) => `${href}?collection=${encodeURIComponent(slug)}`
 
   const nav = (
@@ -150,9 +144,9 @@ export function SidebarClient({
             </GhostLink>
           ))}
           {isSiteAdmin && (
-            <GhostLink href={globalPath('/users')}>
-              <Users className="h-4 w-4 shrink-0" />
-              <span>Site Users</span>
+            <GhostLink href="/server">
+              <FlaskConical className="h-4 w-4 shrink-0" />
+              <span>Server Management</span>
             </GhostLink>
           )}
         </div>
@@ -164,7 +158,7 @@ export function SidebarClient({
     <div className="grid gap-2">
       <div>
         <p className="truncate font-medium">{user.email}</p>
-        <p className="text-stone-600">{user.role.toLowerCase()}</p>
+        <p className="text-stone-600">{isServerAdminRole(user.role) ? 'server admin' : role ? collectionRoleLabel(role) : 'user'}</p>
       </div>
       <GhostLink href={globalPath('/account')}>
         <BookOpen className="h-4 w-4 shrink-0" />

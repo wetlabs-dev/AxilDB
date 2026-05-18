@@ -82,13 +82,13 @@ export default async function CollectionAccessPage({
 
         {user && membership?.status === 'PENDING' && (
           <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-            Your membership request is pending owner approval.
+            Your membership request is pending collection manager approval.
           </p>
         )}
 
         {user && membership?.status === 'REJECTED' && (
           <p className="mt-4 rounded-lg border border-stone-200 bg-white/70 p-3 text-sm text-stone-700">
-            Your previous membership request was not approved. Contact a collection owner if you think this should change.
+            Your previous membership request was not approved. Contact a collection manager if you think this should change.
           </p>
         )}
 
