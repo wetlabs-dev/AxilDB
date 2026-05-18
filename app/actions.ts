@@ -303,6 +303,7 @@ export async function createPlantInstance(fd: FormData) {
   const acquisitionDate = date(val(fd, 'acquisitionDate'))
   const propagationDate = date(val(fd, 'propagationDate'))
   const plantId = await generatePlantId(prisma, {
+    collectionId: collection.id,
     plantDefinitionId,
     instanceType,
     date: propagationDate || acquisitionDate,
@@ -903,6 +904,7 @@ export async function createPropagationEvent(fd: FormData) {
 
   for (let index = 0; index < childCount; index += 1) {
     const plantId = await generatePlantId(prisma, {
+      collectionId: collection.id,
       plantDefinitionId: parentPlant.plantDefinitionId,
       date: eventDate,
       instanceType: 'PROPAGATION',

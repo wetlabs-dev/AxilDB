@@ -71,6 +71,18 @@ const relationshipChecks = [
     `,
   },
   {
+    label: 'Plant IDs are unique within each collection',
+    sql: `
+      SELECT COUNT(*)::int AS count
+      FROM (
+        SELECT "collectionId", "plantId"
+        FROM "PlantInstance"
+        GROUP BY "collectionId", "plantId"
+        HAVING COUNT(*) > 1
+      ) duplicates
+    `,
+  },
+  {
     label: 'BloomEvent.collectionId matches PlantInstance.collectionId',
     sql: `
       SELECT COUNT(*)::int AS count

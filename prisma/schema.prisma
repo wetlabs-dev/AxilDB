@@ -313,7 +313,7 @@ model PlantInstance {
   id                String    @id @default(cuid())
   collectionId      String?
   plantDefinitionId String
-  plantId           String    @unique
+  plantId           String
   instanceType      String
   status            String    @default("ACTIVE")
   location          String?
@@ -340,6 +340,7 @@ model PlantInstance {
   sportRecords    SportStabilityRecord[]
 
   @@index([collectionId])
+  @@unique([collectionId, plantId])
   @@index([plantDefinitionId])
   @@index([status])
   @@index([instanceType])

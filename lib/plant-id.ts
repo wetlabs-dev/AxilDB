@@ -46,6 +46,7 @@ export function plantIdContextCode(instanceType?: string | null, method?: string
 export async function generatePlantId(
   client: PlantIdClient,
   options: {
+    collectionId: string
     plantDefinitionId: string
     date?: Date | string | null
     instanceType?: string | null
@@ -64,7 +65,7 @@ export async function generatePlantId(
   ].join('-')
 
   const existing = await client.plantInstance.findMany({
-    where: { plantId: { startsWith: `${prefix}-` } },
+    where: { collectionId: options.collectionId, plantId: { startsWith: `${prefix}-` } },
     select: { plantId: true },
   })
 
