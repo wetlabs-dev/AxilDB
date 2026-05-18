@@ -19,6 +19,31 @@ const requiredCollectionModels = [
 
 const relationshipChecks = [
   {
+    label: 'Exactly one default collection exists',
+    sql: `
+      SELECT CASE
+        WHEN COUNT(*) = 0 THEN 0
+        WHEN COUNT(*) FILTER (WHERE "isDefault" = true) = 1 THEN 0
+        ELSE 1
+      END AS count
+      FROM "Collection"
+    `,
+  },
+  {
+    label: 'Every collection has at least one active owner',
+    sql: `
+      SELECT COUNT(*)::int AS count
+      FROM "Collection" collection
+      WHERE NOT EXISTS (
+        SELECT 1
+        FROM "CollectionMembership" membership
+        WHERE membership."collectionId" = collection.id
+          AND membership.status = 'ACTIVE'
+          AND membership.role = 'OWNER'
+      )
+    `,
+  },
+  {
     label: 'PlantAlias.collectionId matches PlantDefinition.collectionId',
     sql: `
       SELECT COUNT(*)::int AS count
@@ -210,6 +235,69 @@ const relationshipChecks = [
       JOIN "PropagationEvent" event ON event.id = reminder."entityId"
       WHERE reminder."entityType" = 'PROPAGATION_EVENT'
         AND reminder."collectionId" IS DISTINCT FROM event."collectionId"
+    `,
+  },
+  {
+    label: 'Collection-domain audit logs include collectionId',
+    sql: `
+      SELECT COUNT(*)::int AS count
+      FROM "AuditLog" audit
+      WHERE audit."entityType" IN (
+        'COLLECTION',
+        'COLLECTION_MEMBERSHIP',
+        'GOVERNING_BODY',
+        'PLANT_DEFINITION',
+        'PLANT_INSTANCE',
+        'NOTE',
+        'PHOTO',
+        'BLOOM_EVENT',
+        'PROPAGATION_EVENT',
+        'REMINDER',
+        'FOLLOW',
+        'SPORT_STABILITY_RECORD',
+        'DEMO_DATA'
+      )
+        AND audit."collectionId" IS NULL
+    `,
+  },
+  {
+    label: 'Existing plant-definition audit logs stay in the definition collection',
+    sql: `
+      SELECT COUNT(*)::int AS count
+      FROM "AuditLog" audit
+      JOIN "PlantDefinition" definition ON definition.id = audit."entityId"
+      WHERE audit."entityType" = 'PLANT_DEFINITION'
+        AND audit."collectionId" IS DISTINCT FROM definition."collectionId"
+    `,
+  },
+  {
+    label: 'Existing plant-instance audit logs stay in the plant collection',
+    sql: `
+      SELECT COUNT(*)::int AS count
+      FROM "AuditLog" audit
+      JOIN "PlantInstance" instance ON instance.id = audit."entityId"
+      WHERE audit."entityType" = 'PLANT_INSTANCE'
+        AND audit."collectionId" IS DISTINCT FROM instance."collectionId"
+    `,
+  },
+  {
+    label: 'Existing bloom audit logs stay in the bloom collection',
+    sql: `
+      SELECT COUNT(*)::int AS count
+      FROM "AuditLog" audit
+      JOIN "BloomEvent" bloom ON bloom.id = audit."entityId"
+      WHERE audit."entityType" = 'BLOOM_EVENT'
+        AND audit."collectionId" IS DISTINCT FROM bloom."collectionId"
+    `,
+  },
+  {
+    label: 'Existing propagation audit logs stay in the propagation collection',
+    sql: `
+      SELECT COUNT(*)::int AS count
+      FROM "AuditLog" audit
+      JOIN "PropagationEvent" event ON event.id = audit."entityId"
+      WHERE audit."entityType" = 'PROPAGATION_EVENT'
+        AND audit."collectionId" IS DISTINCT FROM event."collectionId"
     `,
   },
 ]

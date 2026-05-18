@@ -142,16 +142,19 @@ npm run db:push
 npm run db:seed
 npm run db:bootstrap
 npm run backup
+npm run check:collection-defaults
 npm run check:collection-scope
 npm run check:collection-integrity
 npm run check:production
 ```
 
+`check:collection-defaults` is a static guardrail for legacy slug assumptions. The default collection can be renamed, so normal app code should use the current collection context rather than hard-coding `axildb`.
+
 `check:collection-scope` is a static guardrail for the multi-collection model. It flags collection-owned Prisma reads that are missing an explicit collection boundary, including ID-based lookups that could otherwise accidentally cross collection lines.
 
-`check:collection-integrity` is a database guardrail. Run it on the server after schema changes or data repairs to confirm collection-owned records have `collectionId` values and that linked records, photos, notes, follows, reminders, and propagation graph edges do not cross collection boundaries.
+`check:collection-integrity` is a database guardrail. Run it on the server after schema changes or data repairs to confirm collection-owned records have `collectionId` values, exactly one default collection exists, every collection has an active owner, and linked records, photos, notes, follows, reminders, audit logs, and propagation graph edges do not cross collection boundaries.
 
-`check:production` runs the repeatable pre-deploy safety pass: TypeScript, the collection-scope static scan, the database integrity scan when `DATABASE_URL` is available, and a production build.
+`check:production` runs the repeatable pre-deploy safety pass: TypeScript, collection static scans, the database integrity scan when `DATABASE_URL` is available, and a production build.
 
 ## Backup And Restore
 

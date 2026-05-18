@@ -4,12 +4,11 @@ import { reminderEmail } from '../lib/email-templates'
 import { nextOccurrence, reminderCategoryLabel, reminderPreferenceKey } from '../lib/reminders'
 
 const prisma = new PrismaClient()
-const defaultCollectionSlug = 'axildb'
 
 function collectionPath(slug: string | null | undefined, path = '/') {
-  const collectionSlug = slug || defaultCollectionSlug
+  if (!slug) return '/collections'
   const normalized = path.startsWith('/') ? path : `/${path}`
-  return `/c/${collectionSlug}${normalized === '/' ? '' : normalized}`
+  return `/c/${slug}${normalized === '/' ? '' : normalized}`
 }
 
 async function recordUrl(reminder: { collectionId: string | null; entityType: string | null; entityId: string | null; collection?: { id: string; slug: string } | null }) {

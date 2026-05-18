@@ -14,6 +14,7 @@
     "db:bootstrap": "tsx prisma/bootstrap.ts",
     "email:send-reminders": "tsx scripts/send-reminders.ts",
     "backup": "sh scripts/backup.sh",
+    "check:collection-defaults": "node scripts/check-collection-defaults.mjs",
     "check:collection-scope": "node scripts/check-collection-scope.mjs",
     "check:collection-integrity": "tsx scripts/check-collection-integrity.ts",
     "check:production": "sh scripts/check-production.sh"
