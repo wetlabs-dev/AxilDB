@@ -53,14 +53,14 @@ function aliasRows(fd: FormData) {
     .filter((alias) => alias.name)
 }
 
-async function cleanupGenericEntity(entityType: string, entityId: string) {
-  await prisma.note.deleteMany({ where: { entityType, entityId } })
-  await prisma.photo.deleteMany({ where: { entityType, entityId } })
+async function cleanupGenericEntity(collectionId: string, entityType: string, entityId: string) {
+  await prisma.note.deleteMany({ where: { collectionId, entityType, entityId } })
+  await prisma.photo.deleteMany({ where: { collectionId, entityType, entityId } })
 }
 
-async function cleanupPlantInstanceDependents(id: string) {
+async function cleanupPlantInstanceDependents(collectionId: string, id: string) {
   const blooms = await prisma.bloomEvent.findMany({
-    where: { plantInstanceId: id },
+    where: { collectionId, plantInstanceId: id },
     select: { id: true },
   })
 
@@ -68,19 +68,20 @@ async function cleanupPlantInstanceDependents(id: string) {
 
   if (bloomIds.length > 0) {
     await prisma.photo.deleteMany({
-      where: { entityType: 'BLOOM_EVENT', entityId: { in: bloomIds } },
+      where: { collectionId, entityType: 'BLOOM_EVENT', entityId: { in: bloomIds } },
     })
 
     await prisma.note.deleteMany({
-      where: { entityType: 'BLOOM_EVENT', entityId: { in: bloomIds } },
+      where: { collectionId, entityType: 'BLOOM_EVENT', entityId: { in: bloomIds } },
     })
   }
 
-  await cleanupGenericEntity('PLANT_INSTANCE', id)
+  await cleanupGenericEntity(collectionId, 'PLANT_INSTANCE', id)
 }
 
-async function cleanupOrphanPropagationEvents() {
+async function cleanupOrphanPropagationEvents(collectionId: string) {
   const events = await prisma.propagationEvent.findMany({
+    where: { collectionId },
     select: {
       id: true,
       _count: { select: { parents: true, children: true, sportRecords: true } },
@@ -94,27 +95,27 @@ async function cleanupOrphanPropagationEvents() {
   if (orphanIds.length === 0) return
 
   await prisma.note.deleteMany({
-    where: { entityType: 'PROPAGATION_EVENT', entityId: { in: orphanIds } },
+    where: { collectionId, entityType: 'PROPAGATION_EVENT', entityId: { in: orphanIds } },
   })
 
   await prisma.photo.deleteMany({
-    where: { entityType: 'PROPAGATION_EVENT', entityId: { in: orphanIds } },
+    where: { collectionId, entityType: 'PROPAGATION_EVENT', entityId: { in: orphanIds } },
   })
 
-  await prisma.propagationEvent.deleteMany({ where: { id: { in: orphanIds } } })
+  await prisma.propagationEvent.deleteMany({ where: { collectionId, id: { in: orphanIds } } })
 }
 
-async function followLabel(entityType: string, entityId: string) {
+async function followLabel(collectionId: string, entityType: string, entityId: string) {
   if (entityType === 'PLANT_INSTANCE') {
-    const instance = await prisma.plantInstance.findUnique({
-      where: { id: entityId },
+    const instance = await prisma.plantInstance.findFirst({
+      where: { id: entityId, collectionId },
       include: { plantDefinition: true },
     })
     return instance ? `${instance.plantId} · ${plantName(instance.plantDefinition)}` : entityId
   }
 
   if (entityType === 'PLANT_DEFINITION') {
-    const definition = await prisma.plantDefinition.findUnique({ where: { id: entityId } })
+    const definition = await prisma.plantDefinition.findFirst({ where: { id: entityId, collectionId } })
     return definition ? plantName(definition) : entityId
   }
 
@@ -128,10 +129,10 @@ export async function followEntity(fd: FormData) {
   const entityType = val(fd, 'entityType')!
   const entityId = val(fd, 'entityId')!
   const destination = back(fd)
-  const label = val(fd, 'label') || await followLabel(entityType, entityId)
+  const label = val(fd, 'label') || await followLabel(context.collection.id, entityType, entityId)
 
   const follow = await prisma.follow.upsert({
-    where: { userId_scope_entityType_entityId: { userId: user.id, scope, entityType, entityId } },
+    where: { collectionId_userId_scope_entityType_entityId: { collectionId: context.collection.id, userId: user.id, scope, entityType, entityId } },
     update: { label },
     create: { collectionId: context.collection.id, userId: user.id, scope, entityType, entityId, label },
   })
@@ -146,10 +147,12 @@ export async function unfollowEntity(fd: FormData) {
   const id = val(fd, 'id')!
   const destination = back(fd)
   const follow = await prisma.follow.findUniqueOrThrow({ where: { id } })
+  const context = follow.collectionId ? await requireCollectionViewer(await collectionSlug(fd)) : null
 
   if (follow.userId !== user.id && !isAdmin(user)) {
     throw new Error('You do not have permission to remove this follow.')
   }
+  if (context && context.collection.id !== follow.collectionId) throw new Error('Follow not found in this collection.')
 
   await prisma.follow.delete({ where: { id } })
   await audit(user, 'DELETE', 'FOLLOW', id, `Unfollowed ${follow.label}`, follow, follow.collectionId)
@@ -196,7 +199,7 @@ export async function deleteGoverningBody(fd: FormData) {
   const id = val(fd, 'id')!
   const body = await prisma.governingBody.findFirst({ where: { id, collectionId: collection.id } })
   if (!body) throw new Error('Governing body not found in this collection.')
-  await cleanupGenericEntity('GOVERNING_BODY', id)
+  await cleanupGenericEntity(collection.id, 'GOVERNING_BODY', id)
   await prisma.governingBody.delete({ where: { id } })
   await audit(user, 'DELETE', 'GOVERNING_BODY', id, `Deleted governing body ${body?.name || id}`, undefined, collection.id)
   redirect(collectionPath(collection.slug, '/settings'))
@@ -278,12 +281,12 @@ export async function deletePlantDefinition(fd: FormData) {
   })
 
   for (const instance of instances) {
-    await cleanupPlantInstanceDependents(instance.id)
+    await cleanupPlantInstanceDependents(collection.id, instance.id)
   }
 
-  await cleanupGenericEntity('PLANT_DEFINITION', id)
+  await cleanupGenericEntity(collection.id, 'PLANT_DEFINITION', id)
   await prisma.plantDefinition.delete({ where: { id } })
-  await cleanupOrphanPropagationEvents()
+  await cleanupOrphanPropagationEvents(collection.id)
   await audit(user, 'DELETE', 'PLANT_DEFINITION', id, `Deleted plant definition ${definition ? `${definition.genus} ${definition.species}` : id}`, undefined, collection.id)
 
   redirect(collectionPath(collection.slug, '/plants'))
@@ -373,9 +376,9 @@ export async function deletePlantInstance(fd: FormData) {
   const instance = await prisma.plantInstance.findFirst({ where: { id, collectionId: collection.id } })
   if (!instance) throw new Error('Plant instance not found in this collection.')
 
-  await cleanupPlantInstanceDependents(id)
+  await cleanupPlantInstanceDependents(collection.id, id)
   await prisma.plantInstance.delete({ where: { id } })
-  await cleanupOrphanPropagationEvents()
+  await cleanupOrphanPropagationEvents(collection.id)
   await audit(user, 'DELETE', 'PLANT_INSTANCE', id, `Deleted plant instance ${instance?.plantId || id}`, undefined, collection.id)
 
   redirect(collectionPath(collection.slug, '/instances'))
@@ -450,10 +453,11 @@ export async function addNote(fd: FormData) {
 
 async function requireReminderAccess(id: string) {
   const user = await requireUser()
-  const reminder = await prisma.reminder.findUniqueOrThrow({ where: { id } })
+  const reminder = await prisma.reminder.findUniqueOrThrow({ where: { id }, include: { collection: { select: { slug: true } } } })
 
   if (reminder.userId !== user.id && !isAdmin(user)) {
-    throw new Error('You do not have permission to manage this reminder.')
+    if (!reminder.collection?.slug) throw new Error('You do not have permission to manage this reminder.')
+    await requireCollectionAdmin(reminder.collection.slug)
   }
 
   return { user, reminder }
@@ -843,7 +847,7 @@ export async function deleteBloomEvent(fd: FormData) {
   const plantInstanceId = val(fd, 'plantInstanceId')!
   await prisma.bloomEvent.findFirstOrThrow({ where: { id, collectionId: collection.id }, select: { id: true } })
 
-  await cleanupGenericEntity('BLOOM_EVENT', id)
+  await cleanupGenericEntity(collection.id, 'BLOOM_EVENT', id)
   await prisma.bloomEvent.delete({ where: { id } })
   await audit(user, 'DELETE', 'BLOOM_EVENT', id, `Deleted bloom event for plant instance ${plantInstanceId}`, undefined, collection.id)
 
@@ -958,7 +962,7 @@ export async function deletePropagationEvent(fd: FormData) {
   const event = await prisma.propagationEvent.findFirst({ where: { id, collectionId: collection.id } })
   if (!event) redirect(collectionPath(collection.slug, '/propagations'))
 
-  await cleanupGenericEntity('PROPAGATION_EVENT', id)
+  await cleanupGenericEntity(collection.id, 'PROPAGATION_EVENT', id)
   await prisma.propagationEvent.delete({ where: { id } })
   await audit(user, 'DELETE', 'PROPAGATION_EVENT', id, `Deleted ${event?.method || ''} propagation event`, event, collection.id)
 

@@ -222,7 +222,7 @@ model Follow {
   user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   notifications FollowNotification[]
 
-  @@unique([userId, scope, entityType, entityId])
+  @@unique([collectionId, userId, scope, entityType, entityId])
   @@index([collectionId])
   @@index([userId])
   @@index([scope, entityType, entityId])

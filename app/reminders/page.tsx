@@ -151,12 +151,12 @@ export default async function RemindersPage() {
                   <>
                     <form action={completeReminder}>
                       <input type="hidden" name="id" value={reminder.id} />
-                      <input type="hidden" name="back" value="/reminders" />
+                      <input type="hidden" name="back" value={collectionPath(collection.slug, '/reminders')} />
                       <Button className="px-3 py-1.5 text-xs">Complete</Button>
                     </form>
                     <form action={pauseReminder}>
                       <input type="hidden" name="id" value={reminder.id} />
-                      <input type="hidden" name="back" value="/reminders" />
+                      <input type="hidden" name="back" value={collectionPath(collection.slug, '/reminders')} />
                       <Button className="border border-stone-300 bg-white/70 px-3 py-1.5 text-xs text-stone-800 hover:bg-white">Pause</Button>
                     </form>
                   </>
@@ -164,13 +164,13 @@ export default async function RemindersPage() {
                 {reminder.pausedAt && !reminder.completedAt && (
                   <form action={resumeReminder}>
                     <input type="hidden" name="id" value={reminder.id} />
-                    <input type="hidden" name="back" value="/reminders" />
+                    <input type="hidden" name="back" value={collectionPath(collection.slug, '/reminders')} />
                     <Button className="px-3 py-1.5 text-xs">Resume</Button>
                   </form>
                 )}
                 <form action={deleteReminder}>
                   <input type="hidden" name="id" value={reminder.id} />
-                  <input type="hidden" name="back" value="/reminders" />
+                  <input type="hidden" name="back" value={collectionPath(collection.slug, '/reminders')} />
                   <ConfirmDeleteButton
                     className="px-3 py-1.5 text-xs"
                     title="Delete reminder?"

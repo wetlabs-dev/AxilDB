@@ -78,13 +78,49 @@ export async function notifyFollowers(prisma: PrismaClient, input: NotifyFollowe
 
   const follows = await prisma.follow.findMany({
     where: { ...(input.collectionId ? { collectionId: input.collectionId } : {}), OR: filters },
-    include: { user: { include: { emailPreference: true } } },
+    include: {
+      collection: { select: { visibility: true } },
+      user: {
+        include: {
+          emailPreference: true,
+          memberships: {
+            where: {
+              ...(input.collectionId ? { collectionId: input.collectionId } : {}),
+              status: 'ACTIVE',
+            },
+            select: { collectionId: true },
+          },
+        },
+      },
+    },
   })
 
   const seenUsers = new Set<string>()
   for (const follow of follows) {
     if (seenUsers.has(follow.userId)) continue
     seenUsers.add(follow.userId)
+
+    const hasPrivateAccess =
+      follow.collection?.visibility === 'PUBLIC' ||
+      !follow.collectionId ||
+      follow.user.memberships.some((membership) => membership.collectionId === follow.collectionId)
+
+    if (!hasPrivateAccess) {
+      await prisma.followNotification.create({
+        data: {
+          followId: follow.id,
+          collectionId: input.collectionId || follow.collectionId,
+          userId: follow.userId,
+          eventType: input.eventType,
+          subject: input.subject,
+          body: input.body,
+          recordUrl: appUrl(input.recordPath),
+          status: 'SKIPPED',
+          error: 'User no longer has access to this private collection.',
+        },
+      })
+      continue
+    }
 
     if (!follow.user.emailVerifiedAt || follow.user.emailPreference?.followNotifications === false) {
       await prisma.followNotification.create({
