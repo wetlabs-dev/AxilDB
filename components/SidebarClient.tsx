@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { MobileMenuAutoClose } from './MobileMenuAutoClose'
 import { Button, GhostLink } from './ui'
 import {
@@ -96,7 +96,7 @@ function collectionPath(slug: string, path = '/') {
 
 function slugFromPathname(pathname: string) {
   const match = pathname.match(/^\/c\/([^/]+)/)
-  return match ? decodeURIComponent(match[1]) : 'axildb'
+  return match ? decodeURIComponent(match[1]) : null
 }
 
 function activeRole(collection: SidebarCollection | undefined) {
@@ -116,12 +116,16 @@ export function SidebarClient({
   logoutAction: () => Promise<void>
 }) {
   const pathname = usePathname()
-  const slug = slugFromPathname(pathname)
+  const searchParams = useSearchParams()
+  const pathSlug = slugFromPathname(pathname)
+  const querySlug = searchParams.get('collection')
+  const slug = pathSlug || querySlug || initialCollection.slug
   const currentCollection = collections.find((collection) => collection.slug === slug)
   const currentName = currentCollection?.name || (initialCollection.slug === slug ? initialCollection.name : slug)
   const role = activeRole(currentCollection)
   const isSiteAdmin = user?.role === 'ADMIN'
   const collectionAdminItemsForRole = collectionAdminItems.filter(([, , , minimumRole]) => role && roleRank[role] >= roleRank[minimumRole])
+  const globalPath = (href: string) => `${href}?collection=${encodeURIComponent(slug)}`
 
   const nav = (
     <nav className="grid gap-4">
@@ -146,7 +150,7 @@ export function SidebarClient({
             </GhostLink>
           ))}
           {isSiteAdmin && (
-            <GhostLink href="/users">
+            <GhostLink href={globalPath('/users')}>
               <Users className="h-4 w-4 shrink-0" />
               <span>Site Users</span>
             </GhostLink>
@@ -162,7 +166,7 @@ export function SidebarClient({
         <p className="truncate font-medium">{user.email}</p>
         <p className="text-stone-600">{user.role.toLowerCase()}</p>
       </div>
-      <GhostLink href="/account">
+      <GhostLink href={globalPath('/account')}>
         <BookOpen className="h-4 w-4 shrink-0" />
         <span>Account</span>
       </GhostLink>
@@ -190,7 +194,7 @@ export function SidebarClient({
             {collection.name}
           </a>
         ))}
-        <Link href="/collections" className="rounded-md px-2 py-1 text-[#2f6b45] hover:bg-[#d6dfc9]/60">
+        <Link href={globalPath('/collections')} className="rounded-md px-2 py-1 text-[#2f6b45] hover:bg-[#d6dfc9]/60">
           Manage collections
         </Link>
       </div>
