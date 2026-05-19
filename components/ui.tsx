@@ -5,8 +5,8 @@ import { HelpTooltip } from '@/components/HelpTooltip'
 const control = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
 const primary = 'rounded-md bg-[#2f6b45] px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-[#255537]'
 
-export function Card({ className = '', children }: any) {
-  return <div className={cn('min-w-0 overflow-hidden rounded-lg border border-stone-200/90 bg-[#fffaf0]/82 p-4 shadow-[0_8px_30px_rgba(47,38,24,0.07)] sm:p-5', className)}>{children}</div>
+export function Card({ className = '', children, ...props }: any) {
+  return <div className={cn('min-w-0 overflow-hidden rounded-lg border border-stone-200/90 bg-[#fffaf0]/82 p-4 shadow-[0_8px_30px_rgba(47,38,24,0.07)] sm:p-5', className)} {...props}>{children}</div>
 }
 
 export function AddPanel({ label, children, className = '' }: any) {

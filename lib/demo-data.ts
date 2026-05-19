@@ -199,6 +199,62 @@ export async function createDemoData(collectionId: string) {
     definitionsByCode.set(item.code, definition)
   }
 
+  const guideDefaults: Record<string, Record<string, string>> = {
+    DTR: {
+      summaryWater: 'Water sparingly',
+      summaryLight: 'Bright indirect to low light',
+      summaryToxicity: 'Pet toxic',
+      summaryCare: 'Tough rhizomatous houseplant; avoid soggy soil.',
+      wateringCadence: 'Every 2-4 weeks, less in winter.',
+      wateringMoistureLevel: 'Dry between waterings.',
+      lightIntensity: 'Bright indirect, tolerant of lower light.',
+      mediumPreferred: 'Fast-draining cactus or houseplant mix.',
+      mediumDrainage: 'Excellent drainage is important.',
+      toxicityPets: 'Toxic to cats and dogs if chewed.',
+      growthHabit: 'Rhizomatous upright foliage.',
+    },
+    STR: {
+      summaryWater: 'Keep evenly moist',
+      summaryLight: 'Bright indirect light',
+      summaryToxicity: 'Generally non-toxic to pets',
+      summaryCare: 'Warm shelf culture with steady moisture and gentle fertilizer.',
+      wateringCadence: 'Water when the surface begins to dry.',
+      wateringMoistureLevel: 'Evenly moist, not waterlogged.',
+      lightIntensity: 'Bright indirect light or moderate grow lights.',
+      mediumPreferred: 'Light African violet mix with extra perlite.',
+      fertilizationFrequency: 'Every 2-4 weeks while actively growing.',
+      propagationMethods: 'Leaf cuttings.',
+      propagationDifficulty: 'Easy to moderate.',
+      growthHabit: 'Compact rosette.',
+    },
+    HOY: {
+      summaryWater: 'Let dry partly',
+      summaryLight: 'Bright indirect light',
+      summaryToxicity: 'Milky sap may irritate',
+      summaryCare: 'Epiphytic vine that prefers airflow, chunky medium, and restraint with watering.',
+      wateringCadence: 'Water after the medium partly dries.',
+      lightIntensity: 'Bright indirect; some gentle morning sun is helpful.',
+      mediumHabit: 'Epiphytic or hemiepiphytic vine.',
+      mediumPreferred: 'Chunky aroid/orchid-style mix.',
+      toxicitySapIrritant: 'Milky sap can irritate skin.',
+      growthHabit: 'Trailing or climbing vine.',
+      bloomTriggers: 'Maturity, bright light, and stable care.',
+    },
+  }
+
+  for (const [code, guide] of Object.entries(guideDefaults)) {
+    const definition = definitionsByCode.get(code)
+    if (!definition) continue
+    await prisma.plantHusbandryGuide.create({
+      data: {
+        collectionId,
+        plantDefinitionId: definition.id,
+        reviewStatus: 'REVIEWED',
+        ...guide,
+      },
+    })
+  }
+
   const instance = async (code: string, suffix: string, data: Record<string, unknown>) =>
     prisma.plantInstance.create({
       data: {

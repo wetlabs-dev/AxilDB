@@ -11,6 +11,10 @@ It is designed for real collection work: messy taxonomy, acquisition names, alia
 - Multi-collection workspaces at `/c/[collectionSlug]`, with private/public visibility and collection-scoped memberships.
 - Plant definitions with genus, species, hybrid notation, cultivar name, authority, governing body, registration number, confidence, provisional taxon, acquisition label, reference URLs, notes, and aliases.
 - Alias tracking for synonyms, old taxonomy, trade names, common names, shorthand, and misapplied names.
+- Structured plant husbandry guides for definitions, with watering, light, temperature, humidity, medium, fertilization, repotting, propagation, pest/disease, toxicity, dormancy, bloom, growth habit, and conservation fields.
+- Live-linked husbandry guides so similar definitions can reuse the same care guidance, with fork-to-local-copy support.
+- Specimen-level husbandry overrides that highlight local care differences from the inherited definition guide.
+- AI Magic Fill for complete husbandry guide drafts, stored as editable draft content with model/review metadata.
 - Plant instances with generated plant IDs, acquisition/propagation dates, source/distributor metadata, location, archive status, notes, and photos.
 - Automatic plant ID generation based on plant definition, date, context, and sequence number.
 - Propagation events with parent/child links, method, date, success status, and generated child plant IDs.
@@ -23,7 +27,7 @@ It is designed for real collection work: messy taxonomy, acquisition names, alia
 - Sport review workflow for suspected, candidate, stable, registered, unstable, and reverted sport lines.
 - Stable sport/cultivar wizard that creates a new cultivar definition and preserves lineage history.
 - QR label generation and bulk PDF label export.
-- Collection search across definitions, instances, aliases, notes, source metadata, and plant IDs.
+- Collection search across definitions, instances, aliases, notes, husbandry text, source metadata, and plant IDs.
 - Archive/restore workflow for plants that leave the active collection.
 - Local user accounts with self-service viewer registration.
 - Collection roles for managers, gardeners, loggers, and viewers, with member approval, invitations, and role-management tools.
@@ -300,6 +304,19 @@ Most domain records carry `collectionId`, including plant definitions, aliases, 
 
 The schema intentionally uses string fields rather than Prisma enums for many domain states. This keeps taxonomy, sport states, propagation methods, and future horticultural vocabulary easier to evolve.
 
+## Plant Husbandry
+
+Plant husbandry is collection-scoped and lives in two layers:
+
+- `PlantHusbandryGuide` belongs to a plant definition. It can either store its own structured care data or live-link to another definition's guide in the same collection.
+- `PlantHusbandryOverride` belongs to one plant instance. Blank fields inherit from the definition guide; filled fields are treated as local specimen-specific adjustments.
+
+Guides are intentionally structured as explicit fields rather than a loose JSON blob. That makes each care section independently renderable and keeps the future care-sheet module straightforward: a later feature can select specimens, select care sections, merge inherited guide values with local overrides, and render a printable/shareable care package.
+
+Gardeners and managers can create, edit, link, fork, and delete definition-level husbandry guides. Loggers can add local instance-level care adjustments. Viewers can read husbandry in collections they can access.
+
+The husbandry integrity checks verify that linked guides do not cross collection boundaries, guide links do not form circular references, and instance overrides belong to the same collection as their specimen.
+
 ## Photos
 
 Photo uploads are processed with Sharp:
@@ -357,6 +374,8 @@ OPENAI_DESCRIPTION_MODEL=gpt-5.4-mini
 OPENAI_DESCRIPTION_HOURLY_LIMIT=20
 OPENAI_MAGIC_FILL_MODEL=gpt-5.4-mini
 OPENAI_MAGIC_FILL_HOURLY_LIMIT=10
+OPENAI_HUSBANDRY_FILL_MODEL=gpt-5.4-mini
+OPENAI_HUSBANDRY_FILL_HOURLY_LIMIT=10
 ```
 
 Set `TOTP_ENCRYPTION_KEY` to a long random secret in production. It encrypts authenticator app secrets before they are stored in the database. On Ubuntu, a good value can be generated with:
@@ -403,7 +422,7 @@ Recommended production provider: Amazon SES. It fits well with the AWS/Lightsail
 
 ## Optional OpenAI Plant Definition Drafting
 
-Plant definition forms include optional OpenAI buttons beside the description field. **AI draft** uses the genus, species, and cultivar fields to draft a description under 40 words. **Magic fill** asks OpenAI for a structured plant definition draft: accepted genus/species, authority, cultivar registration number, governing body, taxonomy/reference URLs, description, and aliases. The API key is never sent to the browser, and generated data is never saved automatically; review it before saving.
+Plant definition forms include optional OpenAI buttons. **AI draft** uses the genus, species, and cultivar fields to draft a description under 40 words. **Magic fill** asks OpenAI for a structured plant definition draft: accepted genus/species, authority, cultivar registration number, governing body, taxonomy/reference URLs, description, and aliases. **Magic Fill husbandry** asks for one structured draft covering the entire care guide. The API key is never sent to the browser, and generated data is never saved automatically; review it before saving.
 
 To enable it, create an OpenAI API key in the OpenAI Platform dashboard and add it to the server-level config file that Docker Compose already loads:
 
@@ -419,6 +438,8 @@ OPENAI_DESCRIPTION_MODEL=gpt-5.4-mini
 OPENAI_DESCRIPTION_HOURLY_LIMIT=20
 OPENAI_MAGIC_FILL_MODEL=gpt-5.4-mini
 OPENAI_MAGIC_FILL_HOURLY_LIMIT=10
+OPENAI_HUSBANDRY_FILL_MODEL=gpt-5.4-mini
+OPENAI_HUSBANDRY_FILL_HOURLY_LIMIT=10
 ```
 
 Then redeploy/recreate the app container so the environment changes are loaded:
@@ -427,7 +448,7 @@ Then redeploy/recreate the app container so the environment changes are loaded:
 docker compose up -d --build
 ```
 
-`OPENAI_DESCRIPTION_HOURLY_LIMIT` and `OPENAI_MAGIC_FILL_HOURLY_LIMIT` are lightweight per-user in-process limits for the two OpenAI buttons. For stricter cost control, also set project usage limits in the OpenAI Platform billing settings.
+`OPENAI_DESCRIPTION_HOURLY_LIMIT`, `OPENAI_MAGIC_FILL_HOURLY_LIMIT`, and `OPENAI_HUSBANDRY_FILL_HOURLY_LIMIT` are lightweight per-user in-process limits for the OpenAI buttons. For stricter cost control, also set project usage limits in the OpenAI Platform billing settings.
 
 Current email foundation:
 

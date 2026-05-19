@@ -34,6 +34,27 @@ export default async function SearchPage({
           { gbifUrl: contains(q) },
           { description: contains(q) },
           { notes: contains(q) },
+          {
+            husbandryGuide: {
+              is: {
+                OR: [
+                  { summaryWater: contains(q) },
+                  { summaryLight: contains(q) },
+                  { summaryToxicity: contains(q) },
+                  { summaryCare: contains(q) },
+                  { wateringCadence: contains(q) },
+                  { lightIntensity: contains(q) },
+                  { mediumPreferred: contains(q) },
+                  { propagationMethods: contains(q) },
+                  { toxicityPets: contains(q) },
+                  { toxicityHumans: contains(q) },
+                  { growthHabit: contains(q) },
+                  { conservationStatus: contains(q) },
+                  { nativeRangeNotes: contains(q) },
+                ],
+              },
+            },
+          },
           { aliases: { some: { OR: [{ name: contains(q) }, { source: contains(q) }, { notes: contains(q) }] } } },
         ],
       }

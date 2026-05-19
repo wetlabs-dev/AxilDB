@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import { updatePlantDefinition, deletePlantDefinition } from '@/app/actions'
+import { deletePlantDefinition, deletePlantHusbandryGuide, forkPlantHusbandryGuide, linkPlantHusbandryGuide, savePlantHusbandryGuide, updatePlantDefinition } from '@/app/actions'
 import { Button, Card, Field, HelpTooltip, SuggestionDatalist, TextArea } from '@/components/ui'
 import { ConfidenceSelect, PlantAliasFields } from '@/components/PlantAliasFields'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
@@ -7,6 +7,8 @@ import { PlantImage } from '@/components/PlantImage'
 import { rankedSuggestions } from '@/lib/suggestions'
 import { AIDescriptionField, AIMagicFillButton } from '@/components/AIDescriptionField'
 import { collectionPath, requireCollectionAdmin } from '@/lib/collections'
+import { HusbandryBadges, HusbandryEmptyPrompt, HusbandryGuideForm, HusbandryGuideView } from '@/components/Husbandry'
+import { plantName } from '@/lib/utils'
 
 const selectClass = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
 
@@ -27,11 +29,12 @@ export default async function EditPlant({
   const { collection } = await requireCollectionAdmin()
   const { id } = await params
   const { uploadError } = await searchParams
-  const [plant, bodies, typePhotos, definitionSuggestionRows] = await Promise.all([
+  const [plant, bodies, typePhotos, definitionSuggestionRows, guideSourceOptions] = await Promise.all([
     prisma.plantDefinition.findFirstOrThrow({
       where: { id, collectionId: collection.id },
       include: {
         aliases: { orderBy: { name: 'asc' } },
+        husbandryGuide: true,
         _count: { select: { instances: true } },
       },
     }),
@@ -53,8 +56,20 @@ export default async function EditPlant({
         aliases: { select: { source: true } },
       },
     }),
+    prisma.plantDefinition.findMany({
+      where: { collectionId: collection.id, NOT: { id }, husbandryGuide: { is: { sourcePlantDefinitionId: null } } },
+      include: { husbandryGuide: true },
+      orderBy: [{ genus: 'asc' }, { species: 'asc' }],
+    }),
   ])
   const currentTypePhoto = typePhotos[0]
+  const sourceDefinition = plant.husbandryGuide?.sourcePlantDefinitionId
+    ? await prisma.plantDefinition.findFirst({
+        where: { id: plant.husbandryGuide.sourcePlantDefinitionId, collectionId: collection.id },
+        include: { husbandryGuide: true },
+      })
+    : null
+  const effectiveGuide = sourceDefinition?.husbandryGuide || plant.husbandryGuide
   const definitionSuggestions = {
     genus: rankedSuggestions(definitionSuggestionRows.map((definition) => definition.genus)),
     species: rankedSuggestions(definitionSuggestionRows.map((definition) => definition.species)),
@@ -116,6 +131,115 @@ export default async function EditPlant({
           <TextArea label="Notes" name="notes" defaultValue={plant.notes} wrapperClassName="lg:col-span-2" />
           <PlantAliasFields aliases={plant.aliases} submitLabel="Save changes" sourceSuggestions={definitionSuggestions.aliasSource} />
         </form>
+      </Card>
+      <Card id="husbandry">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="font-serif text-2xl font-semibold">Plant husbandry</h3>
+            <p className="mt-1 text-sm text-stone-600">Create a care guide, link to a similar definition&apos;s guide, or fork linked care into a local guide.</p>
+            <HusbandryBadges values={effectiveGuide as any} />
+          </div>
+          {plant.husbandryGuide && (
+            <form action={deletePlantHusbandryGuide}>
+              <input type="hidden" name="collectionSlug" value={collection.slug} />
+              <input type="hidden" name="plantDefinitionId" value={plant.id} />
+              <ConfirmDeleteButton
+                title="Delete husbandry guide?"
+                message="This removes the guide or linked-guide reference for this plant definition. It does not delete plant records."
+                confirmLabel="Delete husbandry"
+                className="px-3 py-1.5 text-xs"
+              >
+                Delete husbandry
+              </ConfirmDeleteButton>
+            </form>
+          )}
+        </div>
+
+        <div className="mt-4 grid gap-4">
+          {sourceDefinition && plant.husbandryGuide ? (
+            <div className="rounded-lg border border-[#d6dfc9] bg-[#f7f4e8]/80 p-3">
+              <p className="text-sm text-stone-700">
+                This definition uses live-linked husbandry from{' '}
+                <a className="font-semibold underline" href={collectionPath(collection.slug, `/plants/${sourceDefinition.id}/edit#husbandry`)}>
+                  {plantName(sourceDefinition)}
+                </a>
+                . Changes to that source guide will appear here.
+              </p>
+              <form action={forkPlantHusbandryGuide} className="mt-3">
+                <input type="hidden" name="collectionSlug" value={collection.slug} />
+                <input type="hidden" name="plantDefinitionId" value={plant.id} />
+                <Button className="w-fit">Make local copy</Button>
+              </form>
+            </div>
+          ) : null}
+
+          <details className="group rounded-lg border border-stone-200 bg-white/50">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-semibold">
+              <span>Link husbandry from another definition</span>
+              <span className="rounded-md border border-stone-300 bg-white/70 px-2 py-1 text-xs group-open:hidden">Open</span>
+              <span className="hidden rounded-md border border-stone-300 bg-white/70 px-2 py-1 text-xs group-open:inline-block">Hide</span>
+            </summary>
+            <form action={linkPlantHusbandryGuide} className="grid gap-3 border-t border-stone-200 p-3 md:grid-cols-[1fr_auto]">
+              <input type="hidden" name="collectionSlug" value={collection.slug} />
+              <input type="hidden" name="plantDefinitionId" value={plant.id} />
+              <label className="grid gap-1 text-sm font-medium text-stone-800">
+                Source plant definition
+                <select name="sourcePlantDefinitionId" className={selectClass} required defaultValue={plant.husbandryGuide?.sourcePlantDefinitionId || ''}>
+                  <option value="">Choose a guide...</option>
+                  {guideSourceOptions.map((option) => (
+                    <option key={option.id} value={option.id}>{plantName(option)}</option>
+                  ))}
+                </select>
+              </label>
+              <Button className="self-end">Link guide</Button>
+            </form>
+          </details>
+
+          {effectiveGuide ? (
+            <HusbandryGuideView
+              values={effectiveGuide as any}
+              title="Current husbandry guide"
+              sourceLabel={sourceDefinition ? `Inherited from ${plantName(sourceDefinition)}` : undefined}
+            />
+          ) : (
+            <HusbandryEmptyPrompt />
+          )}
+
+          {!sourceDefinition && (
+            <details className="group rounded-lg border border-stone-200 bg-white/50" open={!plant.husbandryGuide}>
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-semibold">
+                <span>{plant.husbandryGuide ? 'Edit husbandry guide' : 'Create husbandry guide'}</span>
+                <span className="rounded-md border border-stone-300 bg-white/70 px-2 py-1 text-xs group-open:hidden">Open</span>
+                <span className="hidden rounded-md border border-stone-300 bg-white/70 px-2 py-1 text-xs group-open:inline-block">Hide</span>
+              </summary>
+              <div className="border-t border-stone-200 p-3">
+                <HusbandryGuideForm
+                  values={plant.husbandryGuide as any}
+                  plant={{
+                    id: plant.id,
+                    genus: plant.genus,
+                    species: plant.species,
+                    hybridNotation: plant.hybridNotation,
+                    cultivarName: plant.cultivarName,
+                    authority: plant.authority,
+                    acquisitionLabel: plant.acquisitionLabel,
+                    provisionalTaxon: plant.provisionalTaxon,
+                    description: plant.description,
+                    wikipediaUrl: plant.wikipediaUrl,
+                    inaturalistUrl: plant.inaturalistUrl,
+                    powoUrl: plant.powoUrl,
+                    gbifUrl: plant.gbifUrl,
+                    aliases: plant.aliases,
+                  }}
+                  collectionSlug={collection.slug}
+                  action={savePlantHusbandryGuide}
+                  submitLabel="Save husbandry guide"
+                  includeMagicFill
+                />
+              </div>
+            </details>
+          )}
+        </div>
       </Card>
       <Card>
         <h3 className="font-bold">Plant definition type image</h3>

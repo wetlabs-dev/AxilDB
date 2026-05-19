@@ -14,15 +14,18 @@ import {
   pauseReminder,
   deleteReminder,
   followEntity,
+  savePlantHusbandryOverride,
   unfollowEntity,
 } from '@/app/actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { PlantImage } from '@/components/PlantImage'
 import { Button, Card, Field, Select, TextArea } from '@/components/ui'
+import { HusbandryBadges, HusbandryGuideView, HusbandryOverrideForm } from '@/components/Husbandry'
 import { getCurrentUser } from '@/lib/auth'
 import { canCreateInCollection, canEditInCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
 import { recurrenceLabel, reminderCategories, reminderCategoryLabel, reminderRecurrences } from '@/lib/reminders'
+import { hasHusbandryData, mergeHusbandryValues } from '@/lib/husbandry'
 import { fmtDate, plantName, taxonomyLabel } from '@/lib/utils'
 import Link from 'next/link'
 import QRCode from 'qrcode'
@@ -41,7 +44,7 @@ export default async function InstanceDetail({
   const i = await prisma.plantInstance.findFirstOrThrow({
     where: { id, ...collectionWhere },
     include: {
-      plantDefinition: { include: { aliases: { orderBy: { name: 'asc' } } } },
+      plantDefinition: { include: { aliases: { orderBy: { name: 'asc' } }, husbandryGuide: true } },
       blooms: {
         orderBy: { bloomStartDate: 'desc' },
       },
@@ -64,8 +67,17 @@ export default async function InstanceDetail({
         },
       },
       sportRecords: { include: { propagationEvent: true }, orderBy: { generationNumber: 'desc' } },
+      husbandryOverride: true,
     },
   })
+  const sourceHusbandryGuide = i.plantDefinition.husbandryGuide?.sourcePlantDefinitionId
+    ? await prisma.plantHusbandryGuide.findFirst({
+        where: { collectionId: collection.id, plantDefinitionId: i.plantDefinition.husbandryGuide.sourcePlantDefinitionId },
+        include: { plantDefinition: true },
+      })
+    : null
+  const baseHusbandryGuide = sourceHusbandryGuide || i.plantDefinition.husbandryGuide
+  const effectiveHusbandry = mergeHusbandryValues(baseHusbandryGuide as any, i.husbandryOverride as any)
 
   const notes = await prisma.note.findMany({
     where: { ...collectionWhere, entityType: 'PLANT_INSTANCE', entityId: id },
@@ -224,6 +236,7 @@ export default async function InstanceDetail({
           <Link className="mt-3 inline-block underline" href={collectionPath(collection.slug, `/graphs?root=${i.id}`)}>
             View lineage graph
           </Link>
+          <HusbandryBadges values={effectiveHusbandry} href="#husbandry" />
           {i.plantDefinition.aliases.length > 0 && (
             <div className="mt-3 border-t border-stone-200 pt-3 text-sm">
               <p className="font-medium">Aliases</p>
@@ -233,6 +246,21 @@ export default async function InstanceDetail({
                 </p>
               ))}
             </div>
+          )}
+        </Card>
+
+        <Card id="husbandry">
+          <h3 className="font-bold">Husbandry</h3>
+          {baseHusbandryGuide ? (
+            <>
+              <p className="mt-1 text-sm text-stone-600">
+                {sourceHusbandryGuide ? `Inherited from ${plantName(sourceHusbandryGuide.plantDefinition)}.` : 'Inherited from this plant definition.'}
+                {i.husbandryOverride && hasHusbandryData(i.husbandryOverride as any) ? ' Local adjustments are applied.' : ''}
+              </p>
+              <HusbandryBadges values={effectiveHusbandry} />
+            </>
+          ) : (
+            <p className="mt-1 text-sm text-stone-600">No plant husbandry guide has been added for this definition yet.</p>
           )}
         </Card>
 
@@ -293,6 +321,30 @@ export default async function InstanceDetail({
           )}
         </Card>}
       </div>
+
+      <Card>
+        <HusbandryGuideView
+          values={effectiveHusbandry}
+          baseValues={baseHusbandryGuide as any}
+          title="Full husbandry guide"
+          sourceLabel={sourceHusbandryGuide ? `Inherited from ${plantName(sourceHusbandryGuide.plantDefinition)}` : baseHusbandryGuide ? 'Inherited from plant definition' : undefined}
+        />
+      </Card>
+
+      {canCreateInCollection(user, context) && (
+        <Card>
+          <h3 className="font-serif text-2xl font-semibold">Local husbandry adjustments</h3>
+          <p className="mt-1 text-sm text-stone-600">Use this only for care differences that apply to this individual specimen.</p>
+          <div className="mt-4">
+            <HusbandryOverrideForm
+              values={i.husbandryOverride as any}
+              collectionSlug={collection.slug}
+              plantInstanceId={id}
+              action={savePlantHusbandryOverride}
+            />
+          </div>
+        </Card>
+      )}
 
       <Card>
         <h3 className="font-bold">Children</h3>

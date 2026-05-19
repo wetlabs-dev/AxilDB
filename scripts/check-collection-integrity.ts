@@ -15,6 +15,8 @@ const requiredCollectionModels = [
   ['ReminderDelivery', 'reminderDelivery'],
   ['Follow', 'follow'],
   ['FollowNotification', 'followNotification'],
+  ['PlantHusbandryGuide', 'plantHusbandryGuide'],
+  ['PlantHusbandryOverride', 'plantHusbandryOverride'],
 ] as const
 
 const relationshipChecks = [
@@ -129,6 +131,69 @@ const relationshipChecks = [
       FROM "PlantInstance" instance
       JOIN "PlantDefinition" definition ON definition.id = instance."plantDefinitionId"
       WHERE instance."collectionId" IS DISTINCT FROM definition."collectionId"
+    `,
+  },
+  {
+    label: 'PlantHusbandryGuide.collectionId matches PlantDefinition.collectionId',
+    sql: `
+      SELECT COUNT(*)::int AS count
+      FROM "PlantHusbandryGuide" guide
+      JOIN "PlantDefinition" definition ON definition.id = guide."plantDefinitionId"
+      WHERE guide."collectionId" IS DISTINCT FROM definition."collectionId"
+    `,
+  },
+  {
+    label: 'Linked husbandry guides stay in one collection',
+    sql: `
+      SELECT COUNT(*)::int AS count
+      FROM "PlantHusbandryGuide" guide
+      JOIN "PlantDefinition" source ON source.id = guide."sourcePlantDefinitionId"
+      WHERE guide."sourcePlantDefinitionId" IS NOT NULL
+        AND guide."collectionId" IS DISTINCT FROM source."collectionId"
+    `,
+  },
+  {
+    label: 'PlantHusbandryOverride.collectionId matches PlantInstance.collectionId',
+    sql: `
+      SELECT COUNT(*)::int AS count
+      FROM "PlantHusbandryOverride" override
+      JOIN "PlantInstance" instance ON instance.id = override."plantInstanceId"
+      WHERE override."collectionId" IS DISTINCT FROM instance."collectionId"
+    `,
+  },
+  {
+    label: 'Plant husbandry guides do not link to themselves',
+    sql: `
+      SELECT COUNT(*)::int AS count
+      FROM "PlantHusbandryGuide"
+      WHERE "plantDefinitionId" = "sourcePlantDefinitionId"
+    `,
+  },
+  {
+    label: 'Plant husbandry guides do not form circular links',
+    sql: `
+      WITH RECURSIVE guide_links AS (
+        SELECT
+          guide."plantDefinitionId" AS root,
+          guide."sourcePlantDefinitionId" AS current,
+          ARRAY[guide."plantDefinitionId"] AS path,
+          false AS cycle
+        FROM "PlantHusbandryGuide" guide
+        WHERE guide."sourcePlantDefinitionId" IS NOT NULL
+        UNION ALL
+        SELECT
+          guide_links.root,
+          next_guide."sourcePlantDefinitionId" AS current,
+          guide_links.path || next_guide."plantDefinitionId",
+          next_guide."plantDefinitionId" = ANY(guide_links.path) AS cycle
+        FROM guide_links
+        JOIN "PlantHusbandryGuide" next_guide ON next_guide."plantDefinitionId" = guide_links.current
+        WHERE guide_links.current IS NOT NULL
+          AND NOT guide_links.cycle
+      )
+      SELECT COUNT(*)::int AS count
+      FROM guide_links
+      WHERE cycle = true
     `,
   },
   {
@@ -328,6 +393,8 @@ const relationshipChecks = [
         'REMINDER',
         'FOLLOW',
         'SPORT_STABILITY_RECORD',
+        'PLANT_HUSBANDRY_GUIDE',
+        'PLANT_HUSBANDRY_OVERRIDE',
         'DEMO_DATA'
       )
         AND audit."collectionId" IS NULL

@@ -4,6 +4,7 @@ import { AddPanel, Button, Card, Field, HelpTooltip, TextArea, LinkButton, Sugge
 import { ConfidenceSelect, PlantAliasFields } from '@/components/PlantAliasFields'
 import { PlantImage } from '@/components/PlantImage'
 import { AIDescriptionField, AIMagicFillButton } from '@/components/AIDescriptionField'
+import { HusbandryBadges } from '@/components/Husbandry'
 import { getCurrentUser } from '@/lib/auth'
 import { canCreateInCollection, canEditInCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { rankedSuggestions } from '@/lib/suggestions'
@@ -23,6 +24,7 @@ export default async function Plants() {
       include: {
         governingBody: true,
         aliases: { orderBy: { name: 'asc' } },
+        husbandryGuide: true,
         instances: { select: { id: true } },
         _count: { select: { instances: true } },
       },
@@ -49,7 +51,7 @@ export default async function Plants() {
   const governingBodyOptions = bodies.map((body) => ({ id: body.id, name: body.name, abbreviation: body.abbreviation }))
   const instanceIds = plants.flatMap((plant) => plant.instances.map((instance) => instance.id))
   const plantIds = plants.map((plant) => plant.id)
-  const [definitionPhotos, typePhotos, followCounts] = await Promise.all([
+  const [definitionPhotos, typePhotos, followCounts, allHusbandryGuides] = await Promise.all([
     prisma.photo.findMany({
       where: { ...collectionWhere, entityType: 'PLANT_DEFINITION', entityId: { in: plantIds }, isType: true },
       orderBy: { createdAt: 'desc' },
@@ -63,7 +65,9 @@ export default async function Plants() {
       where: { ...collectionWhere, scope: 'TYPE', entityType: 'PLANT_DEFINITION', entityId: { in: plantIds } },
       _count: { _all: true },
     }),
+    prisma.plantHusbandryGuide.findMany({ where: { collectionId: collection.id } }),
   ])
+  const husbandryGuideByDefinitionId = new Map(allHusbandryGuides.map((guide) => [guide.plantDefinitionId, guide]))
   const followCountByDefinitionId = new Map(followCounts.map((follow) => [follow.entityId, follow._count._all]))
   const typePhotoByDefinition = definitionPhotos.reduce<Record<string, string>>((acc, photo) => {
     if (!acc[photo.entityId]) acc[photo.entityId] = photo.path
@@ -168,6 +172,12 @@ export default async function Plants() {
                   </div>
                 )}
                 <p className="line-clamp-2 text-sm text-stone-600">{plant.description}</p>
+                <HusbandryBadges
+                  values={(plant.husbandryGuide?.sourcePlantDefinitionId
+                    ? husbandryGuideByDefinitionId.get(plant.husbandryGuide.sourcePlantDefinitionId)
+                    : plant.husbandryGuide) as any}
+                  href={collectionPath(collection.slug, `/plants/${plant.id}/husbandry`)}
+                />
                 <p className="mt-2 text-xs font-medium text-stone-500">
                   {followCountByDefinitionId.get(plant.id) || 0} follower{(followCountByDefinitionId.get(plant.id) || 0) === 1 ? '' : 's'}
                 </p>

@@ -79,6 +79,8 @@ model Collection {
   reminders           Reminder[]
   reminderDeliveries  ReminderDelivery[]
   governingBodies     GoverningBody[]
+  plantHusbandryGuides PlantHusbandryGuide[]
+  plantHusbandryOverrides PlantHusbandryOverride[]
 
   @@index([visibility])
   @@index([status])
@@ -379,10 +381,99 @@ model PlantDefinition {
   governingBody GoverningBody?  @relation(fields: [governingBodyId], references: [id], onDelete: SetNull)
   instances     PlantInstance[]
   aliases       PlantAlias[]
+  husbandryGuide PlantHusbandryGuide?
+  husbandrySourceFor PlantHusbandryGuide[] @relation("HusbandrySourceDefinition")
 
   @@index([collectionId])
   @@index([governingBodyId])
   @@index([confidence])
+}
+
+model PlantHusbandryGuide {
+  id                      String    @id @default(cuid())
+  collectionId            String?
+  plantDefinitionId       String    @unique
+  sourcePlantDefinitionId String?
+  summaryWater            String?
+  summaryLight            String?
+  summaryToxicity         String?
+  summaryCare             String?
+  wateringCadence         String?
+  wateringMoistureLevel   String?
+  wateringDroughtTolerance String?
+  wateringCycleNotes      String?
+  wateringSeasonalAdjustments String?
+  lightIntensity          String?
+  lightDuration           String?
+  temperatureUsdaZone     String?
+  temperatureColdTolerance String?
+  temperatureHeatTolerance String?
+  temperatureFrostSensitivity String?
+  temperatureOverwinterInstructions String?
+  humidityRange           String?
+  humidityDryAirTolerance String?
+  humidityMistingNotes    String?
+  mediumPreferred         String?
+  mediumPh                String?
+  mediumDrainage          String?
+  mediumHabit             String?
+  mediumRecipeNotes       String?
+  fertilizationType       String?
+  fertilizationStrength   String?
+  fertilizationFrequency  String?
+  fertilizationSeasonalSchedule String?
+  fertilizationMicronutrientNotes String?
+  repottingInterval       String?
+  repottingPotType        String?
+  repottingRootSensitivity String?
+  repottingDormancyConsideration String?
+  repottingDivisionGuidance String?
+  propagationMethods      String?
+  propagationDifficulty   String?
+  propagationExpectedSuccess String?
+  propagationOptimalTiming String?
+  propagationRootingHormoneNotes String?
+  propagationTissueCultureNotes String?
+  pestsCommon             String?
+  diseasesCommon          String?
+  treatmentNotes          String?
+  susceptibilityLevel     String?
+  preventativePractices   String?
+  toxicityPets            String?
+  toxicityHumans          String?
+  toxicitySapIrritant     String?
+  toxicityEdible          String?
+  dormancyBehavior        String?
+  bloomSeason             String?
+  bloomDuration           String?
+  bloomFragrance          String?
+  bloomRebloomTendency    String?
+  bloomTriggers           String?
+  bloomPollinatorNotes    String?
+  growthHabit             String?
+  rarity                  String?
+  conservationStatus      String?
+  conservationLinks       String?
+  protectedSpeciesNotes   String?
+  collectionRestrictions  String?
+  importExportConcerns    String?
+  invasiveness            String?
+  nativeRangeNotes        String?
+  aiGeneratedAt           DateTime?
+  aiModel                 String?
+  reviewStatus            String    @default("DRAFT")
+  reviewNotes             String?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  collection            Collection?      @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  plantDefinition       PlantDefinition @relation(fields: [plantDefinitionId], references: [id], onDelete: Cascade)
+  sourcePlantDefinition PlantDefinition? @relation("HusbandrySourceDefinition", fields: [sourcePlantDefinitionId], references: [id], onDelete: SetNull)
+
+  @@index([collectionId])
+  @@index([plantDefinitionId])
+  @@index([sourcePlantDefinitionId])
+  @@index([reviewStatus])
 }
 
 model PlantAlias {
@@ -435,6 +526,7 @@ model PlantInstance {
   childLinks      PropagationChild[]
   blooms          BloomEvent[]
   sportRecords    SportStabilityRecord[]
+  husbandryOverride PlantHusbandryOverride?
 
   @@index([collectionId])
   @@unique([collectionId, plantId])
@@ -442,6 +534,86 @@ model PlantInstance {
   @@index([status])
   @@index([instanceType])
   @@index([sportStatus])
+}
+
+model PlantHusbandryOverride {
+  id                      String    @id @default(cuid())
+  collectionId            String?
+  plantInstanceId         String    @unique
+  summaryWater            String?
+  summaryLight            String?
+  summaryToxicity         String?
+  summaryCare             String?
+  wateringCadence         String?
+  wateringMoistureLevel   String?
+  wateringDroughtTolerance String?
+  wateringCycleNotes      String?
+  wateringSeasonalAdjustments String?
+  lightIntensity          String?
+  lightDuration           String?
+  temperatureUsdaZone     String?
+  temperatureColdTolerance String?
+  temperatureHeatTolerance String?
+  temperatureFrostSensitivity String?
+  temperatureOverwinterInstructions String?
+  humidityRange           String?
+  humidityDryAirTolerance String?
+  humidityMistingNotes    String?
+  mediumPreferred         String?
+  mediumPh                String?
+  mediumDrainage          String?
+  mediumHabit             String?
+  mediumRecipeNotes       String?
+  fertilizationType       String?
+  fertilizationStrength   String?
+  fertilizationFrequency  String?
+  fertilizationSeasonalSchedule String?
+  fertilizationMicronutrientNotes String?
+  repottingInterval       String?
+  repottingPotType        String?
+  repottingRootSensitivity String?
+  repottingDormancyConsideration String?
+  repottingDivisionGuidance String?
+  propagationMethods      String?
+  propagationDifficulty   String?
+  propagationExpectedSuccess String?
+  propagationOptimalTiming String?
+  propagationRootingHormoneNotes String?
+  propagationTissueCultureNotes String?
+  pestsCommon             String?
+  diseasesCommon          String?
+  treatmentNotes          String?
+  susceptibilityLevel     String?
+  preventativePractices   String?
+  toxicityPets            String?
+  toxicityHumans          String?
+  toxicitySapIrritant     String?
+  toxicityEdible          String?
+  dormancyBehavior        String?
+  bloomSeason             String?
+  bloomDuration           String?
+  bloomFragrance          String?
+  bloomRebloomTendency    String?
+  bloomTriggers           String?
+  bloomPollinatorNotes    String?
+  growthHabit             String?
+  rarity                  String?
+  conservationStatus      String?
+  conservationLinks       String?
+  protectedSpeciesNotes   String?
+  collectionRestrictions  String?
+  importExportConcerns    String?
+  invasiveness            String?
+  nativeRangeNotes        String?
+  overrideNotes           String?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  collection    Collection?    @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  plantInstance PlantInstance @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
+
+  @@index([collectionId])
+  @@index([plantInstanceId])
 }
 
 model PropagationEvent {

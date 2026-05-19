@@ -84,8 +84,10 @@ async function main() {
   await prisma.$transaction([
     prisma.governingBody.updateMany({ where: { collectionId: null }, data: { collectionId: defaultCollection.id } }),
     prisma.plantDefinition.updateMany({ where: { collectionId: null }, data: { collectionId: defaultCollection.id } }),
+    prisma.plantHusbandryGuide.updateMany({ where: { collectionId: null }, data: { collectionId: defaultCollection.id } }),
     prisma.plantAlias.updateMany({ where: { collectionId: null }, data: { collectionId: defaultCollection.id } }),
     prisma.plantInstance.updateMany({ where: { collectionId: null }, data: { collectionId: defaultCollection.id } }),
+    prisma.plantHusbandryOverride.updateMany({ where: { collectionId: null }, data: { collectionId: defaultCollection.id } }),
     prisma.propagationEvent.updateMany({ where: { collectionId: null }, data: { collectionId: defaultCollection.id } }),
     prisma.note.updateMany({ where: { collectionId: null }, data: { collectionId: defaultCollection.id } }),
     prisma.photo.updateMany({ where: { collectionId: null }, data: { collectionId: defaultCollection.id } }),

@@ -17,6 +17,7 @@ import { createDemoData } from '@/lib/demo-data'
 import { notifyFollowers } from '@/lib/follows'
 import { generatePlantId } from '@/lib/plant-id'
 import { plantName } from '@/lib/utils'
+import { husbandryFieldNames, husbandryFormValues } from '@/lib/husbandry'
 
 const val = (fd: FormData, k: string) =>
   String(fd.get(k) || '').trim() || undefined
@@ -56,6 +57,33 @@ function aliasRows(fd: FormData) {
 async function cleanupGenericEntity(collectionId: string, entityType: string, entityId: string) {
   await prisma.note.deleteMany({ where: { collectionId, entityType, entityId } })
   await prisma.photo.deleteMany({ where: { collectionId, entityType, entityId } })
+}
+
+async function assertHusbandryLinkAllowed(collectionId: string, plantDefinitionId: string, sourcePlantDefinitionId: string) {
+  if (plantDefinitionId === sourcePlantDefinitionId) throw new Error('A plant definition cannot link husbandry to itself.')
+  await prisma.plantDefinition.findFirstOrThrow({ where: { id: plantDefinitionId, collectionId }, select: { id: true } })
+  await prisma.plantDefinition.findFirstOrThrow({ where: { id: sourcePlantDefinitionId, collectionId }, select: { id: true } })
+
+  const seen = new Set([plantDefinitionId])
+  let cursor: string | null = sourcePlantDefinitionId
+  while (cursor) {
+    if (seen.has(cursor)) throw new Error('That husbandry link would create a circular guide reference.')
+    seen.add(cursor)
+    const guide: { sourcePlantDefinitionId: string | null } | null = await prisma.plantHusbandryGuide.findFirst({
+      where: { collectionId, plantDefinitionId: cursor },
+      select: { sourcePlantDefinitionId: true },
+    })
+    cursor = guide?.sourcePlantDefinitionId || null
+  }
+}
+
+function husbandryMutationData(fd: FormData) {
+  const values: Record<string, string | null | Date> = husbandryFormValues(fd)
+  values.reviewStatus = val(fd, 'reviewStatus') || 'DRAFT'
+  values.reviewNotes = val(fd, 'reviewNotes') || null
+  values.aiModel = val(fd, 'aiModel') || null
+  if (values.aiModel && !val(fd, 'existingAiGeneratedAt')) values.aiGeneratedAt = new Date()
+  return values
 }
 
 async function cleanupPlantInstanceDependents(collectionId: string, id: string) {
@@ -298,6 +326,94 @@ export async function deletePlantDefinition(fd: FormData) {
   redirect(collectionPath(collection.slug, '/plants'))
 }
 
+export async function savePlantHusbandryGuide(fd: FormData) {
+  const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
+  const plantDefinitionId = val(fd, 'plantDefinitionId')!
+  await prisma.plantDefinition.findFirstOrThrow({ where: { id: plantDefinitionId, collectionId: collection.id }, select: { id: true } })
+
+  const guide = await prisma.plantHusbandryGuide.upsert({
+    where: { plantDefinitionId },
+    update: {
+      ...husbandryMutationData(fd),
+      sourcePlantDefinitionId: null,
+    } as any,
+    create: {
+      collectionId: collection.id,
+      plantDefinitionId,
+      ...husbandryMutationData(fd),
+    } as any,
+  })
+
+  await audit(user, 'UPDATE', 'PLANT_HUSBANDRY_GUIDE', guide.id, `Saved plant husbandry guide`, undefined, collection.id)
+  redirect(collectionPath(collection.slug, `/plants/${plantDefinitionId}/edit#husbandry`))
+}
+
+export async function linkPlantHusbandryGuide(fd: FormData) {
+  const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
+  const plantDefinitionId = val(fd, 'plantDefinitionId')!
+  const sourcePlantDefinitionId = val(fd, 'sourcePlantDefinitionId')!
+  await assertHusbandryLinkAllowed(collection.id, plantDefinitionId, sourcePlantDefinitionId)
+
+  const guide = await prisma.plantHusbandryGuide.upsert({
+    where: { plantDefinitionId },
+    update: {
+      sourcePlantDefinitionId,
+      ...Object.fromEntries(husbandryFieldNames.map((field) => [field, null])),
+      reviewStatus: 'LINKED',
+      reviewNotes: val(fd, 'reviewNotes') || 'Uses live-linked husbandry from another plant definition.',
+      aiGeneratedAt: null,
+      aiModel: null,
+    } as any,
+    create: {
+      collectionId: collection.id,
+      plantDefinitionId,
+      sourcePlantDefinitionId,
+      reviewStatus: 'LINKED',
+      reviewNotes: val(fd, 'reviewNotes') || 'Uses live-linked husbandry from another plant definition.',
+    },
+  })
+
+  await audit(user, 'LINK', 'PLANT_HUSBANDRY_GUIDE', guide.id, `Linked plant husbandry guide`, { sourcePlantDefinitionId }, collection.id)
+  redirect(collectionPath(collection.slug, `/plants/${plantDefinitionId}/edit#husbandry`))
+}
+
+export async function forkPlantHusbandryGuide(fd: FormData) {
+  const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
+  const plantDefinitionId = val(fd, 'plantDefinitionId')!
+  const guide = await prisma.plantHusbandryGuide.findFirstOrThrow({ where: { collectionId: collection.id, plantDefinitionId } })
+  if (!guide.sourcePlantDefinitionId) redirect(collectionPath(collection.slug, `/plants/${plantDefinitionId}/edit#husbandry`))
+  const source = await prisma.plantHusbandryGuide.findFirstOrThrow({
+    where: { collectionId: collection.id, plantDefinitionId: guide.sourcePlantDefinitionId },
+  })
+
+  const data = Object.fromEntries(husbandryFieldNames.map((field) => [field, (source as any)[field] || null]))
+  const updated = await prisma.plantHusbandryGuide.update({
+    where: { id: guide.id },
+    data: {
+      ...data,
+      sourcePlantDefinitionId: null,
+      reviewStatus: 'DRAFT',
+      reviewNotes: `Forked from linked guide on ${new Date().toLocaleDateString()}. Review local care before relying on it.`,
+      aiGeneratedAt: source.aiGeneratedAt,
+      aiModel: source.aiModel,
+    } as any,
+  })
+
+  await audit(user, 'FORK', 'PLANT_HUSBANDRY_GUIDE', updated.id, `Forked linked plant husbandry guide`, { sourcePlantDefinitionId: source.plantDefinitionId }, collection.id)
+  redirect(collectionPath(collection.slug, `/plants/${plantDefinitionId}/edit#husbandry`))
+}
+
+export async function deletePlantHusbandryGuide(fd: FormData) {
+  const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
+  const plantDefinitionId = val(fd, 'plantDefinitionId')!
+  const guide = await prisma.plantHusbandryGuide.findFirst({ where: { collectionId: collection.id, plantDefinitionId } })
+  if (guide) {
+    await prisma.plantHusbandryGuide.delete({ where: { id: guide.id } })
+    await audit(user, 'DELETE', 'PLANT_HUSBANDRY_GUIDE', guide.id, `Deleted plant husbandry guide`, undefined, collection.id)
+  }
+  redirect(collectionPath(collection.slug, `/plants/${plantDefinitionId}/edit#husbandry`))
+}
+
 export async function createPlantInstance(fd: FormData) {
   const { user, collection } = await requireCollectionLogger(await collectionSlug(fd))
   const plantDefinitionId = val(fd, 'plantDefinitionId')!
@@ -375,6 +491,30 @@ export async function updatePlantInstance(fd: FormData) {
   await audit(user, 'UPDATE', 'PLANT_INSTANCE', id, `Updated plant instance ${instance.plantId}`, undefined, collection.id)
 
   redirect(collectionPath(collection.slug, `/instances/${id}`))
+}
+
+export async function savePlantHusbandryOverride(fd: FormData) {
+  const { user, collection } = await requireCollectionLogger(await collectionSlug(fd))
+  const plantInstanceId = val(fd, 'plantInstanceId')!
+  await prisma.plantInstance.findFirstOrThrow({ where: { id: plantInstanceId, collectionId: collection.id }, select: { id: true } })
+  const values = husbandryFormValues(fd)
+  const overrideNotes = val(fd, 'overrideNotes') || null
+  const hasData = Object.values(values).some(Boolean) || Boolean(overrideNotes)
+
+  if (!hasData) {
+    await prisma.plantHusbandryOverride.deleteMany({ where: { collectionId: collection.id, plantInstanceId } })
+    await audit(user, 'DELETE', 'PLANT_HUSBANDRY_OVERRIDE', plantInstanceId, `Cleared local plant husbandry adjustments`, undefined, collection.id)
+    redirect(collectionPath(collection.slug, `/instances/${plantInstanceId}#husbandry`))
+  }
+
+  const override = await prisma.plantHusbandryOverride.upsert({
+    where: { plantInstanceId },
+    update: { ...values, overrideNotes } as any,
+    create: { collectionId: collection.id, plantInstanceId, ...values, overrideNotes } as any,
+  })
+
+  await audit(user, 'UPDATE', 'PLANT_HUSBANDRY_OVERRIDE', override.id, `Saved local plant husbandry adjustments`, undefined, collection.id)
+  redirect(collectionPath(collection.slug, `/instances/${plantInstanceId}#husbandry`))
 }
 
 export async function deletePlantInstance(fd: FormData) {
