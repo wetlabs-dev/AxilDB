@@ -117,6 +117,158 @@ export async function requestMembership(fd: FormData) {
   redirect('/collections')
 }
 
+export async function requestCollection(fd: FormData) {
+  const user = await requireUser()
+  const name = val(fd, 'name')
+  if (!name) throw new Error('Collection name is required.')
+  const requestedSlug = slugify(val(fd, 'slug') || name)
+  if (!requestedSlug) throw new Error('Collection slug is required.')
+
+  const activeCollection = await prisma.collection.findUnique({ where: { slug: requestedSlug }, select: { id: true } })
+  if (activeCollection) throw new Error('A collection already uses that slug.')
+
+  const existingPending = await prisma.collectionRequest.findFirst({
+    where: { requestedById: user.id, status: 'PENDING', requestedSlug },
+    select: { id: true },
+  })
+  if (existingPending) redirect('/collections?collectionRequest=already-pending')
+
+  const request = await prisma.collectionRequest.create({
+    data: {
+      requestedById: user.id,
+      requestedName: name,
+      requestedSlug,
+      visibility: val(fd, 'visibility') === 'PUBLIC' ? 'PUBLIC' : 'PRIVATE',
+      description: val(fd, 'description'),
+      rationale: val(fd, 'rationale'),
+    },
+  })
+
+  await audit(user, 'REQUEST', 'COLLECTION_REQUEST', request.id, `Requested collection ${name}`, request)
+
+  const admins = await prisma.user.findMany({ where: { role: 'SERVER_ADMIN' }, select: { id: true, email: true } })
+  const serverUrl = appUrl('/server')
+  const template = renderBrandedEmail({
+    title: 'New AxilDB collection request',
+    preview: `${user.email} requested a new collection.`,
+    body: [
+      `${user.email} requested a new collection named ${name}.`,
+      `Requested slug: ${requestedSlug}`,
+      `Visibility: ${request.visibility.toLowerCase()}`,
+      request.rationale ? `Reason: ${request.rationale}` : 'No reason was provided.',
+    ],
+    actionLabel: 'Review request',
+    actionUrl: serverUrl,
+  })
+
+  await Promise.all(
+    admins.map(async (admin) => {
+      try {
+        await sendEmail({ to: admin.email, subject: `AxilDB collection request: ${name}`, ...template })
+      } catch (error) {
+        await audit(user, 'ERROR', 'EMAIL', request.id, `Failed to notify ${admin.email} about collection request`, { error: String(error), admin: admin.email })
+      }
+    }),
+  )
+
+  redirect('/collections?collectionRequest=requested')
+}
+
+export async function approveCollectionRequest(fd: FormData) {
+  const user = await requireServerAdmin()
+  const requestId = val(fd, 'requestId')
+  const request = await prisma.collectionRequest.findUniqueOrThrow({
+    where: { id: requestId },
+    include: { requestedBy: { select: { id: true, email: true } } },
+  })
+  if (request.status !== 'PENDING') throw new Error('This request has already been reviewed.')
+
+  const slug = await uniqueSlug(request.requestedSlug || request.requestedName)
+  const collection = await prisma.$transaction(async (tx) => {
+    const created = await tx.collection.create({
+      data: {
+        name: request.requestedName,
+        slug,
+        visibility: request.visibility === 'PUBLIC' ? 'PUBLIC' : 'PRIVATE',
+        status: 'ACTIVE',
+        description: request.description,
+        memberships: { create: { userId: request.requestedById, role: 'MANAGER', status: 'ACTIVE' } },
+      },
+    })
+    await tx.collectionRequest.update({
+      where: { id: request.id },
+      data: {
+        status: 'APPROVED',
+        reviewedById: user.id,
+        reviewedAt: new Date(),
+        collectionId: created.id,
+        reviewNote: val(fd, 'reviewNote'),
+      },
+    })
+    return created
+  })
+
+  await audit(user, 'APPROVE', 'COLLECTION_REQUEST', request.id, `Approved collection request ${request.requestedName}`, { requestId: request.id, collectionId: collection.id }, collection.id)
+  await audit(user, 'CREATE', 'COLLECTION', collection.id, `Created collection ${collection.name} from request`, collection, collection.id)
+
+  if (request.requestedBy.email) {
+    const template = renderBrandedEmail({
+      title: 'Your AxilDB collection is ready',
+      preview: `${collection.name} has been created.`,
+      body: [
+        `Good news: ${collection.name} has been approved and created.`,
+        'You have been added as the collection manager, so you can manage settings and invite members.',
+      ],
+      actionLabel: 'Open collection',
+      actionUrl: appUrl(collectionPath(collection.slug)),
+    })
+    try {
+      await sendEmail({ to: request.requestedBy.email, subject: `Your AxilDB collection is ready: ${collection.name}`, ...template })
+    } catch (error) {
+      await audit(user, 'ERROR', 'EMAIL', request.id, `Failed to email collection request approval`, { error: String(error), email: request.requestedBy.email }, collection.id)
+    }
+  }
+
+  redirect('/server?collectionRequest=approved')
+}
+
+export async function rejectCollectionRequest(fd: FormData) {
+  const user = await requireServerAdmin()
+  const requestId = val(fd, 'requestId')
+  const request = await prisma.collectionRequest.findUniqueOrThrow({
+    where: { id: requestId },
+    include: { requestedBy: { select: { email: true } } },
+  })
+  if (request.status !== 'PENDING') throw new Error('This request has already been reviewed.')
+
+  const reviewNote = val(fd, 'reviewNote')
+  await prisma.collectionRequest.update({
+    where: { id: request.id },
+    data: { status: 'REJECTED', reviewedById: user.id, reviewedAt: new Date(), reviewNote },
+  })
+  await audit(user, 'REJECT', 'COLLECTION_REQUEST', request.id, `Rejected collection request ${request.requestedName}`, { reviewNote })
+
+  if (request.requestedBy.email) {
+    const template = renderBrandedEmail({
+      title: 'AxilDB collection request update',
+      preview: `${request.requestedName} was not approved right now.`,
+      body: [
+        `Your request for ${request.requestedName} was not approved right now.`,
+        reviewNote ? `Note from the server admin: ${reviewNote}` : 'No review note was provided.',
+      ],
+      actionLabel: 'Open AxilDB',
+      actionUrl: appUrl('/collections'),
+    })
+    try {
+      await sendEmail({ to: request.requestedBy.email, subject: `AxilDB collection request update: ${request.requestedName}`, ...template })
+    } catch (error) {
+      await audit(user, 'ERROR', 'EMAIL', request.id, `Failed to email collection request rejection`, { error: String(error), email: request.requestedBy.email })
+    }
+  }
+
+  redirect('/server?collectionRequest=rejected')
+}
+
 export async function approveMembership(fd: FormData) {
   const { user, collection } = await requireCollectionManager(val(fd, 'collectionSlug'))
   const membershipId = val(fd, 'membershipId')

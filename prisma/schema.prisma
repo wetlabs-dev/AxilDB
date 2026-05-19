@@ -38,6 +38,8 @@ model User {
   twoFactor           UserTwoFactor?
   twoFactorChallenges TwoFactorChallenge[]
   memberships         CollectionMembership[]
+  collectionRequests  CollectionRequest[] @relation("CollectionRequestRequester")
+  reviewedCollectionRequests CollectionRequest[] @relation("CollectionRequestReviewer")
   archivedCollections Collection[] @relation("CollectionArchivedBy")
   backupRuns          BackupRun[] @relation("BackupRunRequestedBy")
   sentCollectionInvitations CollectionInvitation[] @relation("CollectionInvitationInviter")
@@ -63,6 +65,7 @@ model Collection {
   archivedBy          User?                  @relation("CollectionArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull)
   memberships         CollectionMembership[]
   invitations         CollectionInvitation[]
+  collectionRequests  CollectionRequest[]
   auditLogs           AuditLog[]
   follows             Follow[]
   followNotifications FollowNotification[]
@@ -123,6 +126,34 @@ model CollectionInvitation {
   @@index([email])
   @@index([status])
   @@index([expiresAt])
+}
+
+model CollectionRequest {
+  id             String    @id @default(cuid())
+  requestedById  String
+  reviewedById   String?
+  collectionId   String?
+  requestedName  String
+  requestedSlug  String
+  visibility     String    @default("PRIVATE")
+  description    String?
+  rationale      String?
+  status         String    @default("PENDING")
+  reviewNote     String?
+  reviewedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  requestedBy User        @relation("CollectionRequestRequester", fields: [requestedById], references: [id], onDelete: Cascade)
+  reviewedBy  User?       @relation("CollectionRequestReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  collection  Collection? @relation(fields: [collectionId], references: [id], onDelete: SetNull)
+
+  @@index([requestedById])
+  @@index([reviewedById])
+  @@index([collectionId])
+  @@index([requestedSlug])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model ServerMetricSnapshot {

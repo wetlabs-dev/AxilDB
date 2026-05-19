@@ -27,6 +27,7 @@ It is designed for real collection work: messy taxonomy, acquisition names, alia
 - Archive/restore workflow for plants that leave the active collection.
 - Local user accounts with self-service viewer registration.
 - Collection roles for managers, gardeners, loggers, and viewers, with member approval, invitations, and role-management tools.
+- Registered users can request new collections; server admins approve requests, create the collection, and promote the requester to collection manager.
 - Server-admin management area for collection lifecycle, global users, server health checks, storage estimates, and sitewide backup initiation.
 - QR-code two-factor authentication with one-time recovery codes, compatible with Apple Passwords and standard authenticator apps.
 - SMTP-ready email foundation with welcome/verification emails, secure single-use tokens, branded HTML/plain-text templates, and user email preferences.
@@ -275,6 +276,7 @@ Core models:
 - `Collection`: tenant-like workspace with slug, name, visibility, active/archived status, and description.
 - `CollectionMembership`: user membership, collection role, and pending/active/rejected status.
 - `CollectionInvitation`: single-use collection invitation tokens for adding new users by email.
+- `CollectionRequest`: registered-user request for a server-admin-approved collection.
 - `PlantDefinition`: taxonomic/cultivar definition and reference metadata.
 - `PlantAlias`: alternate names with type, source, confidence, and notes.
 - `PlantInstance`: an individual plant/specimen in the collection.

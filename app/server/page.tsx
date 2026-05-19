@@ -1,7 +1,8 @@
 import Link from 'next/link'
+import { approveCollectionRequest, rejectCollectionRequest } from '@/app/collection-actions'
 import { requestSitewideBackup } from '@/app/server-actions'
 import { MetricChart } from '@/components/MetricChart'
-import { Card, LinkButton } from '@/components/ui'
+import { Button, Card, LinkButton, TextArea } from '@/components/ui'
 import { requireServerAdmin } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ensureRecentServerMetricSnapshot, formatBytes, serverMetricHistory } from '@/lib/server-metrics'
@@ -23,11 +24,11 @@ function statusClass(status: string) {
 export default async function ServerDashboard({
   searchParams,
 }: {
-  searchParams: Promise<{ backup?: string }>
+  searchParams: Promise<{ backup?: string; collectionRequest?: string }>
 }) {
   await requireServerAdmin()
   const sp = await searchParams
-  const [users, collections, archived, memberships, photos, latestSnapshot, backupRuns] = await Promise.all([
+  const [users, collections, archived, memberships, photos, latestSnapshot, backupRuns, collectionRequests] = await Promise.all([
     prisma.user.count(),
     prisma.collection.count({ where: { status: 'ACTIVE' } }),
     prisma.collection.count({ where: { status: 'ARCHIVED' } }),
@@ -37,6 +38,12 @@ export default async function ServerDashboard({
     prisma.backupRun.findMany({
       orderBy: { requestedAt: 'desc' },
       take: 10,
+      include: { requestedBy: { select: { email: true } } },
+    }),
+    prisma.collectionRequest.findMany({
+      where: { status: 'PENDING' },
+      orderBy: { createdAt: 'asc' },
+      take: 8,
       include: { requestedBy: { select: { email: true } } },
     }),
   ])
@@ -90,6 +97,45 @@ export default async function ServerDashboard({
           </Card>
         ))}
       </div>
+
+      <Card>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="font-serif text-xl font-semibold">Pending collection requests</h3>
+            <p className="mt-1 text-sm text-stone-600">Review registered users asking for their own AxilDB collection.</p>
+          </div>
+          {collectionRequests.length > 0 && <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-900">{collectionRequests.length} pending</span>}
+        </div>
+        {sp.collectionRequest === 'approved' && <p className="mt-3 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900">Collection request approved and collection created.</p>}
+        {sp.collectionRequest === 'rejected' && <p className="mt-3 rounded-lg border border-stone-200 bg-stone-50 p-3 text-sm text-stone-700">Collection request rejected.</p>}
+        <div className="mt-4 grid gap-3">
+          {collectionRequests.length === 0 && <p className="rounded-lg border border-stone-200 bg-white/50 p-3 text-sm text-stone-600">No pending collection requests.</p>}
+          {collectionRequests.map((request) => (
+            <div key={request.id} className="rounded-lg border border-stone-200 bg-white/50 p-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h4 className="font-serif text-lg font-semibold">{request.requestedName}</h4>
+                  <p className="text-sm text-stone-600">/{request.requestedSlug} · {request.visibility.toLowerCase()} · requested by {request.requestedBy.email}</p>
+                  {request.description && <p className="mt-2 text-sm text-stone-700">{request.description}</p>}
+                  {request.rationale && <p className="mt-2 text-sm text-stone-600">Reason: {request.rationale}</p>}
+                </div>
+              </div>
+              <div className="mt-3 grid gap-2 lg:grid-cols-2">
+                <form action={approveCollectionRequest} className="grid gap-2">
+                  <input type="hidden" name="requestId" value={request.id} />
+                  <TextArea label="Approval note" name="reviewNote" className="min-h-16" />
+                  <Button className="w-fit">Approve and create collection</Button>
+                </form>
+                <form action={rejectCollectionRequest} className="grid gap-2">
+                  <input type="hidden" name="requestId" value={request.id} />
+                  <TextArea label="Rejection note" name="reviewNote" className="min-h-16" />
+                  <Button className="w-fit bg-[#9a3f35] hover:bg-[#7d3028]">Reject request</Button>
+                </form>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
 
       <Card>
         <h3 className="font-serif text-xl font-semibold">Health checks</h3>
