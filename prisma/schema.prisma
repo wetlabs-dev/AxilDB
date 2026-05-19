@@ -124,6 +124,14 @@ model CollectionInvitation {
   @@index([expiresAt])
 }
 
+model ServerMetricSnapshot {
+  id        String   @id @default(cuid())
+  capturedAt DateTime @default(now())
+  metrics   Json
+
+  @@index([capturedAt])
+}
+
 model Session {
   id                  String    @id @default(cuid())
   tokenHash           String    @unique

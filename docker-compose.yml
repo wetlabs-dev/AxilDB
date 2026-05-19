@@ -77,6 +77,26 @@ services:
       DATABASE_URL: postgresql://plants:plants@db:5432/axildb?schema=public
       NEXT_PUBLIC_APP_URL: https://app.axildb.com
     command: sh -c "while true; do npm run email:send-reminders; sleep $${REMINDER_WORKER_INTERVAL_SECONDS:-300}; done"
+  metrics:
+    build:
+      context: .
+      target: builder
+    env_file:
+      - path: ./.env
+        required: false
+      - path: /etc/axildb/axildb.env
+        required: false
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgresql://plants:plants@db:5432/axildb?schema=public
+    volumes:
+      - ./public/uploads:/app/public/uploads
+      - ./public/labels:/app/public/labels
+    command: sh -c "while true; do npm run metrics:collect; sleep $${METRICS_WORKER_INTERVAL_SECONDS:-300}; done"
 volumes:
   axildb_pgdata:
   caddy_data:

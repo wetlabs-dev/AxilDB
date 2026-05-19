@@ -13,6 +13,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:bootstrap": "tsx prisma/bootstrap.ts",
     "email:send-reminders": "tsx scripts/send-reminders.ts",
+    "metrics:collect": "tsx scripts/collect-server-metrics.ts",
     "backup": "sh scripts/backup.sh",
     "check:collection-defaults": "node scripts/check-collection-defaults.mjs",
     "check:collection-scope": "node scripts/check-collection-scope.mjs",
