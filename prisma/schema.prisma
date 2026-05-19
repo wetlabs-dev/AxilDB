@@ -39,6 +39,7 @@ model User {
   twoFactorChallenges TwoFactorChallenge[]
   memberships         CollectionMembership[]
   archivedCollections Collection[] @relation("CollectionArchivedBy")
+  backupRuns          BackupRun[] @relation("BackupRunRequestedBy")
   sentCollectionInvitations CollectionInvitation[] @relation("CollectionInvitationInviter")
   acceptedCollectionInvitations CollectionInvitation[] @relation("CollectionInvitationAcceptedUser")
 
@@ -130,6 +131,30 @@ model ServerMetricSnapshot {
   metrics   Json
 
   @@index([capturedAt])
+}
+
+model BackupRun {
+  id            String    @id @default(cuid())
+  scope         String    @default("SITEWIDE")
+  status        String    @default("REQUESTED")
+  requestedById String?
+  requestedAt   DateTime  @default(now())
+  startedAt     DateTime?
+  finishedAt    DateTime?
+  backupPath    String?
+  manifest      Json?
+  log           String?
+  error         String?
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  requestedBy User? @relation("BackupRunRequestedBy", fields: [requestedById], references: [id], onDelete: SetNull)
+
+  @@index([scope])
+  @@index([status])
+  @@index([requestedAt])
+  @@index([requestedById])
 }
 
 model Session {
