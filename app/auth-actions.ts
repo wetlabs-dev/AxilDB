@@ -421,14 +421,21 @@ export async function serverAddUserMembership(fd: FormData) {
     where: { collectionId_userId: { collectionId, userId } },
   })
 
-  if (collection.status === 'ACTIVE' && existing?.status === 'ACTIVE' && normalizeCollectionRole(existing.role) === 'MANAGER' && (role !== 'MANAGER' || status !== 'ACTIVE')) {
-    await assertActiveCollectionKeepsManager(collectionId, existing.id)
+  if (existing) {
+    await audit(
+      actor,
+      'SKIP',
+      'COLLECTION_MEMBERSHIP',
+      existing.id,
+      `${user.email} already has a membership in ${collection.name}`,
+      { email: user.email, role: existing.role, status: existing.status, collection: collection.slug },
+      collectionId,
+    )
+    redirect('/server/users')
   }
 
-  const membership = await prisma.collectionMembership.upsert({
-    where: { collectionId_userId: { collectionId, userId } },
-    update: { role, status },
-    create: { collectionId, userId, role, status },
+  const membership = await prisma.collectionMembership.create({
+    data: { collectionId, userId, role, status },
   })
 
   await assertActiveCollectionKeepsManager(collectionId)
