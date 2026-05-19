@@ -1,10 +1,13 @@
-import { createUser, deleteUser, resendVerificationEmail, updateUser } from '@/app/auth-actions'
+import { createUser, deleteUser, resendVerificationEmail, serverAddUserMembership, serverRemoveMembership, serverUpdateMembership, updateUser } from '@/app/auth-actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
-import { AddPanel, Button, Card, Field } from '@/components/ui'
+import { AddPanel, Button, Card, Field, Select } from '@/components/ui'
 import { requireServerAdmin } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { collectionRoleLabel } from '@/lib/roles'
 
 const roleOptions = ['USER', 'SERVER_ADMIN']
+const collectionRoleOptions = ['VIEWER', 'LOGGER', 'GARDENER', 'MANAGER']
+const membershipStatusOptions = ['PENDING', 'ACTIVE', 'REJECTED']
 
 export default async function ServerUsers({
   searchParams,
@@ -13,15 +16,21 @@ export default async function ServerUsers({
 }) {
   const currentUser = await requireServerAdmin()
   const sp = await searchParams
-  const users = await prisma.user.findMany({
-    orderBy: { email: 'asc' },
-    include: {
-      memberships: {
-        include: { collection: { select: { name: true, slug: true, status: true } } },
-        orderBy: { createdAt: 'asc' },
+  const [users, collections] = await Promise.all([
+    prisma.user.findMany({
+      orderBy: { email: 'asc' },
+      include: {
+        memberships: {
+          include: { collection: { select: { id: true, name: true, slug: true, status: true } } },
+          orderBy: { createdAt: 'asc' },
+        },
       },
-    },
-  })
+    }),
+    prisma.collection.findMany({
+      orderBy: [{ status: 'asc' }, { name: 'asc' }],
+      select: { id: true, name: true, slug: true, status: true },
+    }),
+  ])
 
   return (
     <div className="space-y-6">
@@ -65,15 +74,69 @@ export default async function ServerUsers({
             <div className="mt-3 text-xs text-stone-600">
               Email {user.emailVerifiedAt ? `verified ${user.emailVerifiedAt.toLocaleDateString()}` : 'not verified'}
             </div>
-            {user.memberships.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                {user.memberships.map((membership) => (
-                  <span key={membership.id} className="rounded-full border border-stone-200 bg-white/60 px-2 py-1">
-                    {membership.collection.name}: {membership.role.toLowerCase()} · {membership.status.toLowerCase()}
-                  </span>
-                ))}
+            <div className="mt-4 rounded-lg border border-stone-200 bg-white/45 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold">Collection memberships</h3>
+                <span className="text-xs text-stone-500">{user.memberships.length} active or pending record{user.memberships.length === 1 ? '' : 's'}</span>
               </div>
-            )}
+              {user.memberships.length > 0 ? (
+                <div className="mt-3 grid gap-2">
+                  {user.memberships.map((membership) => (
+                    <div key={membership.id} className="grid gap-2 rounded-md border border-stone-200 bg-[#fffdf7] p-2 md:grid-cols-[minmax(12rem,1fr)_10rem_10rem_auto_auto] md:items-end">
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-semibold">{membership.collection.name}</div>
+                        <div className="text-xs text-stone-500">
+                          /{membership.collection.slug} · {membership.collection.status.toLowerCase()} · {collectionRoleLabel(membership.role)}
+                        </div>
+                      </div>
+                      <form id={`membership-${membership.id}`} action={serverUpdateMembership} className="contents">
+                        <input type="hidden" name="membershipId" value={membership.id} />
+                        <Select label="Role" name="role" defaultValue={membership.role}>
+                          {collectionRoleOptions.map((role) => <option key={role}>{role}</option>)}
+                        </Select>
+                        <Select label="Status" name="status" defaultValue={membership.status}>
+                          {membershipStatusOptions.map((status) => <option key={status}>{status}</option>)}
+                        </Select>
+                      </form>
+                      <Button form={`membership-${membership.id}`} className="px-3 py-1.5 text-xs">Save</Button>
+                      <form action={serverRemoveMembership}>
+                        <input type="hidden" name="membershipId" value={membership.id} />
+                        <ConfirmDeleteButton
+                          title="Remove membership?"
+                          message={`This removes ${user.email} from ${membership.collection.name}.`}
+                          confirmLabel="Remove"
+                          className="px-3 py-1.5 text-xs"
+                        >
+                          Remove
+                        </ConfirmDeleteButton>
+                      </form>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-3 text-sm text-stone-600">No collection memberships yet.</p>
+              )}
+
+              {collections.length > 0 && (
+                <form action={serverAddUserMembership} className="mt-3 grid gap-2 border-t border-stone-200 pt-3 md:grid-cols-[minmax(12rem,1fr)_10rem_10rem_auto] md:items-end">
+                  <input type="hidden" name="userId" value={user.id} />
+                  <Select label="Add to collection" name="collectionId">
+                    {collections.map((collection) => (
+                      <option key={collection.id} value={collection.id}>
+                        {collection.name} ({collection.status.toLowerCase()})
+                      </option>
+                    ))}
+                  </Select>
+                  <Select label="Role" name="role" defaultValue="VIEWER">
+                    {collectionRoleOptions.map((role) => <option key={role}>{role}</option>)}
+                  </Select>
+                  <Select label="Status" name="status" defaultValue="ACTIVE">
+                    {membershipStatusOptions.map((status) => <option key={status}>{status}</option>)}
+                  </Select>
+                  <Button className="px-3 py-1.5 text-xs">Add membership</Button>
+                </form>
+              )}
+            </div>
             {!user.emailVerifiedAt && (
               <form action={resendVerificationEmail} className="mt-3">
                 <input type="hidden" name="id" value={user.id} />

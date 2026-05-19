@@ -6,10 +6,13 @@ import { sendEmail, appUrl } from '@/lib/email'
 import { consumeEmailToken, createEmailToken, emailTokenPurposes, expireOutstandingEmailTokens, type EmailTokenPurpose } from '@/lib/email-tokens'
 import { magicLoginEmail, passwordResetEmail, welcomeEmail } from '@/lib/email-templates'
 import { prisma } from '@/lib/prisma'
+import { collectionRoles, normalizeCollectionRole } from '@/lib/roles'
 import { decryptTotpSecret, encryptRecoveryCodes, encryptTotpSecret, generateRecoveryCodes, generateTotpSecret, hashRecoveryCode, verifyTotp } from '@/lib/totp'
 
 const val = (fd: FormData, key: string) => String(fd.get(key) || '').trim()
 const roles = new Set(['USER', 'SERVER_ADMIN'])
+const collectionRoleValues = new Set<string>(collectionRoles)
+const membershipStatusValues = new Set(['PENDING', 'ACTIVE', 'REJECTED'])
 
 function checkbox(fd: FormData, key: string) {
   return fd.get(key) === 'on'
@@ -20,9 +23,38 @@ function roleFromForm(fd: FormData) {
   return roles.has(role) ? role : 'USER'
 }
 
+function collectionRoleFromForm(fd: FormData) {
+  const role = val(fd, 'role').toUpperCase()
+  return collectionRoleValues.has(role) ? role : 'VIEWER'
+}
+
+function membershipStatusFromForm(fd: FormData) {
+  const status = val(fd, 'status').toUpperCase()
+  return membershipStatusValues.has(status) ? status : 'ACTIVE'
+}
+
 function authEmailStatusUrl(path: string, status: 'sent' | 'limited' | 'error') {
   const params = new URLSearchParams({ emailStatus: status })
   return `${path}?${params.toString()}`
+}
+
+async function assertActiveCollectionKeepsManager(collectionId: string, excludingMembershipId?: string) {
+  const collection = await prisma.collection.findUniqueOrThrow({
+    where: { id: collectionId },
+    select: { status: true },
+  })
+  if (collection.status !== 'ACTIVE') return
+
+  const memberships = await prisma.collectionMembership.findMany({
+    where: {
+      collectionId,
+      status: 'ACTIVE',
+      ...(excludingMembershipId ? { id: { not: excludingMembershipId } } : {}),
+    },
+    select: { role: true },
+  })
+  const hasManager = memberships.some((membership) => normalizeCollectionRole(membership.role) === 'MANAGER')
+  if (!hasManager) throw new Error('Active collections must keep at least one active collection manager.')
 }
 
 async function isEmailRequestAllowed(email: string, purpose: EmailTokenPurpose) {
@@ -372,6 +404,107 @@ export async function resendVerificationEmail(fd: FormData) {
   const user = await prisma.user.findUniqueOrThrow({ where: { id } })
   if (!(await isEmailRequestAllowed(user.email, emailTokenPurposes.emailVerification))) redirect(authEmailStatusUrl('/server/users', 'limited'))
   await sendVerificationAndAudit(actor, user, '/server/users')
+}
+
+export async function serverAddUserMembership(fd: FormData) {
+  const actor = await requireServerAdmin()
+  const userId = val(fd, 'userId')
+  const collectionId = val(fd, 'collectionId')
+  const role = collectionRoleFromForm(fd)
+  const status = membershipStatusFromForm(fd)
+
+  const [user, collection] = await Promise.all([
+    prisma.user.findUniqueOrThrow({ where: { id: userId } }),
+    prisma.collection.findUniqueOrThrow({ where: { id: collectionId } }),
+  ])
+  const existing = await prisma.collectionMembership.findUnique({
+    where: { collectionId_userId: { collectionId, userId } },
+  })
+
+  if (collection.status === 'ACTIVE' && existing?.status === 'ACTIVE' && normalizeCollectionRole(existing.role) === 'MANAGER' && (role !== 'MANAGER' || status !== 'ACTIVE')) {
+    await assertActiveCollectionKeepsManager(collectionId, existing.id)
+  }
+
+  const membership = await prisma.collectionMembership.upsert({
+    where: { collectionId_userId: { collectionId, userId } },
+    update: { role, status },
+    create: { collectionId, userId, role, status },
+  })
+
+  await assertActiveCollectionKeepsManager(collectionId)
+  await audit(
+    actor,
+    'UPSERT',
+    'COLLECTION_MEMBERSHIP',
+    membership.id,
+    `Set ${user.email} as ${role.toLowerCase()} in ${collection.name}`,
+    { email: user.email, role, status, collection: collection.slug },
+    collectionId,
+  )
+  redirect('/server/users')
+}
+
+export async function serverUpdateMembership(fd: FormData) {
+  const actor = await requireServerAdmin()
+  const id = val(fd, 'membershipId')
+  const role = collectionRoleFromForm(fd)
+  const status = membershipStatusFromForm(fd)
+  const existing = await prisma.collectionMembership.findUniqueOrThrow({
+    where: { id },
+    include: {
+      collection: { select: { id: true, name: true, slug: true, status: true } },
+      user: { select: { email: true } },
+    },
+  })
+
+  const existingRole = normalizeCollectionRole(existing.role)
+  if (existing.collection.status === 'ACTIVE' && existing.status === 'ACTIVE' && existingRole === 'MANAGER' && (role !== 'MANAGER' || status !== 'ACTIVE')) {
+    await assertActiveCollectionKeepsManager(existing.collectionId, existing.id)
+  }
+
+  const membership = await prisma.collectionMembership.update({
+    where: { id },
+    data: { role, status },
+  })
+
+  await audit(
+    actor,
+    'UPDATE',
+    'COLLECTION_MEMBERSHIP',
+    membership.id,
+    `Updated ${existing.user.email} membership in ${existing.collection.name}`,
+    { email: existing.user.email, role, status, collection: existing.collection.slug },
+    existing.collectionId,
+  )
+  redirect('/server/users')
+}
+
+export async function serverRemoveMembership(fd: FormData) {
+  const actor = await requireServerAdmin()
+  const id = val(fd, 'membershipId')
+  const membership = await prisma.collectionMembership.findUniqueOrThrow({
+    where: { id },
+    include: {
+      collection: { select: { id: true, name: true, slug: true, status: true } },
+      user: { select: { email: true } },
+    },
+  })
+
+  if (membership.collection.status === 'ACTIVE' && membership.status === 'ACTIVE' && normalizeCollectionRole(membership.role) === 'MANAGER') {
+    await assertActiveCollectionKeepsManager(membership.collectionId, membership.id)
+  }
+
+  await prisma.collectionMembership.delete({ where: { id } })
+  await audit(
+    actor,
+    'DELETE',
+    'COLLECTION_MEMBERSHIP',
+    id,
+    `Removed ${membership.user.email} from ${membership.collection.name}`,
+    { email: membership.user.email, role: membership.role, collection: membership.collection.slug },
+    membership.collectionId,
+  )
+  redirect('/server/users')
 }
 
 export async function resendOwnVerificationEmail() {
