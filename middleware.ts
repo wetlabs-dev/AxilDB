@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { RETURN_TO_HEADER } from '@/lib/redirects'
 
 const marketingHosts = new Set(['axildb.com', 'www.axildb.com'])
 const publicFile = /\.(.*)$/
@@ -63,6 +64,7 @@ export function middleware(request: NextRequest) {
     url.pathname = `/${rest.join('/')}` || '/'
     const requestHeaders = new Headers(request.headers)
     requestHeaders.set('x-axildb-collection', decodeURIComponent(slug || defaultCollectionSlug))
+    requestHeaders.set(RETURN_TO_HEADER, `${pathname}${search}`)
     return NextResponse.rewrite(url, {
       request: {
         headers: requestHeaders,
@@ -79,6 +81,7 @@ export function middleware(request: NextRequest) {
   if (pathname === '/splash') {
     const requestHeaders = new Headers(request.headers)
     requestHeaders.set('x-axildb-marketing', '1')
+    requestHeaders.set(RETURN_TO_HEADER, `${pathname}${search}`)
     return NextResponse.next({
       request: {
         headers: requestHeaders,
@@ -92,6 +95,7 @@ export function middleware(request: NextRequest) {
       url.pathname = '/splash'
       const requestHeaders = new Headers(request.headers)
       requestHeaders.set('x-axildb-marketing', '1')
+      requestHeaders.set(RETURN_TO_HEADER, `${pathname}${search}`)
       return NextResponse.rewrite(url, {
         request: {
           headers: requestHeaders,

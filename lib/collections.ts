@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { getCurrentUser, type AuthUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { collectionRoleAtLeast, collectionRoleRank, isServerAdminRole, normalizeCollectionRole, type CollectionRole } from '@/lib/roles'
+import { pathWithNext, RETURN_TO_HEADER } from '@/lib/redirects'
 
 export const DEFAULT_COLLECTION_SLUG = 'axildb'
 export const COLLECTION_HEADER = 'x-axildb-collection'
@@ -46,6 +47,11 @@ export function legacyPathFromCollectionPath(pathname: string) {
 export async function getCurrentCollectionSlug() {
   const requestHeaders = await headers()
   return requestHeaders.get(COLLECTION_HEADER) || DEFAULT_COLLECTION_SLUG
+}
+
+async function getReturnToPath() {
+  const requestHeaders = await headers()
+  return requestHeaders.get(RETURN_TO_HEADER)
 }
 
 export async function ensureDefaultCollection() {
@@ -202,14 +208,14 @@ async function assertCollectionTwoFactorReady(user: AuthUser, role: CollectionRo
   if (!role || collectionRoleRank[role] < collectionRoleRank.GARDENER) return
   const twoFactor = await prisma.userTwoFactor.findUnique({ where: { userId: user.id } })
   if (!twoFactor?.enabledAt) redirect('/account/security?setup=required')
-  if (!user.twoFactorVerifiedAt) redirect('/login?twoFactor=expired')
+  if (!user.twoFactorVerifiedAt) redirect(pathWithNext('/login?twoFactor=expired', await getReturnToPath()))
 }
 
 async function requireCollectionRole(slug: string | undefined, minimumRole: CollectionRole) {
   const context = await getCollectionContext(slug)
   const user = context.user
   if (!canViewCollection(user, context)) {
-    if (!user) redirect('/login')
+    if (!user) redirect(pathWithNext('/login', await getReturnToPath()))
     redirect(`/collection-access?slug=${encodeURIComponent(context.collection.slug)}`)
   }
 
@@ -230,7 +236,7 @@ async function requireCollectionRole(slug: string | undefined, minimumRole: Coll
 export async function requireCollectionViewer(slug?: string) {
   const context = await getCollectionContext(slug)
   if (!canViewCollection(context.user, context)) {
-    if (!context.user) redirect('/login')
+    if (!context.user) redirect(pathWithNext('/login', await getReturnToPath()))
     redirect(`/collection-access?slug=${encodeURIComponent(context.collection.slug)}`)
   }
   if (context.user && isServerAdminRole(context.user.role)) {

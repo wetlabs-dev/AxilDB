@@ -3,11 +3,13 @@ import { getCurrentUser } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { Card, Field, Button } from '@/components/ui'
 import Link from 'next/link'
+import { pathWithNext, safeNextPath } from '@/lib/redirects'
 
-export default async function Login({ searchParams }: { searchParams: Promise<{ error?: string; reset?: string; magic?: string; magicError?: string; twoFactor?: string }> }) {
-  const user = await getCurrentUser()
-  if (user) redirect('/')
+export default async function Login({ searchParams }: { searchParams: Promise<{ error?: string; reset?: string; magic?: string; magicError?: string; twoFactor?: string; next?: string }> }) {
   const sp = await searchParams
+  const next = safeNextPath(sp.next)
+  const user = await getCurrentUser()
+  if (user) redirect(next)
 
   return (
     <div className="mx-auto max-w-md space-y-6">
@@ -19,6 +21,7 @@ export default async function Login({ searchParams }: { searchParams: Promise<{ 
         {sp.magic === 'expired' && <p className="mb-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">That sign-in link is expired or has already been used.</p>}
         {sp.twoFactor === 'expired' && <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">Your two-factor verification expired. Sign in again to continue.</p>}
         <form action={login} className="grid gap-3">
+          {next !== '/' && <input type="hidden" name="next" value={next} />}
           <Field label="Email" name="email" type="email" required />
           <Field label="Password" name="password" type="password" required />
           <Button>Sign in</Button>
@@ -26,7 +29,7 @@ export default async function Login({ searchParams }: { searchParams: Promise<{ 
         <div className="mt-3 text-sm">
           <Link className="text-[#2f6b45] underline" href="/forgot-password">Forgot password?</Link>
           <span className="mx-2 text-stone-400">·</span>
-          <Link className="text-[#2f6b45] underline" href="/register">Create viewer account</Link>
+          <Link className="text-[#2f6b45] underline" href={pathWithNext('/register', next)}>Create viewer account</Link>
         </div>
       </Card>
 
@@ -34,6 +37,7 @@ export default async function Login({ searchParams }: { searchParams: Promise<{ 
         <h3 className="font-bold">Email me a sign-in link</h3>
         <p className="mt-1 text-sm text-stone-600">Use a single-use magic link instead of a password.</p>
         <form action={requestMagicLogin} className="mt-3 grid gap-3">
+          {next !== '/' && <input type="hidden" name="next" value={next} />}
           <Field label="Email" name="email" type="email" required />
           <Button>Send sign-in link</Button>
         </form>

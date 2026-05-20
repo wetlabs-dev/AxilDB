@@ -1,8 +1,10 @@
 import { cookies } from 'next/headers'
+import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { randomBytes, scryptSync, timingSafeEqual, createHash } from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { isServerAdminRole } from '@/lib/roles'
+import { pathWithNext, RETURN_TO_HEADER } from '@/lib/redirects'
 
 export const SESSION_COOKIE = 'axildb_session'
 export const TWO_FACTOR_COOKIE = 'axildb_2fa'
@@ -140,7 +142,10 @@ export function canCreate(user: AuthUser | null) {
 
 export async function requireUser() {
   const user = await getCurrentUser()
-  if (!user) redirect('/login')
+  if (!user) {
+    const requestHeaders = await headers()
+    redirect(pathWithNext('/login', requestHeaders.get(RETURN_TO_HEADER)))
+  }
   return user
 }
 
@@ -166,7 +171,10 @@ async function assertAdminTwoFactorReady(user: AuthUser) {
   if (!isAdmin(user)) return
   const twoFactor = await prisma.userTwoFactor.findUnique({ where: { userId: user.id } })
   if (!twoFactor?.enabledAt) redirect('/account/security?setup=required')
-  if (!user.twoFactorVerifiedAt) redirect('/login?twoFactor=expired')
+  if (!user.twoFactorVerifiedAt) {
+    const requestHeaders = await headers()
+    redirect(pathWithNext('/login?twoFactor=expired', requestHeaders.get(RETURN_TO_HEADER)))
+  }
 }
 
 export async function audit(

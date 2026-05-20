@@ -1,16 +1,18 @@
 import { verifyTwoFactorLogin } from '@/app/auth-actions'
 import { Button, Card, Field } from '@/components/ui'
 import { getTwoFactorChallenge } from '@/lib/auth'
+import { pathWithNext, safeNextPath } from '@/lib/redirects'
 import { redirect } from 'next/navigation'
 
 export default async function TwoFactorPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>
+  searchParams: Promise<{ error?: string; next?: string }>
 }) {
-  const challenge = await getTwoFactorChallenge()
-  if (!challenge) redirect('/login?twoFactor=expired')
   const sp = await searchParams
+  const next = safeNextPath(sp.next)
+  const challenge = await getTwoFactorChallenge()
+  if (!challenge) redirect(pathWithNext('/login?twoFactor=expired', next))
 
   return (
     <div className="mx-auto grid min-h-[70vh] max-w-md content-center">
@@ -23,6 +25,7 @@ export default async function TwoFactorPage({
           </p>
         )}
         <form action={verifyTwoFactorLogin} className="mt-5 grid gap-3">
+          {next !== '/' && <input type="hidden" name="next" value={next} />}
           <Field
             label="Verification or recovery code"
             name="code"

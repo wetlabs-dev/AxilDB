@@ -6,6 +6,7 @@ import { sendEmail, appUrl } from '@/lib/email'
 import { consumeEmailToken, createEmailToken, emailTokenPurposes, expireOutstandingEmailTokens, type EmailTokenPurpose } from '@/lib/email-tokens'
 import { magicLoginEmail, passwordResetEmail, welcomeEmail } from '@/lib/email-templates'
 import { prisma } from '@/lib/prisma'
+import { pathWithNext, safeNextPath } from '@/lib/redirects'
 import { collectionRoles, normalizeCollectionRole } from '@/lib/roles'
 import { decryptTotpSecret, encryptRecoveryCodes, encryptTotpSecret, generateRecoveryCodes, generateTotpSecret, hashRecoveryCode, verifyTotp } from '@/lib/totp'
 
@@ -121,28 +122,30 @@ async function sendVerificationAndAudit(
 export async function login(fd: FormData) {
   const email = val(fd, 'email').toLowerCase()
   const password = val(fd, 'password')
+  const next = safeNextPath(val(fd, 'next'))
   const user = await prisma.user.findUnique({ where: { email }, include: { twoFactor: true } })
 
   if (!user || !verifyPassword(password, user.passwordHash)) {
-    redirect('/login?error=1')
+    redirect(pathWithNext('/login?error=1', next))
   }
 
   if (user.twoFactor?.enabledAt) {
     await createTwoFactorChallenge(user.id)
     await audit({ id: user.id, email: user.email, role: user.role }, '2FA_CHALLENGE', 'USER', user.id, `${user.email} started two-factor sign in`)
-    redirect('/two-factor')
+    redirect(pathWithNext('/two-factor', next))
   }
 
   await createSession(user.id)
   await audit({ id: user.id, email: user.email, role: user.role }, 'LOGIN', 'USER', user.id, `${user.email} signed in`)
-  redirect(user.role === 'SERVER_ADMIN' && !user.twoFactor?.enabledAt ? '/account/security?setup=required' : '/')
+  redirect(user.role === 'SERVER_ADMIN' && !user.twoFactor?.enabledAt ? '/account/security?setup=required' : next)
 }
 
 export async function verifyTwoFactorLogin(fd: FormData) {
   const code = val(fd, 'code')
+  const next = safeNextPath(val(fd, 'next'))
   const challenge = await getTwoFactorChallenge()
 
-  if (!challenge?.user.twoFactor?.enabledAt) redirect('/login?twoFactor=expired')
+  if (!challenge?.user.twoFactor?.enabledAt) redirect(pathWithNext('/login?twoFactor=expired', next))
 
   const secret = decryptTotpSecret(challenge.user.twoFactor.secretCiphertext)
   let method: 'totp' | 'recovery_code' = 'totp'
@@ -155,7 +158,7 @@ export async function verifyTwoFactorLogin(fd: FormData) {
       },
     })
 
-    if (!recoveryCode) redirect('/two-factor?error=1')
+    if (!recoveryCode) redirect(pathWithNext('/two-factor?error=1', next))
 
     await prisma.twoFactorRecoveryCode.update({
       where: { id: recoveryCode.id },
@@ -174,7 +177,7 @@ export async function verifyTwoFactorLogin(fd: FormData) {
     `${challenge.user.email} signed in with two-factor authentication`,
     { method },
   )
-  redirect('/')
+  redirect(next)
 }
 
 export async function confirmTwoFactorSetup(fd: FormData) {
@@ -310,11 +313,12 @@ export async function registerViewer(fd: FormData) {
   const email = val(fd, 'email').toLowerCase()
   const password = val(fd, 'password')
   const inviteToken = val(fd, 'invite')
+  const next = safeNextPath(val(fd, 'next'))
 
-  if (!email || password.length < 8) redirect('/register?error=invalid')
+  if (!email || password.length < 8) redirect(pathWithNext('/register?error=invalid', next))
 
   const existing = await prisma.user.findUnique({ where: { email } })
-  if (existing) redirect('/register?error=exists')
+  if (existing) redirect(pathWithNext('/register?error=exists', next))
 
   const user = await prisma.user.create({
     data: {
@@ -356,7 +360,7 @@ export async function registerViewer(fd: FormData) {
   }
 
   await createSession(user.id)
-  redirect('/following?registered=1')
+  redirect(next === '/' ? '/following?registered=1' : next)
 }
 
 export async function createUser(fd: FormData) {
@@ -589,11 +593,12 @@ export async function resetPassword(fd: FormData) {
 
 export async function requestMagicLogin(fd: FormData) {
   const email = val(fd, 'email').toLowerCase()
-  if (!email) redirect('/login?magic=sent')
-  if (!(await isEmailRequestAllowed(email, emailTokenPurposes.magicLogin))) redirect('/login?magic=sent')
+  const next = safeNextPath(val(fd, 'next'))
+  if (!email) redirect(pathWithNext('/login?magic=sent', next))
+  if (!(await isEmailRequestAllowed(email, emailTokenPurposes.magicLogin))) redirect(pathWithNext('/login?magic=sent', next))
 
   const user = await prisma.user.findUnique({ where: { email } })
-  if (!user) redirect('/login?magic=sent')
+  if (!user) redirect(pathWithNext('/login?magic=sent', next))
 
   await expireOutstandingEmailTokens(prisma, {
     email,
@@ -605,7 +610,7 @@ export async function requestMagicLogin(fd: FormData) {
     userId: user.id,
     purpose: emailTokenPurposes.magicLogin,
   })
-  const loginUrl = appUrl(`/magic-login?token=${encodeURIComponent(token)}`)
+  const loginUrl = appUrl(pathWithNext(`/magic-login?token=${encodeURIComponent(token)}`, next))
   const template = magicLoginEmail(loginUrl)
 
   try {
@@ -620,7 +625,7 @@ export async function requestMagicLogin(fd: FormData) {
     await audit({ id: user.id, email: user.email, role: user.role }, 'ERROR', 'EMAIL', user.id, `Failed to send magic login email to ${email}`, { email, error: String(error) })
   }
 
-  redirect('/login?magic=sent')
+  redirect(pathWithNext('/login?magic=sent', next))
 }
 
 export async function updateEmailPreferences(fd: FormData) {

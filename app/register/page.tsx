@@ -3,15 +3,17 @@ import { Button, Card, Field, LinkButton } from '@/components/ui'
 import { getCurrentUser } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { pathWithNext, safeNextPath } from '@/lib/redirects'
 
 export default async function Register({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; invite?: string }>
+  searchParams: Promise<{ error?: string; invite?: string; next?: string }>
 }) {
-  const user = await getCurrentUser()
-  if (user) redirect('/')
   const sp = await searchParams
+  const next = safeNextPath(sp.next)
+  const user = await getCurrentUser()
+  if (user) redirect(next)
 
   return (
     <div className="mx-auto max-w-md space-y-6">
@@ -35,12 +37,13 @@ export default async function Register({
         )}
         <form action={registerViewer} className="grid gap-3">
           {sp.invite && <input type="hidden" name="invite" value={sp.invite} />}
+          {next !== '/' && <input type="hidden" name="next" value={next} />}
           <Field label="Email" name="email" type="email" required />
           <Field label="Password" name="password" type="password" required minLength={8} />
           <Button>Create viewer account</Button>
         </form>
         <p className="mt-3 text-sm text-stone-600">
-          Already have an account? <Link className="text-[#2f6b45] underline" href="/login">Sign in</Link>.
+          Already have an account? <Link className="text-[#2f6b45] underline" href={pathWithNext('/login', next)}>Sign in</Link>.
         </p>
       </Card>
 
