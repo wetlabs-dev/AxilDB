@@ -40,6 +40,9 @@ model User {
   memberships         CollectionMembership[]
   collectionRequests  CollectionRequest[] @relation("CollectionRequestRequester")
   reviewedCollectionRequests CollectionRequest[] @relation("CollectionRequestReviewer")
+  aiAccessRequests    AiAccessRequest[] @relation("AiAccessRequestRequester")
+  reviewedAiAccessRequests AiAccessRequest[] @relation("AiAccessRequestReviewer")
+  aiUsageEvents       AiUsageEvent[]
   archivedCollections Collection[] @relation("CollectionArchivedBy")
   backupRuns          BackupRun[] @relation("BackupRunRequestedBy")
   sentCollectionInvitations CollectionInvitation[] @relation("CollectionInvitationInviter")
@@ -56,6 +59,7 @@ model Collection {
   visibility          String                 @default("PRIVATE")
   status              String                 @default("ACTIVE")
   isDefault           Boolean                @default(false)
+  aiFeaturesEnabled   Boolean                @default(true)
   description         String?
   archivedAt          DateTime?
   archivedById        String?
@@ -66,6 +70,8 @@ model Collection {
   memberships         CollectionMembership[]
   invitations         CollectionInvitation[]
   collectionRequests  CollectionRequest[]
+  aiAccessRequests    AiAccessRequest[]
+  aiUsageEvents       AiUsageEvent[]
   auditLogs           AuditLog[]
   follows             Follow[]
   followNotifications FollowNotification[]
@@ -85,6 +91,7 @@ model Collection {
   @@index([visibility])
   @@index([status])
   @@index([isDefault])
+  @@index([aiFeaturesEnabled])
 }
 
 model CollectionMembership {
@@ -155,6 +162,52 @@ model CollectionRequest {
   @@index([collectionId])
   @@index([requestedSlug])
   @@index([status])
+  @@index([createdAt])
+}
+
+model AiAccessRequest {
+  id             String    @id @default(cuid())
+  collectionId   String
+  requestedById  String
+  reviewedById   String?
+  status         String    @default("PENDING")
+  rationale      String?
+  reviewNote     String?
+  reviewedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  collection  Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  requestedBy User       @relation("AiAccessRequestRequester", fields: [requestedById], references: [id], onDelete: Cascade)
+  reviewedBy  User?      @relation("AiAccessRequestReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([collectionId])
+  @@index([requestedById])
+  @@index([reviewedById])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model AiUsageEvent {
+  id           String   @id @default(cuid())
+  collectionId String
+  userId       String?
+  feature      String
+  model        String?
+  inputTokens  Int?
+  outputTokens Int?
+  totalTokens  Int?
+  success      Boolean  @default(true)
+  error        String?
+  createdAt    DateTime @default(now())
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  user       User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([collectionId])
+  @@index([userId])
+  @@index([feature])
+  @@index([success])
   @@index([createdAt])
 }
 

@@ -65,6 +65,7 @@ export function AIDescriptionField({
     const genus = String(formData.get('genus') || '').trim()
     const species = String(formData.get('species') || '').trim()
     const cultivarName = String(formData.get('cultivarName') || '').trim()
+    const collectionSlug = String(formData.get('collectionSlug') || '').trim()
 
     if (!genus || !species) {
       setStatus('Enter genus and species first.')
@@ -77,7 +78,7 @@ export function AIDescriptionField({
       const response = await fetch('/api/ai/plant-description', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ genus, species, cultivarName }),
+        body: JSON.stringify({ collectionSlug, genus, species, cultivarName }),
       })
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || 'Description generation failed.')
@@ -143,6 +144,7 @@ export function AIMagicFillButton({
     const species = String(formData.get('species') || '').trim()
     const hybridNotation = String(formData.get('hybridNotation') || '').trim()
     const cultivarName = String(formData.get('cultivarName') || '').trim()
+    const collectionSlug = String(formData.get('collectionSlug') || '').trim()
 
     if (!genus || !species) {
       setStatus('Enter genus and species first.')
@@ -155,7 +157,7 @@ export function AIMagicFillButton({
       const response = await fetch('/api/ai/plant-definition-fill', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ genus, species, hybridNotation, cultivarName, governingBodies }),
+        body: JSON.stringify({ collectionSlug, genus, species, hybridNotation, cultivarName, governingBodies }),
       })
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || 'Magic fill failed.')

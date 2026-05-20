@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { approveCollectionRequest, rejectCollectionRequest } from '@/app/collection-actions'
+import { approveAiAccessRequest, approveCollectionRequest, rejectAiAccessRequest, rejectCollectionRequest } from '@/app/collection-actions'
 import { requestSitewideBackup } from '@/app/server-actions'
 import { MetricChart } from '@/components/MetricChart'
 import { Button, Card, LinkButton, TextArea } from '@/components/ui'
@@ -21,14 +21,21 @@ function statusClass(status: string) {
   return 'border-stone-200 bg-stone-50 text-stone-700'
 }
 
+function featureLabel(feature: string) {
+  if (feature === 'AI_DESCRIPTION') return 'Description drafts'
+  if (feature === 'AI_MAGIC_FILL') return 'Definition Magic Fill'
+  if (feature === 'AI_HUSBANDRY_FILL') return 'Husbandry Magic Fill'
+  return feature.replace(/^AI_/, '').toLowerCase().replaceAll('_', ' ')
+}
+
 export default async function ServerDashboard({
   searchParams,
 }: {
-  searchParams: Promise<{ backup?: string; collectionRequest?: string }>
+  searchParams: Promise<{ backup?: string; collectionRequest?: string; aiAccess?: string }>
 }) {
   await requireServerAdmin()
   const sp = await searchParams
-  const [users, collections, archived, memberships, photos, latestSnapshot, backupRuns, collectionRequests] = await Promise.all([
+  const [users, collections, archived, memberships, photos, latestSnapshot, backupRuns, collectionRequests, aiAccessRequests, aiUsageByCollection, aiUsageByFeature] = await Promise.all([
     prisma.user.count(),
     prisma.collection.count({ where: { status: 'ACTIVE' } }),
     prisma.collection.count({ where: { status: 'ARCHIVED' } }),
@@ -46,7 +53,41 @@ export default async function ServerDashboard({
       take: 8,
       include: { requestedBy: { select: { email: true } } },
     }),
+    prisma.aiAccessRequest.findMany({
+      where: { status: 'PENDING' },
+      orderBy: { createdAt: 'asc' },
+      take: 8,
+      include: {
+        collection: { select: { id: true, name: true, slug: true, aiFeaturesEnabled: true } },
+        requestedBy: { select: { email: true } },
+      },
+    }),
+    prisma.aiUsageEvent.groupBy({
+      by: ['collectionId'],
+      _count: { _all: true },
+      _sum: { inputTokens: true, outputTokens: true, totalTokens: true },
+      orderBy: { _count: { collectionId: 'desc' } },
+      take: 12,
+    }),
+    prisma.aiUsageEvent.groupBy({
+      by: ['collectionId', 'feature'],
+      _count: { _all: true },
+      _sum: { totalTokens: true },
+    }),
   ])
+  const aiUsageCollections = aiUsageByCollection.length
+    ? await prisma.collection.findMany({
+        where: { id: { in: aiUsageByCollection.map((row) => row.collectionId) } },
+        select: { id: true, name: true, slug: true, aiFeaturesEnabled: true },
+      })
+    : []
+  const aiUsageCollectionMap = new Map(aiUsageCollections.map((collection) => [collection.id, collection]))
+  const aiFeatureRows = new Map<string, typeof aiUsageByFeature>()
+  for (const row of aiUsageByFeature) {
+    const existing = aiFeatureRows.get(row.collectionId) || []
+    existing.push(row)
+    aiFeatureRows.set(row.collectionId, existing)
+  }
   const metricHistory = await serverMetricHistory()
   const latest = latestSnapshot.metrics
   const diskUsedPercent = latest.disk.totalBytes ? (latest.disk.usedBytes / latest.disk.totalBytes) * 100 : 0
@@ -134,6 +175,94 @@ export default async function ServerDashboard({
               </div>
             </div>
           ))}
+        </div>
+      </Card>
+
+      <Card>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="font-serif text-xl font-semibold">Pending AI access requests</h3>
+            <p className="mt-1 text-sm text-stone-600">Review collection managers asking to enable metered AI drafting tools.</p>
+          </div>
+          {aiAccessRequests.length > 0 && <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-900">{aiAccessRequests.length} pending</span>}
+        </div>
+        {sp.aiAccess === 'approved' && <p className="mt-3 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900">AI access approved and enabled for the collection.</p>}
+        {sp.aiAccess === 'rejected' && <p className="mt-3 rounded-lg border border-stone-200 bg-stone-50 p-3 text-sm text-stone-700">AI access request rejected.</p>}
+        <div className="mt-4 grid gap-3">
+          {aiAccessRequests.length === 0 && <p className="rounded-lg border border-stone-200 bg-white/50 p-3 text-sm text-stone-600">No pending AI access requests.</p>}
+          {aiAccessRequests.map((request) => (
+            <div key={request.id} className="rounded-lg border border-stone-200 bg-white/50 p-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h4 className="font-serif text-lg font-semibold">{request.collection.name}</h4>
+                  <p className="text-sm text-stone-600">
+                    /{request.collection.slug} · AI currently {request.collection.aiFeaturesEnabled ? 'enabled' : 'disabled'} · requested by {request.requestedBy.email}
+                  </p>
+                  {request.rationale && <p className="mt-2 text-sm text-stone-700">Reason: {request.rationale}</p>}
+                </div>
+              </div>
+              <div className="mt-3 grid gap-2 lg:grid-cols-2">
+                <form action={approveAiAccessRequest} className="grid gap-2">
+                  <input type="hidden" name="requestId" value={request.id} />
+                  <TextArea label="Approval note" name="reviewNote" className="min-h-16" />
+                  <Button className="w-fit">Approve and enable AI</Button>
+                </form>
+                <form action={rejectAiAccessRequest} className="grid gap-2">
+                  <input type="hidden" name="requestId" value={request.id} />
+                  <TextArea label="Rejection note" name="reviewNote" className="min-h-16" />
+                  <Button className="w-fit bg-[#9a3f35] hover:bg-[#7d3028]">Reject request</Button>
+                </form>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <Card>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="font-serif text-xl font-semibold">AI usage by collection</h3>
+            <p className="mt-1 text-sm text-stone-600">Counts and token estimates are recorded when AxilDB calls the AI endpoints.</p>
+          </div>
+          <LinkButton href="/server/collections">Toggle AI availability</LinkButton>
+        </div>
+        <div className="mt-4 grid gap-3">
+          {aiUsageByCollection.length === 0 && <p className="rounded-lg border border-stone-200 bg-white/50 p-3 text-sm text-stone-600">No AI usage has been recorded yet.</p>}
+          {aiUsageByCollection.map((usage) => {
+            const collection = aiUsageCollectionMap.get(usage.collectionId)
+            const featureRows = aiFeatureRows.get(usage.collectionId) || []
+            return (
+              <div key={usage.collectionId} className="rounded-lg border border-stone-200 bg-white/50 p-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-serif text-lg font-semibold">{collection?.name || 'Deleted collection'}</p>
+                    <p className="text-sm text-stone-600">
+                      {collection ? `/${collection.slug}` : usage.collectionId} · AI {collection?.aiFeaturesEnabled ? 'enabled' : 'disabled'}
+                    </p>
+                  </div>
+                  <div className="text-right text-sm">
+                    <p className="font-semibold">{usage._count._all} calls</p>
+                    <p className="text-stone-600">{(usage._sum.totalTokens || 0).toLocaleString()} total tokens</p>
+                  </div>
+                </div>
+                <div className="mt-3 grid gap-2 text-sm md:grid-cols-3">
+                  <span>Input: {(usage._sum.inputTokens || 0).toLocaleString()}</span>
+                  <span>Output: {(usage._sum.outputTokens || 0).toLocaleString()}</span>
+                  <span>Total: {(usage._sum.totalTokens || 0).toLocaleString()}</span>
+                </div>
+                {featureRows.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {featureRows.map((feature) => (
+                      <span key={`${feature.collectionId}-${feature.feature}`} className="rounded-full border border-stone-200 bg-white px-2 py-1 text-xs text-stone-700">
+                        {featureLabel(feature.feature)}: {feature._count._all} calls
+                        {feature._sum.totalTokens ? `, ${feature._sum.totalTokens.toLocaleString()} tokens` : ''}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       </Card>
 

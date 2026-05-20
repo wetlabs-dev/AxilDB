@@ -269,6 +269,146 @@ export async function rejectCollectionRequest(fd: FormData) {
   redirect('/server?collectionRequest=rejected')
 }
 
+export async function requestAiAccess(fd: FormData) {
+  const { user, collection } = await requireCollectionManager(val(fd, 'collectionSlug'))
+  if (collection.aiFeaturesEnabled) redirect(collectionPath(collection.slug, '/collection-settings?aiAccess=already-enabled'))
+
+  const existingPending = await prisma.aiAccessRequest.findFirst({
+    where: { collectionId: collection.id, status: 'PENDING' },
+    select: { id: true },
+  })
+  if (existingPending) redirect(collectionPath(collection.slug, '/collection-settings?aiAccess=already-pending'))
+
+  const request = await prisma.aiAccessRequest.create({
+    data: {
+      collectionId: collection.id,
+      requestedById: user.id,
+      rationale: val(fd, 'rationale'),
+    },
+  })
+
+  await audit(user, 'REQUEST', 'AI_ACCESS_REQUEST', request.id, `Requested AI access for ${collection.name}`, request, collection.id)
+
+  const admins = await prisma.user.findMany({ where: { role: 'SERVER_ADMIN' }, select: { email: true } })
+  const template = renderBrandedEmail({
+    title: 'New AxilDB AI access request',
+    preview: `${user.email} requested AI features for ${collection.name}.`,
+    body: [
+      `${user.email} requested AI features for ${collection.name}.`,
+      val(fd, 'rationale') ? `Reason: ${val(fd, 'rationale')}` : 'No reason was provided.',
+      'Approve this only for collections where API usage is expected and acceptable.',
+    ],
+    actionLabel: 'Review request',
+    actionUrl: appUrl('/server'),
+  })
+
+  await Promise.all(
+    admins.map(async (admin) => {
+      try {
+        await sendEmail({ to: admin.email, subject: `AxilDB AI access request: ${collection.name}`, ...template })
+      } catch (error) {
+        await audit(user, 'ERROR', 'EMAIL', request.id, `Failed to notify ${admin.email} about AI access request`, { error: String(error), admin: admin.email }, collection.id)
+      }
+    }),
+  )
+
+  redirect(collectionPath(collection.slug, '/collection-settings?aiAccess=requested'))
+}
+
+export async function approveAiAccessRequest(fd: FormData) {
+  const user = await requireServerAdmin()
+  const requestId = val(fd, 'requestId')
+  const request = await prisma.aiAccessRequest.findUniqueOrThrow({
+    where: { id: requestId },
+    include: {
+      collection: { select: { id: true, name: true, slug: true } },
+      requestedBy: { select: { email: true } },
+    },
+  })
+  if (request.status !== 'PENDING') throw new Error('This request has already been reviewed.')
+
+  await prisma.$transaction([
+    prisma.collection.update({ where: { id: request.collectionId }, data: { aiFeaturesEnabled: true } }),
+    prisma.aiAccessRequest.update({
+      where: { id: request.id },
+      data: { status: 'APPROVED', reviewedById: user.id, reviewedAt: new Date(), reviewNote: val(fd, 'reviewNote') },
+    }),
+  ])
+  await audit(user, 'APPROVE', 'AI_ACCESS_REQUEST', request.id, `Approved AI access for ${request.collection.name}`, { requestId: request.id }, request.collectionId)
+
+  if (request.requestedBy.email) {
+    const template = renderBrandedEmail({
+      title: 'AI features are enabled',
+      preview: `AI features are now enabled for ${request.collection.name}.`,
+      body: [
+        `AI features are now enabled for ${request.collection.name}.`,
+        'Collection members with record-creation permissions can use AI draft and Magic Fill tools where available.',
+      ],
+      actionLabel: 'Open collection settings',
+      actionUrl: appUrl(collectionPath(request.collection.slug, '/collection-settings')),
+    })
+    try {
+      await sendEmail({ to: request.requestedBy.email, subject: `AI enabled for ${request.collection.name}`, ...template })
+    } catch (error) {
+      await audit(user, 'ERROR', 'EMAIL', request.id, 'Failed to email AI access approval', { error: String(error), email: request.requestedBy.email }, request.collectionId)
+    }
+  }
+
+  redirect('/server?aiAccess=approved')
+}
+
+export async function rejectAiAccessRequest(fd: FormData) {
+  const user = await requireServerAdmin()
+  const requestId = val(fd, 'requestId')
+  const request = await prisma.aiAccessRequest.findUniqueOrThrow({
+    where: { id: requestId },
+    include: {
+      collection: { select: { id: true, name: true, slug: true } },
+      requestedBy: { select: { email: true } },
+    },
+  })
+  if (request.status !== 'PENDING') throw new Error('This request has already been reviewed.')
+
+  const reviewNote = val(fd, 'reviewNote')
+  await prisma.aiAccessRequest.update({
+    where: { id: request.id },
+    data: { status: 'REJECTED', reviewedById: user.id, reviewedAt: new Date(), reviewNote },
+  })
+  await audit(user, 'REJECT', 'AI_ACCESS_REQUEST', request.id, `Rejected AI access for ${request.collection.name}`, { reviewNote }, request.collectionId)
+
+  if (request.requestedBy.email) {
+    const template = renderBrandedEmail({
+      title: 'AxilDB AI access request update',
+      preview: `AI features were not enabled for ${request.collection.name} right now.`,
+      body: [
+        `AI features were not enabled for ${request.collection.name} right now.`,
+        reviewNote ? `Note from the server admin: ${reviewNote}` : 'No review note was provided.',
+      ],
+      actionLabel: 'Open collection settings',
+      actionUrl: appUrl(collectionPath(request.collection.slug, '/collection-settings')),
+    })
+    try {
+      await sendEmail({ to: request.requestedBy.email, subject: `AI access request update: ${request.collection.name}`, ...template })
+    } catch (error) {
+      await audit(user, 'ERROR', 'EMAIL', request.id, 'Failed to email AI access rejection', { error: String(error), email: request.requestedBy.email }, request.collectionId)
+    }
+  }
+
+  redirect('/server?aiAccess=rejected')
+}
+
+export async function setCollectionAiFeatures(fd: FormData) {
+  const user = await requireServerAdmin()
+  const collectionId = val(fd, 'collectionId')
+  const enabled = val(fd, 'enabled') === 'true'
+  const collection = await prisma.collection.update({
+    where: { id: collectionId },
+    data: { aiFeaturesEnabled: enabled },
+  })
+  await audit(user, 'UPDATE', 'COLLECTION_AI_FEATURES', collection.id, `${enabled ? 'Enabled' : 'Disabled'} AI features for ${collection.name}`, { enabled }, collection.id)
+  redirect('/server/collections')
+}
+
 export async function approveMembership(fd: FormData) {
   const { user, collection } = await requireCollectionManager(val(fd, 'collectionSlug'))
   const membershipId = val(fd, 'membershipId')

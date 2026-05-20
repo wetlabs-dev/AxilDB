@@ -1,4 +1,4 @@
-import { archiveCollection, permanentlyDeleteCollection, restoreCollection } from '@/app/collection-actions'
+import { archiveCollection, permanentlyDeleteCollection, restoreCollection, setCollectionAiFeatures } from '@/app/collection-actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { Button, Card, Field, LinkButton } from '@/components/ui'
 import { requireServerAdmin } from '@/lib/auth'
@@ -41,6 +41,7 @@ export default async function ServerCollections() {
           photos: true,
           reminders: true,
           follows: true,
+          aiUsageEvents: true,
         },
       },
       photos: { select: { path: true } },
@@ -70,9 +71,17 @@ export default async function ServerCollections() {
                 <p className="text-sm text-stone-600">
                   /c/{collection.slug} · {collection.visibility.toLowerCase()} · {collection.status.toLowerCase()}
                   {collection.isDefault ? ' · default' : ''}
+                  {' · '}AI {collection.aiFeaturesEnabled ? 'enabled' : 'disabled'}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
+                <form action={setCollectionAiFeatures}>
+                  <input type="hidden" name="collectionId" value={collection.id} />
+                  <input type="hidden" name="enabled" value={collection.aiFeaturesEnabled ? 'false' : 'true'} />
+                  <Button className="bg-[#6d7f6d] px-3 py-1.5 hover:bg-[#536453]">
+                    {collection.aiFeaturesEnabled ? 'Disable AI' : 'Enable AI'}
+                  </Button>
+                </form>
                 {collection.status === 'ACTIVE' && !collection.isDefault && (
                   <form action={archiveCollection}>
                     <input type="hidden" name="collectionId" value={collection.id} />
@@ -95,6 +104,7 @@ export default async function ServerCollections() {
               <span>Blooms: {collection._count.bloomEvents}</span>
               <span>Photos: {collection._count.photos}</span>
               <span>Reminders: {collection._count.reminders}</span>
+              <span>AI calls: {collection._count.aiUsageEvents}</span>
               <span>Uploads: {formatBytes(byteCounts.get(collection.id) || 0)}</span>
             </div>
             {collection.status === 'ARCHIVED' && !collection.isDefault && (

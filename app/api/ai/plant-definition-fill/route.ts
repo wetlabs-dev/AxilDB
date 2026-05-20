@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { audit, requireCreateUser } from '@/lib/auth'
+import { audit } from '@/lib/auth'
+import { recordAiUsage, requireAiFeatureAccess, tokenUsage } from '@/lib/ai-usage'
 
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses'
 const DEFAULT_MODEL = 'gpt-5.4-mini'
@@ -94,7 +95,10 @@ function normalizeFields(raw: any, originalName: string) {
 }
 
 export async function POST(req: Request) {
-  const user = await requireCreateUser()
+  const body = await req.json().catch(() => ({}))
+  const access = await requireAiFeatureAccess(trimmedString(body.collectionSlug, 80))
+  if (access.error) return access.error
+  const { user, collection } = access.context
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) {
     return NextResponse.json({ error: 'OpenAI API key is not configured.' }, { status: 503 })
@@ -103,7 +107,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Magic fill limit reached. Try again later.' }, { status: 429 })
   }
 
-  const body = await req.json().catch(() => ({}))
   const genus = trimmedString(body.genus, 80)
   const species = trimmedString(body.species, 80).toLowerCase()
   const hybridNotation = trimmedString(body.hybridNotation, 120)
@@ -177,7 +180,8 @@ export async function POST(req: Request) {
     const payload = await response.json().catch(() => ({}))
     if (!response.ok) {
       const message = payload.error?.message || 'OpenAI magic fill request failed.'
-      await audit(user, 'ERROR', 'AI_MAGIC_FILL', null, `Failed magic fill for ${originalName}`, { model, error: message })
+      await recordAiUsage({ collectionId: collection.id, userId: user.id, feature: 'AI_MAGIC_FILL', model, success: false, error: message })
+      await audit(user, 'ERROR', 'AI_MAGIC_FILL', null, `Failed magic fill for ${originalName}`, { model, error: message }, collection.id)
       return NextResponse.json({ error: message }, { status: response.status })
     }
 
@@ -194,11 +198,13 @@ export async function POST(req: Request) {
       })
       fields.aliases = fields.aliases.slice(0, 8)
     }
-    await audit(user, 'GENERATE', 'AI_MAGIC_FILL', null, `Generated magic fill for ${originalName}`, { model, reviewNote: fields.reviewNote })
+    await recordAiUsage({ collectionId: collection.id, userId: user.id, feature: 'AI_MAGIC_FILL', model, usage: tokenUsage(payload) })
+    await audit(user, 'GENERATE', 'AI_MAGIC_FILL', null, `Generated magic fill for ${originalName}`, { model, reviewNote: fields.reviewNote }, collection.id)
     return NextResponse.json({ fields })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'OpenAI magic fill request failed.'
-    await audit(user, 'ERROR', 'AI_MAGIC_FILL', null, `Failed magic fill for ${originalName}`, { model, error: message })
+    await recordAiUsage({ collectionId: collection.id, userId: user.id, feature: 'AI_MAGIC_FILL', model, success: false, error: message })
+    await audit(user, 'ERROR', 'AI_MAGIC_FILL', null, `Failed magic fill for ${originalName}`, { model, error: message }, collection.id)
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

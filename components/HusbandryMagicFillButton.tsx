@@ -22,6 +22,8 @@ export function HusbandryMagicFillButton({ plant, className = '' }: { plant: any
   async function magicFill() {
     const form = buttonRef.current?.form
     if (!form) return
+    const formData = new FormData(form)
+    const collectionSlug = String(formData.get('collectionSlug') || '').trim()
 
     setLoading(true)
     setStatus('Drafting husbandry...')
@@ -29,7 +31,7 @@ export function HusbandryMagicFillButton({ plant, className = '' }: { plant: any
       const response = await fetch('/api/ai/plant-husbandry-fill', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plant }),
+        body: JSON.stringify({ collectionSlug, plant }),
       })
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || 'Husbandry fill failed.')
