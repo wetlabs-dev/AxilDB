@@ -104,7 +104,7 @@ export default async function Plants() {
               <span className="min-w-0">Enter the core name first, then let AxilDB draft taxonomy metadata and suggested aliases.</span>
               <AIMagicFillButton governingBodies={governingBodyOptions} />
             </div>
-            <Field label="Authority" help="The author citation for the scientific name, such as (L.f.) R.Br. It records who validly published the name or combination." name="authority" list="definition-authority-suggestions" />
+            <Field label="Author citation" help="The author citation for the scientific name, such as (L.f.) R.Br. It records who validly published the name or combination." name="authority" list="definition-authority-suggestions" />
             <Field label="Cultivar registration number" help="Use when a formal cultivar registry or governing body assigns a registration number to the cultivar." name="cultivarRegistrationNumber" />
             <ConfidenceSelect name="confidence" />
             <label className="grid gap-1 text-sm font-medium text-stone-800">
@@ -154,7 +154,7 @@ export default async function Plants() {
                       <p className="line-clamp-2 text-sm text-stone-600">
                         {plant.acquisitionLabel && <>Acquired as {plant.acquisitionLabel}. </>}
                         {plant.provisionalTaxon && <>Provisional taxon: {plant.provisionalTaxon}. </>}
-                        {plant.authority && <>Authority: {plant.authority}.</>}
+                        {plant.authority && <>Author citation: {plant.authority}.</>}
                       </p>
                     )}
                     {plant.aliases.length > 0 && (

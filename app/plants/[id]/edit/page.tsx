@@ -104,7 +104,7 @@ export default async function EditPlant({
             <span className="min-w-0">Update the core name first, then let AxilDB draft taxonomy metadata and suggested aliases.</span>
             <AIMagicFillButton governingBodies={governingBodyOptions} />
           </div>
-          <Field label="Authority" help="The author citation for the scientific name, such as (L.f.) R.Br. It records who validly published the name or combination." name="authority" defaultValue={plant.authority} list="definition-authority-suggestions" />
+          <Field label="Author citation" help="The author citation for the scientific name, such as (L.f.) R.Br. It records who validly published the name or combination." name="authority" defaultValue={plant.authority} list="definition-authority-suggestions" />
           <Field label="Cultivar registration number" help="Use when a formal cultivar registry or governing body assigns a registration number to the cultivar." name="cultivarRegistrationNumber" defaultValue={plant.cultivarRegistrationNumber} />
           <ConfidenceSelect name="confidence" defaultValue={plant.confidence} />
           <label className="grid gap-1 text-sm font-medium text-stone-800">
