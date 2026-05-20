@@ -164,7 +164,7 @@ export default async function InstanceDetail({
   )
 
   const followCard = user ? (
-    <Card className="text-sm">
+    <Card className="text-sm xl:order-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h3 className="font-bold">Follow updates</h3>
@@ -295,8 +295,8 @@ export default async function InstanceDetail({
         <img src={qr} className="h-28 w-28" alt="QR code" />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.35fr)]">
+        <Card>
           <h3 className="font-bold">Identity</h3>
           <p className="font-medium">{plantName(i.plantDefinition)}</p>
           <p>Confidence: {taxonomyLabel(i.plantDefinition.confidence)}</p>
@@ -335,7 +335,7 @@ export default async function InstanceDetail({
 
         {photosCard}
 
-        <Card id="husbandry" className="lg:col-span-2">
+        <Card id="husbandry" className="xl:order-4">
           <h3 className="font-bold">Husbandry</h3>
           {baseHusbandryGuide ? (
             <>
@@ -371,7 +371,7 @@ export default async function InstanceDetail({
           )}
         </Card>
 
-        <Card>
+        <Card className="xl:order-3">
           <h3 className="font-bold">Sport / mutation</h3>
           <p>Status: {i.sportStatus}</p>
           <p className="text-sm text-stone-700">{i.sportDescription || 'No sport observations yet.'}</p>
@@ -411,11 +411,10 @@ export default async function InstanceDetail({
             </div>
           )}
         </Card>
-
-        {followCard}
       </div>
 
-      <Card>
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1fr)]">
+        <Card className="xl:order-1">
         <h3 className="font-bold">Children</h3>
         {i.childLinks.length === 0 && <p className="text-sm text-neutral-600">No child propagations yet.</p>}
         {i.childLinks
@@ -429,8 +428,9 @@ export default async function InstanceDetail({
           ))}
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
+        {followCard}
+
+        <Card className="xl:order-4">
           <h3 className="font-bold">Add note</h3>
           {canCreateInCollection(user, context) && <form action={addNote} className="grid gap-2">
             <input type="hidden" name="entityType" value="PLANT_INSTANCE" />
@@ -450,7 +450,7 @@ export default async function InstanceDetail({
           ))}
         </Card>
 
-        <Card>
+        <Card className="xl:order-5">
           <div className="flex items-start justify-between gap-3">
             <div>
               <h3 className="font-bold">Reminders</h3>
@@ -526,7 +526,7 @@ export default async function InstanceDetail({
           </div>
         </Card>
 
-        <Card>
+        <Card className="xl:order-2 xl:col-span-2">
           <h3 className="font-bold">Bloom tracker</h3>
           <p className="mb-4 text-sm text-neutral-600">
             Open a bloom when it starts, mark peak later, then close it when finished. Photos can be added to the bloom event at any stage.
