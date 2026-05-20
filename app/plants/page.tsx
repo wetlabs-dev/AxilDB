@@ -142,75 +142,75 @@ export default async function Plants() {
               <div className="aspect-[4/3]">
                 <PlantImage src={typePhoto} alt={plantName(plant)} />
               </div>
-              <div className="min-h-0 flex-1 overflow-hidden p-3">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <span className="line-clamp-2 text-sm font-bold leading-tight">{plantName(plant)}</span>
-                <p className="truncate text-sm">
-                  {plant.governingBody?.abbreviation || 'No governing body'} · {plant._count.instances} instance(s) ·{' '}
-                  {taxonomyLabel(plant.confidence)}
-                </p>
-                {(plant.acquisitionLabel || plant.provisionalTaxon || plant.authority) && (
-                  <p className="line-clamp-2 text-sm text-stone-600">
-                    {plant.acquisitionLabel && <>Acquired as {plant.acquisitionLabel}. </>}
-                    {plant.provisionalTaxon && <>Provisional taxon: {plant.provisionalTaxon}. </>}
-                    {plant.authority && <>Authority: {plant.authority}.</>}
-                  </p>
-                )}
-                {plant.aliases.length > 0 && (
-                  <p className="line-clamp-2 text-sm text-stone-600">
-                    Aliases: {plant.aliases.slice(0, 4).map((alias) => alias.name).join(', ')}
-                    {plant.aliases.length > 4 ? `, +${plant.aliases.length - 4} more` : ''}
-                  </p>
-                )}
-                {(plant.wikipediaUrl || plant.inaturalistUrl || plant.powoUrl || plant.gbifUrl) && (
-                  <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                    {plant.wikipediaUrl && <a className="rounded-md border border-stone-300 bg-white/60 px-2 py-1 underline" href={plant.wikipediaUrl}>Wikipedia</a>}
-                    {plant.inaturalistUrl && <a className="rounded-md border border-stone-300 bg-white/60 px-2 py-1 underline" href={plant.inaturalistUrl}>iNaturalist</a>}
-                    {plant.powoUrl && <a className="rounded-md border border-stone-300 bg-white/60 px-2 py-1 underline" href={plant.powoUrl}>POWO</a>}
-                    {plant.gbifUrl && <a className="rounded-md border border-stone-300 bg-white/60 px-2 py-1 underline" href={plant.gbifUrl}>GBIF</a>}
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-3">
+                <div className="flex flex-1 items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <span className="line-clamp-2 text-sm font-bold leading-tight">{plantName(plant)}</span>
+                    <p className="truncate text-sm">
+                      {plant.governingBody?.abbreviation || 'No governing body'} · {plant._count.instances} instance(s) ·{' '}
+                      {taxonomyLabel(plant.confidence)}
+                    </p>
+                    {(plant.acquisitionLabel || plant.provisionalTaxon || plant.authority) && (
+                      <p className="line-clamp-2 text-sm text-stone-600">
+                        {plant.acquisitionLabel && <>Acquired as {plant.acquisitionLabel}. </>}
+                        {plant.provisionalTaxon && <>Provisional taxon: {plant.provisionalTaxon}. </>}
+                        {plant.authority && <>Authority: {plant.authority}.</>}
+                      </p>
+                    )}
+                    {plant.aliases.length > 0 && (
+                      <p className="line-clamp-2 text-sm text-stone-600">
+                        Aliases: {plant.aliases.slice(0, 4).map((alias) => alias.name).join(', ')}
+                        {plant.aliases.length > 4 ? `, +${plant.aliases.length - 4} more` : ''}
+                      </p>
+                    )}
+                    {(plant.wikipediaUrl || plant.inaturalistUrl || plant.powoUrl || plant.gbifUrl) && (
+                      <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                        {plant.wikipediaUrl && <a className="rounded-md border border-stone-300 bg-white/60 px-2 py-1 underline" href={plant.wikipediaUrl}>Wikipedia</a>}
+                        {plant.inaturalistUrl && <a className="rounded-md border border-stone-300 bg-white/60 px-2 py-1 underline" href={plant.inaturalistUrl}>iNaturalist</a>}
+                        {plant.powoUrl && <a className="rounded-md border border-stone-300 bg-white/60 px-2 py-1 underline" href={plant.powoUrl}>POWO</a>}
+                        {plant.gbifUrl && <a className="rounded-md border border-stone-300 bg-white/60 px-2 py-1 underline" href={plant.gbifUrl}>GBIF</a>}
+                      </div>
+                    )}
+                    <p className="line-clamp-2 text-sm text-stone-600">{plant.description}</p>
+                    <HusbandryBadges
+                      values={(plant.husbandryGuide?.sourcePlantDefinitionId
+                        ? husbandryGuideByDefinitionId.get(plant.husbandryGuide.sourcePlantDefinitionId)
+                        : plant.husbandryGuide) as any}
+                      href={collectionPath(collection.slug, `/plants/${plant.id}/husbandry`)}
+                    />
+                    <p className="mt-2 text-xs font-medium text-stone-500">
+                      {followCountByDefinitionId.get(plant.id) || 0} follower{(followCountByDefinitionId.get(plant.id) || 0) === 1 ? '' : 's'}
+                    </p>
                   </div>
-                )}
-                <p className="line-clamp-2 text-sm text-stone-600">{plant.description}</p>
-                <HusbandryBadges
-                  values={(plant.husbandryGuide?.sourcePlantDefinitionId
-                    ? husbandryGuideByDefinitionId.get(plant.husbandryGuide.sourcePlantDefinitionId)
-                    : plant.husbandryGuide) as any}
-                  href={collectionPath(collection.slug, `/plants/${plant.id}/husbandry`)}
-                />
-                <p className="mt-2 text-xs font-medium text-stone-500">
-                  {followCountByDefinitionId.get(plant.id) || 0} follower{(followCountByDefinitionId.get(plant.id) || 0) === 1 ? '' : 's'}
-                </p>
-                </div>
-              {canEditInCollection(user, context) && (
-                <Link className="rounded-md border px-2 py-1 text-xs" href={collectionPath(collection.slug, `/plants/${plant.id}/edit`)}>
-                  Edit
-                </Link>
-              )}
-              </div>
-              {user && (
-                <div className="mt-3">
-                  {followsByDefinitionId.get(plant.id) ? (
-                    <form action={unfollowEntity}>
-                      <input type="hidden" name="id" value={followsByDefinitionId.get(plant.id)!.id} />
-                      <input type="hidden" name="back" value={collectionPath(collection.slug, '/plants')} />
-                      <Button className="w-full border border-stone-300 bg-white/70 px-3 py-1.5 text-xs text-stone-800 hover:bg-white">
-                        Following type · {followCountByDefinitionId.get(plant.id) || 0}
-                      </Button>
-                    </form>
-                  ) : (
-                    <form action={followEntity}>
-                      <input type="hidden" name="scope" value="TYPE" />
-                      <input type="hidden" name="entityType" value="PLANT_DEFINITION" />
-                      <input type="hidden" name="entityId" value={plant.id} />
-                      <input type="hidden" name="collectionSlug" value={collection.slug} />
-                      <input type="hidden" name="back" value={collectionPath(collection.slug, '/plants')} />
-                      <Button className="w-full px-3 py-1.5 text-xs">Follow type · {followCountByDefinitionId.get(plant.id) || 0}</Button>
-                    </form>
+                  {canEditInCollection(user, context) && (
+                    <Link className="rounded-md border px-2 py-1 text-xs" href={collectionPath(collection.slug, `/plants/${plant.id}/edit`)}>
+                      Edit
+                    </Link>
                   )}
                 </div>
-              )}
-            </div>
+                {user && (
+                  <div className="mt-auto pt-3">
+                    {followsByDefinitionId.get(plant.id) ? (
+                      <form action={unfollowEntity}>
+                        <input type="hidden" name="id" value={followsByDefinitionId.get(plant.id)!.id} />
+                        <input type="hidden" name="back" value={collectionPath(collection.slug, '/plants')} />
+                        <Button className="w-full border border-stone-300 bg-white/70 px-3 py-1.5 text-xs text-stone-800 hover:bg-white">
+                          Following type · {followCountByDefinitionId.get(plant.id) || 0}
+                        </Button>
+                      </form>
+                    ) : (
+                      <form action={followEntity}>
+                        <input type="hidden" name="scope" value="TYPE" />
+                        <input type="hidden" name="entityType" value="PLANT_DEFINITION" />
+                        <input type="hidden" name="entityId" value={plant.id} />
+                        <input type="hidden" name="collectionSlug" value={collection.slug} />
+                        <input type="hidden" name="back" value={collectionPath(collection.slug, '/plants')} />
+                        <Button className="w-full px-3 py-1.5 text-xs">Follow type · {followCountByDefinitionId.get(plant.id) || 0}</Button>
+                      </form>
+                    )}
+                  </div>
+                )}
+              </div>
             </Card>
           )
         })}

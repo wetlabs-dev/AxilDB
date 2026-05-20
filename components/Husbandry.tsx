@@ -1,11 +1,64 @@
 import Link from 'next/link'
-import { PencilLine, Sparkles } from 'lucide-react'
-import { husbandryDifferences, husbandryFieldNames, husbandrySections, husbandrySummary, type HusbandryValues } from '@/lib/husbandry'
+import { Droplets, PencilLine, Skull, Sparkles, Sun } from 'lucide-react'
+import {
+  husbandryDifferences,
+  husbandryFieldNames,
+  husbandrySections,
+  husbandrySummaryChoices,
+  husbandrySummaryItems,
+  isHusbandrySummaryChoiceField,
+  type HusbandryFieldName,
+  type HusbandrySummaryTone,
+  type HusbandryValues,
+} from '@/lib/husbandry'
 import { cn } from '@/lib/utils'
 import { Button, Card, Field, Select, TextArea } from '@/components/ui'
 import { HusbandryMagicFillButton } from '@/components/HusbandryMagicFillButton'
 
 const textareaClass = 'min-h-16'
+const summaryToneClasses: Record<HusbandrySummaryTone, string> = {
+  blue: 'border-sky-300 bg-sky-50 text-sky-800',
+  green: 'border-[#b8c9ad] bg-[#eef4e8] text-[#2f6b45]',
+  red: 'border-[#c47a5a]/40 bg-[#fff1e8] text-[#8a4b32]',
+  yellow: 'border-[#d8bd72]/50 bg-[#fff8dc] text-[#735a1b]',
+}
+const summaryIcons = {
+  summaryWater: Droplets,
+  summaryLight: Sun,
+  summaryToxicity: Skull,
+}
+
+function HusbandrySummaryControl({
+  field,
+  label,
+  name,
+  defaultValue,
+}: {
+  field: HusbandryFieldName
+  label: string
+  name: string
+  defaultValue?: string | null
+}) {
+  if (!isHusbandrySummaryChoiceField(field)) {
+    return null
+  }
+
+  return (
+    <select
+      name={name}
+      defaultValue={defaultValue || ''}
+      aria-label={label}
+      className="rounded-md border border-stone-300 bg-[#fffdf7] px-3 py-2 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30"
+    >
+      <option value="">Clear this field</option>
+      {husbandrySummaryChoices[field].map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label} - {option.description}
+        </option>
+      ))}
+    </select>
+  )
+}
 
 export function HusbandryBadges({
   values,
@@ -16,16 +69,20 @@ export function HusbandryBadges({
   href?: string
   className?: string
 }) {
-  const badges = husbandrySummary(values)
+  const badges = husbandrySummaryItems(values)
   if (badges.length === 0 && !href) return null
 
   return (
     <div className={cn('mt-2 flex flex-wrap gap-1.5 text-xs', className)}>
-      {badges.slice(0, 3).map((badge) => (
-        <span key={badge} className={cn('rounded-full border px-2 py-1', badge.toLowerCase().includes('toxic') ? 'border-[#c47a5a]/40 bg-[#fff1e8] text-[#8a4b32]' : 'border-[#b8c9ad] bg-[#eef4e8] text-[#2f6b45]')}>
-          {badge}
-        </span>
-      ))}
+      {badges.slice(0, 3).map((badge) => {
+        const Icon = summaryIcons[badge.field]
+        return (
+          <span key={`${badge.field}-${badge.label}`} className={cn('inline-flex items-center gap-1.5 rounded-full border px-2 py-1', summaryToneClasses[badge.tone])}>
+            <Icon className="h-3.5 w-3.5 shrink-0" />
+            {badge.label}
+          </span>
+        )
+      })}
       {href && (
         <Link className="rounded-full border border-stone-300 bg-white/70 px-2 py-1 text-stone-700 underline" href={href}>
           See full husbandry
@@ -100,12 +157,16 @@ export function HusbandryGuideView({
                             <input type="hidden" name="fieldName" value={field} />
                             <label className="grid gap-1 font-medium text-stone-800">
                               {label}
-                              <textarea
-                                name="fieldValue"
-                                defaultValue={values?.[field] || ''}
-                                className="min-h-24 rounded-md border border-stone-300 bg-[#fffdf7] px-3 py-2 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30"
-                                placeholder="Leave blank if this does not apply yet."
-                              />
+                              {isHusbandrySummaryChoiceField(field) ? (
+                                <HusbandrySummaryControl field={field} label={label} name="fieldValue" defaultValue={values?.[field]} />
+                              ) : (
+                                <textarea
+                                  name="fieldValue"
+                                  defaultValue={values?.[field] || ''}
+                                  className="min-h-24 rounded-md border border-stone-300 bg-[#fffdf7] px-3 py-2 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30"
+                                  placeholder="Leave blank if this does not apply yet."
+                                />
+                              )}
                             </label>
                             <p className="text-xs font-normal text-stone-600">Leave blank and save to clear this field.</p>
                             <Button className="w-fit px-3 py-1.5 text-xs">Save field</Button>
@@ -124,12 +185,16 @@ export function HusbandryGuideView({
                             <input type="hidden" name="fieldName" value={field} />
                             <label className="grid gap-1 font-medium text-stone-800">
                               Local {label.toLowerCase()}
-                              <textarea
-                                name="fieldValue"
-                                defaultValue={overrideValues?.[field] || ''}
-                                className="min-h-24 rounded-md border border-stone-300 bg-[#fffdf7] px-3 py-2 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30"
-                                placeholder={String(baseValues?.[field] || values?.[field] || '')}
-                              />
+                              {isHusbandrySummaryChoiceField(field) ? (
+                                <HusbandrySummaryControl field={field} label={`Local ${label.toLowerCase()}`} name="fieldValue" defaultValue={overrideValues?.[field]} />
+                              ) : (
+                                <textarea
+                                  name="fieldValue"
+                                  defaultValue={overrideValues?.[field] || ''}
+                                  className="min-h-24 rounded-md border border-stone-300 bg-[#fffdf7] px-3 py-2 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30"
+                                  placeholder={String(baseValues?.[field] || values?.[field] || '')}
+                                />
+                              )}
                             </label>
                             <p className="text-xs font-normal text-stone-600">Leave blank and save to remove this local adjustment.</p>
                             <Button className="w-fit px-3 py-1.5 text-xs">Save override</Button>
@@ -182,14 +247,21 @@ export function HusbandryGuideForm({
             <h4 className="font-serif text-lg font-semibold">{section.title}</h4>
             <div className="mt-3 grid gap-3 md:grid-cols-2">
               {section.fields.map(([field, label]) => (
-                <TextArea
-                  key={field}
-                  label={label}
-                  name={field}
-                  defaultValue={values?.[field] || ''}
-                  className={textareaClass}
-                  wrapperClassName={section.key === 'summary' ? '' : undefined}
-                />
+                isHusbandrySummaryChoiceField(field) ? (
+                  <label key={field} className="grid gap-1 text-sm font-medium text-stone-800">
+                    <span>{label}</span>
+                    <HusbandrySummaryControl field={field} label={label} name={field} defaultValue={values?.[field]} />
+                  </label>
+                ) : (
+                  <TextArea
+                    key={field}
+                    label={label}
+                    name={field}
+                    defaultValue={values?.[field] || ''}
+                    className={textareaClass}
+                    wrapperClassName={section.key === 'summary' ? '' : undefined}
+                  />
+                )
               ))}
             </div>
           </div>
@@ -232,7 +304,14 @@ export function HusbandryOverrideForm({
             <h4 className="font-serif text-lg font-semibold">{section.title}</h4>
             <div className="mt-3 grid gap-3 md:grid-cols-2">
               {section.fields.map(([field, label]) => (
-                <TextArea key={field} label={label} name={field} defaultValue={values?.[field] || ''} className={textareaClass} />
+                isHusbandrySummaryChoiceField(field) ? (
+                  <label key={field} className="grid gap-1 text-sm font-medium text-stone-800">
+                    <span>{label}</span>
+                    <HusbandrySummaryControl field={field} label={label} name={field} defaultValue={values?.[field]} />
+                  </label>
+                ) : (
+                  <TextArea key={field} label={label} name={field} defaultValue={values?.[field] || ''} className={textareaClass} />
+                )
               ))}
             </div>
           </div>
