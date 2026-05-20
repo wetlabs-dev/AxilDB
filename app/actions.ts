@@ -348,6 +348,35 @@ export async function savePlantHusbandryGuide(fd: FormData) {
   redirect(collectionPath(collection.slug, `/plants/${plantDefinitionId}/edit#husbandry`))
 }
 
+export async function savePlantHusbandryGuideField(fd: FormData) {
+  const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
+  const plantDefinitionId = val(fd, 'plantDefinitionId')!
+  const fieldName = val(fd, 'fieldName')!
+  if (!husbandryFieldNames.includes(fieldName as any)) throw new Error('Unknown husbandry field.')
+  await prisma.plantDefinition.findFirstOrThrow({ where: { id: plantDefinitionId, collectionId: collection.id }, select: { id: true } })
+
+  const fieldValue = val(fd, 'fieldValue') || null
+  const existing = await prisma.plantHusbandryGuide.findFirst({ where: { collectionId: collection.id, plantDefinitionId } })
+  if (existing?.sourcePlantDefinitionId) throw new Error('Fork the linked husbandry guide before editing local fields.')
+
+  const guide = existing
+    ? await prisma.plantHusbandryGuide.update({
+        where: { id: existing.id },
+        data: { [fieldName]: fieldValue } as any,
+      })
+    : await prisma.plantHusbandryGuide.create({
+        data: {
+          collectionId: collection.id,
+          plantDefinitionId,
+          reviewStatus: 'DRAFT',
+          [fieldName]: fieldValue,
+        } as any,
+      })
+
+  await audit(user, 'UPDATE', 'PLANT_HUSBANDRY_GUIDE', guide.id, `Saved plant husbandry guide field`, { fieldName }, collection.id)
+  redirect(collectionPath(collection.slug, `/plants/${plantDefinitionId}/edit#husbandry`))
+}
+
 export async function linkPlantHusbandryGuide(fd: FormData) {
   const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const plantDefinitionId = val(fd, 'plantDefinitionId')!

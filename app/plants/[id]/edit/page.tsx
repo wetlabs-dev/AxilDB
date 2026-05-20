@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import { deletePlantDefinition, deletePlantHusbandryGuide, forkPlantHusbandryGuide, linkPlantHusbandryGuide, savePlantHusbandryGuide, updatePlantDefinition } from '@/app/actions'
+import { deletePlantDefinition, deletePlantHusbandryGuide, forkPlantHusbandryGuide, linkPlantHusbandryGuide, savePlantHusbandryGuideField, updatePlantDefinition } from '@/app/actions'
 import { Button, Card, Field, HelpTooltip, SuggestionDatalist, TextArea } from '@/components/ui'
 import { ConfidenceSelect, PlantAliasFields } from '@/components/PlantAliasFields'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
@@ -7,7 +7,7 @@ import { PlantImage } from '@/components/PlantImage'
 import { rankedSuggestions } from '@/lib/suggestions'
 import { AIDescriptionField, AIMagicFillButton } from '@/components/AIDescriptionField'
 import { collectionPath, requireCollectionAdmin } from '@/lib/collections'
-import { HusbandryBadges, HusbandryEmptyPrompt, HusbandryGuideForm, HusbandryGuideView } from '@/components/Husbandry'
+import { HusbandryBadges, HusbandryGuideView } from '@/components/Husbandry'
 import { plantName } from '@/lib/utils'
 
 const selectClass = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
@@ -197,47 +197,25 @@ export default async function EditPlant({
 
           {effectiveGuide ? (
             <HusbandryGuideView
-              values={effectiveGuide as any}
+              values={(sourceDefinition ? effectiveGuide : plant.husbandryGuide) as any}
+              editAction={!sourceDefinition ? savePlantHusbandryGuideField : undefined}
+              collectionSlug={collection.slug}
+              plantDefinitionId={plant.id}
+              canEdit={!sourceDefinition}
+              showEmptyFields={!sourceDefinition}
               title="Current husbandry guide"
               sourceLabel={sourceDefinition ? `Inherited from ${plantName(sourceDefinition)}` : undefined}
             />
           ) : (
-            <HusbandryEmptyPrompt />
-          )}
-
-          {!sourceDefinition && (
-            <details className="group rounded-lg border border-stone-200 bg-white/50" open={!plant.husbandryGuide}>
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-semibold">
-                <span>{plant.husbandryGuide ? 'Edit husbandry guide' : 'Create husbandry guide'}</span>
-                <span className="rounded-md border border-stone-300 bg-white/70 px-2 py-1 text-xs group-open:hidden">Open</span>
-                <span className="hidden rounded-md border border-stone-300 bg-white/70 px-2 py-1 text-xs group-open:inline-block">Hide</span>
-              </summary>
-              <div className="border-t border-stone-200 p-3">
-                <HusbandryGuideForm
-                  values={plant.husbandryGuide as any}
-                  plant={{
-                    id: plant.id,
-                    genus: plant.genus,
-                    species: plant.species,
-                    hybridNotation: plant.hybridNotation,
-                    cultivarName: plant.cultivarName,
-                    authority: plant.authority,
-                    acquisitionLabel: plant.acquisitionLabel,
-                    provisionalTaxon: plant.provisionalTaxon,
-                    description: plant.description,
-                    wikipediaUrl: plant.wikipediaUrl,
-                    inaturalistUrl: plant.inaturalistUrl,
-                    powoUrl: plant.powoUrl,
-                    gbifUrl: plant.gbifUrl,
-                    aliases: plant.aliases,
-                  }}
-                  collectionSlug={collection.slug}
-                  action={savePlantHusbandryGuide}
-                  submitLabel="Save husbandry guide"
-                  includeMagicFill
-                />
-              </div>
-            </details>
+            <HusbandryGuideView
+              values={plant.husbandryGuide as any}
+              editAction={savePlantHusbandryGuideField}
+              collectionSlug={collection.slug}
+              plantDefinitionId={plant.id}
+              canEdit
+              showEmptyFields
+              title="Create husbandry guide"
+            />
           )}
         </div>
       </Card>
