@@ -137,7 +137,7 @@ export function HusbandryGuideView({
           const rows = showEmptyFields ? section.fields : section.fields.filter(([field]) => values?.[field])
           if (rows.length === 0) return null
           return (
-            <Card key={section.key} className="bg-white/55">
+            <Card key={section.key} className="overflow-visible bg-white/55">
               <h4 className="font-serif text-lg font-semibold">{section.title}</h4>
               <dl className="mt-3 grid gap-2 text-sm">
                 {rows.map(([field, label]) => (
@@ -146,12 +146,12 @@ export function HusbandryGuideView({
                       <span>{label}</span>
                       {differences.has(field) && <span className="rounded-full border border-[#c4a86a]/40 bg-[#fff5d6] px-2 py-0.5 text-[0.65rem] uppercase tracking-[0.12em] text-[#6f541f]">Local adjustment</span>}
                       {canEditFields && (
-                        <details className="relative inline-block max-w-full">
+                        <details className="relative z-10 inline-block max-w-full open:z-50">
                           <summary className="inline-flex cursor-pointer list-none items-center gap-1 rounded-full border border-[#b8c9ad] bg-[#eef4e8] px-2 py-0.5 text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-[#2f6b45] hover:bg-[#dfead7]">
                             <PencilLine className="h-3 w-3" />
                             Edit
                           </summary>
-                          <form action={editAction} className="absolute right-0 z-20 mt-2 grid w-[min(22rem,calc(100vw-2rem))] gap-2 rounded-lg border border-[#b8c9ad] bg-[#f3f7ed] p-3 text-sm normal-case tracking-normal shadow-xl sm:left-0 sm:right-auto">
+                          <form action={editAction} className="absolute right-0 z-50 mt-2 grid w-[min(22rem,calc(100vw-2rem))] gap-2 rounded-lg border border-[#b8c9ad] bg-[#f3f7ed] p-3 text-sm normal-case tracking-normal shadow-xl sm:left-0 sm:right-auto">
                             <input type="hidden" name="collectionSlug" value={collectionSlug} />
                             <input type="hidden" name="plantDefinitionId" value={plantDefinitionId} />
                             <input type="hidden" name="fieldName" value={field} />
@@ -174,12 +174,12 @@ export function HusbandryGuideView({
                         </details>
                       )}
                       {canOverride && overrideAction && collectionSlug && plantInstanceId && (
-                        <details className="relative inline-block max-w-full">
+                        <details className="relative z-10 inline-block max-w-full open:z-50">
                           <summary className="inline-flex cursor-pointer list-none items-center gap-1 rounded-full border border-[#b8c9ad] bg-[#eef4e8] px-2 py-0.5 text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-[#2f6b45] hover:bg-[#dfead7]">
                             <PencilLine className="h-3 w-3" />
                             Override
                           </summary>
-                          <form action={overrideAction} className="absolute right-0 z-20 mt-2 grid w-[min(22rem,calc(100vw-2rem))] gap-2 rounded-lg border border-[#b8c9ad] bg-[#f3f7ed] p-3 text-sm normal-case tracking-normal shadow-xl sm:left-0 sm:right-auto">
+                          <form action={overrideAction} className="absolute right-0 z-50 mt-2 grid w-[min(22rem,calc(100vw-2rem))] gap-2 rounded-lg border border-[#b8c9ad] bg-[#f3f7ed] p-3 text-sm normal-case tracking-normal shadow-xl sm:left-0 sm:right-auto">
                             <input type="hidden" name="collectionSlug" value={collectionSlug} />
                             <input type="hidden" name="plantInstanceId" value={plantInstanceId} />
                             <input type="hidden" name="fieldName" value={field} />
