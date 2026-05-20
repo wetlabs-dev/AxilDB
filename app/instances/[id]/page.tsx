@@ -163,6 +163,128 @@ export default async function InstanceDetail({
     `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.axildb.com'}${collectionPath(collection.slug, `/instances/${id}`)}`
   )
 
+  const followCard = user ? (
+    <Card className="text-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h3 className="font-bold">Follow updates</h3>
+          <p className="text-xs text-stone-600">Email updates for this record and related changes.</p>
+        </div>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {[
+          ['SPECIMEN', 'PLANT_INSTANCE', id, 'Specimen', 'Specimen'],
+          ['LINEAGE', 'PLANT_INSTANCE', id, 'Lineage', 'Lineage'],
+          ['TYPE', 'PLANT_DEFINITION', i.plantDefinitionId, 'Plant type', 'Plant type'],
+        ].map(([scope, entityType, entityId, followLabel, followedLabel]) => {
+          const existing = followByScope.get(scope)
+          const count = followerCount(scope, entityType, entityId)
+          return existing ? (
+            <form key={scope} action={unfollowEntity}>
+              <input type="hidden" name="id" value={existing.id} />
+              <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}`)} />
+              <Button className="border border-stone-300 bg-white/70 px-3 py-1.5 text-xs text-stone-800 hover:bg-white">
+                Following {followedLabel} · {count}
+              </Button>
+            </form>
+          ) : (
+            <form key={scope} action={followEntity}>
+              <input type="hidden" name="scope" value={scope} />
+              <input type="hidden" name="entityType" value={entityType} />
+              <input type="hidden" name="entityId" value={entityId} />
+              <input type="hidden" name="collectionSlug" value={collection.slug} />
+              <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}`)} />
+              <Button className="px-3 py-1.5 text-xs">Follow {followLabel} · {count}</Button>
+            </form>
+          )
+        })}
+      </div>
+    </Card>
+  ) : null
+
+  const photosCard = (
+    <Card>
+      <h3 className="font-bold">Specimen photos</h3>
+      <p className="mt-1 text-sm text-stone-600">
+        Choose one cover photo for this specimen card. Admins can also mark one specimen photo as the type photo for the plant definition.
+      </p>
+      {canCreateInCollection(user, context) && (
+        <details className="group mt-3 rounded-lg border border-stone-200 bg-white/50">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-semibold">
+            <span>Upload specimen photo</span>
+            <span className="rounded-md border border-stone-300 bg-white/70 px-2 py-1 text-xs group-open:hidden">Open</span>
+            <span className="hidden rounded-md border border-stone-300 bg-white/70 px-2 py-1 text-xs group-open:inline-block">Hide</span>
+          </summary>
+          <form
+            action="/api/photos"
+            method="post"
+            encType="multipart/form-data"
+            className="grid gap-2 border-t border-stone-200 p-3"
+          >
+            <input type="hidden" name="entityType" value="PLANT_INSTANCE" />
+            <input type="hidden" name="entityId" value={id} />
+            <input type="hidden" name="collectionSlug" value={collection.slug} />
+            <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}`)} />
+            <input name="photo" type="file" accept="image/*" className="min-w-0 rounded-lg border p-2 text-sm" />
+            <Field label="Caption" name="caption" />
+            <Button>Upload photo</Button>
+          </form>
+        </details>
+      )}
+
+      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+        {photos.length === 0 && <p className="text-sm text-stone-600">No specimen photos yet.</p>}
+        {photos.map((p) => (
+          <figure key={p.id} className="overflow-hidden rounded-lg border border-stone-200 bg-white/70">
+            <div className="aspect-[4/3]">
+              <PlantImage src={p.path} alt={p.caption || 'Plant photo'} />
+            </div>
+            <figcaption className="space-y-3 p-3 text-xs">
+              <div>
+                <p className="font-medium">{p.caption || 'Untitled photo'}</p>
+                <p className="text-stone-600">
+                  {p.isCover ? 'Cover photo' : 'Not cover'} · {p.isType ? 'Type photo' : 'Not type'}
+                </p>
+              </div>
+              {canEditInCollection(user, context) && (
+                <div className="flex flex-wrap gap-2">
+                  <form action={setCoverPhoto}>
+                    <input type="hidden" name="id" value={p.id} />
+                    <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}`)} />
+                    <Button className="px-3 py-1.5 text-xs" disabled={p.isCover}>Set cover</Button>
+                  </form>
+                  <form action={setTypePhoto}>
+                    <input type="hidden" name="id" value={p.id} />
+                    <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}`)} />
+                    <Button className="px-3 py-1.5 text-xs" disabled={p.isType}>Set type</Button>
+                  </form>
+                </div>
+              )}
+            </figcaption>
+          </figure>
+        ))}
+      </div>
+    </Card>
+  )
+
+  const archiveCard = (canEditInCollection(user, context) || i.status !== 'ACTIVE') ? (
+    <Card>
+      <h3 className="font-bold">Archive</h3>
+      {canEditInCollection(user, context) && i.status === 'ACTIVE' ? (
+        <form action={archivePlantInstance} className="grid max-w-2xl gap-2">
+          <input type="hidden" name="id" value={id} />
+          <Field label="Reason" help="Short reason this plant left active collection, such as sold, discarded, died, duplicate, or gifted." name="archiveReason" />
+          <TextArea label="Notes" help="Optional archive context, including date details, condition, recipient, or follow-up notes." name="archiveNotes" />
+          <Button>Archive plant</Button>
+        </form>
+      ) : (
+        <p>
+          {i.archiveReason} on {fmtDate(i.archiveDate)}
+        </p>
+      )}
+    </Card>
+  ) : null
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between gap-4">
@@ -174,44 +296,7 @@ export default async function InstanceDetail({
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        {user && (
-          <Card>
-            <h3 className="font-bold">Follow updates</h3>
-            <p className="mt-1 text-sm text-stone-600">
-              Get emails when this specimen, its type, or this connected lineage changes.
-            </p>
-            <div className="mt-4 grid gap-2">
-              {[
-                ['SPECIMEN', 'PLANT_INSTANCE', id, 'Follow specimen', 'Following specimen'],
-                ['LINEAGE', 'PLANT_INSTANCE', id, 'Follow lineage', 'Following lineage'],
-                ['TYPE', 'PLANT_DEFINITION', i.plantDefinitionId, 'Follow plant type', 'Following plant type'],
-              ].map(([scope, entityType, entityId, followLabel, followedLabel]) => {
-                const existing = followByScope.get(scope)
-                const count = followerCount(scope, entityType, entityId)
-                return existing ? (
-                  <form key={scope} action={unfollowEntity}>
-                    <input type="hidden" name="id" value={existing.id} />
-                    <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}`)} />
-                    <Button className="w-full border border-stone-300 bg-white/70 text-stone-800 hover:bg-white">
-                      {followedLabel} · {count}
-                    </Button>
-                  </form>
-                ) : (
-                  <form key={scope} action={followEntity}>
-                    <input type="hidden" name="scope" value={scope} />
-                    <input type="hidden" name="entityType" value={entityType} />
-                    <input type="hidden" name="entityId" value={entityId} />
-                    <input type="hidden" name="collectionSlug" value={collection.slug} />
-                    <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}`)} />
-                    <Button className="w-full">{followLabel} · {count}</Button>
-                  </form>
-                )
-              })}
-            </div>
-          </Card>
-        )}
-
-        <Card>
+        <Card className="lg:col-span-2">
           <h3 className="font-bold">Identity</h3>
           <p className="font-medium">{plantName(i.plantDefinition)}</p>
           <p>Confidence: {taxonomyLabel(i.plantDefinition.confidence)}</p>
@@ -247,6 +332,8 @@ export default async function InstanceDetail({
             </div>
           )}
         </Card>
+
+        {photosCard}
 
         <Card id="husbandry" className="lg:col-span-2">
           <h3 className="font-bold">Husbandry</h3>
@@ -325,21 +412,7 @@ export default async function InstanceDetail({
           )}
         </Card>
 
-        {(canEditInCollection(user, context) || i.status !== 'ACTIVE') && <Card>
-          <h3 className="font-bold">Archive</h3>
-          {canEditInCollection(user, context) && i.status === 'ACTIVE' ? (
-            <form action={archivePlantInstance} className="grid gap-2">
-              <input type="hidden" name="id" value={id} />
-              <Field label="Reason" help="Short reason this plant left active collection, such as sold, discarded, died, duplicate, or gifted." name="archiveReason" />
-              <TextArea label="Notes" help="Optional archive context, including date details, condition, recipient, or follow-up notes." name="archiveNotes" />
-              <Button>Archive plant</Button>
-            </form>
-          ) : (
-            <p>
-              {i.archiveReason} on {fmtDate(i.archiveDate)}
-            </p>
-          )}
-        </Card>}
+        {followCard}
       </div>
 
       <Card>
@@ -605,59 +678,7 @@ export default async function InstanceDetail({
         </Card>
       </div>
 
-      <Card>
-        <h3 className="font-bold">Specimen photos</h3>
-        <p className="mt-1 text-sm text-stone-600">
-          Choose one cover photo for this specimen card. Admins can also mark one specimen photo as the type photo for the plant definition.
-        </p>
-        {canCreateInCollection(user, context) && <form
-          action="/api/photos"
-          method="post"
-          encType="multipart/form-data"
-          className="grid gap-2"
-        >
-          <input type="hidden" name="entityType" value="PLANT_INSTANCE" />
-          <input type="hidden" name="entityId" value={id} />
-          <input type="hidden" name="collectionSlug" value={collection.slug} />
-          <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}`)} />
-          <input name="photo" type="file" accept="image/*" className="rounded-lg border p-2" />
-          <Field label="Caption" name="caption" />
-          <Button>Upload photo</Button>
-        </form>}
-
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {photos.length === 0 && <p className="text-sm text-stone-600">No specimen photos yet.</p>}
-          {photos.map((p) => (
-            <figure key={p.id} className="overflow-hidden rounded-lg border border-stone-200 bg-white/70">
-              <div className="aspect-[4/3]">
-                <PlantImage src={p.path} alt={p.caption || 'Plant photo'} />
-              </div>
-              <figcaption className="space-y-3 p-3 text-xs">
-                <div>
-                  <p className="font-medium">{p.caption || 'Untitled photo'}</p>
-                  <p className="text-stone-600">
-                    {p.isCover ? 'Cover photo' : 'Not cover'} · {p.isType ? 'Type photo' : 'Not type'}
-                  </p>
-                </div>
-                {canEditInCollection(user, context) && (
-                  <div className="flex flex-wrap gap-2">
-                    <form action={setCoverPhoto}>
-                      <input type="hidden" name="id" value={p.id} />
-                      <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}`)} />
-                      <Button className="px-3 py-1.5 text-xs" disabled={p.isCover}>Set cover</Button>
-                    </form>
-                    <form action={setTypePhoto}>
-                      <input type="hidden" name="id" value={p.id} />
-                      <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}`)} />
-                      <Button className="px-3 py-1.5 text-xs" disabled={p.isType}>Set type</Button>
-                    </form>
-                  </div>
-                )}
-              </figcaption>
-            </figure>
-          ))}
-        </div>
-      </Card>
+      {archiveCard}
     </div>
   )
 }
