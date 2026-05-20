@@ -14,13 +14,13 @@ import {
   pauseReminder,
   deleteReminder,
   followEntity,
-  savePlantHusbandryOverride,
+  savePlantHusbandryOverrideField,
   unfollowEntity,
 } from '@/app/actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { PlantImage } from '@/components/PlantImage'
 import { Button, Card, Field, Select, TextArea } from '@/components/ui'
-import { HusbandryBadges, HusbandryGuideView, HusbandryOverrideForm } from '@/components/Husbandry'
+import { HusbandryBadges, HusbandryGuideView } from '@/components/Husbandry'
 import { getCurrentUser } from '@/lib/auth'
 import { canCreateInCollection, canEditInCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
@@ -236,7 +236,6 @@ export default async function InstanceDetail({
           <Link className="mt-3 inline-block underline" href={collectionPath(collection.slug, `/graphs?root=${i.id}`)}>
             View lineage graph
           </Link>
-          <HusbandryBadges values={effectiveHusbandry} href="#husbandry" />
           {i.plantDefinition.aliases.length > 0 && (
             <div className="mt-3 border-t border-stone-200 pt-3 text-sm">
               <p className="font-medium">Aliases</p>
@@ -249,7 +248,7 @@ export default async function InstanceDetail({
           )}
         </Card>
 
-        <Card id="husbandry">
+        <Card id="husbandry" className="lg:col-span-2">
           <h3 className="font-bold">Husbandry</h3>
           {baseHusbandryGuide ? (
             <>
@@ -258,6 +257,27 @@ export default async function InstanceDetail({
                 {i.husbandryOverride && hasHusbandryData(i.husbandryOverride as any) ? ' Local adjustments are applied.' : ''}
               </p>
               <HusbandryBadges values={effectiveHusbandry} />
+              {effectiveHusbandry.summaryCare && <p className="mt-2 text-sm text-stone-700">{effectiveHusbandry.summaryCare}</p>}
+              <details className="group mt-4 rounded-lg border border-stone-200 bg-white/50">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-semibold">
+                  <span>Full husbandry guide</span>
+                  <span className="rounded-md border border-stone-300 bg-white/70 px-2 py-1 text-xs group-open:hidden">Open</span>
+                  <span className="hidden rounded-md border border-stone-300 bg-white/70 px-2 py-1 text-xs group-open:inline-block">Hide</span>
+                </summary>
+                <div className="border-t border-stone-200 p-3">
+                  <HusbandryGuideView
+                    values={effectiveHusbandry}
+                    baseValues={baseHusbandryGuide as any}
+                    overrideValues={i.husbandryOverride as any}
+                    overrideAction={savePlantHusbandryOverrideField}
+                    collectionSlug={collection.slug}
+                    plantInstanceId={id}
+                    canOverride={canCreateInCollection(user, context)}
+                    title="Full husbandry guide"
+                    sourceLabel={sourceHusbandryGuide ? `Inherited from ${plantName(sourceHusbandryGuide.plantDefinition)}` : 'Inherited from plant definition'}
+                  />
+                </div>
+              </details>
             </>
           ) : (
             <p className="mt-1 text-sm text-stone-600">No plant husbandry guide has been added for this definition yet.</p>
@@ -321,30 +341,6 @@ export default async function InstanceDetail({
           )}
         </Card>}
       </div>
-
-      <Card>
-        <HusbandryGuideView
-          values={effectiveHusbandry}
-          baseValues={baseHusbandryGuide as any}
-          title="Full husbandry guide"
-          sourceLabel={sourceHusbandryGuide ? `Inherited from ${plantName(sourceHusbandryGuide.plantDefinition)}` : baseHusbandryGuide ? 'Inherited from plant definition' : undefined}
-        />
-      </Card>
-
-      {canCreateInCollection(user, context) && (
-        <Card>
-          <h3 className="font-serif text-2xl font-semibold">Local husbandry adjustments</h3>
-          <p className="mt-1 text-sm text-stone-600">Use this only for care differences that apply to this individual specimen.</p>
-          <div className="mt-4">
-            <HusbandryOverrideForm
-              values={i.husbandryOverride as any}
-              collectionSlug={collection.slug}
-              plantInstanceId={id}
-              action={savePlantHusbandryOverride}
-            />
-          </div>
-        </Card>
-      )}
 
       <Card>
         <h3 className="font-bold">Children</h3>

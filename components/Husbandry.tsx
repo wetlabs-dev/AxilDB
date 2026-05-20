@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Sparkles } from 'lucide-react'
+import { PencilLine, Sparkles } from 'lucide-react'
 import { husbandryDifferences, husbandryFieldNames, husbandrySections, husbandrySummary, type HusbandryValues } from '@/lib/husbandry'
 import { cn } from '@/lib/utils'
 import { Button, Card, Field, Select, TextArea } from '@/components/ui'
@@ -38,11 +38,21 @@ export function HusbandryBadges({
 export function HusbandryGuideView({
   values,
   baseValues,
+  overrideValues,
+  overrideAction,
+  collectionSlug,
+  plantInstanceId,
+  canOverride = false,
   title = 'Plant husbandry',
   sourceLabel,
 }: {
   values?: HusbandryValues | null
   baseValues?: HusbandryValues | null
+  overrideValues?: HusbandryValues | null
+  overrideAction?: any
+  collectionSlug?: string
+  plantInstanceId?: string
+  canOverride?: boolean
   title?: string
   sourceLabel?: string
 }) {
@@ -66,9 +76,33 @@ export function HusbandryGuideView({
               <dl className="mt-3 grid gap-2 text-sm">
                 {rows.map(([field, label]) => (
                   <div key={field} className="grid gap-1 border-t border-stone-200 pt-2 first:border-t-0 first:pt-0">
-                    <dt className="flex items-center gap-2 font-semibold text-stone-800">
+                    <dt className="flex flex-wrap items-center gap-2 font-semibold text-stone-800">
                       <span>{label}</span>
                       {differences.has(field) && <span className="rounded-full border border-[#c4a86a]/40 bg-[#fff5d6] px-2 py-0.5 text-[0.65rem] uppercase tracking-[0.12em] text-[#6f541f]">Local adjustment</span>}
+                      {canOverride && overrideAction && collectionSlug && plantInstanceId && (
+                        <details className="relative inline-block max-w-full">
+                          <summary className="inline-flex cursor-pointer list-none items-center gap-1 rounded-full border border-[#b8c9ad] bg-[#eef4e8] px-2 py-0.5 text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-[#2f6b45] hover:bg-[#dfead7]">
+                            <PencilLine className="h-3 w-3" />
+                            Override
+                          </summary>
+                          <form action={overrideAction} className="absolute right-0 z-20 mt-2 grid w-[min(22rem,calc(100vw-2rem))] gap-2 rounded-lg border border-[#b8c9ad] bg-[#f3f7ed] p-3 text-sm normal-case tracking-normal shadow-xl sm:left-0 sm:right-auto">
+                            <input type="hidden" name="collectionSlug" value={collectionSlug} />
+                            <input type="hidden" name="plantInstanceId" value={plantInstanceId} />
+                            <input type="hidden" name="fieldName" value={field} />
+                            <label className="grid gap-1 font-medium text-stone-800">
+                              Local {label.toLowerCase()}
+                              <textarea
+                                name="fieldValue"
+                                defaultValue={overrideValues?.[field] || ''}
+                                className="min-h-24 rounded-md border border-stone-300 bg-[#fffdf7] px-3 py-2 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30"
+                                placeholder={String(baseValues?.[field] || values?.[field] || '')}
+                              />
+                            </label>
+                            <p className="text-xs font-normal text-stone-600">Leave blank and save to remove this local adjustment.</p>
+                            <Button className="w-fit px-3 py-1.5 text-xs">Save override</Button>
+                          </form>
+                        </details>
+                      )}
                     </dt>
                     <dd className="text-stone-700">{values?.[field]}</dd>
                     {differences.has(field) && baseValues?.[field] && <dd className="text-xs text-stone-500">Inherited: {baseValues[field]}</dd>}

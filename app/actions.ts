@@ -517,6 +517,32 @@ export async function savePlantHusbandryOverride(fd: FormData) {
   redirect(collectionPath(collection.slug, `/instances/${plantInstanceId}#husbandry`))
 }
 
+export async function savePlantHusbandryOverrideField(fd: FormData) {
+  const { user, collection } = await requireCollectionLogger(await collectionSlug(fd))
+  const plantInstanceId = val(fd, 'plantInstanceId')!
+  const fieldName = val(fd, 'fieldName')!
+  if (!husbandryFieldNames.includes(fieldName as any)) throw new Error('Unknown husbandry field.')
+  await prisma.plantInstance.findFirstOrThrow({ where: { id: plantInstanceId, collectionId: collection.id }, select: { id: true } })
+
+  const fieldValue = val(fd, 'fieldValue') || null
+  const existing = await prisma.plantHusbandryOverride.findFirst({ where: { collectionId: collection.id, plantInstanceId } })
+  const override = existing
+    ? await prisma.plantHusbandryOverride.update({
+        where: { id: existing.id },
+        data: { [fieldName]: fieldValue } as any,
+      })
+    : await prisma.plantHusbandryOverride.create({
+        data: { collectionId: collection.id, plantInstanceId, [fieldName]: fieldValue } as any,
+      })
+
+  const refreshed = await prisma.plantHusbandryOverride.findUnique({ where: { id: override.id } })
+  const hasData = husbandryFieldNames.some((field) => Boolean((refreshed as any)?.[field])) || Boolean(refreshed?.overrideNotes)
+  if (!hasData) await prisma.plantHusbandryOverride.delete({ where: { id: override.id } })
+
+  await audit(user, 'UPDATE', 'PLANT_HUSBANDRY_OVERRIDE', override.id, `Saved local husbandry field adjustment`, { fieldName }, collection.id)
+  redirect(collectionPath(collection.slug, `/instances/${plantInstanceId}#husbandry`))
+}
+
 export async function deletePlantInstance(fd: FormData) {
   const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const id = val(fd, 'id')!
