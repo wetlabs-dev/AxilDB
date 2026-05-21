@@ -25,8 +25,6 @@ const features = [
   ['Accession records', 'Trace living specimens, generated plant IDs, source details, propagation context, and stable cultivar lines without losing the story.', GitBranch],
   ['Taxonomy confidence', 'Record accepted names, provisional labels, acquisition names, aliases, sources, reference URLs, and uncertainty.', BadgeCheck],
   ['AI-assisted taxonomy', 'Draft concise descriptions or ask Magic Fill to suggest authority, reference links, aliases, and accepted-name corrections.', Sparkles],
-  ['Photo-backed records', 'Choose specimen cover photos, type images for definitions, and browse the collection gallery in a full-screen viewer.', Camera],
-  ['Bloom history', 'Log bloom starts, peaks, closures, flower counts, first blooms, notes, and bloom photos over time.', Flower2],
   ['Follow notifications', 'Follow plant types, specimens, or lineages and get email updates when relevant blooms, photos, notes, or propagations appear.', Bell],
   ['Reminder emails', 'Schedule plant check-ins, bloom-cycle reminders, propagation follow-ups, and custom recurring reminders.', Mail],
   ['Role-aware access', 'Let visitors browse public collections, viewers follow records, loggers add records, gardeners tend records, and managers handle membership.', LockKeyhole],
@@ -123,17 +121,53 @@ export default function SplashPage() {
           <h2 className="text-3xl">Built for real collection work</h2>
           <p className="mt-3 text-stone-700">The app is designed around the day-to-day messiness of horticultural records, collaboration, and long-lived accession history.</p>
         </div>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {features.map(([title, text, Icon]) => (
-            <article key={title} className="rounded-lg border border-stone-200 bg-white/65 p-5 shadow-[0_8px_30px_rgba(47,38,24,0.06)]">
+        <div className="grid grid-flow-dense gap-4 md:grid-cols-2 xl:grid-cols-6">
+          {features.slice(0, 3).map(([title, text, Icon]) => (
+            <article key={title} className="rounded-lg border border-stone-200 bg-white/65 p-5 shadow-[0_8px_30px_rgba(47,38,24,0.06)] xl:col-span-2">
               <Icon className="mb-4 h-6 w-6 text-[#2f6b45]" />
               <h3 className="font-serif text-xl">{title}</h3>
               <p className="mt-2 text-sm leading-6 text-stone-700">{text}</p>
             </article>
           ))}
-        </div>
-        <div className="mt-8 grid gap-4 lg:grid-cols-3">
-          <article className="overflow-hidden rounded-lg border border-stone-200 bg-white/70 shadow-[0_8px_30px_rgba(47,38,24,0.06)]">
+          <article className="overflow-hidden rounded-lg border border-stone-200 bg-white/70 shadow-[0_8px_30px_rgba(47,38,24,0.06)] md:col-span-2 xl:col-span-4">
+            <div className="grid h-full min-h-[260px] gap-4 md:grid-cols-[1fr_1.1fr]">
+              <div className="flex items-center justify-center bg-[#fffdf7] p-4">
+                <img src="/splash-photos.png" alt="" className="max-h-72 w-full object-contain mix-blend-multiply" />
+              </div>
+              <div className="flex flex-col justify-center p-5">
+                <Camera className="mb-4 h-6 w-6 text-[#2f6b45]" />
+                <h3 className="font-serif text-xl">Photo-backed records</h3>
+                <p className="mt-2 text-sm leading-6 text-stone-700">Choose specimen cover photos, type images for definitions, and browse the collection gallery in a full-screen viewer.</p>
+              </div>
+            </div>
+          </article>
+          {features.slice(3, 4).map(([title, text, Icon]) => (
+            <article key={title} className="rounded-lg border border-stone-200 bg-white/65 p-5 shadow-[0_8px_30px_rgba(47,38,24,0.06)] xl:col-span-2">
+              <Icon className="mb-4 h-6 w-6 text-[#2f6b45]" />
+              <h3 className="font-serif text-xl">{title}</h3>
+              <p className="mt-2 text-sm leading-6 text-stone-700">{text}</p>
+            </article>
+          ))}
+          <article className="overflow-hidden rounded-lg border border-stone-200 bg-white/70 shadow-[0_8px_30px_rgba(47,38,24,0.06)] md:col-span-2 xl:col-span-4">
+            <div className="grid h-full min-h-[260px] gap-4 md:grid-cols-[1.1fr_1fr]">
+              <div className="flex flex-col justify-center p-5">
+                <Flower2 className="mb-4 h-6 w-6 text-[#2f6b45]" />
+                <h3 className="font-serif text-xl">Bloom history without guesswork</h3>
+                <p className="mt-2 text-sm leading-6 text-stone-700">Log bloom starts, peaks, closures, flower counts, first blooms, notes, photos, and reminders as each bloom moves through its cycle.</p>
+              </div>
+              <div className="flex items-center justify-center bg-[#fffdf7]">
+                <img src="/splash-bloom.png" alt="" className="h-full max-h-80 w-full object-cover object-center mix-blend-multiply" />
+              </div>
+            </div>
+          </article>
+          {features.slice(4, 5).map(([title, text, Icon]) => (
+            <article key={title} className="rounded-lg border border-stone-200 bg-white/65 p-5 shadow-[0_8px_30px_rgba(47,38,24,0.06)] xl:col-span-2">
+              <Icon className="mb-4 h-6 w-6 text-[#2f6b45]" />
+              <h3 className="font-serif text-xl">{title}</h3>
+              <p className="mt-2 text-sm leading-6 text-stone-700">{text}</p>
+            </article>
+          ))}
+          <article className="overflow-hidden rounded-lg border border-stone-200 bg-white/70 shadow-[0_8px_30px_rgba(47,38,24,0.06)] md:col-span-2 xl:col-span-3">
             <div className="flex h-56 items-center justify-center bg-[#fffdf7] p-4">
               <img src="/splash-plant-label.png" alt="" className="max-h-full w-full object-contain" />
             </div>
@@ -142,17 +176,8 @@ export default function SplashPage() {
               <p className="mt-2 text-sm leading-6 text-stone-700">Connect physical labels, generated plant IDs, and scannable QR codes back to the living record.</p>
             </div>
           </article>
-          <article className="overflow-hidden rounded-lg border border-stone-200 bg-white/70 shadow-[0_8px_30px_rgba(47,38,24,0.06)]">
-            <div className="flex h-56 items-center justify-center bg-[#fffdf7]">
-              <img src="/splash-bloom.png" alt="" className="h-full w-full object-cover object-center mix-blend-multiply" />
-            </div>
-            <div className="p-5">
-              <h3 className="font-serif text-xl">Bloom cycles without guesswork</h3>
-              <p className="mt-2 text-sm leading-6 text-stone-700">Track opening, peak, closure, counts, photos, and reminders as each bloom moves through its cycle.</p>
-            </div>
-          </article>
-          <article className="overflow-hidden rounded-lg border border-stone-200 bg-white/70 shadow-[0_8px_30px_rgba(47,38,24,0.06)]">
-            <div className="grid min-h-56 items-center gap-4 bg-[#fffdf7] p-5">
+          <article className="overflow-hidden rounded-lg border border-stone-200 bg-white/70 shadow-[0_8px_30px_rgba(47,38,24,0.06)] md:col-span-2 xl:col-span-3">
+            <div className="grid h-full min-h-56 items-center gap-4 bg-[#fffdf7] p-5">
               <div>
                 <h3 className="font-serif text-2xl">Lineage you can see</h3>
                 <p className="mt-3 text-sm leading-6 text-stone-700">Propagations inherit their parent context, while suspected sports become candidate lines only when observations justify it.</p>
@@ -160,6 +185,13 @@ export default function SplashPage() {
               <img src="/splash-lineage-diagram.png" alt="" className="max-h-72 w-full object-contain mix-blend-multiply" />
             </div>
           </article>
+          {features.slice(5).map(([title, text, Icon], index) => (
+            <article key={title} className={`rounded-lg border border-stone-200 bg-white/65 p-5 shadow-[0_8px_30px_rgba(47,38,24,0.06)] ${index === 4 ? 'xl:col-span-4' : 'xl:col-span-2'}`}>
+              <Icon className="mb-4 h-6 w-6 text-[#2f6b45]" />
+              <h3 className="font-serif text-xl">{title}</h3>
+              <p className="mt-2 text-sm leading-6 text-stone-700">{text}</p>
+            </article>
+          ))}
         </div>
       </section>
 
