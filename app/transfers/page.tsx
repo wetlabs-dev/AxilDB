@@ -1,7 +1,11 @@
 import Link from 'next/link'
 import {
+  acceptPlantDefinitionShareRequest,
   acceptPlantTransferRequest,
+  cancelPlantDefinitionShareRequest,
   cancelPlantTransferRequest,
+  copyConnectedPlantDefinition,
+  declinePlantDefinitionShareRequest,
   declinePlantTransferRequest,
   requestTransferConnection,
   respondTransferConnection,
@@ -11,7 +15,7 @@ import { Button, Card, Field, Select, TextArea } from '@/components/ui'
 import { collectionPath, requireCollectionGardener } from '@/lib/collections'
 import { collectionRoleAtLeast } from '@/lib/roles'
 import { prisma } from '@/lib/prisma'
-import { fmtDate } from '@/lib/utils'
+import { fmtDate, plantName } from '@/lib/utils'
 
 type Preview = {
   plantName?: string
@@ -40,8 +44,32 @@ type Preview = {
   senderNote?: string | null
 }
 
+type DefinitionPreview = {
+  plantName?: string
+  definition?: {
+    genus?: string
+    species?: string
+    cultivarName?: string | null
+    acquisitionLabel?: string | null
+    provisionalTaxon?: string | null
+    confidence?: string | null
+    governingBody?: string | null
+  }
+  counts?: {
+    aliases?: number
+    instances?: number
+    typePhotos?: number
+    husbandryGuides?: number
+  }
+  senderNote?: string | null
+}
+
 function previewOf(value: unknown): Preview {
   return (value && typeof value === 'object') ? value as Preview : {}
+}
+
+function definitionPreviewOf(value: unknown): DefinitionPreview {
+  return (value && typeof value === 'object') ? value as DefinitionPreview : {}
 }
 
 function statusBadge(status: string) {
@@ -67,6 +95,8 @@ export default async function CollectionTransfersPage() {
     inboundConnections,
     incomingRequests,
     outgoingRequests,
+    incomingDefinitionShares,
+    outgoingDefinitionShares,
   ] = await Promise.all([
     prisma.collectionTransferConnection.findMany({
       where: { sourceCollectionId: collection.id },
@@ -90,7 +120,35 @@ export default async function CollectionTransfersPage() {
       orderBy: { requestedAt: 'desc' },
       take: 30,
     }),
+    prisma.plantDefinitionShareRequest.findMany({
+      where: { targetCollectionId: collection.id },
+      include: { sourceCollection: true, requestedBy: true, sourcePlantDefinition: true, targetPlantDefinition: true },
+      orderBy: { requestedAt: 'desc' },
+      take: 30,
+    }),
+    prisma.plantDefinitionShareRequest.findMany({
+      where: { sourceCollectionId: collection.id },
+      include: { targetCollection: true, requestedBy: true, sourcePlantDefinition: true, targetPlantDefinition: true },
+      orderBy: { requestedAt: 'desc' },
+      take: 30,
+    }),
   ])
+  const activeIncomingSourceIds = new Set(inboundConnections.filter((connection) => connection.status === 'ACTIVE').map((connection) => connection.sourceCollectionId))
+  const reciprocalConnections = outboundConnections.filter((connection) => connection.status === 'ACTIVE' && activeIncomingSourceIds.has(connection.targetCollectionId))
+  const reciprocalCollectionIds = reciprocalConnections.map((connection) => connection.targetCollectionId)
+  const connectedDefinitions = reciprocalCollectionIds.length
+    ? await prisma.plantDefinition.findMany({
+        where: { collectionId: { in: reciprocalCollectionIds } },
+        include: {
+          collection: true,
+          governingBody: true,
+          aliases: { orderBy: { name: 'asc' } },
+          _count: { select: { instances: true } },
+        },
+        orderBy: [{ genus: 'asc' }, { species: 'asc' }, { cultivarName: 'asc' }],
+        take: 100,
+      })
+    : []
 
   return (
     <div className="space-y-6">
@@ -188,6 +246,109 @@ export default async function CollectionTransfersPage() {
       </div>
 
       <Card>
+        <h3 className="font-bold">Incoming definition share queue</h3>
+        <p className="mt-1 text-sm text-stone-600">Review shared plant definitions from connected collections before copying them into this collection.</p>
+        <div className="mt-4 grid gap-4">
+          {incomingDefinitionShares.length === 0 && <p className="text-sm text-stone-600">No incoming definition shares.</p>}
+          {incomingDefinitionShares.map((request) => {
+            const preview = definitionPreviewOf(request.previewSnapshot)
+            return (
+              <div key={request.id} className="rounded-lg border border-stone-200 bg-white/60 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="font-semibold">{preview.plantName || plantName(request.sourcePlantDefinition)}</p>
+                    <p className="text-sm text-stone-600">From {request.sourceCollection.name} · requested {fmtDate(request.requestedAt)} by {request.requestedBy.email}</p>
+                    {preview.definition?.governingBody && <p className="text-sm text-stone-600">Governing body: {preview.definition.governingBody}</p>}
+                  </div>
+                  <span className={statusBadge(request.status)}>{request.status.toLowerCase()}</span>
+                </div>
+                <div className="mt-3 grid gap-2 text-sm md:grid-cols-4">
+                  <p>Aliases: {preview.counts?.aliases || 0}</p>
+                  <p>Existing instances: {preview.counts?.instances || 0}</p>
+                  <p>Type photos: {preview.counts?.typePhotos || 0}</p>
+                  <p>Husbandry: {preview.counts?.husbandryGuides ? 'included' : 'none'}</p>
+                </div>
+                {preview.senderNote && <p className="mt-3 rounded-md bg-[#f5f0e2] p-3 text-sm">{preview.senderNote}</p>}
+                {request.status === 'PENDING' && (
+                  <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                    <form action={acceptPlantDefinitionShareRequest} className="grid gap-2 rounded-lg border border-green-200 bg-green-50/60 p-3">
+                      <input type="hidden" name="collectionSlug" value={collection.slug} />
+                      <input type="hidden" name="id" value={request.id} />
+                      <TextArea label="Receiver note" name="receiverNote" />
+                      <Button>Accept definition</Button>
+                    </form>
+                    <form action={declinePlantDefinitionShareRequest} className="grid gap-2 rounded-lg border border-red-200 bg-red-50/40 p-3">
+                      <input type="hidden" name="collectionSlug" value={collection.slug} />
+                      <input type="hidden" name="id" value={request.id} />
+                      <TextArea label="Decline note" name="receiverNote" />
+                      <Button className="bg-[#9a3f35] hover:bg-[#7d3028]">Decline definition</Button>
+                    </form>
+                  </div>
+                )}
+                {request.targetPlantDefinition && (
+                  <Link className="mt-3 inline-block text-sm font-medium underline" href={collectionPath(collection.slug, `/plants/${request.targetPlantDefinition.id}/edit`)}>
+                    View accepted definition
+                  </Link>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </Card>
+
+      <Card>
+        <h3 className="font-bold">Browse connected definitions</h3>
+        <p className="mt-1 text-sm text-stone-600">Bidirectional active connections allow both collections to preview and copy plant definitions directly.</p>
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {connectedDefinitions.length === 0 && <p className="text-sm text-stone-600">No bidirectional definition browsing connections yet.</p>}
+          {connectedDefinitions.map((definition) => (
+            <div key={definition.id} className="rounded-lg border border-stone-200 bg-white/60 p-3 text-sm">
+              <p className="font-semibold">{plantName(definition)}</p>
+              <p className="text-stone-600">{definition.collection?.name} · {definition.governingBody?.abbreviation || definition.governingBody?.name || 'No governing body'}</p>
+              <p className="mt-2 text-stone-600">Aliases: {definition.aliases.length} · Instances: {definition._count.instances}</p>
+              {definition.description && <p className="mt-2 line-clamp-2 text-stone-700">{definition.description}</p>}
+              <form action={copyConnectedPlantDefinition} className="mt-3">
+                <input type="hidden" name="collectionSlug" value={collection.slug} />
+                <input type="hidden" name="sourceCollectionId" value={definition.collectionId || ''} />
+                <input type="hidden" name="sourcePlantDefinitionId" value={definition.id} />
+                <Button className="w-full px-3 py-1.5 text-xs">Copy into this collection</Button>
+              </form>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <Card>
+        <h3 className="font-bold">Outgoing definition shares</h3>
+        <div className="mt-4 space-y-3">
+          {outgoingDefinitionShares.length === 0 && <p className="text-sm text-stone-600">No outgoing definition shares.</p>}
+          {outgoingDefinitionShares.map((request) => (
+            <div key={request.id} className="rounded-lg border border-stone-200 bg-white/60 p-3 text-sm">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="font-semibold">{plantName(request.sourcePlantDefinition)} to {request.targetCollection.name}</p>
+                  <p className="text-stone-600">Requested {fmtDate(request.requestedAt)}</p>
+                </div>
+                <span className={statusBadge(request.status)}>{request.status.toLowerCase()}</span>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Link className="rounded-md border border-stone-300 bg-white/70 px-3 py-1.5 text-xs font-medium underline" href={collectionPath(collection.slug, `/plants/${request.sourcePlantDefinition.id}/edit`)}>
+                  Source definition
+                </Link>
+                {request.status === 'PENDING' && (
+                  <form action={cancelPlantDefinitionShareRequest}>
+                    <input type="hidden" name="collectionSlug" value={collection.slug} />
+                    <input type="hidden" name="id" value={request.id} />
+                    <Button className="border border-stone-300 bg-white/70 px-3 py-1.5 text-xs text-stone-800 hover:bg-white">Cancel request</Button>
+                  </form>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <Card>
         <h3 className="font-bold">Incoming plant transfer queue</h3>
         <div className="mt-4 grid gap-4">
           {incomingRequests.length === 0 && <p className="text-sm text-stone-600">No incoming plant transfer requests.</p>}
@@ -273,4 +434,3 @@ export default async function CollectionTransfersPage() {
     </div>
   )
 }
-

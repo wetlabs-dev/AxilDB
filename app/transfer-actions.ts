@@ -10,7 +10,13 @@ import {
   requireCollectionManager,
 } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
-import { buildPlantTransferPreview, acceptPlantTransferPackage } from '@/lib/transfers'
+import {
+  acceptPlantDefinitionSharePackage,
+  acceptPlantTransferPackage,
+  buildPlantDefinitionSharePreview,
+  buildPlantTransferPreview,
+  copyPlantDefinitionPackage,
+} from '@/lib/transfers'
 
 const val = (fd: FormData, key: string) => String(fd.get(key) || '').trim() || undefined
 const collectionSlug = async (fd: FormData) => val(fd, 'collectionSlug') || await getCurrentCollectionSlug()
@@ -202,3 +208,130 @@ export async function cancelPlantTransferRequest(fd: FormData) {
   redirect(transfersPath(collection.slug))
 }
 
+export async function createPlantDefinitionShareRequest(fd: FormData) {
+  const context = await requireCollectionGardener(await collectionSlug(fd))
+  const { user, collection } = context
+  const connectionId = val(fd, 'connectionId')
+  const sourcePlantDefinitionId = val(fd, 'sourcePlantDefinitionId')
+  const senderNote = val(fd, 'senderNote')
+  const back = val(fd, 'back')
+  if (!connectionId || !sourcePlantDefinitionId) throw new Error('Connection and plant definition are required.')
+
+  const connection = await prisma.collectionTransferConnection.findFirstOrThrow({
+    where: { id: connectionId, sourceCollectionId: collection.id, status: 'ACTIVE' },
+    include: { targetCollection: true },
+  })
+  const definition = await prisma.plantDefinition.findFirstOrThrow({
+    where: { id: sourcePlantDefinitionId, collectionId: collection.id },
+    select: { id: true, genus: true, species: true, cultivarName: true },
+  })
+
+  const existing = await prisma.plantDefinitionShareRequest.findFirst({
+    where: {
+      sourceCollectionId: collection.id,
+      targetCollectionId: connection.targetCollectionId,
+      sourcePlantDefinitionId,
+      status: 'PENDING',
+    },
+  })
+  if (existing) throw new Error('There is already a pending definition share for this target collection.')
+
+  const previewSnapshot = await buildPlantDefinitionSharePreview(collection.id, sourcePlantDefinitionId, senderNote)
+  const request = await prisma.plantDefinitionShareRequest.create({
+    data: {
+      connectionId: connection.id,
+      sourceCollectionId: collection.id,
+      targetCollectionId: connection.targetCollectionId,
+      sourcePlantDefinitionId,
+      requestedById: user.id,
+      senderNote,
+      previewSnapshot,
+    },
+  })
+
+  await audit(user, 'REQUEST', 'PLANT_DEFINITION_SHARE_REQUEST', request.id, `Shared definition ${definition.genus} ${definition.species}${definition.cultivarName ? ` '${definition.cultivarName}'` : ''} with ${connection.targetCollection.name}`, { targetCollectionSlug: connection.targetCollection.slug }, collection.id)
+  const destination = back || transfersPath(collection.slug)
+  revalidatePath(destination.split('#')[0] || transfersPath(collection.slug))
+  redirect(destination)
+}
+
+export async function acceptPlantDefinitionShareRequest(fd: FormData) {
+  const context = await requireCollectionGardener(await collectionSlug(fd))
+  const { collection } = context
+  const id = val(fd, 'id')
+  const receiverNote = val(fd, 'receiverNote')
+  if (!id) throw new Error('Definition share request is required.')
+  await prisma.plantDefinitionShareRequest.findFirstOrThrow({ where: { id, targetCollectionId: collection.id, status: 'PENDING' } })
+  const result = await acceptPlantDefinitionSharePackage({ requestId: id, reviewedBy: context.user, receiverNote })
+  revalidatePath(transfersPath(collection.slug))
+  redirect(collectionPath(collection.slug, `/plants/${result.targetDefinition.id}/edit`))
+}
+
+export async function declinePlantDefinitionShareRequest(fd: FormData) {
+  const context = await requireCollectionGardener(await collectionSlug(fd))
+  const { user, collection } = context
+  const id = val(fd, 'id')
+  const receiverNote = val(fd, 'receiverNote')
+  if (!id) throw new Error('Definition share request is required.')
+  const request = await prisma.plantDefinitionShareRequest.findFirstOrThrow({
+    where: { id, targetCollectionId: collection.id, status: 'PENDING' },
+    include: { sourceCollection: true, sourcePlantDefinition: true },
+  })
+  await prisma.plantDefinitionShareRequest.update({
+    where: { id: request.id },
+    data: { status: 'DECLINED', reviewedById: user.id, reviewedAt: new Date(), receiverNote },
+  })
+  await audit(user, 'DECLINE', 'PLANT_DEFINITION_SHARE_REQUEST', request.id, `Declined shared definition from ${request.sourceCollection.name}`, undefined, collection.id)
+  revalidatePath(transfersPath(collection.slug))
+  redirect(transfersPath(collection.slug))
+}
+
+export async function cancelPlantDefinitionShareRequest(fd: FormData) {
+  const context = await requireCollectionGardener(await collectionSlug(fd))
+  const { user, collection } = context
+  const id = val(fd, 'id')
+  if (!id) throw new Error('Definition share request is required.')
+  const request = await prisma.plantDefinitionShareRequest.findFirstOrThrow({
+    where: { id, sourceCollectionId: collection.id, status: 'PENDING' },
+    include: { targetCollection: true },
+  })
+  await prisma.plantDefinitionShareRequest.update({
+    where: { id: request.id },
+    data: { status: 'CANCELLED', reviewedById: user.id, reviewedAt: new Date() },
+  })
+  await audit(user, 'CANCEL', 'PLANT_DEFINITION_SHARE_REQUEST', request.id, `Cancelled definition share to ${request.targetCollection.name}`, undefined, collection.id)
+  revalidatePath(transfersPath(collection.slug))
+  redirect(transfersPath(collection.slug))
+}
+
+export async function copyConnectedPlantDefinition(fd: FormData) {
+  const context = await requireCollectionGardener(await collectionSlug(fd))
+  const { user, collection } = context
+  const sourceCollectionId = val(fd, 'sourceCollectionId')
+  const sourcePlantDefinitionId = val(fd, 'sourcePlantDefinitionId')
+  if (!sourceCollectionId || !sourcePlantDefinitionId) throw new Error('Source collection and plant definition are required.')
+
+  const [incoming, outgoing] = await Promise.all([
+    prisma.collectionTransferConnection.findFirst({
+      where: { sourceCollectionId, targetCollectionId: collection.id, status: 'ACTIVE' },
+      include: { sourceCollection: true },
+    }),
+    prisma.collectionTransferConnection.findFirst({
+      where: { sourceCollectionId: collection.id, targetCollectionId: sourceCollectionId, status: 'ACTIVE' },
+    }),
+  ])
+  if (!incoming || !outgoing) throw new Error('Definition browsing requires an active bidirectional collection connection.')
+
+  const result = await copyPlantDefinitionPackage({
+    sourceCollectionId,
+    targetCollectionId: collection.id,
+    sourcePlantDefinitionId,
+  })
+  await audit(user, 'COPY', 'PLANT_DEFINITION', result.targetDefinition.id, `Copied definition ${result.sourceDefinition.genus} ${result.sourceDefinition.species} from ${incoming.sourceCollection.name}`, {
+    sourceCollection: incoming.sourceCollection.name,
+    sourcePlantDefinitionId,
+    createdDefinition: result.createdDefinition,
+  }, collection.id)
+  revalidatePath(transfersPath(collection.slug))
+  redirect(collectionPath(collection.slug, `/plants/${result.targetDefinition.id}/edit`))
+}

@@ -51,6 +51,8 @@ model User {
   respondedTransferConnections CollectionTransferConnection[] @relation("TransferConnectionResponder")
   requestedPlantTransfers PlantTransferRequest[] @relation("PlantTransferRequester")
   reviewedPlantTransfers PlantTransferRequest[] @relation("PlantTransferReviewer")
+  requestedDefinitionShares PlantDefinitionShareRequest[] @relation("DefinitionShareRequester")
+  reviewedDefinitionShares PlantDefinitionShareRequest[] @relation("DefinitionShareReviewer")
 
   @@index([role])
   @@index([emailVerifiedAt])
@@ -95,6 +97,8 @@ model Collection {
   incomingTransferConnections CollectionTransferConnection[] @relation("TransferConnectionTarget")
   outgoingPlantTransferRequests PlantTransferRequest[] @relation("PlantTransferSourceCollection")
   incomingPlantTransferRequests PlantTransferRequest[] @relation("PlantTransferTargetCollection")
+  outgoingDefinitionShareRequests PlantDefinitionShareRequest[] @relation("DefinitionShareSourceCollection")
+  incomingDefinitionShareRequests PlantDefinitionShareRequest[] @relation("DefinitionShareTargetCollection")
 
   @@index([visibility])
   @@index([status])
@@ -164,6 +168,7 @@ model CollectionTransferConnection {
   requestedBy      User       @relation("TransferConnectionRequester", fields: [requestedById], references: [id], onDelete: Cascade)
   respondedBy      User?      @relation("TransferConnectionResponder", fields: [respondedById], references: [id], onDelete: SetNull)
   transferRequests PlantTransferRequest[]
+  definitionShareRequests PlantDefinitionShareRequest[]
 
   @@unique([sourceCollectionId, targetCollectionId])
   @@index([sourceCollectionId])
@@ -204,6 +209,42 @@ model PlantTransferRequest {
   @@index([targetCollectionId])
   @@index([sourcePlantInstanceId])
   @@index([targetPlantInstanceId])
+  @@index([status])
+  @@index([requestedAt])
+}
+
+model PlantDefinitionShareRequest {
+  id                      String    @id @default(cuid())
+  connectionId            String
+  sourceCollectionId      String
+  targetCollectionId      String
+  sourcePlantDefinitionId String
+  targetPlantDefinitionId String?
+  status                  String    @default("PENDING")
+  requestedById           String
+  reviewedById            String?
+  requestedAt             DateTime  @default(now())
+  reviewedAt              DateTime?
+  senderNote              String?
+  receiverNote            String?
+  previewSnapshot         Json
+  transferManifest        Json?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  connection            CollectionTransferConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  sourceCollection      Collection @relation("DefinitionShareSourceCollection", fields: [sourceCollectionId], references: [id], onDelete: Cascade)
+  targetCollection      Collection @relation("DefinitionShareTargetCollection", fields: [targetCollectionId], references: [id], onDelete: Cascade)
+  sourcePlantDefinition PlantDefinition @relation("SourceDefinitionShareRequests", fields: [sourcePlantDefinitionId], references: [id], onDelete: Cascade)
+  targetPlantDefinition PlantDefinition? @relation("TargetDefinitionShareRequests", fields: [targetPlantDefinitionId], references: [id], onDelete: SetNull)
+  requestedBy           User @relation("DefinitionShareRequester", fields: [requestedById], references: [id], onDelete: Cascade)
+  reviewedBy            User? @relation("DefinitionShareReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([connectionId])
+  @@index([sourceCollectionId])
+  @@index([targetCollectionId])
+  @@index([sourcePlantDefinitionId])
+  @@index([targetPlantDefinitionId])
   @@index([status])
   @@index([requestedAt])
 }
@@ -507,6 +548,8 @@ model PlantDefinition {
   aliases       PlantAlias[]
   husbandryGuide PlantHusbandryGuide?
   husbandrySourceFor PlantHusbandryGuide[] @relation("HusbandrySourceDefinition")
+  outgoingDefinitionShareRequests PlantDefinitionShareRequest[] @relation("SourceDefinitionShareRequests")
+  incomingDefinitionShareRequests PlantDefinitionShareRequest[] @relation("TargetDefinitionShareRequests")
 
   @@index([collectionId])
   @@index([governingBodyId])

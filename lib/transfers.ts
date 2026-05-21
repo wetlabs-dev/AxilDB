@@ -93,7 +93,7 @@ async function matchingGoverningBody(
   })
 }
 
-async function ensureTargetDefinition(
+export async function ensureTargetDefinition(
   client: TransferClient,
   sourceDefinition: Prisma.PlantDefinitionGetPayload<{ include: { aliases: true; governingBody: true } }>,
   sourceCollectionId: string,
@@ -168,6 +168,179 @@ async function ensureTargetDefinition(
   }
 
   return { definition, createdDefinition: !existing }
+}
+
+function buildDefinitionPreview(
+  definition: Prisma.PlantDefinitionGetPayload<{ include: { aliases: true; governingBody: true; _count: { select: { instances: true } } } }>,
+  counts: { typePhotoCount: number; husbandryGuideCount: number },
+  senderNote?: string | null,
+) {
+  return {
+    plantName: plantName(definition),
+    definition: {
+      genus: definition.genus,
+      species: definition.species,
+      cultivarName: definition.cultivarName,
+      acquisitionLabel: definition.acquisitionLabel,
+      provisionalTaxon: definition.provisionalTaxon,
+      confidence: definition.confidence,
+      governingBody: definition.governingBody?.name || null,
+    },
+    counts: {
+      aliases: definition.aliases.length,
+      instances: definition._count.instances,
+      typePhotos: counts.typePhotoCount,
+      husbandryGuides: counts.husbandryGuideCount,
+    },
+    senderNote: senderNote || null,
+    generatedAt: new Date().toISOString(),
+  }
+}
+
+export async function buildPlantDefinitionSharePreview(sourceCollectionId: string, sourcePlantDefinitionId: string, senderNote?: string | null) {
+  const definition = await prisma.plantDefinition.findFirstOrThrow({
+    where: { id: sourcePlantDefinitionId, collectionId: sourceCollectionId },
+    include: {
+      aliases: { orderBy: { name: 'asc' } },
+      governingBody: true,
+      _count: { select: { instances: true } },
+    },
+  })
+  const [typePhotoCount, guide] = await Promise.all([
+    prisma.photo.count({ where: { collectionId: sourceCollectionId, entityType: 'PLANT_DEFINITION', entityId: definition.id, isType: true } }),
+    resolvedHusbandryGuide(prisma, definition.id, sourceCollectionId),
+  ])
+  return buildDefinitionPreview(definition, { typePhotoCount, husbandryGuideCount: guide ? 1 : 0 }, senderNote)
+}
+
+async function copyDefinitionPhotos(
+  client: TransferClient,
+  sourceCollectionId: string,
+  targetCollectionId: string,
+  sourceDefinitionId: string,
+  targetDefinitionId: string,
+) {
+  const sourcePhotos = await prisma.photo.findMany({
+    where: { collectionId: sourceCollectionId, entityType: 'PLANT_DEFINITION', entityId: sourceDefinitionId },
+    orderBy: { createdAt: 'asc' },
+  })
+  const existingTargetPhotos = await client.photo.count({
+    where: { collectionId: targetCollectionId, entityType: 'PLANT_DEFINITION', entityId: targetDefinitionId },
+  })
+  if (existingTargetPhotos > 0) {
+    return { copiedPhotoIds: [] as string[], skippedPhotoIds: sourcePhotos.map((photo) => photo.id) }
+  }
+
+  const copiedPhotoIds: string[] = []
+  const skippedPhotoIds: string[] = []
+  for (const photo of sourcePhotos) {
+    const copied = await copyPhotoAsset(photo)
+    if (!copied) {
+      skippedPhotoIds.push(photo.id)
+      continue
+    }
+    await client.photo.create({
+      data: {
+        collectionId: targetCollectionId,
+        entityType: 'PLANT_DEFINITION',
+        entityId: targetDefinitionId,
+        filename: copied.filename,
+        path: copied.path,
+        caption: photo.caption,
+        source: photo.source,
+        sourceUrl: photo.sourceUrl,
+        isCover: photo.isCover,
+        isType: photo.isType,
+        createdAt: photo.createdAt,
+      },
+    })
+    copiedPhotoIds.push(photo.id)
+  }
+  return { copiedPhotoIds, skippedPhotoIds }
+}
+
+export async function copyPlantDefinitionPackage(options: {
+  sourceCollectionId: string
+  targetCollectionId: string
+  sourcePlantDefinitionId: string
+}) {
+  const sourceDefinition = await prisma.plantDefinition.findFirstOrThrow({
+    where: { id: options.sourcePlantDefinitionId, collectionId: options.sourceCollectionId },
+    include: { aliases: { orderBy: { name: 'asc' } }, governingBody: true },
+  })
+
+  return prisma.$transaction(async (tx) => {
+    const ensured = await ensureTargetDefinition(
+      tx,
+      sourceDefinition,
+      options.sourceCollectionId,
+      options.targetCollectionId,
+    )
+    const photoManifest = await copyDefinitionPhotos(
+      tx,
+      options.sourceCollectionId,
+      options.targetCollectionId,
+      sourceDefinition.id,
+      ensured.definition.id,
+    )
+    return {
+      sourceDefinition,
+      targetDefinition: ensured.definition,
+      createdDefinition: ensured.createdDefinition,
+      manifest: {
+        sourceCollectionId: options.sourceCollectionId,
+        targetCollectionId: options.targetCollectionId,
+        sourcePlantDefinitionId: sourceDefinition.id,
+        targetPlantDefinitionId: ensured.definition.id,
+        createdDefinition: ensured.createdDefinition,
+        copiedPhotoIds: photoManifest.copiedPhotoIds,
+        skippedPhotoIds: photoManifest.skippedPhotoIds,
+      },
+    }
+  })
+}
+
+export async function acceptPlantDefinitionSharePackage(options: {
+  requestId: string
+  reviewedBy: AuthUser
+  receiverNote?: string | null
+}) {
+  const request = await prisma.plantDefinitionShareRequest.findUniqueOrThrow({
+    where: { id: options.requestId },
+    include: {
+      sourceCollection: true,
+      targetCollection: true,
+      sourcePlantDefinition: true,
+    },
+  })
+  if (request.status !== 'PENDING') throw new Error('This definition share has already been reviewed.')
+
+  const copied = await copyPlantDefinitionPackage({
+    sourceCollectionId: request.sourceCollectionId,
+    targetCollectionId: request.targetCollectionId,
+    sourcePlantDefinitionId: request.sourcePlantDefinitionId,
+  })
+
+  const updatedRequest = await prisma.plantDefinitionShareRequest.update({
+    where: { id: request.id },
+    data: {
+      status: 'ACCEPTED',
+      reviewedById: options.reviewedBy.id,
+      reviewedAt: new Date(),
+      receiverNote: text(options.receiverNote),
+      targetPlantDefinitionId: copied.targetDefinition.id,
+      transferManifest: copied.manifest as Prisma.InputJsonObject,
+    },
+  })
+
+  await audit(options.reviewedBy, 'ACCEPT', 'PLANT_DEFINITION_SHARE_REQUEST', request.id, `Accepted shared definition ${plantName(copied.sourceDefinition)} from ${request.sourceCollection.name}`, {
+    sourceCollection: request.sourceCollection.name,
+    targetCollection: request.targetCollection.name,
+    targetPlantDefinitionId: copied.targetDefinition.id,
+    createdDefinition: copied.createdDefinition,
+  }, request.targetCollectionId)
+
+  return { ...copied, updatedRequest }
 }
 
 function buildPreview(instance: Prisma.PlantInstanceGetPayload<{ include: { plantDefinition: true } }>, counts: {

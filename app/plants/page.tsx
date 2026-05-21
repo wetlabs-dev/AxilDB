@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { copyPlantDefinition, createPlantDefinition, followEntity, unfollowEntity } from '@/app/actions'
+import { createPlantDefinitionShareRequest } from '@/app/transfer-actions'
 import { AddPanel, Button, Card, Field, HelpTooltip, TextArea, LinkButton, SuggestionDatalist } from '@/components/ui'
 import { ConfidenceSelect, PlantAliasFields } from '@/components/PlantAliasFields'
 import { PlantImage } from '@/components/PlantImage'
@@ -20,7 +21,7 @@ export default async function Plants() {
   const canCreate = canCreateInCollection(user, context)
   const canEdit = canEditInCollection(user, context)
   const collectionWhere = { collectionId: collection.id }
-  const [plants, bodies, follows] = await Promise.all([
+  const [plants, bodies, follows, outgoingTransferConnections] = await Promise.all([
     prisma.plantDefinition.findMany({
       where: collectionWhere,
       include: {
@@ -36,6 +37,13 @@ export default async function Plants() {
     user
       ? prisma.follow.findMany({
           where: { ...collectionWhere, userId: user.id, scope: 'TYPE', entityType: 'PLANT_DEFINITION' },
+        })
+      : [],
+    canEdit
+      ? prisma.collectionTransferConnection.findMany({
+          where: { sourceCollectionId: collection.id, status: 'ACTIVE' },
+          include: { targetCollection: true },
+          orderBy: { requestedAt: 'desc' },
         })
       : [],
   ])
@@ -197,6 +205,25 @@ export default async function Plants() {
                           <input type="hidden" name="collectionSlug" value={collection.slug} />
                           <button type="submit" className="w-full rounded-md border px-2 py-1 text-center text-xs">
                             Copy
+                          </button>
+                        </form>
+                      )}
+                      {canEdit && outgoingTransferConnections.length > 0 && (
+                        <form action={createPlantDefinitionShareRequest} className="grid gap-1">
+                          <input type="hidden" name="sourcePlantDefinitionId" value={plant.id} />
+                          <input type="hidden" name="collectionSlug" value={collection.slug} />
+                          <input type="hidden" name="back" value={collectionPath(collection.slug, '/plants')} />
+                          {outgoingTransferConnections.length === 1 ? (
+                            <input type="hidden" name="connectionId" value={outgoingTransferConnections[0].id} />
+                          ) : (
+                            <select name="connectionId" aria-label="Share target collection" className="max-w-24 rounded-md border border-stone-300 bg-white/80 px-1 py-1 text-xs">
+                              {outgoingTransferConnections.map((connection) => (
+                                <option key={connection.id} value={connection.id}>{connection.targetCollection.name}</option>
+                              ))}
+                            </select>
+                          )}
+                          <button type="submit" className="w-full rounded-md border px-2 py-1 text-center text-xs">
+                            Share definition
                           </button>
                         </form>
                       )}

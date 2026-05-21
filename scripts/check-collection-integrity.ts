@@ -123,6 +123,14 @@ const relationshipChecks = [
     `,
   },
   {
+    label: 'Definition share requests use known statuses',
+    sql: `
+      SELECT COUNT(*)::int AS count
+      FROM "PlantDefinitionShareRequest"
+      WHERE status NOT IN ('PENDING', 'ACCEPTED', 'DECLINED', 'CANCELLED')
+    `,
+  },
+  {
     label: 'Transfer connections do not point to the same collection',
     sql: `
       SELECT COUNT(*)::int AS count
@@ -154,6 +162,35 @@ const relationshipChecks = [
     sql: `
       SELECT COUNT(*)::int AS count
       FROM "PlantTransferRequest" request
+      JOIN "CollectionTransferConnection" connection ON connection.id = request."connectionId"
+      WHERE request."sourceCollectionId" IS DISTINCT FROM connection."sourceCollectionId"
+        OR request."targetCollectionId" IS DISTINCT FROM connection."targetCollectionId"
+    `,
+  },
+  {
+    label: 'Definition share source definition stays in source collection',
+    sql: `
+      SELECT COUNT(*)::int AS count
+      FROM "PlantDefinitionShareRequest" request
+      JOIN "PlantDefinition" definition ON definition.id = request."sourcePlantDefinitionId"
+      WHERE request."sourceCollectionId" IS DISTINCT FROM definition."collectionId"
+    `,
+  },
+  {
+    label: 'Definition share target definition stays in target collection',
+    sql: `
+      SELECT COUNT(*)::int AS count
+      FROM "PlantDefinitionShareRequest" request
+      JOIN "PlantDefinition" definition ON definition.id = request."targetPlantDefinitionId"
+      WHERE request."targetPlantDefinitionId" IS NOT NULL
+        AND request."targetCollectionId" IS DISTINCT FROM definition."collectionId"
+    `,
+  },
+  {
+    label: 'Definition shares match their connection collections',
+    sql: `
+      SELECT COUNT(*)::int AS count
+      FROM "PlantDefinitionShareRequest" request
       JOIN "CollectionTransferConnection" connection ON connection.id = request."connectionId"
       WHERE request."sourceCollectionId" IS DISTINCT FROM connection."sourceCollectionId"
         OR request."targetCollectionId" IS DISTINCT FROM connection."targetCollectionId"
@@ -450,6 +487,7 @@ const relationshipChecks = [
         'PLANT_HUSBANDRY_OVERRIDE',
         'TRANSFER_CONNECTION',
         'PLANT_TRANSFER_REQUEST',
+        'PLANT_DEFINITION_SHARE_REQUEST',
         'DEMO_DATA'
       )
         AND audit."collectionId" IS NULL
