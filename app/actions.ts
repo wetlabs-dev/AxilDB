@@ -21,10 +21,16 @@ import { husbandryFieldNames, husbandryFormValues } from '@/lib/husbandry'
 
 const val = (fd: FormData, k: string) =>
   String(fd.get(k) || '').trim() || undefined
+const clearableVal = (fd: FormData, k: string) =>
+  fd.has(k) ? val(fd, k) || null : undefined
 const speciesVal = (fd: FormData, k = 'species') => val(fd, k)?.toLowerCase()
 
 const date = (s?: string) => (s ? new Date(s) : undefined)
 const dec = (s?: string) => (s ? s : undefined)
+const clearableDate = (fd: FormData, k: string) =>
+  fd.has(k) ? date(val(fd, k)) || null : undefined
+const clearableDec = (fd: FormData, k: string) =>
+  fd.has(k) ? dec(val(fd, k)) || null : undefined
 const back = (fd: FormData) => val(fd, 'back') || '/'
 const collectionSlug = async (fd: FormData) => val(fd, 'collectionSlug') || await getCurrentCollectionSlug()
 const revalidateDestination = (destination: string) => revalidatePath(destination.split('#')[0] || '/')
@@ -218,9 +224,9 @@ export async function updateGoverningBody(fd: FormData) {
     where: { id: existing.id },
     data: {
       name: val(fd, 'name')!,
-      abbreviation: val(fd, 'abbreviation'),
-      website: val(fd, 'website'),
-      notes: val(fd, 'notes'),
+      abbreviation: clearableVal(fd, 'abbreviation'),
+      website: clearableVal(fd, 'website'),
+      notes: clearableVal(fd, 'notes'),
     },
   })
   await audit(user, 'UPDATE', 'GOVERNING_BODY', body.id, `Updated governing body ${body.name}`, undefined, collection.id)
@@ -246,20 +252,20 @@ export async function createPlantDefinition(fd: FormData) {
       collectionId: collection.id,
       genus: val(fd, 'genus')!,
       species: speciesVal(fd)!,
-      hybridNotation: val(fd, 'hybridNotation'),
-      cultivarName: val(fd, 'cultivarName'),
-      authority: val(fd, 'authority'),
-      cultivarRegistrationNumber: val(fd, 'cultivarRegistrationNumber'),
-      governingBodyId: val(fd, 'governingBodyId'),
+      hybridNotation: clearableVal(fd, 'hybridNotation'),
+      cultivarName: clearableVal(fd, 'cultivarName'),
+      authority: clearableVal(fd, 'authority'),
+      cultivarRegistrationNumber: clearableVal(fd, 'cultivarRegistrationNumber'),
+      governingBodyId: clearableVal(fd, 'governingBodyId'),
       confidence: val(fd, 'confidence') || 'UNCERTAIN',
-      acquisitionLabel: val(fd, 'acquisitionLabel'),
-      provisionalTaxon: val(fd, 'provisionalTaxon'),
-      wikipediaUrl: val(fd, 'wikipediaUrl'),
-      inaturalistUrl: val(fd, 'inaturalistUrl'),
-      powoUrl: val(fd, 'powoUrl'),
-      gbifUrl: val(fd, 'gbifUrl'),
-      description: val(fd, 'description'),
-      notes: val(fd, 'notes'),
+      acquisitionLabel: clearableVal(fd, 'acquisitionLabel'),
+      provisionalTaxon: clearableVal(fd, 'provisionalTaxon'),
+      wikipediaUrl: clearableVal(fd, 'wikipediaUrl'),
+      inaturalistUrl: clearableVal(fd, 'inaturalistUrl'),
+      powoUrl: clearableVal(fd, 'powoUrl'),
+      gbifUrl: clearableVal(fd, 'gbifUrl'),
+      description: clearableVal(fd, 'description'),
+      notes: clearableVal(fd, 'notes'),
       aliases: { create: aliasRows(fd).map((alias) => ({ ...alias, collectionId: collection.id })) },
     },
   })
@@ -322,20 +328,20 @@ export async function updatePlantDefinition(fd: FormData) {
     data: {
       genus: val(fd, 'genus')!,
       species: speciesVal(fd)!,
-      hybridNotation: val(fd, 'hybridNotation'),
-      cultivarName: val(fd, 'cultivarName'),
-      authority: val(fd, 'authority'),
-      cultivarRegistrationNumber: val(fd, 'cultivarRegistrationNumber'),
-      governingBodyId: val(fd, 'governingBodyId'),
+      hybridNotation: clearableVal(fd, 'hybridNotation'),
+      cultivarName: clearableVal(fd, 'cultivarName'),
+      authority: clearableVal(fd, 'authority'),
+      cultivarRegistrationNumber: clearableVal(fd, 'cultivarRegistrationNumber'),
+      governingBodyId: clearableVal(fd, 'governingBodyId'),
       confidence: val(fd, 'confidence') || 'UNCERTAIN',
-      acquisitionLabel: val(fd, 'acquisitionLabel'),
-      provisionalTaxon: val(fd, 'provisionalTaxon'),
-      wikipediaUrl: val(fd, 'wikipediaUrl'),
-      inaturalistUrl: val(fd, 'inaturalistUrl'),
-      powoUrl: val(fd, 'powoUrl'),
-      gbifUrl: val(fd, 'gbifUrl'),
-      description: val(fd, 'description'),
-      notes: val(fd, 'notes'),
+      acquisitionLabel: clearableVal(fd, 'acquisitionLabel'),
+      provisionalTaxon: clearableVal(fd, 'provisionalTaxon'),
+      wikipediaUrl: clearableVal(fd, 'wikipediaUrl'),
+      inaturalistUrl: clearableVal(fd, 'inaturalistUrl'),
+      powoUrl: clearableVal(fd, 'powoUrl'),
+      gbifUrl: clearableVal(fd, 'gbifUrl'),
+      description: clearableVal(fd, 'description'),
+      notes: clearableVal(fd, 'notes'),
       aliases: {
         deleteMany: {},
         create: aliasRows(fd).map((alias) => ({ ...alias, collectionId: collection.id })),
@@ -550,15 +556,15 @@ export async function updatePlantInstance(fd: FormData) {
       plantDefinitionId: val(fd, 'plantDefinitionId')!,
       instanceType: val(fd, 'instanceType')!,
       status: val(fd, 'status') || 'ACTIVE',
-      location: val(fd, 'location'),
-      acquisitionDate: date(val(fd, 'acquisitionDate')),
-      propagationDate: date(val(fd, 'propagationDate')),
-      source: val(fd, 'source'),
-      distributor: val(fd, 'distributor'),
-      stockNumber: val(fd, 'stockNumber'),
-      purchasePrice: dec(val(fd, 'purchasePrice')) as any,
-      archiveReason: val(fd, 'archiveReason'),
-      archiveNotes: val(fd, 'archiveNotes'),
+      location: clearableVal(fd, 'location'),
+      acquisitionDate: clearableDate(fd, 'acquisitionDate'),
+      propagationDate: clearableDate(fd, 'propagationDate'),
+      source: clearableVal(fd, 'source'),
+      distributor: clearableVal(fd, 'distributor'),
+      stockNumber: clearableVal(fd, 'stockNumber'),
+      purchasePrice: clearableDec(fd, 'purchasePrice') as any,
+      archiveReason: clearableVal(fd, 'archiveReason'),
+      archiveNotes: clearableVal(fd, 'archiveNotes'),
     },
   })
   await audit(user, 'UPDATE', 'PLANT_INSTANCE', id, `Updated plant instance ${instance.plantId}`, undefined, collection.id)
@@ -640,8 +646,8 @@ export async function archivePlantInstance(fd: FormData) {
     data: {
       status: 'ARCHIVED',
       archiveDate: new Date(),
-      archiveReason: val(fd, 'archiveReason'),
-      archiveNotes: val(fd, 'archiveNotes'),
+      archiveReason: clearableVal(fd, 'archiveReason'),
+      archiveNotes: clearableVal(fd, 'archiveNotes'),
     },
   })
   await audit(user, 'ARCHIVE', 'PLANT_INSTANCE', id, `Archived plant instance ${instance.plantId}`, undefined, collection.id)
@@ -811,7 +817,7 @@ export async function markSportCandidate(fd: FormData) {
     data: {
       isSportCandidate: true,
       sportStatus: 'SUSPECTED',
-      sportDescription: observation,
+      sportDescription: observation || null,
     },
   })
 
@@ -851,7 +857,7 @@ export async function markSportReverted(fd: FormData) {
     data: {
       isSportCandidate: false,
       sportStatus: 'REVERTED',
-      sportDescription: observation,
+      sportDescription: observation || null,
     },
   })
 
@@ -1015,7 +1021,7 @@ export async function updateBloomPeak(fd: FormData) {
     data: {
       peakBloomDate: date(val(fd, 'peakBloomDate')) ?? null,
       flowerCount: val(fd, 'flowerCount') ? Number(val(fd, 'flowerCount')) : null,
-      notes: val(fd, 'notes'),
+      notes: clearableVal(fd, 'notes'),
     },
   })
   await audit(user, 'UPDATE', 'BLOOM_EVENT', id, `Updated bloom peak for plant instance ${plantInstanceId}`, undefined, collection.id)
@@ -1044,7 +1050,7 @@ export async function closeBloomEvent(fd: FormData) {
 
   await prisma.bloomEvent.update({
     where: { id },
-    data: { bloomEndDate: date(val(fd, 'bloomEndDate'))!, notes: val(fd, 'notes') },
+    data: { bloomEndDate: date(val(fd, 'bloomEndDate'))!, notes: clearableVal(fd, 'notes') },
   })
   await audit(user, 'UPDATE', 'BLOOM_EVENT', id, `Closed bloom event for plant instance ${plantInstanceId}`, undefined, collection.id)
   const instance = await prisma.plantInstance.findFirst({ where: { id: plantInstanceId, collectionId: collection.id } })
@@ -1083,7 +1089,7 @@ export async function updateBloomEvent(fd: FormData) {
       bloomEndDate: date(val(fd, 'bloomEndDate')) ?? null,
       flowerCount: val(fd, 'flowerCount') ? Number(val(fd, 'flowerCount')) : null,
       firstBloom: !!fd.get('firstBloom'),
-      notes: val(fd, 'notes'),
+      notes: clearableVal(fd, 'notes'),
     },
   })
   await audit(user, 'UPDATE', 'BLOOM_EVENT', id, `Updated bloom event for plant instance ${plantInstanceId}`, undefined, collection.id)
@@ -1199,7 +1205,7 @@ export async function updatePropagationEvent(fd: FormData) {
       method: val(fd, 'method')!,
       date: date(val(fd, 'date'))!,
       successStatus: val(fd, 'successStatus') || 'PENDING',
-      notes: val(fd, 'notes'),
+      notes: clearableVal(fd, 'notes'),
     },
   })
   await audit(user, 'UPDATE', 'PROPAGATION_EVENT', id, `Updated ${event.method} propagation event`, undefined, collection.id)

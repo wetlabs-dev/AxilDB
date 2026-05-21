@@ -195,9 +195,9 @@ export default async function Plants() {
                         <form action={copyPlantDefinition}>
                           <input type="hidden" name="id" value={plant.id} />
                           <input type="hidden" name="collectionSlug" value={collection.slug} />
-                          <Button className="border border-stone-300 bg-white/70 px-2 py-1 text-xs text-stone-800 hover:bg-white">
+                          <button type="submit" className="w-full rounded-md border px-2 py-1 text-center text-xs">
                             Copy
-                          </Button>
+                          </button>
                         </form>
                       )}
                     </div>
