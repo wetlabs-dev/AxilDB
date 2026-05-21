@@ -2,12 +2,16 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
+import path from 'path'
 import PDFDocument from 'pdfkit'
 import QRCode from 'qrcode'
 import { prisma } from '@/lib/prisma'
 import { collectionPath, ensureDefaultCollection } from '@/lib/collections'
 import { getCurrentUser } from '@/lib/auth'
 import { LABEL_HEIGHT_PT, LABEL_WIDTH_PT, plantLabelNameLines } from '@/lib/plant-labels'
+
+const LABEL_ID_FONT = 'AxilDBLabelId'
+const LABEL_ID_FONT_PATH = path.join(process.cwd(), 'public/fonts/IBMPlexMono-Regular.ttf')
 
 function oneLineFontSize(doc: PDFKit.PDFDocument, text: string, font: string, max: number, min: number, width: number) {
   for (let size = max; size >= min; size -= 0.5) {
@@ -49,6 +53,7 @@ export async function GET(req: Request) {
   }
   const items=await prisma.plantInstance.findMany({where: all?{collectionId:collection.id,status:'ACTIVE'}:{collectionId:collection.id,id:{in:ids}},include:{plantDefinition:true},orderBy:{plantId:'asc'}})
   const doc=new PDFDocument({size:[LABEL_WIDTH_PT,LABEL_HEIGHT_PT],margin:0})
+  doc.registerFont(LABEL_ID_FONT, LABEL_ID_FONT_PATH)
   const chunks:Buffer[]=[]
   doc.on('data',c=>chunks.push(c))
   const done=new Promise<Buffer>(resolve=>doc.on('end',()=>resolve(Buffer.concat(chunks))))
@@ -85,8 +90,8 @@ export async function GET(req: Request) {
       doc.text(line, nameX, currentY, { width: nameWidth, lineBreak: false })
       currentY += lineHeight
     }
-    const idSize = oneLineFontSize(doc, i.plantId, 'Helvetica', 12, 6, LABEL_WIDTH_PT - 12)
-    doc.font('Helvetica').fontSize(idSize).text(i.plantId, 6, 74, {
+    const idSize = oneLineFontSize(doc, i.plantId, LABEL_ID_FONT, 12, 6, LABEL_WIDTH_PT - 12)
+    doc.font(LABEL_ID_FONT).fontSize(idSize).text(i.plantId, 6, 74, {
       width: LABEL_WIDTH_PT - 12,
       align: 'center',
       lineBreak: false,

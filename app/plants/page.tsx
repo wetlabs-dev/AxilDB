@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import { createPlantDefinition, followEntity, unfollowEntity } from '@/app/actions'
+import { copyPlantDefinition, createPlantDefinition, followEntity, unfollowEntity } from '@/app/actions'
 import { AddPanel, Button, Card, Field, HelpTooltip, TextArea, LinkButton, SuggestionDatalist } from '@/components/ui'
 import { ConfidenceSelect, PlantAliasFields } from '@/components/PlantAliasFields'
 import { PlantImage } from '@/components/PlantImage'
@@ -17,6 +17,8 @@ export default async function Plants() {
   const user = await getCurrentUser()
   const context = await requireCollectionViewer()
   const { collection } = context
+  const canCreate = canCreateInCollection(user, context)
+  const canEdit = canEditInCollection(user, context)
   const collectionWhere = { collectionId: collection.id }
   const [plants, bodies, follows] = await Promise.all([
     prisma.plantDefinition.findMany({
@@ -85,7 +87,7 @@ export default async function Plants() {
         <LinkButton href={collectionPath(collection.slug, '/search')}>Search</LinkButton>
       </div>
 
-      {canCreateInCollection(user, context) && (
+      {canCreate && (
         <AddPanel label="Add plant definition">
           <SuggestionDatalist id="definition-genus-suggestions" suggestions={definitionSuggestions.genus} />
           <SuggestionDatalist id="definition-species-suggestions" suggestions={definitionSuggestions.species} />
@@ -182,10 +184,23 @@ export default async function Plants() {
                       {followCountByDefinitionId.get(plant.id) || 0} follower{(followCountByDefinitionId.get(plant.id) || 0) === 1 ? '' : 's'}
                     </p>
                   </div>
-                  {canEditInCollection(user, context) && (
-                    <Link className="rounded-md border px-2 py-1 text-xs" href={collectionPath(collection.slug, `/plants/${plant.id}/edit`)}>
-                      Edit
-                    </Link>
+                  {(canEdit || canCreate) && (
+                    <div className="flex shrink-0 flex-col gap-1">
+                      {canEdit && (
+                        <Link className="rounded-md border px-2 py-1 text-center text-xs" href={collectionPath(collection.slug, `/plants/${plant.id}/edit`)}>
+                          Edit
+                        </Link>
+                      )}
+                      {canCreate && (
+                        <form action={copyPlantDefinition}>
+                          <input type="hidden" name="id" value={plant.id} />
+                          <input type="hidden" name="collectionSlug" value={collection.slug} />
+                          <Button className="border border-stone-300 bg-white/70 px-2 py-1 text-xs text-stone-800 hover:bg-white">
+                            Copy
+                          </Button>
+                        </form>
+                      )}
+                    </div>
                   )}
                 </div>
                 {user && (

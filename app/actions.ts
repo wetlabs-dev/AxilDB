@@ -268,6 +268,50 @@ export async function createPlantDefinition(fd: FormData) {
   redirect(collectionPath(collection.slug, '/plants'))
 }
 
+export async function copyPlantDefinition(fd: FormData) {
+  const { user, collection } = await requireCollectionLogger(await collectionSlug(fd))
+  const id = val(fd, 'id')!
+  const source = await prisma.plantDefinition.findFirstOrThrow({
+    where: { id, collectionId: collection.id },
+    include: { aliases: true },
+  })
+  const definition = await prisma.plantDefinition.create({
+    data: {
+      collectionId: collection.id,
+      genus: source.genus,
+      species: source.species,
+      authority: source.authority,
+      governingBodyId: source.governingBodyId,
+      wikipediaUrl: source.wikipediaUrl,
+      inaturalistUrl: source.inaturalistUrl,
+      powoUrl: source.powoUrl,
+      gbifUrl: source.gbifUrl,
+      description: source.description,
+      aliases: {
+        create: source.aliases.map((alias) => ({
+          collectionId: collection.id,
+          name: alias.name,
+          aliasType: alias.aliasType,
+          source: alias.source,
+          confidence: alias.confidence,
+          notes: alias.notes,
+        })),
+      },
+    },
+  })
+  await audit(
+    user,
+    'CREATE',
+    'PLANT_DEFINITION',
+    definition.id,
+    `Copied plant definition ${source.genus} ${source.species}`,
+    { sourcePlantDefinitionId: source.id },
+    collection.id,
+  )
+
+  redirect(collectionPath(collection.slug, `/plants/${definition.id}/edit`))
+}
+
 export async function updatePlantDefinition(fd: FormData) {
   const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const id = val(fd, 'id')!

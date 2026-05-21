@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: "AxilDB Label ID";
+  src: url("/fonts/IBMPlexMono-Regular-Latin1.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   color-scheme: light;
 }
@@ -223,7 +231,7 @@ section {
   bottom: 0.05in;
   left: 0.07in;
   overflow: hidden;
-  font-family: Helvetica, Arial, sans-serif;
+  font-family: "AxilDB Label ID", "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   line-height: 1;
   text-align: center;
   white-space: nowrap;
