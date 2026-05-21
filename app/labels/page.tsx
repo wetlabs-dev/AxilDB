@@ -13,7 +13,10 @@ export default async function BulkLabels() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-3xl font-bold">Bulk Tag PDF Sheet</h2>
+      <h2 className="text-3xl font-bold">Plant Label PDFs</h2>
+      <p className="max-w-2xl text-sm text-stone-600">
+        Exports one 2.25 × 1.25 inch label per PDF page for label-printer rolls.
+      </p>
       <Card>
         <form action="/api/labels/bulk" method="get" className="grid gap-3">
           <input type="hidden" name="collectionSlug" value={collection.slug} />

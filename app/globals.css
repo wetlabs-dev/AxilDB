@@ -174,5 +174,59 @@ section {
   }
 }
 
-.tag-print { width: 2.5in; min-height: 1.25in; border: 1px solid #222; padding: .12in; display: grid; grid-template-columns: 1fr .7in; gap: .08in; background: white; }
+.tag-print {
+  position: relative;
+  width: 2.25in;
+  height: 1.25in;
+  overflow: hidden;
+  background: white;
+  color: #000;
+}
+
+.tag-collection {
+  position: absolute;
+  top: 0.045in;
+  right: 0.07in;
+  left: 0.07in;
+  overflow: hidden;
+  font-family: "Times New Roman", Times, serif;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.tag-name {
+  position: absolute;
+  top: 0.31in;
+  left: 0.09in;
+  width: 1.28in;
+  max-height: 0.6in;
+  overflow: hidden;
+  font-family: "Times New Roman", Times, serif;
+  font-style: italic;
+  font-weight: 700;
+  line-height: 0.9;
+}
+
+.tag-qr {
+  position: absolute;
+  top: 0.32in;
+  right: 0.08in;
+  width: 0.66in;
+  height: 0.66in;
+}
+
+.tag-plant-id {
+  position: absolute;
+  right: 0.07in;
+  bottom: 0.05in;
+  left: 0.07in;
+  overflow: hidden;
+  font-family: Helvetica, Arial, sans-serif;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+}
+
 @media print { .no-print { display: none; } body { background: white; } }
