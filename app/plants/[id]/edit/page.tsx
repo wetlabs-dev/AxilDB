@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import { deletePlantDefinition, deletePlantHusbandryGuide, forkPlantHusbandryGuide, linkPlantHusbandryGuide, savePlantHusbandryGuideField, updatePlantDefinition } from '@/app/actions'
+import { deletePlantDefinition, deletePlantHusbandryGuide, forkPlantHusbandryGuide, linkPlantHusbandryGuide, savePlantHusbandryGuide, savePlantHusbandryGuideField, updatePlantDefinition } from '@/app/actions'
 import { Button, Card, Field, HelpTooltip, SuggestionDatalist, TextArea } from '@/components/ui'
 import { ConfidenceSelect, PlantAliasFields } from '@/components/PlantAliasFields'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
@@ -8,6 +8,8 @@ import { rankedSuggestions } from '@/lib/suggestions'
 import { AIDescriptionField, AIMagicFillButton } from '@/components/AIDescriptionField'
 import { collectionPath, requireCollectionAdmin } from '@/lib/collections'
 import { HusbandryBadges, HusbandryGuideView } from '@/components/Husbandry'
+import { HusbandryMagicFillButton } from '@/components/HusbandryMagicFillButton'
+import { husbandryFieldNames } from '@/lib/husbandry'
 import { plantName } from '@/lib/utils'
 
 const selectClass = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
@@ -139,20 +141,39 @@ export default async function EditPlant({
             <p className="mt-1 text-sm text-stone-600">Create a care guide, link to a similar definition&apos;s guide, or fork linked care into a local guide.</p>
             <HusbandryBadges values={effectiveGuide as any} />
           </div>
-          {plant.husbandryGuide && (
-            <form action={deletePlantHusbandryGuide}>
-              <input type="hidden" name="collectionSlug" value={collection.slug} />
-              <input type="hidden" name="plantDefinitionId" value={plant.id} />
-              <ConfirmDeleteButton
-                title="Delete husbandry guide?"
-                message="This removes the guide or linked-guide reference for this plant definition. It does not delete plant records."
-                confirmLabel="Delete husbandry"
-                className="px-3 py-1.5 text-xs"
-              >
-                Delete husbandry
-              </ConfirmDeleteButton>
-            </form>
-          )}
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {!sourceDefinition && (
+              <form action={savePlantHusbandryGuide} className="contents">
+                <input type="hidden" name="collectionSlug" value={collection.slug} />
+                <input type="hidden" name="plantDefinitionId" value={plant.id} />
+                {husbandryFieldNames.map((field) => (
+                  <input key={field} type="hidden" name={field} defaultValue={(plant.husbandryGuide as any)?.[field] || ''} />
+                ))}
+                <input type="hidden" name="reviewStatus" defaultValue={(plant.husbandryGuide as any)?.reviewStatus || 'DRAFT'} />
+                <input type="hidden" name="reviewNotes" defaultValue={(plant.husbandryGuide as any)?.reviewNotes || ''} />
+                <input type="hidden" name="aiModel" defaultValue={(plant.husbandryGuide as any)?.aiModel || ''} />
+                <HusbandryMagicFillButton
+                  plant={plant}
+                  autoSubmit
+                  label={plant.husbandryGuide ? 'Magic refill husbandry' : 'Magic Fill husbandry'}
+                />
+              </form>
+            )}
+            {plant.husbandryGuide && (
+              <form action={deletePlantHusbandryGuide}>
+                <input type="hidden" name="collectionSlug" value={collection.slug} />
+                <input type="hidden" name="plantDefinitionId" value={plant.id} />
+                <ConfirmDeleteButton
+                  title="Delete husbandry guide?"
+                  message="This removes the guide or linked-guide reference for this plant definition. It does not delete plant records."
+                  confirmLabel="Delete husbandry"
+                  className="px-3 py-1.5 text-xs"
+                >
+                  Delete husbandry
+                </ConfirmDeleteButton>
+              </form>
+            )}
+          </div>
         </div>
 
         <div className="mt-4 grid gap-4">

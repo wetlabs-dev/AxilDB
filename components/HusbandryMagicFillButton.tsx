@@ -14,7 +14,17 @@ function setControlValue(form: HTMLFormElement, name: string, value?: string | n
   field.dispatchEvent(new Event('change', { bubbles: true }))
 }
 
-export function HusbandryMagicFillButton({ plant, className = '' }: { plant: any; className?: string }) {
+export function HusbandryMagicFillButton({
+  plant,
+  className = '',
+  autoSubmit = false,
+  label = 'Magic Fill husbandry',
+}: {
+  plant: any
+  className?: string
+  autoSubmit?: boolean
+  label?: string
+}) {
   const buttonRef = useRef<HTMLButtonElement>(null)
   const [status, setStatus] = useState('')
   const [loading, setLoading] = useState(false)
@@ -41,7 +51,12 @@ export function HusbandryMagicFillButton({ plant, className = '' }: { plant: any
       setControlValue(form, 'reviewStatus', fields.reviewStatus || 'DRAFT')
       setControlValue(form, 'reviewNotes', fields.reviewNotes || 'AI-generated draft. Review before relying on this care guide.')
       setControlValue(form, 'aiModel', fields.aiModel)
-      setStatus('Draft added. Review before saving.')
+      if (autoSubmit) {
+        setStatus('Draft added. Saving...')
+        form.requestSubmit()
+      } else {
+        setStatus('Draft added. Review before saving.')
+      }
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Husbandry fill failed.')
     } finally {
@@ -60,7 +75,7 @@ export function HusbandryMagicFillButton({ plant, className = '' }: { plant: any
         className="inline-flex items-center gap-1.5 rounded-md border border-[#c4a86a]/60 bg-[#fff5d6] px-2.5 py-1.5 text-sm font-semibold text-[#6f541f] shadow-sm transition hover:bg-[#f7e6ae] disabled:cursor-wait disabled:opacity-70"
       >
         <Sparkles className="h-4 w-4" />
-        {loading ? 'Filling...' : 'Magic Fill husbandry'}
+        {loading ? 'Filling...' : label}
       </button>
     </div>
   )
