@@ -1,6 +1,7 @@
 services:
   caddy:
     image: caddy:2-alpine
+    restart: unless-stopped
     depends_on:
       - app
     ports:
@@ -12,6 +13,7 @@ services:
       - caddy_config:/config
   db:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_USER: plants
       POSTGRES_PASSWORD: plants
@@ -37,6 +39,7 @@ services:
     command: sh -c "npx prisma db push --accept-data-loss && npm run db:bootstrap"
   app:
     build: .
+    restart: unless-stopped
     env_file:
       - path: ./.env
         required: false
@@ -63,6 +66,7 @@ services:
     build:
       context: .
       target: builder
+    restart: unless-stopped
     env_file:
       - path: ./.env
         required: false
@@ -81,6 +85,7 @@ services:
     build:
       context: .
       target: builder
+    restart: unless-stopped
     env_file:
       - path: ./.env
         required: false
@@ -101,6 +106,7 @@ services:
     build:
       context: .
       target: builder
+    restart: unless-stopped
     env_file:
       - path: ./.env
         required: false
