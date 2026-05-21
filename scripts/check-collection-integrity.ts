@@ -107,6 +107,59 @@ const relationshipChecks = [
     `,
   },
   {
+    label: 'Transfer connections use known statuses',
+    sql: `
+      SELECT COUNT(*)::int AS count
+      FROM "CollectionTransferConnection"
+      WHERE status NOT IN ('PENDING', 'ACTIVE', 'IGNORED', 'BLOCKED')
+    `,
+  },
+  {
+    label: 'Transfer requests use known statuses',
+    sql: `
+      SELECT COUNT(*)::int AS count
+      FROM "PlantTransferRequest"
+      WHERE status NOT IN ('PENDING', 'ACCEPTED', 'DECLINED', 'CANCELLED')
+    `,
+  },
+  {
+    label: 'Transfer connections do not point to the same collection',
+    sql: `
+      SELECT COUNT(*)::int AS count
+      FROM "CollectionTransferConnection"
+      WHERE "sourceCollectionId" = "targetCollectionId"
+    `,
+  },
+  {
+    label: 'Plant transfer source plant stays in source collection',
+    sql: `
+      SELECT COUNT(*)::int AS count
+      FROM "PlantTransferRequest" request
+      JOIN "PlantInstance" instance ON instance.id = request."sourcePlantInstanceId"
+      WHERE request."sourceCollectionId" IS DISTINCT FROM instance."collectionId"
+    `,
+  },
+  {
+    label: 'Plant transfer target plant stays in target collection',
+    sql: `
+      SELECT COUNT(*)::int AS count
+      FROM "PlantTransferRequest" request
+      JOIN "PlantInstance" instance ON instance.id = request."targetPlantInstanceId"
+      WHERE request."targetPlantInstanceId" IS NOT NULL
+        AND request."targetCollectionId" IS DISTINCT FROM instance."collectionId"
+    `,
+  },
+  {
+    label: 'Plant transfers match their connection collections',
+    sql: `
+      SELECT COUNT(*)::int AS count
+      FROM "PlantTransferRequest" request
+      JOIN "CollectionTransferConnection" connection ON connection.id = request."connectionId"
+      WHERE request."sourceCollectionId" IS DISTINCT FROM connection."sourceCollectionId"
+        OR request."targetCollectionId" IS DISTINCT FROM connection."targetCollectionId"
+    `,
+  },
+  {
     label: 'PlantAlias.collectionId matches PlantDefinition.collectionId',
     sql: `
       SELECT COUNT(*)::int AS count
@@ -395,6 +448,8 @@ const relationshipChecks = [
         'SPORT_STABILITY_RECORD',
         'PLANT_HUSBANDRY_GUIDE',
         'PLANT_HUSBANDRY_OVERRIDE',
+        'TRANSFER_CONNECTION',
+        'PLANT_TRANSFER_REQUEST',
         'DEMO_DATA'
       )
         AND audit."collectionId" IS NULL

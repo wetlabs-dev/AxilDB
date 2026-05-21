@@ -6,6 +6,7 @@ import { MobileMenuAutoClose } from './MobileMenuAutoClose'
 import { Button, GhostLink } from './ui'
 import {
   Archive,
+  ArrowRightLeft,
   BarChart3,
   Bell,
   BookOpen,
@@ -78,6 +79,7 @@ const collectionAdminItems = [
   ['/collection-settings', 'Collection Settings', Settings, 'MANAGER'],
   ['/members', 'Collection Members', Users, 'MANAGER'],
   ['/settings', 'Governing Bodies', Settings, 'GARDENER'],
+  ['/transfers', 'Collection Transfers', ArrowRightLeft, 'GARDENER'],
   ['/admin-tools', 'Collection Tools', FlaskConical, 'GARDENER'],
   ['/audit', 'Audit Log', FileText, 'GARDENER'],
 ] as const

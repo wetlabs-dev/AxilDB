@@ -47,6 +47,10 @@ model User {
   backupRuns          BackupRun[] @relation("BackupRunRequestedBy")
   sentCollectionInvitations CollectionInvitation[] @relation("CollectionInvitationInviter")
   acceptedCollectionInvitations CollectionInvitation[] @relation("CollectionInvitationAcceptedUser")
+  requestedTransferConnections CollectionTransferConnection[] @relation("TransferConnectionRequester")
+  respondedTransferConnections CollectionTransferConnection[] @relation("TransferConnectionResponder")
+  requestedPlantTransfers PlantTransferRequest[] @relation("PlantTransferRequester")
+  reviewedPlantTransfers PlantTransferRequest[] @relation("PlantTransferReviewer")
 
   @@index([role])
   @@index([emailVerifiedAt])
@@ -87,6 +91,10 @@ model Collection {
   governingBodies     GoverningBody[]
   plantHusbandryGuides PlantHusbandryGuide[]
   plantHusbandryOverrides PlantHusbandryOverride[]
+  outgoingTransferConnections CollectionTransferConnection[] @relation("TransferConnectionSource")
+  incomingTransferConnections CollectionTransferConnection[] @relation("TransferConnectionTarget")
+  outgoingPlantTransferRequests PlantTransferRequest[] @relation("PlantTransferSourceCollection")
+  incomingPlantTransferRequests PlantTransferRequest[] @relation("PlantTransferTargetCollection")
 
   @@index([visibility])
   @@index([status])
@@ -135,6 +143,69 @@ model CollectionInvitation {
   @@index([email])
   @@index([status])
   @@index([expiresAt])
+}
+
+model CollectionTransferConnection {
+  id                 String    @id @default(cuid())
+  sourceCollectionId String
+  targetCollectionId String
+  status             String    @default("PENDING")
+  requestedById      String
+  respondedById      String?
+  requestedAt        DateTime  @default(now())
+  respondedAt        DateTime?
+  requestNote        String?
+  responseNote       String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  sourceCollection Collection @relation("TransferConnectionSource", fields: [sourceCollectionId], references: [id], onDelete: Cascade)
+  targetCollection Collection @relation("TransferConnectionTarget", fields: [targetCollectionId], references: [id], onDelete: Cascade)
+  requestedBy      User       @relation("TransferConnectionRequester", fields: [requestedById], references: [id], onDelete: Cascade)
+  respondedBy      User?      @relation("TransferConnectionResponder", fields: [respondedById], references: [id], onDelete: SetNull)
+  transferRequests PlantTransferRequest[]
+
+  @@unique([sourceCollectionId, targetCollectionId])
+  @@index([sourceCollectionId])
+  @@index([targetCollectionId])
+  @@index([status])
+  @@index([requestedAt])
+}
+
+model PlantTransferRequest {
+  id                    String    @id @default(cuid())
+  connectionId          String
+  sourceCollectionId    String
+  targetCollectionId    String
+  sourcePlantInstanceId String
+  targetPlantInstanceId String?
+  status                String    @default("PENDING")
+  requestedById         String
+  reviewedById          String?
+  requestedAt           DateTime  @default(now())
+  reviewedAt            DateTime?
+  senderNote            String?
+  receiverNote          String?
+  previewSnapshot       Json
+  transferManifest      Json?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  connection          CollectionTransferConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  sourceCollection    Collection @relation("PlantTransferSourceCollection", fields: [sourceCollectionId], references: [id], onDelete: Cascade)
+  targetCollection    Collection @relation("PlantTransferTargetCollection", fields: [targetCollectionId], references: [id], onDelete: Cascade)
+  sourcePlantInstance PlantInstance @relation("SourcePlantTransferRequests", fields: [sourcePlantInstanceId], references: [id], onDelete: Cascade)
+  targetPlantInstance PlantInstance? @relation("TargetPlantTransferRequests", fields: [targetPlantInstanceId], references: [id], onDelete: SetNull)
+  requestedBy         User @relation("PlantTransferRequester", fields: [requestedById], references: [id], onDelete: Cascade)
+  reviewedBy          User? @relation("PlantTransferReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([connectionId])
+  @@index([sourceCollectionId])
+  @@index([targetCollectionId])
+  @@index([sourcePlantInstanceId])
+  @@index([targetPlantInstanceId])
+  @@index([status])
+  @@index([requestedAt])
 }
 
 model CollectionRequest {
@@ -567,6 +638,10 @@ model PlantInstance {
   archiveDate       DateTime?
   archiveReason     String?
   archiveNotes      String?
+  originCollectionSlug String?
+  originPlantId     String?
+  transferredFromCollectionSlug String?
+  transferredFromPlantId String?
   isSportCandidate  Boolean   @default(false)
   sportStatus       String    @default("NONE")
   sportDescription  String?
@@ -580,6 +655,8 @@ model PlantInstance {
   blooms          BloomEvent[]
   sportRecords    SportStabilityRecord[]
   husbandryOverride PlantHusbandryOverride?
+  outgoingTransferRequests PlantTransferRequest[] @relation("SourcePlantTransferRequests")
+  incomingTransferRequests PlantTransferRequest[] @relation("TargetPlantTransferRequests")
 
   @@index([collectionId])
   @@unique([collectionId, plantId])
@@ -587,6 +664,8 @@ model PlantInstance {
   @@index([status])
   @@index([instanceType])
   @@index([sportStatus])
+  @@index([originCollectionSlug, originPlantId])
+  @@index([transferredFromCollectionSlug, transferredFromPlantId])
 }
 
 model PlantHusbandryOverride {

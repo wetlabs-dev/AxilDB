@@ -17,6 +17,7 @@ import {
   savePlantHusbandryOverrideField,
   unfollowEntity,
 } from '@/app/actions'
+import { createPlantTransferRequest } from '@/app/transfer-actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { PlantImage } from '@/components/PlantImage'
 import { Button, Card, Field, Select, TextArea } from '@/components/ui'
@@ -40,6 +41,8 @@ export default async function InstanceDetail({
   const context = await requireCollectionViewer()
   const { collection } = context
   const collectionWhere = { collectionId: collection.id }
+  const canCreateRecords = canCreateInCollection(user, context)
+  const canEditRecords = canEditInCollection(user, context)
 
   const i = await prisma.plantInstance.findFirstOrThrow({
     where: { id, ...collectionWhere },
@@ -149,6 +152,14 @@ export default async function InstanceDetail({
   const followerCount = (scope: string, entityType: string, entityId: string) =>
     followCounts.find((follow) => follow.scope === scope && follow.entityType === entityType && follow.entityId === entityId)?._count._all || 0
 
+  const activeTransferConnections = canEditRecords && i.status !== 'ARCHIVED'
+    ? await prisma.collectionTransferConnection.findMany({
+        where: { sourceCollectionId: collection.id, status: 'ACTIVE' },
+        include: { targetCollection: true },
+        orderBy: { targetCollection: { name: 'asc' } },
+      })
+    : []
+
   const instanceReminders = reminders.filter((reminder) => reminder.entityType === 'PLANT_INSTANCE')
   const remindersByBloomId = reminders
     .filter((reminder) => reminder.entityType === 'BLOOM_EVENT')
@@ -208,7 +219,7 @@ export default async function InstanceDetail({
       <p className="mt-1 text-sm text-stone-600">
         Choose one cover photo for this specimen card. Admins can also mark one specimen photo as the type photo for the plant definition.
       </p>
-      {canCreateInCollection(user, context) && (
+      {canCreateRecords && (
         <details className="group mt-3 rounded-lg border border-stone-200 bg-white/50">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-semibold">
             <span>Upload specimen photo</span>
@@ -246,7 +257,7 @@ export default async function InstanceDetail({
                   {p.isCover ? 'Cover photo' : 'Not cover'} · {p.isType ? 'Type photo' : 'Not type'}
                 </p>
               </div>
-              {canEditInCollection(user, context) && (
+              {canEditRecords && (
                 <div className="flex flex-wrap gap-2">
                   <form action={setCoverPhoto}>
                     <input type="hidden" name="id" value={p.id} />
@@ -267,10 +278,38 @@ export default async function InstanceDetail({
     </Card>
   )
 
-  const archiveCard = (canEditInCollection(user, context) || i.status !== 'ACTIVE') ? (
+  const transferCard = canEditRecords && i.status === 'ACTIVE' ? (
+    <Card>
+      <h3 className="font-bold">Transfer</h3>
+      <p className="mt-1 text-sm text-stone-600">
+        Queue this specimen package for another connected collection to review. The source plant is archived only after the receiver accepts it.
+      </p>
+      {activeTransferConnections.length === 0 ? (
+        <p className="mt-3 text-sm text-stone-600">
+          No active outgoing transfer connections yet. Collection managers can request one from{' '}
+          <Link className="underline" href={collectionPath(collection.slug, '/transfers')}>Collection Transfers</Link>.
+        </p>
+      ) : (
+        <form action={createPlantTransferRequest} className="mt-3 grid gap-2 rounded-lg border border-stone-200 bg-white/60 p-3">
+          <input type="hidden" name="collectionSlug" value={collection.slug} />
+          <input type="hidden" name="sourcePlantInstanceId" value={id} />
+          <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}`)} />
+          <Select label="Target collection" name="connectionId" required>
+            {activeTransferConnections.map((connection) => (
+              <option key={connection.id} value={connection.id}>{connection.targetCollection.name}</option>
+            ))}
+          </Select>
+          <TextArea label="Sender note" name="senderNote" />
+          <Button>Request transfer</Button>
+        </form>
+      )}
+    </Card>
+  ) : null
+
+  const archiveCard = (canEditRecords || i.status !== 'ACTIVE') ? (
     <Card>
       <h3 className="font-bold">Archive</h3>
-      {canEditInCollection(user, context) && i.status === 'ACTIVE' ? (
+      {canEditRecords && i.status === 'ACTIVE' ? (
         <form action={archivePlantInstance} className="grid max-w-2xl gap-2">
           <input type="hidden" name="id" value={id} />
           <Field label="Reason" help="Short reason this plant left active collection, such as sold, discarded, died, duplicate, or gifted." name="archiveReason" />
@@ -429,6 +468,8 @@ export default async function InstanceDetail({
       </Card>
 
         {followCard}
+
+        {transferCard}
 
         <Card className="xl:order-4">
           <h3 className="font-bold">Add note</h3>
