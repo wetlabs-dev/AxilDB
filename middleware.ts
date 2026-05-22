@@ -34,6 +34,7 @@ const globalPrefixes = [
   '/magic-login',
   '/verify-email',
   '/two-factor',
+  '/help',
   '/account',
   '/users',
   '/server',

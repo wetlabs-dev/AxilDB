@@ -16,6 +16,9 @@
     "metrics:collect": "tsx scripts/collect-server-metrics.ts",
     "backup": "sh scripts/backup.sh",
     "backup:worker": "tsx scripts/run-backup-worker.ts",
+    "docs:manual": "tsx scripts/generate-user-manual.ts",
+    "docs:screenshots": "tsx scripts/generate-manual-screenshots.ts",
+    "docs:build": "npm run docs:manual && npm run docs:screenshots",
     "check:collection-defaults": "node scripts/check-collection-defaults.mjs",
     "check:collection-scope": "node scripts/check-collection-scope.mjs",
     "check:collection-integrity": "tsx scripts/check-collection-integrity.ts",
@@ -41,6 +44,7 @@
     "tailwind-merge": "^2.5.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@types/dagre": "^0.7.52",
     "@types/node": "^22.9.0",
     "@types/pdfkit": "^0.13.8",

@@ -44,6 +44,7 @@ It is designed for real collection work: messy taxonomy, acquisition names, alia
 - Server-admin-only site user management and collection archive/permanent-delete tools.
 - Confirmation modals for destructive delete actions.
 - Demo data generator for populating realistic test records.
+- Web-based Help page and generated Markdown user manual, with repeatable Playwright screenshot capture for documentation.
 
 ## Collections And Roles
 
@@ -153,6 +154,9 @@ Useful scripts:
 
 ```bash
 npm run build
+npm run docs:manual
+npm run docs:screenshots
+npm run docs:build
 npm run prisma:generate
 npm run db:push
 npm run db:seed
@@ -172,6 +176,24 @@ npm run check:production
 `check:collection-integrity` is a database guardrail. Run it on the server after schema changes or data repairs to confirm collection-owned records have `collectionId` values, exactly one default collection exists, every active collection has an active manager, the initial server admin exists, legacy roles are migrated, and linked records, photos, notes, follows, reminders, audit logs, and propagation graph edges do not cross collection boundaries.
 
 `check:production` runs the repeatable pre-deploy safety pass: TypeScript, collection static scans, the database integrity scan when `DATABASE_URL` is available, and a production build.
+
+## User Manual
+
+The in-app Help page is available at `/help` and uses the same structured content as the generated Markdown manual. Regenerate the Markdown files after documentation changes:
+
+```bash
+npm run docs:manual
+```
+
+This writes both `docs/USER_MANUAL.md` for the repository and `public/manual/USER_MANUAL.md` for the web app.
+
+Screenshots can be refreshed against a running app:
+
+```bash
+AXILDB_DOCS_BASE_URL=https://app.axildb.com AXILDB_DOCS_COLLECTION_SLUG=axildb npm run docs:screenshots
+```
+
+If the capture account is required to use 2FA, create a dedicated low-privilege documentation account or set `AXILDB_DOCS_SKIP_LOGIN=1` with an already-authenticated browser context. Screenshots are saved under `public/manual/screenshots/`.
 
 ## Backup And Restore
 

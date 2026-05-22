@@ -162,6 +162,10 @@ export function SidebarClient({
         <p className="truncate font-medium">{user.email}</p>
         <p className="text-stone-600">{isServerAdminRole(user.role) ? 'server admin' : role ? collectionRoleLabel(role) : 'user'}</p>
       </div>
+      <GhostLink href={globalPath('/help')}>
+        <BookOpen className="h-4 w-4 shrink-0" />
+        <span>Help</span>
+      </GhostLink>
       <GhostLink href={globalPath('/account')}>
         <BookOpen className="h-4 w-4 shrink-0" />
         <span>Account</span>
@@ -171,10 +175,16 @@ export function SidebarClient({
       </form>
     </div>
   ) : (
-    <GhostLink href="/login">
-      <BookOpen className="h-4 w-4 shrink-0" />
-      <span>Sign in</span>
-    </GhostLink>
+    <div className="grid gap-2">
+      <GhostLink href={globalPath('/help')}>
+        <BookOpen className="h-4 w-4 shrink-0" />
+        <span>Help</span>
+      </GhostLink>
+      <GhostLink href="/login">
+        <BookOpen className="h-4 w-4 shrink-0" />
+        <span>Sign in</span>
+      </GhostLink>
+    </div>
   )
 
   const collectionSwitcher = (
