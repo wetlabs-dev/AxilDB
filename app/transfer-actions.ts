@@ -22,6 +22,7 @@ import { sendTransferWorkflowEmail } from '@/lib/transfer-emails'
 const val = (fd: FormData, key: string) => String(fd.get(key) || '').trim() || undefined
 const collectionSlug = async (fd: FormData) => val(fd, 'collectionSlug') || await getCurrentCollectionSlug()
 const transfersPath = (slug: string) => collectionPath(slug, '/transfers')
+const transfersStatusPath = (slug: string, status: string) => `${transfersPath(slug)}?transferStatus=${encodeURIComponent(status)}`
 const managerRoles = ['MANAGER']
 const transferReviewRoles = ['GARDENER', 'MANAGER']
 
@@ -40,19 +41,19 @@ export async function requestTransferConnection(fd: FormData) {
   const { user, collection } = context
   const targetSlug = val(fd, 'targetSlug')?.toLowerCase()
   const requestNote = val(fd, 'requestNote')
-  if (!targetSlug) throw new Error('Target collection slug is required.')
+  if (!targetSlug) redirect(transfersStatusPath(collection.slug, 'target-required'))
 
   const target = await prisma.collection.findUnique({
     where: { slug: targetSlug },
     select: { id: true, name: true, slug: true, status: true },
   })
-  if (!target || target.status !== 'ACTIVE') throw new Error('No active collection found with that slug.')
-  if (target.id === collection.id) throw new Error('Choose a different collection.')
+  if (!target || target.status !== 'ACTIVE') redirect(transfersStatusPath(collection.slug, 'target-not-found'))
+  if (target.id === collection.id) redirect(transfersStatusPath(collection.slug, 'target-self'))
 
   const existing = await prisma.collectionTransferConnection.findUnique({
     where: { sourceCollectionId_targetCollectionId: { sourceCollectionId: collection.id, targetCollectionId: target.id } },
   })
-  if (existing?.status === 'BLOCKED') throw new Error('That collection has blocked transfer requests from this collection.')
+  if (existing?.status === 'BLOCKED') redirect(transfersStatusPath(collection.slug, 'target-blocked'))
 
   const connection = await prisma.collectionTransferConnection.upsert({
     where: { sourceCollectionId_targetCollectionId: { sourceCollectionId: collection.id, targetCollectionId: target.id } },
@@ -90,7 +91,7 @@ export async function requestTransferConnection(fd: FormData) {
     ],
   })
   revalidatePath(transfersPath(collection.slug))
-  redirect(transfersPath(collection.slug))
+  redirect(transfersStatusPath(collection.slug, 'connection-requested'))
 }
 
 export async function respondTransferConnection(fd: FormData) {
@@ -103,8 +104,13 @@ export async function respondTransferConnection(fd: FormData) {
 
   const connection = await prisma.collectionTransferConnection.findFirstOrThrow({
     where: { id, targetCollectionId: collection.id },
-    include: { sourceCollection: true, requestedBy: { include: { emailPreference: { select: { transferNotifications: true } } } } },
+    include: {
+      sourceCollection: true,
+      targetCollection: true,
+      requestedBy: { include: { emailPreference: { select: { transferNotifications: true } } } },
+    },
   })
+  const redirectSlug = connection.targetCollection.slug
 
   await prisma.collectionTransferConnection.update({
     where: { id: connection.id },
@@ -131,8 +137,8 @@ export async function respondTransferConnection(fd: FormData) {
       responseNote ? `Response note: ${responseNote}` : 'Open Collection Transfers to review the connection status.',
     ],
   })
-  revalidatePath(transfersPath(collection.slug))
-  redirect(transfersPath(collection.slug))
+  revalidatePath(transfersPath(redirectSlug))
+  redirect(transfersPath(redirectSlug))
 }
 
 export async function unblockTransferConnection(fd: FormData) {

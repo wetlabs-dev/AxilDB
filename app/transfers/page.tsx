@@ -85,10 +85,20 @@ function statusBadge(status: string) {
   return `inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${classes[status] || classes.PENDING}`
 }
 
-export default async function CollectionTransfersPage() {
+const transferStatusMessages: Record<string, { tone: 'success' | 'error'; message: string }> = {
+  'target-required': { tone: 'error', message: 'Enter the target collection slug before sending a transfer connection request.' },
+  'target-not-found': { tone: 'error', message: 'No active collection was found with that slug. Check the spelling and try again.' },
+  'target-self': { tone: 'error', message: 'Choose a different collection. A collection cannot request a transfer connection with itself.' },
+  'target-blocked': { tone: 'error', message: 'That collection has blocked transfer requests from this collection.' },
+  'connection-requested': { tone: 'success', message: 'Transfer connection request sent. The target collection manager can allow, ignore, or block it.' },
+}
+
+export default async function CollectionTransfersPage({ searchParams }: { searchParams: Promise<{ transferStatus?: string }> }) {
+  const sp = await searchParams
   const context = await requireCollectionGardener()
   const { collection, role } = context as typeof context & { role: string }
   const canManageTransfers = collectionRoleAtLeast(role, 'MANAGER')
+  const transferStatus = sp.transferStatus ? transferStatusMessages[sp.transferStatus] : undefined
 
   const [
     outboundConnections,
@@ -156,6 +166,18 @@ export default async function CollectionTransfersPage() {
         <h2 className="text-3xl font-bold">Collection Transfers</h2>
         <p className="mt-1 text-stone-700">Connect with another collection, queue specimen transfers, and review incoming transfer packages.</p>
       </div>
+
+      {transferStatus && (
+        <div
+          className={`rounded-lg border px-4 py-3 text-sm ${
+            transferStatus.tone === 'success'
+              ? 'border-green-200 bg-green-50 text-green-900'
+              : 'border-amber-200 bg-amber-50 text-amber-950'
+          }`}
+        >
+          {transferStatus.message}
+        </div>
+      )}
 
       {canManageTransfers && (
         <Card>
