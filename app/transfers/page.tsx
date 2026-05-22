@@ -7,10 +7,13 @@ import {
   copyConnectedPlantDefinition,
   declinePlantDefinitionShareRequest,
   declinePlantTransferRequest,
+  removeTransferConnection,
   requestTransferConnection,
   respondTransferConnection,
   unblockTransferConnection,
 } from '@/app/transfer-actions'
+import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
+import { PlantImage } from '@/components/PlantImage'
 import { Button, Card, Field, Select, TextArea } from '@/components/ui'
 import { collectionPath, requireCollectionGardener } from '@/lib/collections'
 import { collectionRoleAtLeast } from '@/lib/roles'
@@ -91,6 +94,9 @@ const transferStatusMessages: Record<string, { tone: 'success' | 'error'; messag
   'target-self': { tone: 'error', message: 'Choose a different collection. A collection cannot request a transfer connection with itself.' },
   'target-blocked': { tone: 'error', message: 'That collection has blocked transfer requests from this collection.' },
   'connection-requested': { tone: 'success', message: 'Transfer connection request sent. The target collection manager can allow, ignore, or block it.' },
+  'connection-already-active': { tone: 'success', message: 'That transfer connection is already active.' },
+  'connection-already-pending': { tone: 'success', message: 'That transfer connection request is already pending.' },
+  'connection-removed': { tone: 'success', message: 'Transfer connection removed.' },
 }
 
 export default async function CollectionTransfersPage({ searchParams }: { searchParams: Promise<{ transferStatus?: string }> }) {
@@ -159,6 +165,22 @@ export default async function CollectionTransfersPage({ searchParams }: { search
         take: 100,
       })
     : []
+  const connectedDefinitionTypePhotos = connectedDefinitions.length
+    ? await prisma.photo.findMany({
+        where: {
+          collectionId: { in: reciprocalCollectionIds },
+          entityType: 'PLANT_DEFINITION',
+          entityId: { in: connectedDefinitions.map((definition) => definition.id) },
+          isType: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      })
+    : []
+  const typePhotoByDefinition = connectedDefinitionTypePhotos.reduce<Record<string, string>>((acc, photo) => {
+    if (!acc[photo.entityId]) acc[photo.entityId] = photo.path
+    return acc
+  }, {})
+  const outboundConnectionByTargetId = new Map(outboundConnections.map((connection) => [connection.targetCollectionId, connection]))
 
   return (
     <div className="space-y-6">
@@ -240,9 +262,27 @@ export default async function CollectionTransfersPage({ searchParams }: { search
             )}
             {outboundConnections.filter((connection) => ['ACTIVE', 'BLOCKED'].includes(connection.status)).map((connection) => (
               <div key={connection.id} className="rounded-lg border border-stone-200 bg-white/60 p-3 text-sm">
-                <p className="font-semibold">Outgoing to {connection.targetCollection.name}</p>
-                <p className="text-stone-600">/{connection.targetCollection.slug}</p>
-                <span className={statusBadge(connection.status)}>{connection.status.toLowerCase()}</span>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="font-semibold">Outgoing to {connection.targetCollection.name}</p>
+                    <p className="text-stone-600">/{connection.targetCollection.slug}</p>
+                    <span className={statusBadge(connection.status)}>{connection.status.toLowerCase()}</span>
+                  </div>
+                  {canManageTransfers && (
+                    <form action={removeTransferConnection}>
+                      <input type="hidden" name="collectionSlug" value={collection.slug} />
+                      <input type="hidden" name="id" value={connection.id} />
+                      <ConfirmDeleteButton
+                        title="Remove transfer connection?"
+                        message={`Remove the outgoing transfer connection to ${connection.targetCollection.name}? Pending transfer and definition share requests using this connection will also be removed.`}
+                        confirmLabel="Remove connection"
+                        className="border border-stone-300 bg-white/70 px-3 py-1.5 text-xs text-stone-800 hover:bg-white"
+                      >
+                        Remove
+                      </ConfirmDeleteButton>
+                    </form>
+                  )}
+                </div>
               </div>
             ))}
             {inboundConnections.filter((connection) => ['ACTIVE', 'BLOCKED'].includes(connection.status)).map((connection) => (
@@ -253,12 +293,37 @@ export default async function CollectionTransfersPage({ searchParams }: { search
                     <p className="text-stone-600">/{connection.sourceCollection.slug}</p>
                     <span className={statusBadge(connection.status)}>{connection.status.toLowerCase()}</span>
                   </div>
-                  {canManageTransfers && connection.status === 'BLOCKED' && (
-                    <form action={unblockTransferConnection}>
-                      <input type="hidden" name="collectionSlug" value={collection.slug} />
-                      <input type="hidden" name="id" value={connection.id} />
-                      <Button className="border border-stone-300 bg-white/70 text-stone-800 hover:bg-white">Unblock</Button>
-                    </form>
+                  {canManageTransfers && (
+                    <div className="flex flex-wrap gap-2">
+                      {connection.status === 'ACTIVE' && !outboundConnectionByTargetId.has(connection.sourceCollectionId) && (
+                        <form action={requestTransferConnection}>
+                          <input type="hidden" name="collectionSlug" value={collection.slug} />
+                          <input type="hidden" name="targetSlug" value={connection.sourceCollection.slug} />
+                          <Button className="border border-green-200 bg-green-50 px-3 py-1.5 text-xs text-green-900 hover:bg-green-100">
+                            Connect back
+                          </Button>
+                        </form>
+                      )}
+                      {connection.status === 'BLOCKED' && (
+                        <form action={unblockTransferConnection}>
+                          <input type="hidden" name="collectionSlug" value={collection.slug} />
+                          <input type="hidden" name="id" value={connection.id} />
+                          <Button className="border border-stone-300 bg-white/70 px-3 py-1.5 text-xs text-stone-800 hover:bg-white">Unblock</Button>
+                        </form>
+                      )}
+                      <form action={removeTransferConnection}>
+                        <input type="hidden" name="collectionSlug" value={collection.slug} />
+                        <input type="hidden" name="id" value={connection.id} />
+                        <ConfirmDeleteButton
+                          title="Remove transfer connection?"
+                          message={`Remove the incoming transfer connection from ${connection.sourceCollection.name}? Pending transfer and definition share requests using this connection will also be removed.`}
+                          confirmLabel="Remove connection"
+                          className="border border-stone-300 bg-white/70 px-3 py-1.5 text-xs text-stone-800 hover:bg-white"
+                        >
+                          Remove
+                        </ConfirmDeleteButton>
+                      </form>
+                    </div>
                   )}
                 </div>
               </div>
@@ -325,10 +390,17 @@ export default async function CollectionTransfersPage({ searchParams }: { search
           {connectedDefinitions.length === 0 && <p className="text-sm text-stone-600">No bidirectional definition browsing connections yet.</p>}
           {connectedDefinitions.map((definition) => (
             <div key={definition.id} className="rounded-lg border border-stone-200 bg-white/60 p-3 text-sm">
-              <p className="font-semibold">{plantName(definition)}</p>
-              <p className="text-stone-600">{definition.collection?.name} · {definition.governingBody?.abbreviation || definition.governingBody?.name || 'No governing body'}</p>
-              <p className="mt-2 text-stone-600">Aliases: {definition.aliases.length} · Instances: {definition._count.instances}</p>
-              {definition.description && <p className="mt-2 line-clamp-2 text-stone-700">{definition.description}</p>}
+              <div className="flex gap-3">
+                <div className="h-20 w-20 shrink-0 overflow-hidden rounded-md border border-stone-200">
+                  <PlantImage src={typePhotoByDefinition[definition.id]} alt={plantName(definition)} />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-semibold">{plantName(definition)}</p>
+                  <p className="text-stone-600">{definition.collection?.name} · {definition.governingBody?.abbreviation || definition.governingBody?.name || 'No governing body'}</p>
+                  <p className="mt-2 text-stone-600">Aliases: {definition.aliases.length} · Instances: {definition._count.instances}</p>
+                </div>
+              </div>
+              {definition.description && <p className="mt-3 line-clamp-2 text-stone-700">{definition.description}</p>}
               <form action={copyConnectedPlantDefinition} className="mt-3">
                 <input type="hidden" name="collectionSlug" value={collection.slug} />
                 <input type="hidden" name="sourceCollectionId" value={definition.collectionId || ''} />

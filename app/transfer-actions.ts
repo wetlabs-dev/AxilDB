@@ -54,6 +54,8 @@ export async function requestTransferConnection(fd: FormData) {
     where: { sourceCollectionId_targetCollectionId: { sourceCollectionId: collection.id, targetCollectionId: target.id } },
   })
   if (existing?.status === 'BLOCKED') redirect(transfersStatusPath(collection.slug, 'target-blocked'))
+  if (existing?.status === 'ACTIVE') redirect(transfersStatusPath(collection.slug, 'connection-already-active'))
+  if (existing?.status === 'PENDING') redirect(transfersStatusPath(collection.slug, 'connection-already-pending'))
 
   const connection = await prisma.collectionTransferConnection.upsert({
     where: { sourceCollectionId_targetCollectionId: { sourceCollectionId: collection.id, targetCollectionId: target.id } },
@@ -157,6 +159,35 @@ export async function unblockTransferConnection(fd: FormData) {
   await audit(user, 'UNBLOCK', 'TRANSFER_CONNECTION', connection.id, `Unblocked transfer requests from ${connection.sourceCollection.name}`, undefined, collection.id)
   revalidatePath(transfersPath(collection.slug))
   redirect(transfersPath(collection.slug))
+}
+
+export async function removeTransferConnection(fd: FormData) {
+  const context = await requireCollectionManager(await collectionSlug(fd))
+  const { user, collection } = context
+  const id = val(fd, 'id')
+  if (!id) throw new Error('Connection is required.')
+
+  const connection = await prisma.collectionTransferConnection.findFirstOrThrow({
+    where: {
+      id,
+      OR: [
+        { sourceCollectionId: collection.id },
+        { targetCollectionId: collection.id },
+      ],
+    },
+    include: { sourceCollection: true, targetCollection: true },
+  })
+  const otherCollection = connection.sourceCollectionId === collection.id ? connection.targetCollection : connection.sourceCollection
+
+  await prisma.collectionTransferConnection.delete({ where: { id: connection.id } })
+  await audit(user, 'DELETE', 'TRANSFER_CONNECTION', connection.id, `Removed transfer connection with ${otherCollection.name}`, {
+    sourceCollectionId: connection.sourceCollectionId,
+    targetCollectionId: connection.targetCollectionId,
+    removedStatus: connection.status,
+  }, collection.id)
+
+  revalidatePath(transfersPath(collection.slug))
+  redirect(transfersStatusPath(collection.slug, 'connection-removed'))
 }
 
 export async function createPlantTransferRequest(fd: FormData) {
