@@ -10,6 +10,7 @@ import {
   BarChart3,
   Bell,
   BookOpen,
+  CircleHelp,
   Eye,
   FileText,
   Flower2,
@@ -163,7 +164,7 @@ export function SidebarClient({
         <p className="text-stone-600">{isServerAdminRole(user.role) ? 'server admin' : role ? collectionRoleLabel(role) : 'user'}</p>
       </div>
       <GhostLink href={globalPath('/help')}>
-        <BookOpen className="h-4 w-4 shrink-0" />
+        <CircleHelp className="h-4 w-4 shrink-0" />
         <span>Help</span>
       </GhostLink>
       <GhostLink href={globalPath('/account')}>
@@ -177,7 +178,7 @@ export function SidebarClient({
   ) : (
     <div className="grid gap-2">
       <GhostLink href={globalPath('/help')}>
-        <BookOpen className="h-4 w-4 shrink-0" />
+        <CircleHelp className="h-4 w-4 shrink-0" />
         <span>Help</span>
       </GhostLink>
       <GhostLink href="/login">
