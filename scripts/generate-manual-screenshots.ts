@@ -1,4 +1,5 @@
 import { mkdir } from 'node:fs/promises'
+import { createHmac } from 'node:crypto'
 import path from 'node:path'
 import { chromium, type Page } from '@playwright/test'
 import { manualScreenshotTargets } from '../lib/user-manual'
@@ -7,6 +8,8 @@ const baseUrl = (process.env.AXILDB_DOCS_BASE_URL || 'http://127.0.0.1:3100').re
 const collectionSlug = process.env.AXILDB_DOCS_COLLECTION_SLUG || ['a', 'x', 'i', 'l', 'd', 'b'].join('')
 const email = process.env.AXILDB_DOCS_EMAIL || 'admin@axildb.com'
 const password = process.env.AXILDB_DOCS_PASSWORD || 'password'
+const totpCode = process.env.AXILDB_DOCS_TOTP_CODE
+const totpSecret = process.env.AXILDB_DOCS_TOTP_SECRET
 const skipLogin = process.env.AXILDB_DOCS_SKIP_LOGIN === '1'
 const outputDir = path.join(process.cwd(), 'public', 'manual', 'screenshots')
 
@@ -18,9 +21,60 @@ function manualUrl(route: string) {
   return `${baseUrl}/c/${encodeURIComponent(collectionSlug)}${route}`
 }
 
+function base32Decode(input: string) {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
+  const clean = input.toUpperCase().replace(/[^A-Z2-7]/g, '')
+  let bits = ''
+  for (const char of clean) {
+    const value = alphabet.indexOf(char)
+    if (value === -1) throw new Error('AXILDB_DOCS_TOTP_SECRET is not valid base32.')
+    bits += value.toString(2).padStart(5, '0')
+  }
+  const bytes: number[] = []
+  for (let index = 0; index + 8 <= bits.length; index += 8) {
+    bytes.push(Number.parseInt(bits.slice(index, index + 8), 2))
+  }
+  return Buffer.from(bytes)
+}
+
+function generateTotp(secret: string) {
+  const key = base32Decode(secret)
+  const counter = Math.floor(Date.now() / 30_000)
+  const buffer = Buffer.alloc(8)
+  buffer.writeBigUInt64BE(BigInt(counter))
+  const digest = createHmac('sha1', key).update(buffer).digest()
+  const offset = digest[digest.length - 1] & 0x0f
+  const binary = ((digest[offset] & 0x7f) << 24)
+    | ((digest[offset + 1] & 0xff) << 16)
+    | ((digest[offset + 2] & 0xff) << 8)
+    | (digest[offset + 3] & 0xff)
+  return String(binary % 1_000_000).padStart(6, '0')
+}
+
+async function completeTwoFactorIfNeeded(page: Page) {
+  if (!page.url().includes('/two-factor')) return
+
+  const code = totpCode || (totpSecret ? generateTotp(totpSecret) : null)
+  if (!code) {
+    throw new Error(
+      'Screenshot capture reached two-factor verification. Set AXILDB_DOCS_TOTP_SECRET for the dedicated docs account, set AXILDB_DOCS_TOTP_CODE for a one-time run, or use a docs account with a role that does not require 2FA.',
+    )
+  }
+
+  console.log('Completing two-factor verification for documentation capture.')
+  await page.locator('input[name="code"]').first().fill(code)
+  await page.locator('button[type="submit"], button:has-text("Verify")').first().click()
+  await page.waitForLoadState('networkidle').catch(() => null)
+
+  if (page.url().includes('/two-factor')) {
+    throw new Error('Two-factor verification failed for documentation capture. Check AXILDB_DOCS_TOTP_SECRET or AXILDB_DOCS_TOTP_CODE.')
+  }
+}
+
 async function maybeLogin(page: Page) {
   if (skipLogin) return
 
+  console.log(`Signing in documentation account ${email}.`)
   await page.goto(`${baseUrl}/login?next=${encodeURIComponent(`/c/${collectionSlug}`)}`, {
     waitUntil: 'networkidle',
   })
@@ -32,12 +86,13 @@ async function maybeLogin(page: Page) {
   await page.locator('input[name="password"]').first().fill(password)
   await page.locator('button[type="submit"], button:has-text("Sign in")').first().click()
   await page.waitForLoadState('networkidle').catch(() => null)
+  await completeTwoFactorIfNeeded(page)
 
-  if (page.url().includes('/two-factor')) {
-    throw new Error(
-      'Screenshot capture reached the two-factor page. Use a dedicated docs user without enforced 2FA, or set AXILDB_DOCS_SKIP_LOGIN=1 with a pre-authenticated browser context.',
-    )
+  if (page.url().includes('/login')) {
+    throw new Error('Documentation account is still on the login page after sign-in. Check AXILDB_DOCS_EMAIL and AXILDB_DOCS_PASSWORD.')
   }
+
+  console.log(`Documentation account signed in; current page is ${page.url()}`)
 }
 
 async function main() {
@@ -61,6 +116,10 @@ async function main() {
     const url = manualUrl(target.route)
     console.log(`Capturing ${target.title}: ${url}`)
     await page.goto(url, { waitUntil: 'networkidle', timeout: 45_000 })
+    await completeTwoFactorIfNeeded(page)
+    if (page.url().includes('/login')) {
+      throw new Error(`Documentation capture was redirected to login while opening ${target.title}. Check the docs account membership and role for ${collectionSlug}.`)
+    }
     await page.screenshot({
       path: path.join(outputDir, target.screenshot),
       fullPage: true,

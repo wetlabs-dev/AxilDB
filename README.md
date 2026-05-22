@@ -218,10 +218,13 @@ AXILDB_DOCS_BASE_URL=https://app.axildb.com
 AXILDB_DOCS_COLLECTION_SLUG=axildb
 AXILDB_DOCS_EMAIL=docs@axildb.com
 AXILDB_DOCS_PASSWORD=use-a-long-random-password
+AXILDB_DOCS_TOTP_SECRET=
 AXILDB_DOCS_SKIP_LOGIN=0
 ```
 
 Use a dedicated documentation account with the minimum collection role needed for the screenshots you want. A manager/gardener account captures more admin-oriented pages; a viewer account captures safer public/member workflows.
+
+If the documentation account has a role that requires two-factor authentication, add the account’s authenticator setup secret as `AXILDB_DOCS_TOTP_SECRET`. This should be a docs-only account secret, not your personal authenticator secret. For a one-off run, you can instead set `AXILDB_DOCS_TOTP_CODE` immediately before running the docs profile.
 
 ## Backup And Restore
 
