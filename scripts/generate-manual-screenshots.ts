@@ -84,7 +84,17 @@ async function maybeLogin(page: Page) {
 
   await emailField.fill(email)
   await page.locator('input[name="password"]').first().fill(password)
+
+  const startingUrl = page.url()
   await page.locator('button[type="submit"], button:has-text("Sign in")').first().click()
+  await page
+    .waitForURL((url) => {
+      if (url.href !== startingUrl) return true
+      if (url.pathname === '/two-factor') return true
+      if (url.pathname === '/login' && (url.searchParams.has('error') || url.searchParams.has('twoFactor'))) return true
+      return false
+    }, { timeout: 15_000 })
+    .catch(() => null)
   await page.waitForLoadState('networkidle').catch(() => null)
   await completeTwoFactorIfNeeded(page)
 
@@ -93,8 +103,9 @@ async function maybeLogin(page: Page) {
     const loginError = visibleText.includes('Invalid email or password')
       ? ' The login page says: Invalid email or password.'
       : ''
+    const pageText = visibleText ? ` Visible page text: ${visibleText.slice(0, 500)}` : ''
     throw new Error(
-      `Documentation account is still on the login page after sign-in.${loginError} Current URL: ${page.url()}. Check AXILDB_DOCS_EMAIL, AXILDB_DOCS_PASSWORD, and whether the docs account exists.`,
+      `Documentation account is still on the login page after sign-in.${loginError} Current URL: ${page.url()}.${pageText} Check AXILDB_DOCS_EMAIL, AXILDB_DOCS_PASSWORD, and whether the docs account exists.`,
     )
   }
 
