@@ -9,7 +9,7 @@ const collectionSlug = process.env.AXILDB_DOCS_COLLECTION_SLUG || ['a', 'x', 'i'
 const email = process.env.AXILDB_DOCS_EMAIL || 'admin@axildb.com'
 const password = process.env.AXILDB_DOCS_PASSWORD || 'password'
 const totpCode = process.env.AXILDB_DOCS_TOTP_CODE
-const totpSecret = process.env.AXILDB_DOCS_TOTP_SECRET
+const totpSecret = cleanTotpSecret(process.env.AXILDB_DOCS_TOTP_SECRET)
 const skipLogin = process.env.AXILDB_DOCS_SKIP_LOGIN === '1'
 const outputDir = path.join(process.cwd(), 'public', 'manual', 'screenshots')
 
@@ -37,9 +37,24 @@ function base32Decode(input: string) {
   return Buffer.from(bytes)
 }
 
-function generateTotp(secret: string) {
+function cleanTotpSecret(value: string | undefined) {
+  if (!value) return undefined
+  const trimmed = value.trim()
+  if (trimmed.includes('secret=')) {
+    try {
+      const parsed = new URL(trimmed)
+      return parsed.searchParams.get('secret')?.trim() || trimmed
+    } catch {
+      const match = trimmed.match(/[?&]secret=([^&\s]+)/i)
+      return match ? decodeURIComponent(match[1]).trim() : trimmed
+    }
+  }
+  return trimmed
+}
+
+function generateTotp(secret: string, counterOffset = 0) {
   const key = base32Decode(secret)
-  const counter = Math.floor(Date.now() / 30_000)
+  const counter = Math.floor(Date.now() / 30_000) + counterOffset
   const buffer = Buffer.alloc(8)
   buffer.writeBigUInt64BE(BigInt(counter))
   const digest = createHmac('sha1', key).update(buffer).digest()
@@ -54,20 +69,37 @@ function generateTotp(secret: string) {
 async function completeTwoFactorIfNeeded(page: Page) {
   if (!page.url().includes('/two-factor')) return
 
-  const code = totpCode || (totpSecret ? generateTotp(totpSecret) : null)
-  if (!code) {
+  const codes = totpCode
+    ? [totpCode]
+    : totpSecret
+      ? [0, -1, 1, -2, 2].map((offset) => generateTotp(totpSecret, offset))
+      : []
+  if (codes.length === 0) {
     throw new Error(
       'Screenshot capture reached two-factor verification. Set AXILDB_DOCS_TOTP_SECRET for the dedicated docs account, set AXILDB_DOCS_TOTP_CODE for a one-time run, or use a docs account with a role that does not require 2FA.',
     )
   }
 
   console.log('Completing two-factor verification for documentation capture.')
-  await page.locator('input[name="code"]').first().fill(code)
-  await page.locator('button[type="submit"], button:has-text("Verify")').first().click()
-  await page.waitForLoadState('networkidle').catch(() => null)
+  for (const code of codes) {
+    const startingUrl = page.url()
+    await page.locator('input[name="code"]').first().fill(code)
+    await page.locator('button[type="submit"], button:has-text("Verify")').first().click()
+    await page
+      .waitForURL((url) => {
+        if (!url.pathname.includes('/two-factor')) return true
+        if (url.href !== startingUrl && url.searchParams.has('error')) return true
+        return false
+      }, { timeout: 10_000 })
+      .catch(() => null)
+    await page.waitForLoadState('networkidle').catch(() => null)
+    if (!page.url().includes('/two-factor')) return
+  }
 
   if (page.url().includes('/two-factor')) {
-    throw new Error('Two-factor verification failed for documentation capture. Check AXILDB_DOCS_TOTP_SECRET or AXILDB_DOCS_TOTP_CODE.')
+    const visibleText = (await page.locator('body').innerText().catch(() => '')).replace(/\s+/g, ' ').trim()
+    const pageText = visibleText ? ` Visible page text: ${visibleText.slice(0, 500)}` : ''
+    throw new Error(`Two-factor verification failed for documentation capture. Check AXILDB_DOCS_TOTP_SECRET or AXILDB_DOCS_TOTP_CODE.${pageText}`)
   }
 }
 
