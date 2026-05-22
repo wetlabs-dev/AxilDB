@@ -62,6 +62,7 @@ services:
     volumes:
       - ./public/uploads:/app/public/uploads
       - ./public/labels:/app/public/labels
+      - ./public/manual:/app/public/manual
   reminders:
     build:
       context: .

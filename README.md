@@ -201,6 +201,8 @@ On a Docker production server, use the optional docs runner instead of the slim 
 docker compose --profile docs run --rm docs
 ```
 
+The app bind-mounts `public/manual`, so refreshed manual files and screenshots are visible to the running app without rebuilding the main application container.
+
 The docs runner reads the same uncommitted env files as the app. Store documentation credentials in `/etc/axildb/axildb.env`, not in git:
 
 ```bash
