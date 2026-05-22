@@ -135,9 +135,6 @@ services:
         required: false
       - path: /etc/axildb/axildb.env
         required: false
-    environment:
-      AXILDB_DOCS_BASE_URL: ${AXILDB_DOCS_BASE_URL:-https://app.axildb.com}
-      AXILDB_DOCS_COLLECTION_SLUG: ${AXILDB_DOCS_COLLECTION_SLUG:-axildb}
     volumes:
       - .:/app
       - axildb_docs_node_modules:/app/node_modules
