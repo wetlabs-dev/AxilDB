@@ -74,7 +74,7 @@ async function completeTwoFactorIfNeeded(page: Page) {
 async function maybeLogin(page: Page) {
   if (skipLogin) return
 
-  console.log(`Signing in documentation account ${email}.`)
+  console.log(`Signing in documentation account ${email} with password length ${password.length}.`)
   await page.goto(`${baseUrl}/login?next=${encodeURIComponent(`/c/${collectionSlug}`)}`, {
     waitUntil: 'networkidle',
   })
@@ -89,7 +89,13 @@ async function maybeLogin(page: Page) {
   await completeTwoFactorIfNeeded(page)
 
   if (page.url().includes('/login')) {
-    throw new Error('Documentation account is still on the login page after sign-in. Check AXILDB_DOCS_EMAIL and AXILDB_DOCS_PASSWORD.')
+    const visibleText = (await page.locator('body').innerText().catch(() => '')).replace(/\s+/g, ' ').trim()
+    const loginError = visibleText.includes('Invalid email or password')
+      ? ' The login page says: Invalid email or password.'
+      : ''
+    throw new Error(
+      `Documentation account is still on the login page after sign-in.${loginError} Current URL: ${page.url()}. Check AXILDB_DOCS_EMAIL, AXILDB_DOCS_PASSWORD, and whether the docs account exists.`,
+    )
   }
 
   console.log(`Documentation account signed in; current page is ${page.url()}`)
