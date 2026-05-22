@@ -136,3 +136,13 @@ export function followNotificationEmail(title: string, recordUrl: string, lines:
     actionUrl: recordUrl,
   })
 }
+
+export function transferWorkflowEmail(title: string, actionUrl: string, lines: string[]) {
+  return renderBrandedEmail({
+    title,
+    preview: 'A collection transfer workflow needs your attention.',
+    body: lines,
+    actionLabel: 'Open transfers',
+    actionUrl,
+  })
+}

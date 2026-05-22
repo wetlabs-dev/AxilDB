@@ -59,6 +59,7 @@ export default async function Account({
               ['bloomCycleReminders', 'Bloom-cycle reminders', preferences?.bloomCycleReminders ?? true],
               ['propagationFollowUps', 'Propagation follow-up reminders', preferences?.propagationFollowUps ?? true],
               ['followNotifications', 'Followed plant update emails', preferences?.followNotifications ?? true],
+              ['transferNotifications', 'Collection transfer workflow emails', preferences?.transferNotifications ?? true],
             ].map(([name, label, checked]) => (
               <label key={String(name)} className="flex items-center gap-2 rounded-lg border border-stone-200 bg-white/50 px-3 py-2 text-sm">
                 <input type="checkbox" name={String(name)} defaultChecked={Boolean(checked)} />

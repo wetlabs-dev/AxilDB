@@ -466,6 +466,7 @@ model EmailPreference {
   bloomCycleReminders   Boolean  @default(true)
   propagationFollowUps  Boolean  @default(true)
   followNotifications   Boolean  @default(true)
+  transferNotifications Boolean  @default(true)
   quietHoursStart       String?
   quietHoursEnd         String?
   createdAt             DateTime @default(now())

@@ -17,10 +17,23 @@ import {
   buildPlantTransferPreview,
   copyPlantDefinitionPackage,
 } from '@/lib/transfers'
+import { sendTransferWorkflowEmail } from '@/lib/transfer-emails'
 
 const val = (fd: FormData, key: string) => String(fd.get(key) || '').trim() || undefined
 const collectionSlug = async (fd: FormData) => val(fd, 'collectionSlug') || await getCurrentCollectionSlug()
 const transfersPath = (slug: string) => collectionPath(slug, '/transfers')
+const managerRoles = ['MANAGER']
+const transferReviewRoles = ['GARDENER', 'MANAGER']
+
+function definitionName(definition: { genus: string; species: string; cultivarName?: string | null }) {
+  return `${definition.genus} ${definition.species}${definition.cultivarName ? ` '${definition.cultivarName}'` : ''}`
+}
+
+function connectionResponseLabel(status: string) {
+  if (status === 'ACTIVE') return 'approved'
+  if (status === 'BLOCKED') return 'blocked'
+  return 'ignored'
+}
 
 export async function requestTransferConnection(fd: FormData) {
   const context = await requireCollectionManager(await collectionSlug(fd))
@@ -61,6 +74,21 @@ export async function requestTransferConnection(fd: FormData) {
   })
 
   await audit(user, 'REQUEST', 'TRANSFER_CONNECTION', connection.id, `Requested transfer connection to ${target.name}`, { targetSlug }, collection.id)
+  await sendTransferWorkflowEmail({
+    actor: user,
+    collectionId: target.id,
+    collectionIdForRoles: target.id,
+    roles: managerRoles,
+    entityType: 'TRANSFER_CONNECTION',
+    entityId: connection.id,
+    subject: `Transfer connection requested from ${collection.name}`,
+    actionPath: transfersPath(target.slug),
+    lines: [
+      `${collection.name} requested a collection transfer connection with ${target.name}.`,
+      `${user.email} initiated the request.`,
+      requestNote ? `Note: ${requestNote}` : 'Review the request to allow, ignore, or block it.',
+    ],
+  })
   revalidatePath(transfersPath(collection.slug))
   redirect(transfersPath(collection.slug))
 }
@@ -75,7 +103,7 @@ export async function respondTransferConnection(fd: FormData) {
 
   const connection = await prisma.collectionTransferConnection.findFirstOrThrow({
     where: { id, targetCollectionId: collection.id },
-    include: { sourceCollection: true },
+    include: { sourceCollection: true, requestedBy: { include: { emailPreference: { select: { transferNotifications: true } } } } },
   })
 
   await prisma.collectionTransferConnection.update({
@@ -89,6 +117,20 @@ export async function respondTransferConnection(fd: FormData) {
   })
 
   await audit(user, response === 'ACTIVE' ? 'APPROVE' : response, 'TRANSFER_CONNECTION', connection.id, `${response.toLowerCase()} transfer connection from ${connection.sourceCollection.name}`, undefined, collection.id)
+  const responseLabel = connectionResponseLabel(response)
+  await sendTransferWorkflowEmail({
+    actor: user,
+    collectionId: connection.sourceCollectionId,
+    users: [connection.requestedBy],
+    entityType: 'TRANSFER_CONNECTION',
+    entityId: connection.id,
+    subject: `${collection.name} ${responseLabel} your transfer connection request`,
+    actionPath: transfersPath(connection.sourceCollection.slug),
+    lines: [
+      `${collection.name} ${responseLabel} the transfer connection request from ${connection.sourceCollection.name}.`,
+      responseNote ? `Response note: ${responseNote}` : 'Open Collection Transfers to review the connection status.',
+    ],
+  })
   revalidatePath(transfersPath(collection.slug))
   redirect(transfersPath(collection.slug))
 }
@@ -154,6 +196,21 @@ export async function createPlantTransferRequest(fd: FormData) {
   })
 
   await audit(user, 'REQUEST', 'PLANT_TRANSFER_REQUEST', request.id, `Requested transfer of ${instance.plantId} to ${connection.targetCollection.name}`, { targetCollectionSlug: connection.targetCollection.slug }, collection.id)
+  await sendTransferWorkflowEmail({
+    actor: user,
+    collectionId: connection.targetCollectionId,
+    collectionIdForRoles: connection.targetCollectionId,
+    roles: transferReviewRoles,
+    entityType: 'PLANT_TRANSFER_REQUEST',
+    entityId: request.id,
+    subject: `Plant transfer requested: ${instance.plantId}`,
+    actionPath: transfersPath(connection.targetCollection.slug),
+    lines: [
+      `${collection.name} requested to transfer ${instance.plantId} into ${connection.targetCollection.name}.`,
+      `${user.email} initiated the request.`,
+      senderNote ? `Sender note: ${senderNote}` : 'Review the transfer queue to accept or decline it.',
+    ],
+  })
   const destination = back || transfersPath(collection.slug)
   revalidatePath(destination.split('#')[0] || transfersPath(collection.slug))
   redirect(destination)
@@ -165,8 +222,45 @@ export async function acceptPlantTransferRequest(fd: FormData) {
   const id = val(fd, 'id')
   const receiverNote = val(fd, 'receiverNote')
   if (!id) throw new Error('Transfer request is required.')
-  await prisma.plantTransferRequest.findFirstOrThrow({ where: { id, targetCollectionId: collection.id, status: 'PENDING' } })
+  const request = await prisma.plantTransferRequest.findFirstOrThrow({
+    where: { id, targetCollectionId: collection.id, status: 'PENDING' },
+    include: {
+      sourceCollection: true,
+      targetCollection: true,
+      sourcePlantInstance: true,
+      requestedBy: { include: { emailPreference: { select: { transferNotifications: true } } } },
+    },
+  })
   const result = await acceptPlantTransferPackage({ requestId: id, reviewedBy: user, receiverNote })
+  await sendTransferWorkflowEmail({
+    actor: user,
+    collectionId: request.sourceCollectionId,
+    users: [request.requestedBy],
+    entityType: 'PLANT_TRANSFER_REQUEST',
+    entityId: request.id,
+    subject: `Plant transfer accepted: ${request.sourcePlantInstance.plantId}`,
+    actionPath: collectionPath(request.sourceCollection.slug, `/instances/${request.sourcePlantInstanceId}`),
+    lines: [
+      `${collection.name} accepted the transfer of ${request.sourcePlantInstance.plantId}.`,
+      `New target plant ID: ${result.targetInstance.plantId}.`,
+      receiverNote ? `Receiver note: ${receiverNote}` : 'The source specimen has been archived with transfer notes.',
+    ],
+  })
+  await sendTransferWorkflowEmail({
+    actor: user,
+    collectionId: collection.id,
+    collectionIdForRoles: collection.id,
+    roles: transferReviewRoles,
+    excludeUserIds: [user.id],
+    entityType: 'PLANT_TRANSFER_REQUEST',
+    entityId: request.id,
+    subject: `Plant transfer completed: ${result.targetInstance.plantId}`,
+    actionPath: collectionPath(collection.slug, `/instances/${result.targetInstance.id}`),
+    lines: [
+      `${request.sourceCollection.name} transferred ${request.sourcePlantInstance.plantId} into ${collection.name}.`,
+      `The new local plant ID is ${result.targetInstance.plantId}.`,
+    ],
+  })
   revalidatePath(transfersPath(collection.slug))
   redirect(collectionPath(collection.slug, `/instances/${result.targetInstance.id}`))
 }
@@ -179,13 +273,30 @@ export async function declinePlantTransferRequest(fd: FormData) {
   if (!id) throw new Error('Transfer request is required.')
   const request = await prisma.plantTransferRequest.findFirstOrThrow({
     where: { id, targetCollectionId: collection.id, status: 'PENDING' },
-    include: { sourcePlantInstance: true, sourceCollection: true },
+    include: {
+      sourcePlantInstance: true,
+      sourceCollection: true,
+      requestedBy: { include: { emailPreference: { select: { transferNotifications: true } } } },
+    },
   })
   await prisma.plantTransferRequest.update({
     where: { id: request.id },
     data: { status: 'DECLINED', reviewedById: user.id, reviewedAt: new Date(), receiverNote },
   })
   await audit(user, 'DECLINE', 'PLANT_TRANSFER_REQUEST', request.id, `Declined transfer of ${request.sourcePlantInstance.plantId} from ${request.sourceCollection.name}`, undefined, collection.id)
+  await sendTransferWorkflowEmail({
+    actor: user,
+    collectionId: request.sourceCollectionId,
+    users: [request.requestedBy],
+    entityType: 'PLANT_TRANSFER_REQUEST',
+    entityId: request.id,
+    subject: `Plant transfer declined: ${request.sourcePlantInstance.plantId}`,
+    actionPath: transfersPath(request.sourceCollection.slug),
+    lines: [
+      `${collection.name} declined the transfer of ${request.sourcePlantInstance.plantId}.`,
+      receiverNote ? `Receiver note: ${receiverNote}` : 'The source specimen was not changed.',
+    ],
+  })
   revalidatePath(transfersPath(collection.slug))
   redirect(transfersPath(collection.slug))
 }
@@ -204,6 +315,20 @@ export async function cancelPlantTransferRequest(fd: FormData) {
     data: { status: 'CANCELLED', reviewedById: user.id, reviewedAt: new Date() },
   })
   await audit(user, 'CANCEL', 'PLANT_TRANSFER_REQUEST', request.id, `Cancelled transfer of ${request.sourcePlantInstance.plantId} to ${request.targetCollection.name}`, undefined, collection.id)
+  await sendTransferWorkflowEmail({
+    actor: user,
+    collectionId: request.targetCollectionId,
+    collectionIdForRoles: request.targetCollectionId,
+    roles: transferReviewRoles,
+    entityType: 'PLANT_TRANSFER_REQUEST',
+    entityId: request.id,
+    subject: `Plant transfer cancelled: ${request.sourcePlantInstance.plantId}`,
+    actionPath: transfersPath(request.targetCollection.slug),
+    lines: [
+      `${collection.name} cancelled the pending transfer of ${request.sourcePlantInstance.plantId}.`,
+      'No records were changed in the target collection.',
+    ],
+  })
   revalidatePath(transfersPath(collection.slug))
   redirect(transfersPath(collection.slug))
 }
@@ -250,6 +375,21 @@ export async function createPlantDefinitionShareRequest(fd: FormData) {
   })
 
   await audit(user, 'REQUEST', 'PLANT_DEFINITION_SHARE_REQUEST', request.id, `Shared definition ${definition.genus} ${definition.species}${definition.cultivarName ? ` '${definition.cultivarName}'` : ''} with ${connection.targetCollection.name}`, { targetCollectionSlug: connection.targetCollection.slug }, collection.id)
+  await sendTransferWorkflowEmail({
+    actor: user,
+    collectionId: connection.targetCollectionId,
+    collectionIdForRoles: connection.targetCollectionId,
+    roles: transferReviewRoles,
+    entityType: 'PLANT_DEFINITION_SHARE_REQUEST',
+    entityId: request.id,
+    subject: `Plant definition shared: ${definitionName(definition)}`,
+    actionPath: transfersPath(connection.targetCollection.slug),
+    lines: [
+      `${collection.name} shared the plant definition ${definitionName(definition)} with ${connection.targetCollection.name}.`,
+      `${user.email} initiated the share.`,
+      senderNote ? `Sender note: ${senderNote}` : 'Review the definition share queue to accept or decline it.',
+    ],
+  })
   const destination = back || transfersPath(collection.slug)
   revalidatePath(destination.split('#')[0] || transfersPath(collection.slug))
   redirect(destination)
@@ -257,12 +397,49 @@ export async function createPlantDefinitionShareRequest(fd: FormData) {
 
 export async function acceptPlantDefinitionShareRequest(fd: FormData) {
   const context = await requireCollectionGardener(await collectionSlug(fd))
-  const { collection } = context
+  const { user, collection } = context
   const id = val(fd, 'id')
   const receiverNote = val(fd, 'receiverNote')
   if (!id) throw new Error('Definition share request is required.')
-  await prisma.plantDefinitionShareRequest.findFirstOrThrow({ where: { id, targetCollectionId: collection.id, status: 'PENDING' } })
+  const request = await prisma.plantDefinitionShareRequest.findFirstOrThrow({
+    where: { id, targetCollectionId: collection.id, status: 'PENDING' },
+    include: {
+      sourceCollection: true,
+      targetCollection: true,
+      sourcePlantDefinition: true,
+      requestedBy: { include: { emailPreference: { select: { transferNotifications: true } } } },
+    },
+  })
   const result = await acceptPlantDefinitionSharePackage({ requestId: id, reviewedBy: context.user, receiverNote })
+  await sendTransferWorkflowEmail({
+    actor: user,
+    collectionId: request.sourceCollectionId,
+    users: [request.requestedBy],
+    entityType: 'PLANT_DEFINITION_SHARE_REQUEST',
+    entityId: request.id,
+    subject: `Definition share accepted: ${definitionName(request.sourcePlantDefinition)}`,
+    actionPath: transfersPath(request.sourceCollection.slug),
+    lines: [
+      `${collection.name} accepted the shared definition ${definitionName(request.sourcePlantDefinition)}.`,
+      `Target definition: ${definitionName(result.targetDefinition)}.`,
+      receiverNote ? `Receiver note: ${receiverNote}` : 'The target collection now has a local copy of the definition package.',
+    ],
+  })
+  await sendTransferWorkflowEmail({
+    actor: user,
+    collectionId: collection.id,
+    collectionIdForRoles: collection.id,
+    roles: transferReviewRoles,
+    excludeUserIds: [user.id],
+    entityType: 'PLANT_DEFINITION_SHARE_REQUEST',
+    entityId: request.id,
+    subject: `Definition share completed: ${definitionName(result.targetDefinition)}`,
+    actionPath: collectionPath(collection.slug, `/plants/${result.targetDefinition.id}/edit`),
+    lines: [
+      `${request.sourceCollection.name} shared ${definitionName(request.sourcePlantDefinition)} into ${collection.name}.`,
+      'The definition is ready to review or edit locally.',
+    ],
+  })
   revalidatePath(transfersPath(collection.slug))
   redirect(collectionPath(collection.slug, `/plants/${result.targetDefinition.id}/edit`))
 }
@@ -275,13 +452,30 @@ export async function declinePlantDefinitionShareRequest(fd: FormData) {
   if (!id) throw new Error('Definition share request is required.')
   const request = await prisma.plantDefinitionShareRequest.findFirstOrThrow({
     where: { id, targetCollectionId: collection.id, status: 'PENDING' },
-    include: { sourceCollection: true, sourcePlantDefinition: true },
+    include: {
+      sourceCollection: true,
+      sourcePlantDefinition: true,
+      requestedBy: { include: { emailPreference: { select: { transferNotifications: true } } } },
+    },
   })
   await prisma.plantDefinitionShareRequest.update({
     where: { id: request.id },
     data: { status: 'DECLINED', reviewedById: user.id, reviewedAt: new Date(), receiverNote },
   })
   await audit(user, 'DECLINE', 'PLANT_DEFINITION_SHARE_REQUEST', request.id, `Declined shared definition from ${request.sourceCollection.name}`, undefined, collection.id)
+  await sendTransferWorkflowEmail({
+    actor: user,
+    collectionId: request.sourceCollectionId,
+    users: [request.requestedBy],
+    entityType: 'PLANT_DEFINITION_SHARE_REQUEST',
+    entityId: request.id,
+    subject: `Definition share declined: ${definitionName(request.sourcePlantDefinition)}`,
+    actionPath: transfersPath(request.sourceCollection.slug),
+    lines: [
+      `${collection.name} declined the shared definition ${definitionName(request.sourcePlantDefinition)}.`,
+      receiverNote ? `Receiver note: ${receiverNote}` : 'No definition was copied into the target collection.',
+    ],
+  })
   revalidatePath(transfersPath(collection.slug))
   redirect(transfersPath(collection.slug))
 }
@@ -300,6 +494,20 @@ export async function cancelPlantDefinitionShareRequest(fd: FormData) {
     data: { status: 'CANCELLED', reviewedById: user.id, reviewedAt: new Date() },
   })
   await audit(user, 'CANCEL', 'PLANT_DEFINITION_SHARE_REQUEST', request.id, `Cancelled definition share to ${request.targetCollection.name}`, undefined, collection.id)
+  await sendTransferWorkflowEmail({
+    actor: user,
+    collectionId: request.targetCollectionId,
+    collectionIdForRoles: request.targetCollectionId,
+    roles: transferReviewRoles,
+    entityType: 'PLANT_DEFINITION_SHARE_REQUEST',
+    entityId: request.id,
+    subject: 'Definition share cancelled',
+    actionPath: transfersPath(request.targetCollection.slug),
+    lines: [
+      `${collection.name} cancelled a pending definition share to ${request.targetCollection.name}.`,
+      'No definition was copied into the target collection.',
+    ],
+  })
   revalidatePath(transfersPath(collection.slug))
   redirect(transfersPath(collection.slug))
 }
@@ -332,6 +540,20 @@ export async function copyConnectedPlantDefinition(fd: FormData) {
     sourcePlantDefinitionId,
     createdDefinition: result.createdDefinition,
   }, collection.id)
+  await sendTransferWorkflowEmail({
+    actor: user,
+    collectionId: sourceCollectionId,
+    collectionIdForRoles: sourceCollectionId,
+    roles: transferReviewRoles,
+    entityType: 'PLANT_DEFINITION',
+    entityId: sourcePlantDefinitionId,
+    subject: `Definition copied by ${collection.name}: ${definitionName(result.sourceDefinition)}`,
+    actionPath: transfersPath(incoming.sourceCollection.slug),
+    lines: [
+      `${collection.name} copied ${definitionName(result.sourceDefinition)} from ${incoming.sourceCollection.name} through an active bidirectional connection.`,
+      `${user.email} copied the definition.`,
+    ],
+  })
   revalidatePath(transfersPath(collection.slug))
   redirect(collectionPath(collection.slug, `/plants/${result.targetDefinition.id}/edit`))
 }
