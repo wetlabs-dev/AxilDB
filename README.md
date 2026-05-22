@@ -195,6 +195,32 @@ AXILDB_DOCS_BASE_URL=https://app.axildb.com AXILDB_DOCS_COLLECTION_SLUG=axildb n
 
 If the capture account is required to use 2FA, create a dedicated low-privilege documentation account or set `AXILDB_DOCS_SKIP_LOGIN=1` with an already-authenticated browser context. Screenshots are saved under `public/manual/screenshots/`.
 
+On a Docker production server, use the optional docs runner instead of the slim app container:
+
+```bash
+docker compose --profile docs run --rm docs
+```
+
+The docs runner reads the same uncommitted env files as the app. Store documentation credentials in `/etc/axildb/axildb.env`, not in git:
+
+```bash
+sudo install -d -m 700 /etc/axildb
+sudo nano /etc/axildb/axildb.env
+sudo chmod 600 /etc/axildb/axildb.env
+```
+
+Add values like:
+
+```text
+AXILDB_DOCS_BASE_URL=https://app.axildb.com
+AXILDB_DOCS_COLLECTION_SLUG=axildb
+AXILDB_DOCS_EMAIL=docs@axildb.com
+AXILDB_DOCS_PASSWORD=use-a-long-random-password
+AXILDB_DOCS_SKIP_LOGIN=0
+```
+
+Use a dedicated documentation account with the minimum collection role needed for the screenshots you want. A manager/gardener account captures more admin-oriented pages; a viewer account captures safer public/member workflows.
+
 ## Backup And Restore
 
 Back up before production schema changes, major pulls, or server maintenance. AxilDB backups are **sitewide**: collection-specific export/import is intentionally deferred.
