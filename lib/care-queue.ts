@@ -192,6 +192,8 @@ export async function getCareQueue(
   ])
 
   const photosByInstance = imageLookup(photos)
+  const instanceById = new Map(instances.map((instance) => [instance.id, instance]))
+  const openBloomById = new Map(openBlooms.map((bloom) => [bloom.id, bloom]))
   const latestWater = latestBy(careEvents as any, 'WATERED')
   const latestPestCheck = latestBy(careEvents as any, 'PEST_CHECK')
   const latestHealthCheck = latestBy(careEvents as any, 'HEALTH_CHECK')
@@ -328,6 +330,11 @@ export async function getCareQueue(
   for (const reminder of reminders) {
     const dueAt = reminder.nextSendAt || reminder.dueAt
     const overdueDays = Math.max(0, daysBetween(now, dueAt))
+    const reminderInstance = reminder.entityType === 'PLANT_INSTANCE' && reminder.entityId
+      ? instanceById.get(reminder.entityId)
+      : reminder.entityType === 'BLOOM_EVENT' && reminder.entityId
+        ? openBloomById.get(reminder.entityId)?.plantInstance
+        : null
     const path = reminder.entityType === 'PLANT_INSTANCE' && reminder.entityId
       ? taskPath(collectionSlug, reminder.entityId)
       : reminder.entityType === 'BLOOM_EVENT' && reminder.entityId
@@ -344,7 +351,11 @@ export async function getCareQueue(
       overdueDays,
       href: path,
       reminderId: reminder.id,
-      plantInstanceId: reminder.entityType === 'PLANT_INSTANCE' ? reminder.entityId || undefined : undefined,
+      plantInstanceId: reminderInstance?.id || (reminder.entityType === 'PLANT_INSTANCE' ? reminder.entityId || undefined : undefined),
+      plantId: reminderInstance?.plantId,
+      plantName: reminderInstance ? plantName(reminderInstance.plantDefinition) : undefined,
+      location: reminderInstance?.location,
+      image: reminderInstance ? photosByInstance[reminderInstance.id] : undefined,
       completedAt: reminder.completedAt,
     })
   }
