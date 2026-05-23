@@ -8,6 +8,7 @@ type ConfirmDeleteButtonProps = {
   message: string
   confirmLabel?: string
   className?: string
+  confirmClassName?: string
 }
 
 export function ConfirmDeleteButton({
@@ -16,6 +17,7 @@ export function ConfirmDeleteButton({
   message,
   confirmLabel = 'Delete',
   className = '',
+  confirmClassName = '',
 }: ConfirmDeleteButtonProps) {
   return (
     <span data-confirm-delete>
@@ -45,7 +47,7 @@ export function ConfirmDeleteButton({
           </button>
           <button
             type="button"
-            className="rounded-md bg-[#9a3f35] px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-[#7d3028]"
+            className={cn('rounded-md bg-[#9a3f35] px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-[#7d3028]', confirmClassName)}
             onClick={(event) => {
               const wrapper = event.currentTarget.closest('[data-confirm-delete]')
               const trigger = wrapper?.querySelector('[data-confirm-delete-trigger]')

@@ -16,6 +16,7 @@ import {
   pauseReminder,
   deleteReminder,
   followEntity,
+  regeneratePlantInstanceId,
   savePlantHusbandryOverrideField,
   updatePlantCondition,
   unfollowEntity,
@@ -28,12 +29,14 @@ import { HusbandryBadges, HusbandryGuideView } from '@/components/Husbandry'
 import { waterCadenceDays } from '@/lib/care-queue'
 import { getCurrentUser } from '@/lib/auth'
 import { canCreateInCollection, canEditInCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
+import { expectedPlantIdForInstance } from '@/lib/plant-id'
 import { prisma } from '@/lib/prisma'
 import { recurrenceLabel, reminderCategories, reminderCategoryLabel, reminderRecurrences } from '@/lib/reminders'
 import { hasHusbandryData, mergeHusbandryValues } from '@/lib/husbandry'
 import { dateInput, fmtDate, plantName, taxonomyLabel } from '@/lib/utils'
 import Link from 'next/link'
 import QRCode from 'qrcode'
+import { RefreshCw } from 'lucide-react'
 
 const conditionCategories = [
   ['WILTING', 'Wilting'],
@@ -99,6 +102,10 @@ export default async function InstanceDetail({
         include: { plantDefinition: true },
       })
     : null
+  const expectedPlantId = canEditRecords
+    ? await expectedPlantIdForInstance(prisma, { collectionId: collection.id, plantInstanceId: i.id })
+    : i.plantId
+  const canRegeneratePlantId = canEditRecords && expectedPlantId !== i.plantId
   const baseHusbandryGuide = sourceHusbandryGuide || i.plantDefinition.husbandryGuide
   const effectiveHusbandry = mergeHusbandryValues(baseHusbandryGuide as any, i.husbandryOverride as any)
 
@@ -463,7 +470,26 @@ export default async function InstanceDetail({
     <div className="space-y-6">
       <div className="flex justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold">{i.plantId}</h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-3xl font-bold">{i.plantId}</h2>
+            {canRegeneratePlantId && (
+              <form action={regeneratePlantInstanceId}>
+                <input type="hidden" name="collectionSlug" value={collection.slug} />
+                <input type="hidden" name="id" value={i.id} />
+                <input type="hidden" name="proposedPlantId" value={expectedPlantId} />
+                <ConfirmDeleteButton
+                  title="Regenerate plant ID?"
+                  message={`Change this plant ID from ${i.plantId} to ${expectedPlantId}? Existing links will continue to point to this same record, but printed labels using the old ID should be replaced.`}
+                  confirmLabel="Regenerate ID"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#c7d8bd] bg-[#f5fbf0] p-0 text-[#2f6b45] shadow-sm hover:bg-[#e6f0db]"
+                  confirmClassName="bg-[#2f6b45] hover:bg-[#245737]"
+                >
+                  <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                  <span className="sr-only">Regenerate plant ID</span>
+                </ConfirmDeleteButton>
+              </form>
+            )}
+          </div>
           <p>{plantName(i.plantDefinition)}</p>
         </div>
         <img src={qr} className="h-28 w-28" alt="QR code" />

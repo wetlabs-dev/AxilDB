@@ -15,7 +15,7 @@ import {
 } from '@/lib/collections'
 import { createDemoData } from '@/lib/demo-data'
 import { notifyFollowers } from '@/lib/follows'
-import { generatePlantId } from '@/lib/plant-id'
+import { expectedPlantIdForInstance, generatePlantId } from '@/lib/plant-id'
 import { nextOccurrence } from '@/lib/reminders'
 import { plantName } from '@/lib/utils'
 import { husbandryFieldNames, husbandryFormValues } from '@/lib/husbandry'
@@ -580,6 +580,48 @@ export async function updatePlantInstance(fd: FormData) {
     },
   })
   await audit(user, 'UPDATE', 'PLANT_INSTANCE', id, `Updated plant instance ${instance.plantId}`, undefined, collection.id)
+
+  redirect(collectionPath(collection.slug, `/instances/${id}`))
+}
+
+export async function regeneratePlantInstanceId(fd: FormData) {
+  const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
+  const id = val(fd, 'id')!
+  const proposedPlantId = val(fd, 'proposedPlantId')!
+  const instance = await prisma.plantInstance.findFirstOrThrow({
+    where: { id, collectionId: collection.id },
+    select: { id: true, plantId: true },
+  })
+
+  const expectedPlantId = await expectedPlantIdForInstance(prisma, {
+    collectionId: collection.id,
+    plantInstanceId: id,
+  })
+
+  if (expectedPlantId === instance.plantId) redirect(collectionPath(collection.slug, `/instances/${id}`))
+  if (expectedPlantId !== proposedPlantId) throw new Error('The proposed plant ID is no longer current. Refresh and try again.')
+
+  await prisma.plantInstance.update({
+    where: { id },
+    data: { plantId: expectedPlantId },
+  })
+  await prisma.note.create({
+    data: {
+      collectionId: collection.id,
+      entityType: 'PLANT_INSTANCE',
+      entityId: id,
+      note: `Plant ID regenerated from ${instance.plantId} to ${expectedPlantId}.`,
+    },
+  })
+  await audit(
+    user,
+    'UPDATE',
+    'PLANT_INSTANCE',
+    id,
+    `Regenerated plant ID from ${instance.plantId} to ${expectedPlantId}`,
+    { previousPlantId: instance.plantId, plantId: expectedPlantId },
+    collection.id,
+  )
 
   redirect(collectionPath(collection.slug, `/instances/${id}`))
 }
