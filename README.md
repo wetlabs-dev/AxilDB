@@ -432,6 +432,8 @@ OPENAI_MAGIC_FILL_MODEL=gpt-5.4-mini
 OPENAI_MAGIC_FILL_HOURLY_LIMIT=10
 OPENAI_HUSBANDRY_FILL_MODEL=gpt-5.4-mini
 OPENAI_HUSBANDRY_FILL_HOURLY_LIMIT=10
+OPENAI_GREEN_THUMB_MODEL=gpt-5.4-mini
+OPENAI_GREEN_THUMB_HOURLY_LIMIT=20
 ```
 
 Set `TOTP_ENCRYPTION_KEY` to a long random secret in production. It encrypts authenticator app secrets before they are stored in the database. On Ubuntu, a good value can be generated with:
@@ -478,7 +480,7 @@ Recommended production provider: Amazon SES. It fits well with the AWS/Lightsail
 
 ## Optional OpenAI Plant Definition Drafting
 
-Plant definition forms include optional OpenAI buttons. **AI draft** uses the genus, species, and cultivar fields to draft a description under 40 words. **Magic fill** asks OpenAI for a structured plant definition draft: accepted genus/species, authority, cultivar registration number, governing body, taxonomy/reference URLs, description, and aliases. **Magic Fill husbandry** asks for one structured draft covering the entire care guide. The API key is never sent to the browser, and generated data is never saved automatically; review it before saving.
+Plant definition forms include optional OpenAI buttons. **AI draft** uses the genus, species, and cultivar fields to draft a description under 40 words. **Magic fill** asks OpenAI for a structured plant definition draft: accepted genus/species, authority, cultivar registration number, governing body, taxonomy/reference URLs, description, and aliases. **Magic Fill husbandry** asks for one structured draft covering the entire care guide. **Green Thumb assist** lets a logger ask one care question per plant specimen per day and stores the answer as a highlighted care note. The API key is never sent to the browser, and generated definition/husbandry data is never saved automatically; review it before saving.
 
 To enable it, create an OpenAI API key in the OpenAI Platform dashboard and add it to the server-level config file that Docker Compose already loads:
 
@@ -496,6 +498,8 @@ OPENAI_MAGIC_FILL_MODEL=gpt-5.4-mini
 OPENAI_MAGIC_FILL_HOURLY_LIMIT=10
 OPENAI_HUSBANDRY_FILL_MODEL=gpt-5.4-mini
 OPENAI_HUSBANDRY_FILL_HOURLY_LIMIT=10
+OPENAI_GREEN_THUMB_MODEL=gpt-5.4-mini
+OPENAI_GREEN_THUMB_HOURLY_LIMIT=20
 ```
 
 Then redeploy/recreate the app container so the environment changes are loaded:
@@ -504,7 +508,7 @@ Then redeploy/recreate the app container so the environment changes are loaded:
 docker compose up -d --build
 ```
 
-`OPENAI_DESCRIPTION_HOURLY_LIMIT`, `OPENAI_MAGIC_FILL_HOURLY_LIMIT`, and `OPENAI_HUSBANDRY_FILL_HOURLY_LIMIT` are lightweight per-user in-process limits for the OpenAI buttons. For stricter cost control, also set project usage limits in the OpenAI Platform billing settings.
+`OPENAI_DESCRIPTION_HOURLY_LIMIT`, `OPENAI_MAGIC_FILL_HOURLY_LIMIT`, `OPENAI_HUSBANDRY_FILL_HOURLY_LIMIT`, and `OPENAI_GREEN_THUMB_HOURLY_LIMIT` are lightweight per-user in-process limits for the OpenAI buttons. Green Thumb also has a once-per-specimen-per-day cooldown. For stricter cost control, also set project usage limits in the OpenAI Platform billing settings.
 
 Current email foundation:
 

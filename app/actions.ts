@@ -951,6 +951,25 @@ export async function updatePlantCondition(fd: FormData) {
   redirect(destination)
 }
 
+export async function deleteGreenThumbCareNote(fd: FormData) {
+  const destination = back(fd)
+  const context = await requireCollectionAdmin(await collectionSlug(fd))
+  const id = val(fd, 'id')!
+  const event = await prisma.plantCareEvent.findFirstOrThrow({
+    where: { id, collectionId: context.collection.id },
+    select: { id: true, eventType: true, plantInstance: { select: { plantId: true } } },
+  })
+
+  if (event.eventType !== 'GREEN_THUMB_NOTE') {
+    throw new Error('Only Green Thumb care notes can be deleted here.')
+  }
+
+  await prisma.plantCareEvent.delete({ where: { id } })
+  await audit(context.user, 'DELETE', 'PLANT_CARE_EVENT', id, `Deleted Green Thumb care note for ${event.plantInstance.plantId}`, undefined, context.collection.id)
+  revalidateDestination(destination)
+  redirect(destination)
+}
+
 export async function pauseReminder(fd: FormData) {
   const id = val(fd, 'id')!
   const destination = back(fd)

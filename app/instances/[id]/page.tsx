@@ -13,6 +13,7 @@ import {
   completeCareTask,
   completeReminder,
   createPlantCondition,
+  deleteGreenThumbCareNote,
   pauseReminder,
   deleteReminder,
   followEntity,
@@ -23,6 +24,7 @@ import {
 } from '@/app/actions'
 import { createPlantTransferRequest } from '@/app/transfer-actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
+import { GreenThumbAssist } from '@/components/GreenThumbAssist'
 import { PlantImage } from '@/components/PlantImage'
 import { Button, Card, Field, Select, TextArea } from '@/components/ui'
 import { HusbandryBadges, HusbandryGuideView } from '@/components/Husbandry'
@@ -33,6 +35,7 @@ import { expectedPlantIdForInstance } from '@/lib/plant-id'
 import { prisma } from '@/lib/prisma'
 import { recurrenceLabel, reminderCategories, reminderCategoryLabel, reminderRecurrences } from '@/lib/reminders'
 import { hasHusbandryData, mergeHusbandryValues } from '@/lib/husbandry'
+import { isServerAdminRole } from '@/lib/roles'
 import { dateInput, fmtDate, plantName, taxonomyLabel } from '@/lib/utils'
 import Link from 'next/link'
 import QRCode from 'qrcode'
@@ -53,6 +56,17 @@ const conditionCategories = [
 
 const conditionSeverities = ['LOW', 'MODERATE', 'HIGH', 'CRITICAL'] as const
 const conditionStatuses = ['OPEN', 'IMPROVING', 'RESOLVED'] as const
+
+function careEventMetadata(metadata: unknown) {
+  return metadata && typeof metadata === 'object' && !Array.isArray(metadata)
+    ? metadata as Record<string, unknown>
+    : {}
+}
+
+function careEventLabel(eventType: string) {
+  if (eventType === 'GREEN_THUMB_NOTE') return 'Green Thumb care note'
+  return eventType.replaceAll('_', ' ').toLowerCase()
+}
 
 export default async function InstanceDetail({
   params,
@@ -150,7 +164,10 @@ export default async function InstanceDetail({
       })
     : []
 
-  const [careEvents, careConditions] = await Promise.all([
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const [careEvents, careConditions, greenThumbToday] = await Promise.all([
     prisma.plantCareEvent.findMany({
       where: { collectionId: collection.id, plantInstanceId: id },
       orderBy: { performedAt: 'desc' },
@@ -160,12 +177,23 @@ export default async function InstanceDetail({
       where: { collectionId: collection.id, plantInstanceId: id },
       orderBy: [{ status: 'asc' }, { observedAt: 'desc' }],
     }),
+    prisma.plantCareEvent.findFirst({
+      where: {
+        collectionId: collection.id,
+        plantInstanceId: id,
+        eventType: 'GREEN_THUMB_NOTE',
+        performedAt: { gte: today },
+      },
+      select: { id: true },
+    }),
   ])
   const lastWatered = careEvents.find((event) => event.eventType === 'WATERED')?.performedAt
   const openConditions = careConditions.filter((condition) => condition.status !== 'RESOLVED')
   const waterCadence = waterCadenceDays(effectiveHusbandry.summaryWater || effectiveHusbandry.wateringCadence)
   const nextWatering = new Date(lastWatered || i.acquisitionDate || i.propagationDate || i.createdAt)
   nextWatering.setDate(nextWatering.getDate() + waterCadence)
+  const greenThumbUsedToday = !!greenThumbToday
+  const canUseGreenThumb = canCreateRecords && !!user && (collection.aiFeaturesEnabled || isServerAdminRole(user.role))
 
   const follows = user
     ? await prisma.follow.findMany({
@@ -407,15 +435,60 @@ export default async function InstanceDetail({
         </div>
       )}
 
+      {canUseGreenThumb && (
+        <div className="mt-4">
+          <GreenThumbAssist
+            collectionSlug={collection.slug}
+            plantInstanceId={id}
+            photos={photos.map((photo) => ({ id: photo.id, caption: photo.caption }))}
+            usedToday={greenThumbUsedToday}
+          />
+        </div>
+      )}
+
       <div className="mt-4 space-y-2">
         <p className="text-sm font-semibold">Recent care history</p>
         {careEvents.length === 0 && <p className="text-sm text-stone-600">No care events logged yet.</p>}
-        {careEvents.map((event) => (
-          <div key={event.id} className="rounded-lg border border-stone-200 bg-white/60 p-3 text-sm">
-            <p className="font-medium">{event.eventType.replaceAll('_', ' ').toLowerCase()} · {fmtDate(event.performedAt)}</p>
-            {event.notes && <p className="mt-1 whitespace-pre-wrap text-stone-700">{event.notes}</p>}
-          </div>
-        ))}
+        {careEvents.map((event) => {
+          const isGreenThumb = event.eventType === 'GREEN_THUMB_NOTE'
+          const metadata = careEventMetadata(event.metadata)
+          const question = typeof metadata.question === 'string' ? metadata.question : ''
+          return (
+            <div
+              key={event.id}
+              className={
+                isGreenThumb
+                  ? 'rounded-lg border border-[#9fc29a] bg-[#eef8e9]/80 p-3 text-sm'
+                  : 'rounded-lg border border-stone-200 bg-white/60 p-3 text-sm'
+              }
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className={isGreenThumb ? 'font-bold text-[#255537]' : 'font-medium'}>
+                    {careEventLabel(event.eventType)} · {fmtDate(event.performedAt)}
+                  </p>
+                  {question && <p className="mt-1 text-xs font-medium text-stone-600">Q: {question}</p>}
+                </div>
+                {isGreenThumb && canEditRecords && (
+                  <form action={deleteGreenThumbCareNote}>
+                    <input type="hidden" name="id" value={event.id} />
+                    <input type="hidden" name="collectionSlug" value={collection.slug} />
+                    <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}`)} />
+                    <ConfirmDeleteButton
+                      className="border border-[#9a3f35] bg-white/70 px-2 py-1 text-xs text-[#9a3f35] hover:bg-red-50"
+                      title="Delete Green Thumb care note?"
+                      message="This removes the AI care response from this specimen's care history."
+                      confirmLabel="Delete note"
+                    >
+                      Delete
+                    </ConfirmDeleteButton>
+                  </form>
+                )}
+              </div>
+              {event.notes && <p className="mt-1 whitespace-pre-wrap text-stone-700">{event.notes}</p>}
+            </div>
+          )
+        })}
       </div>
     </Card>
   )
