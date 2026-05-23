@@ -1,17 +1,26 @@
 import { createSportStabilityRecord, markSportReverted } from '@/app/actions'
 import { PlantImage } from '@/components/PlantImage'
+import { SortControl } from '@/components/SortControl'
 import { Button, Card, Field, LinkButton, TextArea } from '@/components/ui'
 import { getCurrentUser } from '@/lib/auth'
 import { canCreateInCollection, canEditInCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
+import { compareText, sortPreference, timeValue, type SortOption } from '@/lib/sort-preferences'
 import { plantName } from '@/lib/utils'
 import Link from 'next/link'
+
+const sportSortOptions: SortOption[] = [
+  { value: 'updatedDesc', label: 'Recently updated' },
+  { value: 'plantIdAsc', label: 'Plant ID A-Z' },
+  { value: 'statusAsc', label: 'Status A-Z' },
+]
 
 export default async function SportReview() {
   const user = await getCurrentUser()
   const context = await requireCollectionViewer()
   const { collection } = context
   const collectionWhere = { collectionId: collection.id }
+  const sortKey = await sortPreference(user?.id, 'sports', 'updatedDesc', sportSortOptions.map((option) => option.value))
   const [sports, events] = await Promise.all([
     prisma.plantInstance.findMany({
       where: { ...collectionWhere, OR: [{ isSportCandidate: true }, { sportStatus: { not: 'NONE' } }] },
@@ -33,16 +42,30 @@ export default async function SportReview() {
     if (!acc[photo.entityId]) acc[photo.entityId] = photo.path
     return acc
   }, {})
+  const sortedSports = [...sports].sort((left, right) => {
+    if (sortKey === 'plantIdAsc') return compareText(left.plantId, right.plantId)
+    if (sortKey === 'statusAsc') return compareText(left.sportStatus, right.sportStatus) || compareText(left.plantId, right.plantId)
+    return timeValue(right.updatedAt) - timeValue(left.updatedAt)
+  })
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold">Sport Stability Review</h2>
-        <p className="mt-1 text-sm text-stone-600">Review suspected sports, log true-to-type propagation records, mark reverted branches, and start the cultivar wizard when a line reaches three true propagations.</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-3xl font-bold">Sport Stability Review</h2>
+          <p className="mt-1 text-sm text-stone-600">Review suspected sports, log true-to-type propagation records, mark reverted branches, and start the cultivar wizard when a line reaches three true propagations.</p>
+        </div>
+        <SortControl
+          section="sports"
+          value={sortKey}
+          options={sportSortOptions}
+          back={collectionPath(collection.slug, '/sports')}
+          disabled={!user}
+        />
       </div>
 
       <div className="grid auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
-        {sports.map((sport) => {
+        {sortedSports.map((sport) => {
           const trueCount = sport.sportRecords.filter((record) => record.propagatedTrue).length
           const eligible = sport.sportRecords.some((record) => record.propagatedTrue && record.generationNumber >= 3) || trueCount >= 3
 

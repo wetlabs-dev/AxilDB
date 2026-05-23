@@ -212,6 +212,34 @@ export async function unfollowEntity(fd: FormData) {
   redirect(destination)
 }
 
+const sortPreferenceSections: Record<string, string[]> = {
+  instances: ['plantIdAsc', 'plantIdDesc', 'updatedDesc', 'updatedAsc', 'acquiredDesc', 'acquiredAsc'],
+  plants: ['nameAsc', 'nameDesc', 'updatedDesc', 'updatedAsc', 'createdDesc', 'createdAsc'],
+  propagations: ['dateDesc', 'dateAsc', 'methodAsc', 'statusAsc', 'updatedDesc'],
+  blooms: ['startDesc', 'startAsc', 'updatedDesc', 'statusAsc', 'plantIdAsc'],
+  gallery: ['newest', 'oldest', 'plantIdAsc', 'typeAsc'],
+  sports: ['updatedDesc', 'plantIdAsc', 'statusAsc'],
+  archived: ['archiveDesc', 'archiveAsc', 'plantIdAsc'],
+}
+
+export async function saveSortPreference(fd: FormData) {
+  const user = await requireUser()
+  const destination = back(fd)
+  const section = val(fd, 'section')!
+  const sortKey = val(fd, 'sortKey')!
+  const allowed = sortPreferenceSections[section]
+  if (!allowed?.includes(sortKey)) throw new Error('Unsupported sort option.')
+
+  await prisma.userSortPreference.upsert({
+    where: { userId_section: { userId: user.id, section } },
+    update: { sortKey },
+    create: { userId: user.id, section, sortKey },
+  })
+
+  revalidateDestination(destination)
+  redirect(destination)
+}
+
 export async function createGoverningBody(fd: FormData) {
   const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const body = await prisma.governingBody.create({

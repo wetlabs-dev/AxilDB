@@ -1,19 +1,30 @@
 import { createPropagationEvent, deletePropagationEvent } from '@/app/actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { PlantImage } from '@/components/PlantImage'
+import { SortControl } from '@/components/SortControl'
 import { AddPanel, Button, Card, Field, HelpTooltip, SuggestionDatalist, TextArea } from '@/components/ui'
 import { getCurrentUser } from '@/lib/auth'
 import { canCreateInCollection, canEditInCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
+import { compareText, sortPreference, timeValue, type SortOption } from '@/lib/sort-preferences'
 import { rankedSuggestions } from '@/lib/suggestions'
 import { fmtDate, plantName } from '@/lib/utils'
 import Link from 'next/link'
+
+const propagationSortOptions: SortOption[] = [
+  { value: 'dateDesc', label: 'Newest propagation' },
+  { value: 'dateAsc', label: 'Oldest propagation' },
+  { value: 'updatedDesc', label: 'Recently updated' },
+  { value: 'methodAsc', label: 'Method A-Z' },
+  { value: 'statusAsc', label: 'Status A-Z' },
+]
 
 export default async function Propagations() {
   const user = await getCurrentUser()
   const context = await requireCollectionViewer()
   const { collection } = context
   const collectionWhere = { collectionId: collection.id }
+  const sortKey = await sortPreference(user?.id, 'propagations', 'dateDesc', propagationSortOptions.map((option) => option.value))
   const [instances, events, instanceSuggestionRows] = await Promise.all([
     prisma.plantInstance.findMany({
       where: { ...collectionWhere, status: 'ACTIVE' },
@@ -47,10 +58,26 @@ export default async function Propagations() {
     if (!acc[photo.entityId]) acc[photo.entityId] = photo.path
     return acc
   }, {})
+  const sortedEvents = [...events].sort((left, right) => {
+    if (sortKey === 'dateAsc') return timeValue(left.date) - timeValue(right.date)
+    if (sortKey === 'updatedDesc') return timeValue(right.updatedAt) - timeValue(left.updatedAt)
+    if (sortKey === 'methodAsc') return compareText(left.method, right.method) || timeValue(right.date) - timeValue(left.date)
+    if (sortKey === 'statusAsc') return compareText(left.successStatus, right.successStatus) || timeValue(right.date) - timeValue(left.date)
+    return timeValue(right.date) - timeValue(left.date)
+  })
 
   return (
     <div className="space-y-6">
-      <h2 className="text-3xl font-bold">Propagations</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-3xl font-bold">Propagations</h2>
+        <SortControl
+          section="propagations"
+          value={sortKey}
+          options={propagationSortOptions}
+          back={collectionPath(collection.slug, '/propagations')}
+          disabled={!user}
+        />
+      </div>
 
       {canCreateInCollection(user, context) && (
         <AddPanel label="Add propagation event">
@@ -119,7 +146,7 @@ export default async function Propagations() {
       )}
 
       <div className="grid auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
-        {events.map((event) => {
+        {sortedEvents.map((event) => {
           const firstChild = event.children[0]?.childPlantInstance
           const firstParent = event.parents[0]?.parentPlantInstance
           const image = photoByInstance[firstChild?.id || ''] || photoByInstance[firstParent?.id || '']

@@ -4,15 +4,26 @@ import { createPlantDefinitionShareRequest } from '@/app/transfer-actions'
 import { AddPanel, Button, Card, Field, HelpTooltip, TextArea, LinkButton, SuggestionDatalist } from '@/components/ui'
 import { ConfidenceSelect, PlantAliasFields } from '@/components/PlantAliasFields'
 import { PlantImage } from '@/components/PlantImage'
+import { SortControl } from '@/components/SortControl'
 import { AIDescriptionField, AIMagicFillButton } from '@/components/AIDescriptionField'
 import { HusbandryBadges } from '@/components/Husbandry'
 import { getCurrentUser } from '@/lib/auth'
 import { canCreateInCollection, canEditInCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { rankedSuggestions } from '@/lib/suggestions'
+import { compareText, sortPreference, timeValue, type SortOption } from '@/lib/sort-preferences'
 import { plantName, taxonomyLabel } from '@/lib/utils'
 import Link from 'next/link'
 
 const selectClass = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
+
+const plantSortOptions: SortOption[] = [
+  { value: 'nameAsc', label: 'Name A-Z' },
+  { value: 'nameDesc', label: 'Name Z-A' },
+  { value: 'updatedDesc', label: 'Recently updated' },
+  { value: 'updatedAsc', label: 'Oldest updated' },
+  { value: 'createdDesc', label: 'Newest created' },
+  { value: 'createdAsc', label: 'Oldest created' },
+]
 
 export default async function Plants() {
   const user = await getCurrentUser()
@@ -21,6 +32,7 @@ export default async function Plants() {
   const canCreate = canCreateInCollection(user, context)
   const canEdit = canEditInCollection(user, context)
   const collectionWhere = { collectionId: collection.id }
+  const sortKey = await sortPreference(user?.id, 'plants', 'nameAsc', plantSortOptions.map((option) => option.value))
   const [plants, bodies, follows, outgoingTransferConnections] = await Promise.all([
     prisma.plantDefinition.findMany({
       where: collectionWhere,
@@ -87,12 +99,29 @@ export default async function Plants() {
     if (!acc[photo.entityId]) acc[photo.entityId] = photo.path
     return acc
   }, {})
+  const sortedPlants = [...plants].sort((left, right) => {
+    if (sortKey === 'nameDesc') return compareText(plantName(right), plantName(left))
+    if (sortKey === 'updatedDesc') return timeValue(right.updatedAt) - timeValue(left.updatedAt)
+    if (sortKey === 'updatedAsc') return timeValue(left.updatedAt) - timeValue(right.updatedAt)
+    if (sortKey === 'createdDesc') return timeValue(right.createdAt) - timeValue(left.createdAt)
+    if (sortKey === 'createdAsc') return timeValue(left.createdAt) - timeValue(right.createdAt)
+    return compareText(plantName(left), plantName(right))
+  })
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-3xl font-bold">Plant Definitions</h2>
-        <LinkButton href={collectionPath(collection.slug, '/search')}>Search</LinkButton>
+        <div className="flex flex-wrap items-center gap-2">
+          <SortControl
+            section="plants"
+            value={sortKey}
+            options={plantSortOptions}
+            back={collectionPath(collection.slug, '/plants')}
+            disabled={!user}
+          />
+          <LinkButton href={collectionPath(collection.slug, '/search')}>Search</LinkButton>
+        </div>
       </div>
 
       {canCreate && (
@@ -145,7 +174,7 @@ export default async function Plants() {
       )}
 
       <div className="grid auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
-        {plants.map((plant) => {
+        {sortedPlants.map((plant) => {
           const typePhoto = typePhotoByDefinition[plant.id] || plant.instances.map((instance) => typePhotoByInstance[instance.id]).find(Boolean)
           return (
             <Card key={plant.id} className="flex h-full flex-col overflow-hidden p-0">

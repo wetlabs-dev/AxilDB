@@ -1,14 +1,31 @@
 import { PlantImage } from '@/components/PlantImage'
+import { SortControl } from '@/components/SortControl'
 import { Card } from '@/components/ui'
+import { getCurrentUser } from '@/lib/auth'
 import { collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
+import { compareText, sortPreference, timeValue, type SortOption } from '@/lib/sort-preferences'
 import { fmtDate, plantName } from '@/lib/utils'
 import { Flower2, Sprout } from 'lucide-react'
 import Link from 'next/link'
 
+const bloomSortOptions: SortOption[] = [
+  { value: 'startDesc', label: 'Newest bloom' },
+  { value: 'startAsc', label: 'Oldest bloom' },
+  { value: 'updatedDesc', label: 'Recently updated' },
+  { value: 'statusAsc', label: 'Status A-Z' },
+  { value: 'plantIdAsc', label: 'Plant ID A-Z' },
+]
+
+function bloomStatus(bloom: { bloomEndDate: Date | null; peakBloomDate: Date | null }) {
+  return bloom.bloomEndDate ? 'Closed' : bloom.peakBloomDate ? 'Peaked' : 'Open'
+}
+
 export default async function Blooms() {
+  const user = await getCurrentUser()
   const { collection } = await requireCollectionViewer()
   const collectionWhere = { collectionId: collection.id }
+  const sortKey = await sortPreference(user?.id, 'blooms', 'startDesc', bloomSortOptions.map((option) => option.value))
   const blooms = await prisma.bloomEvent.findMany({
     where: collectionWhere,
     include: { plantInstance: { include: { plantDefinition: true } } },
@@ -34,10 +51,26 @@ export default async function Blooms() {
     if (!acc[photo.entityId]) acc[photo.entityId] = photo.path
     return acc
   }, {})
+  const sortedBlooms = [...blooms].sort((left, right) => {
+    if (sortKey === 'startAsc') return timeValue(left.bloomStartDate) - timeValue(right.bloomStartDate)
+    if (sortKey === 'updatedDesc') return timeValue(right.updatedAt) - timeValue(left.updatedAt)
+    if (sortKey === 'statusAsc') return compareText(bloomStatus(left), bloomStatus(right)) || timeValue(right.bloomStartDate) - timeValue(left.bloomStartDate)
+    if (sortKey === 'plantIdAsc') return compareText(left.plantInstance.plantId, right.plantInstance.plantId)
+    return timeValue(right.bloomStartDate) - timeValue(left.bloomStartDate)
+  })
 
   return (
     <div className="space-y-6">
-      <h2 className="text-3xl font-bold">Bloom Tracker</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-3xl font-bold">Bloom Tracker</h2>
+        <SortControl
+          section="blooms"
+          value={sortKey}
+          options={bloomSortOptions}
+          back={collectionPath(collection.slug, '/blooms')}
+          disabled={!user}
+        />
+      </div>
       {blooms.length === 0 && (
         <Card className="relative overflow-hidden border-[#d6dfc9] bg-[#fffaf0] p-0">
           <div className="absolute inset-y-0 right-0 hidden w-1/2 bg-[radial-gradient(circle_at_70%_40%,rgba(143,165,143,0.22),transparent_34%),radial-gradient(circle_at_88%_72%,rgba(196,122,90,0.14),transparent_28%)] sm:block" />
@@ -61,8 +94,8 @@ export default async function Blooms() {
         </Card>
       )}
       <div className="grid auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
-        {blooms.map((bloom) => {
-          const status = bloom.bloomEndDate ? 'Closed' : bloom.peakBloomDate ? 'Peaked' : 'Open'
+        {sortedBlooms.map((bloom) => {
+          const status = bloomStatus(bloom)
           const image = bloomPhotoByEvent[bloom.id] || photoByInstance[bloom.plantInstanceId]
 
           return (

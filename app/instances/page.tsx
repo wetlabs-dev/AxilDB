@@ -1,18 +1,30 @@
 import { createPlantInstance } from '@/app/actions'
 import { PlantImage } from '@/components/PlantImage'
+import { SortControl } from '@/components/SortControl'
 import { AddPanel, Button, Card, Field, HelpTooltip, SuggestionDatalist, TextArea } from '@/components/ui'
 import { getCurrentUser } from '@/lib/auth'
 import { canCreateInCollection, canEditInCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
+import { compareText, sortPreference, timeValue, type SortOption } from '@/lib/sort-preferences'
 import { rankedSuggestions } from '@/lib/suggestions'
 import { plantName } from '@/lib/utils'
 import Link from 'next/link'
+
+const instanceSortOptions: SortOption[] = [
+  { value: 'plantIdAsc', label: 'Plant ID A-Z' },
+  { value: 'plantIdDesc', label: 'Plant ID Z-A' },
+  { value: 'updatedDesc', label: 'Recently updated' },
+  { value: 'updatedAsc', label: 'Oldest updated' },
+  { value: 'acquiredDesc', label: 'Newest acquired' },
+  { value: 'acquiredAsc', label: 'Oldest acquired' },
+]
 
 export default async function Instances() {
   const user = await getCurrentUser()
   const context = await requireCollectionViewer()
   const { collection } = context
   const collectionWhere = { collectionId: collection.id }
+  const sortKey = await sortPreference(user?.id, 'instances', 'plantIdAsc', instanceSortOptions.map((option) => option.value))
   const [instances, defs, instanceSuggestionRows] = await Promise.all([
     prisma.plantInstance.findMany({
       where: { ...collectionWhere, status: 'ACTIVE' },
@@ -38,10 +50,27 @@ export default async function Instances() {
     if (!acc[photo.entityId]) acc[photo.entityId] = photo.path
     return acc
   }, {})
+  const sortedInstances = [...instances].sort((left, right) => {
+    if (sortKey === 'plantIdDesc') return compareText(right.plantId, left.plantId)
+    if (sortKey === 'updatedDesc') return timeValue(right.updatedAt) - timeValue(left.updatedAt)
+    if (sortKey === 'updatedAsc') return timeValue(left.updatedAt) - timeValue(right.updatedAt)
+    if (sortKey === 'acquiredDesc') return timeValue(right.acquisitionDate || right.createdAt) - timeValue(left.acquisitionDate || left.createdAt)
+    if (sortKey === 'acquiredAsc') return timeValue(left.acquisitionDate || left.createdAt) - timeValue(right.acquisitionDate || right.createdAt)
+    return compareText(left.plantId, right.plantId)
+  })
 
   return (
     <div className="space-y-6">
-      <h2 className="text-3xl font-bold">Plant Instances</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-3xl font-bold">Plant Instances</h2>
+        <SortControl
+          section="instances"
+          value={sortKey}
+          options={instanceSortOptions}
+          back={collectionPath(collection.slug, '/instances')}
+          disabled={!user}
+        />
+      </div>
 
       {canCreateInCollection(user, context) && (
         <AddPanel label="Add plant instance">
@@ -89,7 +118,7 @@ export default async function Instances() {
       )}
 
       <div className="grid auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
-        {instances.map((instance) => (
+        {sortedInstances.map((instance) => (
           <Card key={instance.id} className="flex h-full flex-col overflow-hidden p-0">
             <Link href={collectionPath(collection.slug, `/instances/${instance.id}`)} className="block flex-1">
               <div className="aspect-[4/3]">
