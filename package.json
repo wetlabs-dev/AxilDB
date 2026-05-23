@@ -21,7 +21,7 @@
     "docs:build": "npm run docs:manual && npm run docs:screenshots",
     "check:collection-defaults": "node scripts/check-collection-defaults.mjs",
     "check:collection-scope": "node scripts/check-collection-scope.mjs",
-    "check:collection-integrity": "tsx scripts/check-collection-integrity.ts",
+    "check:collection-integrity": "prisma generate && tsx scripts/check-collection-integrity.ts",
     "check:production": "sh scripts/check-production.sh"
   },
   "dependencies": {
