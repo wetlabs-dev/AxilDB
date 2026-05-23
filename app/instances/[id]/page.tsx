@@ -10,11 +10,14 @@ import {
   markSportCandidate,
   markSportReverted,
   createReminder,
+  completeCareTask,
   completeReminder,
+  createPlantCondition,
   pauseReminder,
   deleteReminder,
   followEntity,
   savePlantHusbandryOverrideField,
+  updatePlantCondition,
   unfollowEntity,
 } from '@/app/actions'
 import { createPlantTransferRequest } from '@/app/transfer-actions'
@@ -22,14 +25,31 @@ import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { PlantImage } from '@/components/PlantImage'
 import { Button, Card, Field, Select, TextArea } from '@/components/ui'
 import { HusbandryBadges, HusbandryGuideView } from '@/components/Husbandry'
+import { waterCadenceDays } from '@/lib/care-queue'
 import { getCurrentUser } from '@/lib/auth'
 import { canCreateInCollection, canEditInCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
 import { recurrenceLabel, reminderCategories, reminderCategoryLabel, reminderRecurrences } from '@/lib/reminders'
 import { hasHusbandryData, mergeHusbandryValues } from '@/lib/husbandry'
-import { fmtDate, plantName, taxonomyLabel } from '@/lib/utils'
+import { dateInput, fmtDate, plantName, taxonomyLabel } from '@/lib/utils'
 import Link from 'next/link'
 import QRCode from 'qrcode'
+
+const conditionCategories = [
+  ['WILTING', 'Wilting'],
+  ['YELLOWING_LEAVES', 'Yellowing leaves'],
+  ['CRISPY_LEAVES', 'Crispy leaves'],
+  ['PESTS', 'Pests'],
+  ['DISEASE', 'Disease'],
+  ['ROOT_ISSUE', 'Root issue'],
+  ['SUNBURN', 'Sunburn'],
+  ['NUTRIENT_ISSUE', 'Nutrient issue'],
+  ['MECHANICAL_DAMAGE', 'Mechanical damage'],
+  ['OTHER', 'Other'],
+] as const
+
+const conditionSeverities = ['LOW', 'MODERATE', 'HIGH', 'CRITICAL'] as const
+const conditionStatuses = ['OPEN', 'IMPROVING', 'RESOLVED'] as const
 
 export default async function InstanceDetail({
   params,
@@ -122,6 +142,23 @@ export default async function InstanceDetail({
         orderBy: [{ completedAt: 'asc' }, { pausedAt: 'asc' }, { nextSendAt: 'asc' }, { dueAt: 'desc' }],
       })
     : []
+
+  const [careEvents, careConditions] = await Promise.all([
+    prisma.plantCareEvent.findMany({
+      where: { collectionId: collection.id, plantInstanceId: id },
+      orderBy: { performedAt: 'desc' },
+      take: 8,
+    }),
+    prisma.plantCondition.findMany({
+      where: { collectionId: collection.id, plantInstanceId: id },
+      orderBy: [{ status: 'asc' }, { observedAt: 'desc' }],
+    }),
+  ])
+  const lastWatered = careEvents.find((event) => event.eventType === 'WATERED')?.performedAt
+  const openConditions = careConditions.filter((condition) => condition.status !== 'RESOLVED')
+  const waterCadence = waterCadenceDays(effectiveHusbandry.summaryWater || effectiveHusbandry.wateringCadence)
+  const nextWatering = new Date(lastWatered || i.acquisitionDate || i.propagationDate || i.createdAt)
+  nextWatering.setDate(nextWatering.getDate() + waterCadence)
 
   const follows = user
     ? await prisma.follow.findMany({
@@ -278,6 +315,104 @@ export default async function InstanceDetail({
     </Card>
   )
 
+  const careCard = (
+    <Card>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="font-bold">Care</h3>
+          <p className="text-sm text-stone-600">Last watering, open conditions, and recent care history.</p>
+        </div>
+        <Link className="text-sm font-medium text-[#2f6b45] underline" href={collectionPath(collection.slug, '/care')}>Care queue</Link>
+      </div>
+      <div className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
+        <div className="rounded-lg border border-stone-200 bg-white/60 p-3">
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-stone-500">Last watered</p>
+          <p className="mt-1 font-medium">{fmtDate(lastWatered)}</p>
+        </div>
+        <div className="rounded-lg border border-stone-200 bg-white/60 p-3">
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-stone-500">Next estimate</p>
+          <p className="mt-1 font-medium">{fmtDate(nextWatering)}</p>
+        </div>
+        <div className="rounded-lg border border-stone-200 bg-white/60 p-3">
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-stone-500">Open conditions</p>
+          <p className="mt-1 font-medium">{openConditions.length}</p>
+        </div>
+      </div>
+
+      {canCreateRecords && (
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <form action={completeCareTask} className="grid gap-2 rounded-lg border border-stone-200 bg-white/60 p-3">
+            <input type="hidden" name="collectionSlug" value={collection.slug} />
+            <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}`)} />
+            <input type="hidden" name="plantInstanceId" value={id} />
+            <input type="hidden" name="taskType" value="WATER" />
+            <Field label="Watered on" name="performedAt" type="date" defaultValue={dateInput(new Date())} />
+            <TextArea label="Notes" name="notes" className="min-h-14" />
+            <Button>Log watering</Button>
+          </form>
+
+          <form action={createPlantCondition} className="grid gap-2 rounded-lg border border-stone-200 bg-white/60 p-3">
+            <input type="hidden" name="collectionSlug" value={collection.slug} />
+            <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}`)} />
+            <input type="hidden" name="plantInstanceId" value={id} />
+            <Select label="Condition" name="category" defaultValue="WILTING">
+              {conditionCategories.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </Select>
+            <Select label="Severity" name="severity" defaultValue="MODERATE">
+              {conditionSeverities.map((value) => <option key={value} value={value}>{value}</option>)}
+            </Select>
+            <TextArea label="Notes" name="notes" className="min-h-14" />
+            <Button>Add condition</Button>
+          </form>
+        </div>
+      )}
+
+      {careConditions.length > 0 && (
+        <div className="mt-4 grid gap-2">
+          <p className="text-sm font-semibold">Conditions</p>
+          {careConditions.map((condition) => (
+            canCreateRecords ? (
+              <form key={condition.id} action={updatePlantCondition} className="grid gap-2 rounded-lg border border-stone-200 bg-white/60 p-3 text-sm md:grid-cols-[1fr_10rem_10rem_auto]">
+                <input type="hidden" name="id" value={condition.id} />
+                <input type="hidden" name="collectionSlug" value={collection.slug} />
+                <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}`)} />
+                <div className="min-w-0">
+                  <p className="font-medium">{condition.category.replaceAll('_', ' ').toLowerCase()}</p>
+                  <p className="text-xs text-stone-600">Observed {fmtDate(condition.observedAt)}</p>
+                  <input name="notes" defaultValue={condition.notes || ''} className="mt-2 w-full min-w-0 rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm" />
+                </div>
+                <Select label="Severity" name="severity" defaultValue={condition.severity}>
+                  {conditionSeverities.map((value) => <option key={value} value={value}>{value}</option>)}
+                </Select>
+                <Select label="Status" name="status" defaultValue={condition.status}>
+                  {conditionStatuses.map((value) => <option key={value} value={value}>{value}</option>)}
+                </Select>
+                <Button className="self-end">Save</Button>
+              </form>
+            ) : (
+              <div key={condition.id} className="rounded-lg border border-stone-200 bg-white/60 p-3 text-sm">
+                <p className="font-medium">{condition.category.replaceAll('_', ' ').toLowerCase()} · {condition.severity.toLowerCase()} · {condition.status.toLowerCase()}</p>
+                <p className="text-xs text-stone-600">Observed {fmtDate(condition.observedAt)}</p>
+                {condition.notes && <p className="mt-1 whitespace-pre-wrap text-stone-700">{condition.notes}</p>}
+              </div>
+            )
+          ))}
+        </div>
+      )}
+
+      <div className="mt-4 space-y-2">
+        <p className="text-sm font-semibold">Recent care history</p>
+        {careEvents.length === 0 && <p className="text-sm text-stone-600">No care events logged yet.</p>}
+        {careEvents.map((event) => (
+          <div key={event.id} className="rounded-lg border border-stone-200 bg-white/60 p-3 text-sm">
+            <p className="font-medium">{event.eventType.replaceAll('_', ' ').toLowerCase()} · {fmtDate(event.performedAt)}</p>
+            {event.notes && <p className="mt-1 whitespace-pre-wrap text-stone-700">{event.notes}</p>}
+          </div>
+        ))}
+      </div>
+    </Card>
+  )
+
   const transferCard = canEditRecords && i.status === 'ACTIVE' ? (
     <Card>
       <h3 className="font-bold">Transfer</h3>
@@ -373,6 +508,8 @@ export default async function InstanceDetail({
         </Card>
 
         {photosCard}
+
+        <div className="xl:col-span-2">{careCard}</div>
 
         <Card id="husbandry" className="xl:order-4">
           <h3 className="font-bold">Husbandry</h3>

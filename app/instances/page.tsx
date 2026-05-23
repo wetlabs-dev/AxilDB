@@ -64,10 +64,11 @@ export default async function Instances() {
             <label className="grid gap-1 text-sm font-medium">
               <span className="flex items-center gap-1.5">
                 <span>Type</span>
-                <HelpTooltip>Mother plants are acquired source plants. Propagations are plants created from another plant or batch.</HelpTooltip>
+                <HelpTooltip>Mother plants are acquired established/source plants. Acquired propagations are starter plants, cuttings, or leaf props from outside this collection. Propagations are plants created from tracked parents inside this collection.</HelpTooltip>
               </span>
               <select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="instanceType">
                 <option>MOTHER</option>
+                <option>ACQUIRED_PROPAGATION</option>
                 <option>PROPAGATION</option>
               </select>
             </label>

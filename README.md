@@ -15,6 +15,9 @@ It is designed for real collection work: messy taxonomy, acquisition names, alia
 - Live-linked husbandry guides so similar definitions can reuse the same care guidance, with fork-to-local-copy support.
 - Specimen-level husbandry overrides that highlight local care differences from the inherited definition guide.
 - AI Magic Fill for complete husbandry guide drafts, stored as editable draft content with model/review metadata.
+- Smart Care Queue that combines husbandry cadence, watering history, propagation stage, open health conditions, bloom follow-ups, pest checks, and manual reminders into a prioritized collection worklist.
+- Care event history for watering, fertilizing, repotting, pest checks, health checks, propagation checks, bloom checks, and other care tasks.
+- Plant condition tracking for issues like wilting, yellowing leaves, crispy leaves, pests, disease, root issues, sunburn, nutrient issues, and mechanical damage, with severity/status follow-up.
 - Plant instances with generated plant IDs, acquisition/propagation dates, source/distributor metadata, location, archive status, notes, and photos.
 - Automatic plant ID generation based on plant definition, date, context, and sequence number.
 - Propagation events with parent/child links, method, date, success status, and generated child plant IDs.

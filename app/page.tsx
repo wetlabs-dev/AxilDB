@@ -1,9 +1,10 @@
 import { PlantImage } from '@/components/PlantImage'
 import { Card } from '@/components/ui'
+import { careQueueSummary, getCareQueue } from '@/lib/care-queue'
 import { collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
 import { cn, fmtDate, plantName } from '@/lib/utils'
-import { Archive, Flower2, GitBranch, Leaf, Sparkles, Sprout } from 'lucide-react'
+import { Archive, ClipboardCheck, Flower2, GitBranch, Leaf, Sparkles, Sprout } from 'lucide-react'
 import Link from 'next/link'
 
 type PhotoLookup = Record<string, string | undefined>
@@ -107,12 +108,13 @@ export default async function Dashboard({
   searchParams: Promise<{ activity?: string; type?: string }>
 }) {
   const sp = await searchParams
-  const { collection } = await requireCollectionViewer()
+  const context = await requireCollectionViewer()
+  const { collection } = context
   const collectionWhere = { collectionId: collection.id }
   const activityTake = Math.min(Math.max(Number(sp.activity || 12) || 12, 12), 48)
   const activeKind = activityKinds.includes(sp.type as ActivityKind) ? (sp.type as ActivityKind) : undefined
   const queryTake = activeKind ? Math.max(activityTake * 4, 48) : activityTake
-  const [active, recentProps, blooms, sports, acquired, archived] = await Promise.all([
+  const [active, recentProps, blooms, sports, acquired, archived, careItems] = await Promise.all([
     prisma.plantInstance.count({ where: { ...collectionWhere, status: 'ACTIVE' } }),
     prisma.propagationEvent.findMany({
       where: collectionWhere,
@@ -136,7 +138,7 @@ export default async function Dashboard({
       orderBy: { updatedAt: 'desc' },
     }),
     prisma.plantInstance.findMany({
-      where: { ...collectionWhere, instanceType: 'MOTHER' },
+      where: { ...collectionWhere, instanceType: { in: ['MOTHER', 'ACQUIRED_PROPAGATION'] } },
       take: activeKind && activeKind !== 'acquired' ? 0 : queryTake,
       orderBy: [{ acquisitionDate: 'desc' }, { createdAt: 'desc' }],
       include: { plantDefinition: true },
@@ -147,7 +149,9 @@ export default async function Dashboard({
       orderBy: { archiveDate: 'desc' },
       include: { plantDefinition: true },
     }),
+    getCareQueue(prisma, { collectionId: collection.id, collectionSlug: collection.slug, userId: context.user?.id }),
   ])
+  const care = careQueueSummary(careItems)
 
   const instanceIds = Array.from(new Set([
     ...recentProps.flatMap((event) => [
@@ -244,6 +248,7 @@ export default async function Dashboard({
     .slice(0, activityTake)
 
   const stats = [
+    ['Care today', care.today, ClipboardCheck, collectionPath(collection.slug, '/care')],
     ['Active plants', active, Leaf, collectionPath(collection.slug, '/instances')],
     ['Recent propagations', recentProps.length, GitBranch, collectionPath(collection.slug, '/propagations')],
     ['Recent blooms', blooms.length, Flower2, collectionPath(collection.slug, '/blooms')],
@@ -257,7 +262,7 @@ export default async function Dashboard({
         <p className="mt-1 text-sm text-stone-600">Welcome back. Here&apos;s what&apos;s growing on.</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {stats.map(([label, value, Icon, href]) => (
           <Link key={label} href={href} className="group block">
             <Card className="transition group-hover:-translate-y-0.5 group-hover:shadow-[0_14px_36px_rgba(47,38,24,0.10)]">

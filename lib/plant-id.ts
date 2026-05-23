@@ -39,6 +39,7 @@ export function plantDefinitionCode(definition: Pick<PlantDefinition, 'genus' | 
 
 export function plantIdContextCode(instanceType?: string | null, method?: string | null) {
   if (method) return methodCodes[method] || segment(method, 'OT').slice(0, 2)
+  if (instanceType === 'ACQUIRED_PROPAGATION') return 'AP'
   if (instanceType === 'PROPAGATION') return 'PR'
   return 'AC'
 }

@@ -35,6 +35,9 @@ model User {
   reminders           Reminder[]
   follows             Follow[]
   followNotifications FollowNotification[]
+  plantCareEvents     PlantCareEvent[]
+  plantConditions     PlantCondition[]
+  plantCareAdjustments PlantCareAdjustment[]
   twoFactor           UserTwoFactor?
   twoFactorChallenges TwoFactorChallenge[]
   memberships         CollectionMembership[]
@@ -90,6 +93,9 @@ model Collection {
   bloomEvents         BloomEvent[]
   reminders           Reminder[]
   reminderDeliveries  ReminderDelivery[]
+  plantCareEvents     PlantCareEvent[]
+  plantConditions     PlantCondition[]
+  plantCareAdjustments PlantCareAdjustment[]
   governingBodies     GoverningBody[]
   plantHusbandryGuides PlantHusbandryGuide[]
   plantHusbandryOverrides PlantHusbandryOverride[]
@@ -699,6 +705,9 @@ model PlantInstance {
   blooms          BloomEvent[]
   sportRecords    SportStabilityRecord[]
   husbandryOverride PlantHusbandryOverride?
+  careEvents      PlantCareEvent[]
+  conditions      PlantCondition[]
+  careAdjustments PlantCareAdjustment[]
   outgoingTransferRequests PlantTransferRequest[] @relation("SourcePlantTransferRequests")
   incomingTransferRequests PlantTransferRequest[] @relation("TargetPlantTransferRequests")
 
@@ -790,6 +799,81 @@ model PlantHusbandryOverride {
 
   @@index([collectionId])
   @@index([plantInstanceId])
+}
+
+model PlantCareEvent {
+  id              String   @id @default(cuid())
+  collectionId    String?
+  plantInstanceId String
+  userId          String?
+  eventType       String
+  performedAt     DateTime @default(now())
+  notes           String?
+  metadata        Json?
+  createdAt       DateTime @default(now())
+
+  collection    Collection?    @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  plantInstance PlantInstance @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
+  user          User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([collectionId])
+  @@index([plantInstanceId])
+  @@index([userId])
+  @@index([eventType])
+  @@index([performedAt])
+}
+
+model PlantCondition {
+  id              String    @id @default(cuid())
+  collectionId    String?
+  plantInstanceId String
+  userId          String?
+  category        String
+  severity        String    @default("MODERATE")
+  status          String    @default("OPEN")
+  observedAt      DateTime  @default(now())
+  resolvedAt      DateTime?
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  collection    Collection?    @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  plantInstance PlantInstance @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
+  user          User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([collectionId])
+  @@index([plantInstanceId])
+  @@index([userId])
+  @@index([category])
+  @@index([severity])
+  @@index([status])
+  @@index([observedAt])
+}
+
+model PlantCareAdjustment {
+  id                  String    @id @default(cuid())
+  collectionId        String?
+  plantInstanceId     String
+  userId              String?
+  taskType            String
+  cadenceOverrideDays Int?
+  snoozedUntil        DateTime?
+  disabled            Boolean   @default(false)
+  notes               String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  collection    Collection?    @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  plantInstance PlantInstance @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
+  user          User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([collectionId, plantInstanceId, taskType])
+  @@index([collectionId])
+  @@index([plantInstanceId])
+  @@index([userId])
+  @@index([taskType])
+  @@index([snoozedUntil])
+  @@index([disabled])
 }
 
 model PropagationEvent {

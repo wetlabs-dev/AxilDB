@@ -11,6 +11,7 @@ import {
   Bell,
   BookOpen,
   CircleHelp,
+  ClipboardCheck,
   Eye,
   FileText,
   Flower2,
@@ -51,6 +52,7 @@ const navSections = [
     items: [
       ['/', 'Dashboard', Home],
       ['/search', 'Search', Search],
+      ['/care', 'Care Queue', ClipboardCheck],
     ],
   },
   {

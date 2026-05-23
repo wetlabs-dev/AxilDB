@@ -53,6 +53,7 @@ export default async function EditInstance({ params }: { params: Promise<{ id: s
             Type
             <select className={selectClass} name="instanceType" defaultValue={instance.instanceType}>
               <option>MOTHER</option>
+              <option>ACQUIRED_PROPAGATION</option>
               <option>PROPAGATION</option>
             </select>
           </label>

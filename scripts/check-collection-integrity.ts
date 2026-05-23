@@ -17,6 +17,9 @@ const requiredCollectionModels = [
   ['FollowNotification', 'followNotification'],
   ['PlantHusbandryGuide', 'plantHusbandryGuide'],
   ['PlantHusbandryOverride', 'plantHusbandryOverride'],
+  ['PlantCareEvent', 'plantCareEvent'],
+  ['PlantCondition', 'plantCondition'],
+  ['PlantCareAdjustment', 'plantCareAdjustment'],
 ] as const
 
 const relationshipChecks = [
@@ -249,6 +252,33 @@ const relationshipChecks = [
       FROM "PlantHusbandryOverride" override
       JOIN "PlantInstance" instance ON instance.id = override."plantInstanceId"
       WHERE override."collectionId" IS DISTINCT FROM instance."collectionId"
+    `,
+  },
+  {
+    label: 'PlantCareEvent.collectionId matches PlantInstance.collectionId',
+    sql: `
+      SELECT COUNT(*)::int AS count
+      FROM "PlantCareEvent" event
+      JOIN "PlantInstance" instance ON instance.id = event."plantInstanceId"
+      WHERE event."collectionId" IS DISTINCT FROM instance."collectionId"
+    `,
+  },
+  {
+    label: 'PlantCondition.collectionId matches PlantInstance.collectionId',
+    sql: `
+      SELECT COUNT(*)::int AS count
+      FROM "PlantCondition" condition
+      JOIN "PlantInstance" instance ON instance.id = condition."plantInstanceId"
+      WHERE condition."collectionId" IS DISTINCT FROM instance."collectionId"
+    `,
+  },
+  {
+    label: 'PlantCareAdjustment.collectionId matches PlantInstance.collectionId',
+    sql: `
+      SELECT COUNT(*)::int AS count
+      FROM "PlantCareAdjustment" adjustment
+      JOIN "PlantInstance" instance ON instance.id = adjustment."plantInstanceId"
+      WHERE adjustment."collectionId" IS DISTINCT FROM instance."collectionId"
     `,
   },
   {
@@ -485,6 +515,9 @@ const relationshipChecks = [
         'SPORT_STABILITY_RECORD',
         'PLANT_HUSBANDRY_GUIDE',
         'PLANT_HUSBANDRY_OVERRIDE',
+        'PLANT_CARE_EVENT',
+        'PLANT_CONDITION',
+        'PLANT_CARE_ADJUSTMENT',
         'TRANSFER_CONNECTION',
         'PLANT_TRANSFER_REQUEST',
         'PLANT_DEFINITION_SHARE_REQUEST',

@@ -16,6 +16,7 @@ import {
 import { createDemoData } from '@/lib/demo-data'
 import { notifyFollowers } from '@/lib/follows'
 import { generatePlantId } from '@/lib/plant-id'
+import { nextOccurrence } from '@/lib/reminders'
 import { plantName } from '@/lib/utils'
 import { husbandryFieldNames, husbandryFormValues } from '@/lib/husbandry'
 
@@ -41,6 +42,14 @@ const boundedInt = (value: string | undefined, fallback: number, min: number, ma
 }
 const isSportLine = (status?: string | null) =>
   !!status && !['NONE', 'UNSTABLE', 'REVERTED'].includes(status)
+const careEventForTask = (taskType?: string | null) => {
+  if (taskType === 'WATER') return 'WATERED'
+  if (taskType === 'PROPAGATION_CHECK') return 'PROPAGATION_CHECK'
+  if (taskType === 'PEST_CHECK') return 'PEST_CHECK'
+  if (taskType === 'HEALTH_CHECK') return 'HEALTH_CHECK'
+  if (taskType === 'BLOOM_CHECK') return 'BLOOM_CHECK'
+  return 'OTHER'
+}
 
 function aliasRows(fd: FormData) {
   const names = fd.getAll('aliasName').map((value) => String(value || '').trim())
@@ -111,6 +120,9 @@ async function cleanupPlantInstanceDependents(collectionId: string, id: string) 
   }
 
   await cleanupGenericEntity(collectionId, 'PLANT_INSTANCE', id)
+  await prisma.plantCareAdjustment.deleteMany({ where: { collectionId, plantInstanceId: id } })
+  await prisma.plantCondition.deleteMany({ where: { collectionId, plantInstanceId: id } })
+  await prisma.plantCareEvent.deleteMany({ where: { collectionId, plantInstanceId: id } })
 }
 
 async function cleanupOrphanPropagationEvents(collectionId: string) {
@@ -753,13 +765,146 @@ export async function completeReminder(fd: FormData) {
   const id = val(fd, 'id')!
   const destination = back(fd)
   const { user, reminder } = await requireReminderAccess(id, await collectionSlug(fd))
+  const completedAt = new Date()
+  const nextSendAt = nextOccurrence(completedAt, reminder.rrule)
 
   await prisma.reminder.update({
     where: { id },
-    data: { completedAt: new Date(), nextSendAt: null },
+    data: nextSendAt
+      ? { dueAt: nextSendAt, nextSendAt, completedAt: null }
+      : { completedAt, nextSendAt: null },
   })
 
-  await audit(user, 'COMPLETE', 'REMINDER', id, `Completed reminder ${reminder.title}`, undefined, reminder.collectionId)
+  await audit(user, 'COMPLETE', 'REMINDER', id, nextSendAt ? `Completed reminder ${reminder.title}; next due ${nextSendAt.toLocaleDateString()}` : `Completed reminder ${reminder.title}`, undefined, reminder.collectionId)
+  revalidateDestination(destination)
+  redirect(destination)
+}
+
+export async function completeCareTask(fd: FormData) {
+  const destination = back(fd)
+  const slug = await collectionSlug(fd)
+  const context = await requireCollectionLogger(slug)
+  const taskType = val(fd, 'taskType') || 'OTHER'
+  const reminderId = val(fd, 'reminderId')
+
+  if (reminderId) {
+    const { reminder } = await requireReminderAccess(reminderId, slug)
+    const completedAt = new Date()
+    const nextSendAt = nextOccurrence(completedAt, reminder.rrule)
+    await prisma.reminder.update({
+      where: { id: reminderId },
+      data: nextSendAt
+        ? { dueAt: nextSendAt, nextSendAt, completedAt: null }
+        : { completedAt, nextSendAt: null },
+    })
+    await audit(context.user, 'COMPLETE', 'REMINDER', reminderId, `Completed care reminder ${reminder.title}`, undefined, context.collection.id)
+    revalidateDestination(destination)
+    redirect(destination)
+  }
+
+  const plantInstanceId = val(fd, 'plantInstanceId')!
+  const plant = await prisma.plantInstance.findFirstOrThrow({
+    where: { id: plantInstanceId, collectionId: context.collection.id },
+    select: { id: true, plantId: true },
+  })
+
+  const event = await prisma.plantCareEvent.create({
+    data: {
+      collectionId: context.collection.id,
+      plantInstanceId,
+      userId: context.user.id,
+      eventType: careEventForTask(taskType),
+      performedAt: date(val(fd, 'performedAt')) || new Date(),
+      notes: val(fd, 'notes'),
+      metadata: {
+        taskType,
+        conditionId: val(fd, 'conditionId') || null,
+        bloomEventId: val(fd, 'bloomEventId') || null,
+      },
+    },
+  })
+
+  await prisma.plantCareAdjustment.updateMany({
+    where: { collectionId: context.collection.id, plantInstanceId, taskType },
+    data: { snoozedUntil: null },
+  })
+  await audit(context.user, 'CREATE', 'PLANT_CARE_EVENT', event.id, `Completed ${taskType.toLowerCase().replaceAll('_', ' ')} for ${plant.plantId}`, undefined, context.collection.id)
+  revalidateDestination(destination)
+  redirect(destination)
+}
+
+export async function snoozeCareTask(fd: FormData) {
+  const destination = back(fd)
+  const context = await requireCollectionLogger(await collectionSlug(fd))
+  const plantInstanceId = val(fd, 'plantInstanceId')!
+  const taskType = val(fd, 'taskType')!
+  await prisma.plantInstance.findFirstOrThrow({ where: { id: plantInstanceId, collectionId: context.collection.id }, select: { id: true } })
+  const days = boundedInt(val(fd, 'days'), 1, 1, 30)
+  const snoozedUntil = new Date()
+  snoozedUntil.setDate(snoozedUntil.getDate() + days)
+
+  await prisma.plantCareAdjustment.upsert({
+    where: { collectionId_plantInstanceId_taskType: { collectionId: context.collection.id, plantInstanceId, taskType } },
+    create: {
+      collectionId: context.collection.id,
+      plantInstanceId,
+      userId: context.user.id,
+      taskType,
+      snoozedUntil,
+    },
+    update: { snoozedUntil, disabled: false, userId: context.user.id },
+  })
+  await audit(context.user, 'SNOOZE', 'PLANT_CARE_ADJUSTMENT', plantInstanceId, `Snoozed ${taskType.toLowerCase().replaceAll('_', ' ')} for ${days} day${days === 1 ? '' : 's'}`, undefined, context.collection.id)
+  revalidateDestination(destination)
+  redirect(destination)
+}
+
+export async function createPlantCondition(fd: FormData) {
+  const destination = back(fd)
+  const context = await requireCollectionLogger(await collectionSlug(fd))
+  const plantInstanceId = val(fd, 'plantInstanceId')!
+  const plant = await prisma.plantInstance.findFirstOrThrow({
+    where: { id: plantInstanceId, collectionId: context.collection.id },
+    select: { id: true, plantId: true },
+  })
+
+  const condition = await prisma.plantCondition.create({
+    data: {
+      collectionId: context.collection.id,
+      plantInstanceId,
+      userId: context.user.id,
+      category: val(fd, 'category') || 'OTHER',
+      severity: val(fd, 'severity') || 'MODERATE',
+      status: val(fd, 'status') || 'OPEN',
+      observedAt: date(val(fd, 'observedAt')) || new Date(),
+      notes: val(fd, 'notes'),
+    },
+  })
+
+  await audit(context.user, 'CREATE', 'PLANT_CONDITION', condition.id, `Logged ${condition.category.toLowerCase().replaceAll('_', ' ')} for ${plant.plantId}`, undefined, context.collection.id)
+  revalidateDestination(destination)
+  redirect(destination)
+}
+
+export async function updatePlantCondition(fd: FormData) {
+  const destination = back(fd)
+  const context = await requireCollectionLogger(await collectionSlug(fd))
+  const id = val(fd, 'id')!
+  const existing = await prisma.plantCondition.findFirstOrThrow({
+    where: { id, collectionId: context.collection.id },
+    select: { id: true, category: true },
+  })
+  const status = val(fd, 'status') || 'OPEN'
+  await prisma.plantCondition.update({
+    where: { id },
+    data: {
+      severity: val(fd, 'severity') || 'MODERATE',
+      status,
+      resolvedAt: status === 'RESOLVED' ? new Date() : null,
+      notes: clearableVal(fd, 'notes'),
+    },
+  })
+  await audit(context.user, 'UPDATE', 'PLANT_CONDITION', id, `Updated condition ${existing.category.toLowerCase().replaceAll('_', ' ')}`, undefined, context.collection.id)
   revalidateDestination(destination)
   redirect(destination)
 }
