@@ -135,6 +135,8 @@ services:
         required: false
       - path: /etc/axildb/axildb.env
         required: false
+    environment:
+      DATABASE_URL: postgresql://plants:plants@db:5432/axildb?schema=public
     volumes:
       - .:/app
       - axildb_docs_node_modules:/app/node_modules
