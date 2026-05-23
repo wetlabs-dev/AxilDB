@@ -176,8 +176,8 @@ export default async function CollectionTransfersPage({ searchParams }: { search
         orderBy: { createdAt: 'desc' },
       })
     : []
-  const typePhotoByDefinition = connectedDefinitionTypePhotos.reduce<Record<string, string>>((acc, photo) => {
-    if (!acc[photo.entityId]) acc[photo.entityId] = photo.path
+  const typePhotoByDefinition = connectedDefinitionTypePhotos.reduce<Record<string, (typeof connectedDefinitionTypePhotos)[number]>>((acc, photo) => {
+    if (!acc[photo.entityId]) acc[photo.entityId] = photo
     return acc
   }, {})
   const outboundConnectionByTargetId = new Map(outboundConnections.map((connection) => [connection.targetCollectionId, connection]))

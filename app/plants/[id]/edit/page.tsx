@@ -1,9 +1,10 @@
 import { prisma } from '@/lib/prisma'
-import { deletePlantDefinition, deletePlantHusbandryGuide, forkPlantHusbandryGuide, linkPlantHusbandryGuide, savePlantHusbandryGuide, savePlantHusbandryGuideField, updatePlantDefinition } from '@/app/actions'
+import { deletePlantDefinition, deletePlantHusbandryGuide, forkPlantHusbandryGuide, linkPlantHusbandryGuide, savePlantHusbandryGuide, savePlantHusbandryGuideField, updatePhotoFraming, updatePlantDefinition } from '@/app/actions'
 import { Button, Card, Field, HelpTooltip, SuggestionDatalist, TextArea } from '@/components/ui'
 import { ConfidenceSelect, PlantAliasFields } from '@/components/PlantAliasFields'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { PlantImage } from '@/components/PlantImage'
+import { PhotoFramingEditor } from '@/components/PhotoFramingEditor'
 import { rankedSuggestions } from '@/lib/suggestions'
 import { AIDescriptionField, AIMagicFillButton } from '@/components/AIDescriptionField'
 import { collectionPath, requireCollectionAdmin } from '@/lib/collections'
@@ -253,22 +254,38 @@ export default async function EditPlant({
         <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(16rem,22rem)_1fr]">
           <div className="overflow-hidden rounded-lg border border-stone-200 bg-white/70">
             <div className="aspect-[4/3]">
-              <PlantImage src={currentTypePhoto?.path} alt={`${plant.genus} ${plant.species} type image`} />
+              <PlantImage src={currentTypePhoto} alt={`${plant.genus} ${plant.species} type image`} />
             </div>
-            <div className="space-y-1 p-3 text-sm">
+            <div className="space-y-3 p-3 text-sm">
               {currentTypePhoto ? (
                 <>
-                  <p className="font-medium">{currentTypePhoto.caption || 'Type image'}</p>
-                  <p className="text-stone-600">
-                    Source:{' '}
-                    {currentTypePhoto.sourceUrl ? (
-                      <a className="text-[#2f6b45] underline" href={currentTypePhoto.sourceUrl}>
-                        {currentTypePhoto.source || currentTypePhoto.sourceUrl}
-                      </a>
-                    ) : (
-                      currentTypePhoto.source || '—'
-                    )}
-                  </p>
+                  <div className="space-y-1">
+                    <p className="font-medium">{currentTypePhoto.caption || 'Type image'}</p>
+                    <p className="text-stone-600">
+                      Source:{' '}
+                      {currentTypePhoto.sourceUrl ? (
+                        <a className="text-[#2f6b45] underline" href={currentTypePhoto.sourceUrl}>
+                          {currentTypePhoto.source || currentTypePhoto.sourceUrl}
+                        </a>
+                      ) : (
+                        currentTypePhoto.source || '—'
+                      )}
+                    </p>
+                  </div>
+                  <details className="group rounded-lg border border-stone-200 bg-white/60">
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-2 py-1.5 text-xs font-medium">
+                      <span>Edit framing</span>
+                      <span className="rounded-md border border-stone-300 bg-white/70 px-2 py-0.5 text-[0.68rem] group-open:hidden">Open</span>
+                      <span className="hidden rounded-md border border-stone-300 bg-white/70 px-2 py-0.5 text-[0.68rem] group-open:inline-block">Hide</span>
+                    </summary>
+                    <form action={updatePhotoFraming} className="grid gap-2 border-t border-stone-200 p-2">
+                      <input type="hidden" name="id" value={currentTypePhoto.id} />
+                      <input type="hidden" name="collectionSlug" value={collection.slug} />
+                      <input type="hidden" name="back" value={collectionPath(collection.slug, `/plants/${id}/edit`)} />
+                      <PhotoFramingEditor src={currentTypePhoto.path} initial={currentTypePhoto} />
+                      <Button className="px-3 py-1.5 text-xs">Save framing</Button>
+                    </form>
+                  </details>
                 </>
               ) : (
                 <p className="text-stone-600">No definition-level type image yet.</p>
@@ -280,10 +297,7 @@ export default async function EditPlant({
             <input type="hidden" name="entityId" value={id} />
             <input type="hidden" name="collectionSlug" value={collection.slug} />
             <input type="hidden" name="back" value={collectionPath(collection.slug, `/plants/${id}/edit`)} />
-            <label className="grid gap-1 text-sm font-medium text-stone-800">
-              Image file
-              <input name="photo" type="file" accept="image/*" className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm" />
-            </label>
+            <PhotoFramingEditor fileInputName="photo" />
             <Field label="Caption" name="caption" />
             <Field label="Source" help="Credit where the image came from, such as Wikimedia Commons, a photographer, a nursery, or your own reference file." name="source" placeholder="Wikipedia, Wikimedia Commons, iNaturalist, photographer name..." />
             <Field label="Source URL" help="Optional link back to the image source or license page." name="sourceUrl" type="url" />

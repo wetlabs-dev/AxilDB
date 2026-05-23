@@ -91,12 +91,12 @@ export default async function Plants() {
   ])
   const husbandryGuideByDefinitionId = new Map(allHusbandryGuides.map((guide) => [guide.plantDefinitionId, guide]))
   const followCountByDefinitionId = new Map(followCounts.map((follow) => [follow.entityId, follow._count._all]))
-  const typePhotoByDefinition = definitionPhotos.reduce<Record<string, string>>((acc, photo) => {
-    if (!acc[photo.entityId]) acc[photo.entityId] = photo.path
+  const typePhotoByDefinition = definitionPhotos.reduce<Record<string, (typeof definitionPhotos)[number]>>((acc, photo) => {
+    if (!acc[photo.entityId]) acc[photo.entityId] = photo
     return acc
   }, {})
-  const typePhotoByInstance = typePhotos.reduce<Record<string, string>>((acc, photo) => {
-    if (!acc[photo.entityId]) acc[photo.entityId] = photo.path
+  const typePhotoByInstance = typePhotos.reduce<Record<string, (typeof typePhotos)[number]>>((acc, photo) => {
+    if (!acc[photo.entityId]) acc[photo.entityId] = photo
     return acc
   }, {})
   const sortedPlants = [...plants].sort((left, right) => {

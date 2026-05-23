@@ -38,8 +38,8 @@ export default async function SportReview() {
     where: { ...collectionWhere, entityType: 'PLANT_INSTANCE', entityId: { in: sports.map((sport) => sport.id) } },
     orderBy: [{ isCover: 'desc' }, { createdAt: 'desc' }],
   })
-  const photoByInstance = photos.reduce<Record<string, string>>((acc, photo) => {
-    if (!acc[photo.entityId]) acc[photo.entityId] = photo.path
+  const photoByInstance = photos.reduce<Record<string, (typeof photos)[number]>>((acc, photo) => {
+    if (!acc[photo.entityId]) acc[photo.entityId] = photo
     return acc
   }, {})
   const sortedSports = [...sports].sort((left, right) => {

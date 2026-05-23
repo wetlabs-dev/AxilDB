@@ -18,6 +18,12 @@ export type GalleryPhoto = {
   bloomDate?: string | null
   isCover: boolean
   isType: boolean
+  cropX?: number | null
+  cropY?: number | null
+  cropWidth?: number | null
+  cropHeight?: number | null
+  focalX?: number | null
+  focalY?: number | null
 }
 
 export function PhotoGallery({ photos }: { photos: GalleryPhoto[] }) {
@@ -79,7 +85,7 @@ export function PhotoGallery({ photos }: { photos: GalleryPhoto[] }) {
             className="group min-w-0 overflow-hidden rounded-lg border border-stone-200 bg-white/75 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#8fa58f] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#8fa58f]/40"
           >
             <div className="aspect-square overflow-hidden bg-[#d6dfc9]/45">
-              <PlantImage src={photo.path} alt={photo.caption || photo.plantId} className="transition duration-300 group-hover:scale-[1.04]" />
+              <PlantImage src={photo} alt={photo.caption || photo.plantId} className="transition duration-300 group-hover:scale-[1.04]" />
             </div>
             <div className="grid gap-1 p-2.5">
               <div className="flex min-w-0 items-center gap-1.5">

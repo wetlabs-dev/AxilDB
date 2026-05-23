@@ -251,6 +251,12 @@ async function copyDefinitionPhotos(
         sourceUrl: photo.sourceUrl,
         isCover: photo.isCover,
         isType: photo.isType,
+        cropX: photo.cropX,
+        cropY: photo.cropY,
+        cropWidth: photo.cropWidth,
+        cropHeight: photo.cropHeight,
+        focalX: photo.focalX,
+        focalY: photo.focalY,
         createdAt: photo.createdAt,
       },
     })
@@ -605,6 +611,12 @@ export async function acceptPlantTransferPackage(options: {
           sourceUrl: photo.sourceUrl,
           isCover: photo.isCover,
           isType: photo.isType,
+          cropX: photo.cropX,
+          cropY: photo.cropY,
+          cropWidth: photo.cropWidth,
+          cropHeight: photo.cropHeight,
+          focalX: photo.focalX,
+          focalY: photo.focalY,
         },
       })
     }
@@ -659,6 +671,12 @@ export async function acceptPlantTransferPackage(options: {
           sourceUrl: photo.sourceUrl,
           isCover: photo.isCover,
           isType: photo.isType,
+          cropX: photo.cropX,
+          cropY: photo.cropY,
+          cropWidth: photo.cropWidth,
+          cropHeight: photo.cropHeight,
+          focalX: photo.focalX,
+          focalY: photo.focalY,
         },
       })
     }

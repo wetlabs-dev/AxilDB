@@ -43,12 +43,12 @@ export default async function Blooms() {
     }),
   ])
 
-  const bloomPhotoByEvent = bloomPhotos.reduce<Record<string, string>>((acc, photo) => {
-    if (!acc[photo.entityId]) acc[photo.entityId] = photo.path
+  const bloomPhotoByEvent = bloomPhotos.reduce<Record<string, (typeof bloomPhotos)[number]>>((acc, photo) => {
+    if (!acc[photo.entityId]) acc[photo.entityId] = photo
     return acc
   }, {})
-  const photoByInstance = instancePhotos.reduce<Record<string, string>>((acc, photo) => {
-    if (!acc[photo.entityId]) acc[photo.entityId] = photo.path
+  const photoByInstance = instancePhotos.reduce<Record<string, (typeof instancePhotos)[number]>>((acc, photo) => {
+    if (!acc[photo.entityId]) acc[photo.entityId] = photo
     return acc
   }, {})
   const sortedBlooms = [...blooms].sort((left, right) => {

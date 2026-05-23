@@ -54,8 +54,8 @@ export default async function Propagations() {
     where: { ...collectionWhere, entityType: 'PLANT_INSTANCE', entityId: { in: instanceIds } },
     orderBy: [{ isCover: 'desc' }, { createdAt: 'desc' }],
   })
-  const photoByInstance = photos.reduce<Record<string, string>>((acc, photo) => {
-    if (!acc[photo.entityId]) acc[photo.entityId] = photo.path
+  const photoByInstance = photos.reduce<Record<string, (typeof photos)[number]>>((acc, photo) => {
+    if (!acc[photo.entityId]) acc[photo.entityId] = photo
     return acc
   }, {})
   const sortedEvents = [...events].sort((left, right) => {

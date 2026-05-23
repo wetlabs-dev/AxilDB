@@ -963,6 +963,12 @@ model Photo {
   caption    String?
   source     String?
   sourceUrl  String?
+  cropX      Float?
+  cropY      Float?
+  cropWidth  Float?
+  cropHeight Float?
+  focalX     Float?
+  focalY     Float?
   isCover    Boolean  @default(false)
   isType     Boolean  @default(false)
   createdAt  DateTime @default(now())

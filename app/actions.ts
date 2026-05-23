@@ -40,6 +40,20 @@ const boundedInt = (value: string | undefined, fallback: number, min: number, ma
   if (!Number.isFinite(parsed)) return fallback
   return Math.max(min, Math.min(max, Math.floor(parsed)))
 }
+const boundedFloat = (value: string | undefined, fallback: number | null, min: number, max: number) => {
+  if (value == null || value === '') return fallback
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return fallback
+  return Math.max(min, Math.min(max, parsed))
+}
+const photoFramingData = (fd: FormData) => ({
+  cropX: boundedFloat(val(fd, 'cropX'), null, 0, 100),
+  cropY: boundedFloat(val(fd, 'cropY'), null, 0, 100),
+  cropWidth: boundedFloat(val(fd, 'cropWidth'), null, 0, 100),
+  cropHeight: boundedFloat(val(fd, 'cropHeight'), null, 0, 100),
+  focalX: boundedFloat(val(fd, 'focalX'), 50, 0, 100),
+  focalY: boundedFloat(val(fd, 'focalY'), 50, 0, 100),
+})
 const isSportLine = (status?: string | null) =>
   !!status && !['NONE', 'UNSTABLE', 'REVERTED'].includes(status)
 const careEventForTask = (taskType?: string | null) => {
@@ -1209,6 +1223,23 @@ export async function deletePhoto(fd: FormData) {
 
   await audit(user, 'DELETE', 'PHOTO', id, `Deleted photo for ${photo.entityType} ${photo.entityId}`, photo, collection.id)
   revalidatePath(destination)
+  redirect(destination)
+}
+
+export async function updatePhotoFraming(fd: FormData) {
+  const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
+  const id = val(fd, 'id')!
+  const destination = back(fd)
+  const photo = await prisma.photo.findFirstOrThrow({ where: { id, collectionId: collection.id } })
+  const framing = photoFramingData(fd)
+
+  await prisma.photo.update({
+    where: { id },
+    data: framing,
+  })
+
+  await audit(user, 'UPDATE', 'PHOTO', id, `Updated photo framing for ${photo.entityType} ${photo.entityId}`, framing, collection.id)
+  revalidateDestination(destination)
   redirect(destination)
 }
 

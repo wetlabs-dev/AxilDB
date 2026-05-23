@@ -21,6 +21,24 @@ function redirectBack(req: Request, back: string, uploadError?: string) {
   return NextResponse.redirect(target, { status: 303 })
 }
 
+function boundedPercent(value: FormDataEntryValue | null, fallback?: number) {
+  if (value == null || value === '') return fallback
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return fallback
+  return Math.max(0, Math.min(100, parsed))
+}
+
+function framingFromForm(form: FormData) {
+  return {
+    cropX: boundedPercent(form.get('cropX')),
+    cropY: boundedPercent(form.get('cropY')),
+    cropWidth: boundedPercent(form.get('cropWidth')),
+    cropHeight: boundedPercent(form.get('cropHeight')),
+    focalX: boundedPercent(form.get('focalX'), 50),
+    focalY: boundedPercent(form.get('focalY'), 50),
+  }
+}
+
 export async function POST(req: Request) {
   let form: FormData
   try {
@@ -72,6 +90,7 @@ export async function POST(req: Request) {
       source,
       sourceUrl,
       isType: entityType === 'PLANT_DEFINITION',
+      ...framingFromForm(form),
     }
     const photo = entityType === 'PLANT_DEFINITION'
       ? (await prisma.$transaction([
@@ -79,7 +98,7 @@ export async function POST(req: Request) {
           prisma.photo.create({ data }),
         ]))[1]
       : await prisma.photo.create({ data })
-    await audit(user, 'CREATE', 'PHOTO', photo.id, `Uploaded photo for ${entityType} ${entityId}`, { filename, originalBytes: original.length, storedBytes: bytes.length, maxDimension: MAX_PHOTO_DIMENSION, source, sourceUrl }, collection.id)
+    await audit(user, 'CREATE', 'PHOTO', photo.id, `Uploaded photo for ${entityType} ${entityId}`, { filename, originalBytes: original.length, storedBytes: bytes.length, maxDimension: MAX_PHOTO_DIMENSION, source, sourceUrl, framing: framingFromForm(form) }, collection.id)
 
     if (entityType === 'PLANT_INSTANCE') {
       const instance = await prisma.plantInstance.findFirst({ where: { id: entityId, collectionId: collection.id } })

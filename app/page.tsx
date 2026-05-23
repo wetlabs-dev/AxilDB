@@ -1,4 +1,4 @@
-import { PlantImage } from '@/components/PlantImage'
+import { PlantImage, type PlantImageFrame } from '@/components/PlantImage'
 import { Card } from '@/components/ui'
 import { careQueueSummary, getCareQueue } from '@/lib/care-queue'
 import { collectionPath, requireCollectionViewer } from '@/lib/collections'
@@ -7,7 +7,7 @@ import { cn, fmtDate, plantName } from '@/lib/utils'
 import { Archive, ClipboardCheck, Flower2, GitBranch, Leaf, Sparkles, Sprout } from 'lucide-react'
 import Link from 'next/link'
 
-type PhotoLookup = Record<string, string | undefined>
+type PhotoLookup = Record<string, PlantImageFrame | undefined>
 type ActivityKind = 'propagation' | 'bloom' | 'sport' | 'acquired' | 'archive'
 type ActivityItem = {
   id: string
@@ -17,7 +17,7 @@ type ActivityItem = {
   title: string
   subtitle: string
   detail?: string | null
-  image?: string
+  image?: PlantImageFrame
 }
 
 function coverFor(photos: PhotoLookup, id?: string | null) {
@@ -177,11 +177,11 @@ export default async function Dashboard({
   ])
 
   const coverPhotosByInstance = coverPhotos.reduce<PhotoLookup>((acc, photo) => {
-    if (!acc[photo.entityId]) acc[photo.entityId] = photo.path
+    if (!acc[photo.entityId]) acc[photo.entityId] = photo
     return acc
   }, {})
   const bloomPhotosByEvent = bloomPhotos.reduce<PhotoLookup>((acc, photo) => {
-    if (!acc[photo.entityId]) acc[photo.entityId] = photo.path
+    if (!acc[photo.entityId]) acc[photo.entityId] = photo
     return acc
   }, {})
 

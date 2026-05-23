@@ -1,4 +1,5 @@
 import type { PrismaClient } from '@prisma/client'
+import type { PlantImageFrame } from '@/components/PlantImage'
 import { collectionPath } from '@/lib/collections'
 import { nextOccurrence, reminderCategoryLabel } from '@/lib/reminders'
 import { plantName } from '@/lib/utils'
@@ -28,7 +29,7 @@ export type CareQueueItem = {
   plantId?: string
   plantName?: string
   location?: string | null
-  image?: string
+  image?: PlantImageFrame
   href: string
   reminderId?: string
   conditionId?: string
@@ -121,9 +122,9 @@ function latestBy<T extends { plantInstanceId: string; eventType?: string; perfo
   return map
 }
 
-function imageLookup(photos: Array<{ entityId: string; path: string }>) {
-  return photos.reduce<Record<string, string>>((acc, photo) => {
-    if (!acc[photo.entityId]) acc[photo.entityId] = photo.path
+function imageLookup(photos: Array<{ entityId: string } & PlantImageFrame>) {
+  return photos.reduce<Record<string, PlantImageFrame>>((acc, photo) => {
+    if (!acc[photo.entityId]) acc[photo.entityId] = photo
     return acc
   }, {})
 }
@@ -171,7 +172,16 @@ export async function getCareQueue(
     prisma.photo.findMany({
       where: { collectionId, entityType: 'PLANT_INSTANCE' },
       orderBy: [{ isCover: 'desc' }, { createdAt: 'desc' }],
-      select: { entityId: true, path: true },
+      select: {
+        entityId: true,
+        path: true,
+        cropX: true,
+        cropY: true,
+        cropWidth: true,
+        cropHeight: true,
+        focalX: true,
+        focalY: true,
+      },
     }),
     prisma.bloomEvent.findMany({
       where: { collectionId, bloomEndDate: null, plantInstance: { status: 'ACTIVE' } },

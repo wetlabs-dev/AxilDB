@@ -46,8 +46,8 @@ export default async function Instances() {
     where: { ...collectionWhere, entityType: 'PLANT_INSTANCE', entityId: { in: instances.map((item) => item.id) } },
     orderBy: [{ isCover: 'desc' }, { createdAt: 'desc' }],
   })
-  const photoByInstance = photos.reduce<Record<string, string>>((acc, photo) => {
-    if (!acc[photo.entityId]) acc[photo.entityId] = photo.path
+  const photoByInstance = photos.reduce<Record<string, (typeof photos)[number]>>((acc, photo) => {
+    if (!acc[photo.entityId]) acc[photo.entityId] = photo
     return acc
   }, {})
   const sortedInstances = [...instances].sort((left, right) => {

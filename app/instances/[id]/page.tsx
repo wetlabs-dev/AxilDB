@@ -7,6 +7,7 @@ import {
   setCoverPhoto,
   setTypePhoto,
   deletePhoto,
+  updatePhotoFraming,
   markSportCandidate,
   markSportReverted,
   createReminder,
@@ -26,6 +27,7 @@ import { createPlantTransferRequest } from '@/app/transfer-actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { GreenThumbAssist } from '@/components/GreenThumbAssist'
 import { PlantImage } from '@/components/PlantImage'
+import { PhotoFramingEditor } from '@/components/PhotoFramingEditor'
 import { Button, Card, Field, Select, TextArea } from '@/components/ui'
 import { HusbandryBadges, HusbandryGuideView } from '@/components/Husbandry'
 import { waterCadenceDays } from '@/lib/care-queue'
@@ -308,7 +310,7 @@ export default async function InstanceDetail({
             <input type="hidden" name="entityId" value={id} />
             <input type="hidden" name="collectionSlug" value={collection.slug} />
             <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}`)} />
-            <input name="photo" type="file" accept="image/*" className="min-w-0 rounded-lg border p-2 text-sm" />
+            <PhotoFramingEditor fileInputName="photo" />
             <Field label="Caption" name="caption" />
             <Button>Upload photo</Button>
           </form>
@@ -320,7 +322,7 @@ export default async function InstanceDetail({
         {photos.map((p) => (
           <figure key={p.id} className="overflow-hidden rounded-lg border border-stone-200 bg-white/70">
             <div className="aspect-[4/3]">
-              <PlantImage src={p.path} alt={p.caption || 'Plant photo'} />
+              <PlantImage src={p} alt={p.caption || 'Plant photo'} />
             </div>
             <figcaption className="space-y-3 p-3 text-xs">
               <div>
@@ -342,6 +344,22 @@ export default async function InstanceDetail({
                     <Button className="px-3 py-1.5 text-xs" disabled={p.isType}>Set type</Button>
                   </form>
                 </div>
+              )}
+              {canEditRecords && (
+                <details className="group rounded-lg border border-stone-200 bg-white/60">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-2 py-1.5 font-medium">
+                    <span>Edit framing</span>
+                    <span className="rounded-md border border-stone-300 bg-white/70 px-2 py-0.5 text-[0.68rem] group-open:hidden">Open</span>
+                    <span className="hidden rounded-md border border-stone-300 bg-white/70 px-2 py-0.5 text-[0.68rem] group-open:inline-block">Hide</span>
+                  </summary>
+                  <form action={updatePhotoFraming} className="grid gap-2 border-t border-stone-200 p-2">
+                    <input type="hidden" name="id" value={p.id} />
+                    <input type="hidden" name="collectionSlug" value={collection.slug} />
+                    <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}`)} />
+                    <PhotoFramingEditor src={p.path} initial={p} />
+                    <Button className="px-3 py-1.5 text-xs">Save framing</Button>
+                  </form>
+                </details>
               )}
             </figcaption>
           </figure>
@@ -880,7 +898,7 @@ export default async function InstanceDetail({
                     <input type="hidden" name="entityId" value={b.id} />
                     <input type="hidden" name="collectionSlug" value={collection.slug} />
                     <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}`)} />
-                    <input name="photo" type="file" accept="image/*" className="rounded-lg border p-2" />
+                    <PhotoFramingEditor fileInputName="photo" />
                     <Field label="Caption" name="caption" />
                     <Button>Add bloom photo</Button>
                   </form>}
@@ -925,23 +943,39 @@ export default async function InstanceDetail({
                       {(photosByBloomId[b.id] || []).map((p) => (
                         <figure key={p.id} className="overflow-hidden rounded-xl border border-stone-200 bg-white/70">
                           <div className="aspect-[4/3]">
-                            <PlantImage src={p.path} alt={p.caption || 'Bloom photo'} />
+                            <PlantImage src={p} alt={p.caption || 'Bloom photo'} />
                           </div>
                           <figcaption className="space-y-2 p-2 text-xs">
                             <p>{p.caption || 'Untitled bloom photo'}</p>
                             {canEditInCollection(user, context) && (
-                              <form action={deletePhoto}>
-                                <input type="hidden" name="id" value={p.id} />
-                                <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}`)} />
-                                <ConfirmDeleteButton
-                                  className="px-2 py-1 text-xs"
-                                  title="Delete bloom photo?"
-                                  message="This will permanently delete this bloom photo from the bloom event."
-                                  confirmLabel="Delete photo"
-                                >
-                                  Delete photo
-                                </ConfirmDeleteButton>
-                              </form>
+                              <>
+                                <details className="group rounded-lg border border-stone-200 bg-white/60">
+                                  <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-2 py-1.5 font-medium">
+                                    <span>Edit framing</span>
+                                    <span className="rounded-md border border-stone-300 bg-white/70 px-2 py-0.5 text-[0.68rem] group-open:hidden">Open</span>
+                                    <span className="hidden rounded-md border border-stone-300 bg-white/70 px-2 py-0.5 text-[0.68rem] group-open:inline-block">Hide</span>
+                                  </summary>
+                                  <form action={updatePhotoFraming} className="grid gap-2 border-t border-stone-200 p-2">
+                                    <input type="hidden" name="id" value={p.id} />
+                                    <input type="hidden" name="collectionSlug" value={collection.slug} />
+                                    <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}#bloom-${b.id}`)} />
+                                    <PhotoFramingEditor src={p.path} initial={p} />
+                                    <Button className="px-2 py-1 text-xs">Save framing</Button>
+                                  </form>
+                                </details>
+                                <form action={deletePhoto}>
+                                  <input type="hidden" name="id" value={p.id} />
+                                  <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}`)} />
+                                  <ConfirmDeleteButton
+                                    className="px-2 py-1 text-xs"
+                                    title="Delete bloom photo?"
+                                    message="This will permanently delete this bloom photo from the bloom event."
+                                    confirmLabel="Delete photo"
+                                  >
+                                    Delete photo
+                                  </ConfirmDeleteButton>
+                                </form>
+                              </>
                             )}
                           </figcaption>
                         </figure>
