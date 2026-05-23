@@ -40,10 +40,27 @@ function rateLimit(userId: string) {
   return true
 }
 
+function collectionDailyLimit() {
+  const configured = Number(process.env.OPENAI_GREEN_THUMB_DAILY_COLLECTION_LIMIT || 5)
+  return Number.isFinite(configured) && configured > 0 ? Math.floor(configured) : 5
+}
+
 function startOfToday() {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   return today
+}
+
+async function collectionDailyUsage(collectionId: string) {
+  const since = startOfToday()
+  const used = await prisma.aiUsageEvent.count({
+    where: {
+      collectionId,
+      feature: 'AI_GREEN_THUMB',
+      createdAt: { gte: since },
+    },
+  })
+  return { used, limit: collectionDailyLimit() }
 }
 
 function mimeTypeFor(filePath: string) {
@@ -72,6 +89,14 @@ export async function POST(req: Request) {
   }
   if (!rateLimit(user.id)) {
     return NextResponse.json({ error: 'Green Thumb assist limit reached. Try again later.' }, { status: 429 })
+  }
+
+  const dailyUsage = await collectionDailyUsage(collection.id)
+  if (dailyUsage.used >= dailyUsage.limit) {
+    return NextResponse.json(
+      { error: `This collection has reached its Green Thumb daily limit (${dailyUsage.limit} requests). Try again tomorrow.` },
+      { status: 429 },
+    )
   }
 
   const plantInstanceId = trimmedString(body.plantInstanceId, 120)

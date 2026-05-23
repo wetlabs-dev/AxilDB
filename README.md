@@ -434,6 +434,7 @@ OPENAI_HUSBANDRY_FILL_MODEL=gpt-5.4-mini
 OPENAI_HUSBANDRY_FILL_HOURLY_LIMIT=10
 OPENAI_GREEN_THUMB_MODEL=gpt-5.4-mini
 OPENAI_GREEN_THUMB_HOURLY_LIMIT=20
+OPENAI_GREEN_THUMB_DAILY_COLLECTION_LIMIT=5
 ```
 
 Set `TOTP_ENCRYPTION_KEY` to a long random secret in production. It encrypts authenticator app secrets before they are stored in the database. On Ubuntu, a good value can be generated with:
@@ -500,6 +501,7 @@ OPENAI_HUSBANDRY_FILL_MODEL=gpt-5.4-mini
 OPENAI_HUSBANDRY_FILL_HOURLY_LIMIT=10
 OPENAI_GREEN_THUMB_MODEL=gpt-5.4-mini
 OPENAI_GREEN_THUMB_HOURLY_LIMIT=20
+OPENAI_GREEN_THUMB_DAILY_COLLECTION_LIMIT=5
 ```
 
 Then redeploy/recreate the app container so the environment changes are loaded:
@@ -508,7 +510,7 @@ Then redeploy/recreate the app container so the environment changes are loaded:
 docker compose up -d --build
 ```
 
-`OPENAI_DESCRIPTION_HOURLY_LIMIT`, `OPENAI_MAGIC_FILL_HOURLY_LIMIT`, `OPENAI_HUSBANDRY_FILL_HOURLY_LIMIT`, and `OPENAI_GREEN_THUMB_HOURLY_LIMIT` are lightweight per-user in-process limits for the OpenAI buttons. Green Thumb also has a once-per-specimen-per-day cooldown. For stricter cost control, also set project usage limits in the OpenAI Platform billing settings.
+`OPENAI_DESCRIPTION_HOURLY_LIMIT`, `OPENAI_MAGIC_FILL_HOURLY_LIMIT`, `OPENAI_HUSBANDRY_FILL_HOURLY_LIMIT`, and `OPENAI_GREEN_THUMB_HOURLY_LIMIT` are lightweight per-user in-process limits for the OpenAI buttons. `OPENAI_GREEN_THUMB_DAILY_COLLECTION_LIMIT` is a persisted per-collection daily cap for Green Thumb requests and defaults to 5 when unset. Green Thumb also has a once-per-specimen-per-day cooldown. For stricter cost control, also set project usage limits in the OpenAI Platform billing settings.
 
 Current email foundation:
 
