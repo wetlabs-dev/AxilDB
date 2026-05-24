@@ -24,6 +24,7 @@ export function GreenThumbAssist({ collectionSlug, plantInstanceId, photos, used
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [answer, setAnswer] = useState('')
+  const [pendingQuestion, setPendingQuestion] = useState('')
 
   async function askGreenThumb() {
     const trimmedQuestion = question.trim()
@@ -35,11 +36,11 @@ export function GreenThumbAssist({ collectionSlug, plantInstanceId, photos, used
       return
     }
 
-    const confirmed = window.confirm(
-      `Is this the question you want to ask about this plant today?\n\n"${trimmedQuestion}"\n\nYou'll be able to ask another question tomorrow.`,
-    )
-    if (!confirmed) return
+    setPendingQuestion(trimmedQuestion)
+  }
 
+  async function submitGreenThumb(trimmedQuestion: string) {
+    setPendingQuestion('')
     setLoading(true)
     try {
       const response = await fetch('/api/ai/green-thumb', {
@@ -121,6 +122,43 @@ export function GreenThumbAssist({ collectionSlug, plantInstanceId, photos, used
 
       {error && <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p>}
       {answer && <p className="mt-3 rounded-md border border-[#bdd5b6] bg-white/70 px-3 py-2 text-sm text-[#255537]">{answer}</p>}
+
+      {pendingQuestion && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/45 px-4 py-6">
+          <div className="w-full max-w-lg rounded-lg border border-[#bdd5b6] bg-[#fffaf0] p-5 shadow-2xl">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#d6dfc9] text-[#255537]">
+                <Sparkles size={18} />
+              </div>
+              <div>
+                <h4 className="font-serif text-xl">Ask Green Thumb today?</h4>
+                <p className="mt-2 text-sm leading-6 text-stone-700">
+                  This uses today&apos;s Green Thumb request for this specimen. You&apos;ll be able to ask another question tomorrow.
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 rounded-md border border-[#bdd5b6] bg-[#eef8e9]/80 px-3 py-2 text-sm text-stone-800">
+              {pendingQuestion}
+            </div>
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                className="rounded-md border border-stone-300 bg-[#fffdf7] px-4 py-2 text-sm font-medium hover:bg-white"
+                onClick={() => setPendingQuestion('')}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="rounded-md bg-[#2f6b45] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#255537]"
+                onClick={() => submitGreenThumb(pendingQuestion)}
+              >
+                Ask Green Thumb
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
