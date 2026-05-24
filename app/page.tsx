@@ -139,7 +139,7 @@ export default async function Dashboard({
     }),
     prisma.plantInstance.findMany({
       where: { ...collectionWhere, instanceType: { in: ['MOTHER', 'ACQUIRED_PROPAGATION'] } },
-      take: activeKind && activeKind !== 'acquired' ? 0 : queryTake,
+      take: activeKind && !['acquired', 'propagation'].includes(activeKind) ? 0 : queryTake,
       orderBy: [{ acquisitionDate: 'desc' }, { createdAt: 'desc' }],
       include: { plantDefinition: true },
     }),
@@ -222,16 +222,19 @@ export default async function Dashboard({
       detail: sport.sportDescription,
       image: coverFor(coverPhotosByInstance, sport.id),
     })),
-    ...acquired.map((item) => ({
-      id: item.id,
-      kind: 'acquired' as const,
-      href: collectionPath(collection.slug, `/instances/${item.id}`),
-      date: item.acquisitionDate || item.createdAt,
-      title: item.plantId,
-      subtitle: plantName(item.plantDefinition),
-      detail: [item.source, item.distributor, item.location].filter(Boolean).join(' · '),
-      image: coverFor(coverPhotosByInstance, item.id),
-    })),
+    ...acquired.map((item) => {
+      const isAcquiredPropagation = item.instanceType === 'ACQUIRED_PROPAGATION'
+      return {
+        id: item.id,
+        kind: isAcquiredPropagation ? 'propagation' as const : 'acquired' as const,
+        href: collectionPath(collection.slug, `/instances/${item.id}`),
+        date: item.acquisitionDate || item.createdAt,
+        title: item.plantId,
+        subtitle: isAcquiredPropagation ? `ACQUIRED PROPAGATION · ${plantName(item.plantDefinition)}` : plantName(item.plantDefinition),
+        detail: [item.source, item.distributor, item.location].filter(Boolean).join(' · '),
+        image: coverFor(coverPhotosByInstance, item.id),
+      }
+    }),
     ...archived.map((item) => ({
       id: item.id,
       kind: 'archive' as const,
