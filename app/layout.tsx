@@ -1,4 +1,5 @@
 import './globals.css'
+import { ScrollPreserver } from '@/components/ScrollPreserver'
 import { Sidebar } from '@/components/sidebar'
 import { headers } from 'next/headers'
 
@@ -20,6 +21,7 @@ export default async function RootLayout({children}:{children:React.ReactNode}) 
           children
         ) : (
           <div className="min-h-screen md:flex">
+            <ScrollPreserver />
             <Sidebar />
             <main className="min-w-0 flex-1 px-4 py-5 sm:px-6 lg:px-8 lg:py-8">{children}</main>
           </div>
