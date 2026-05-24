@@ -2,6 +2,7 @@ import {
   BadgeCheck,
   Bell,
   Camera,
+  ClipboardCheck,
   FlaskConical,
   Flower2,
   GitBranch,
@@ -13,6 +14,7 @@ import {
   Search,
   ShieldCheck,
   Sparkles,
+  Sprout,
   Users,
 } from 'lucide-react'
 
@@ -23,23 +25,23 @@ const donateUrl = process.env.NEXT_PUBLIC_DONATE_URL || 'https://ko-fi.com/wetla
 const features = [
   ['Multi-collection workspaces', 'Keep accession records separated by collection, with public or private visibility and collection-scoped membership.', Users],
   ['Accession records', 'Trace living specimens, generated plant IDs, source details, propagation context, and stable cultivar lines without losing the story.', GitBranch],
-  ['Taxonomy confidence', 'Record accepted names, provisional labels, acquisition names, aliases, sources, reference URLs, and uncertainty.', BadgeCheck],
-  ['AI-assisted taxonomy', 'Draft concise descriptions or ask Magic Fill to suggest authority, reference links, aliases, and accepted-name corrections.', Sparkles],
+  ['Taxonomy confidence', 'Record accepted names, author citations, provisional labels, acquisition names, aliases, sources, reference URLs, and uncertainty.', BadgeCheck],
+  ['AI-assisted records', 'Draft concise descriptions, taxonomy metadata, aliases, reference links, and structured husbandry guides with review-first AI tools.', Sparkles],
   ['Follow notifications', 'Follow plant types, specimens, or lineages and get email updates when relevant blooms, photos, notes, or propagations appear.', Bell],
   ['Reminder emails', 'Schedule plant check-ins, bloom-cycle reminders, propagation follow-ups, and custom recurring reminders.', Mail],
   ['Role-aware access', 'Let visitors browse public collections, viewers follow records, loggers add records, gardeners tend records, and managers handle membership.', LockKeyhole],
   ['Collection search', 'Search plants by generated IDs, cultivars, aliases, old taxonomy, common names, locations, notes, and sources.', Search],
   ['Activity timeline', 'Review recent propagations, blooms, sport observations, acquisitions, and archive actions in one chronological feed.', History],
-  ['Admin tools', 'Seed realistic demo data, manage governing bodies, review audit history, enforce 2FA for admins, and keep records tidy.', FlaskConical],
+  ['Server and collection tools', 'Manage collection settings, governing bodies, audit history, backups, role boundaries, 2FA, and server-level operations.', FlaskConical],
 ] as const
 
 const workflow = [
   ['Create a collection', 'Start with a private workspace, invite members when ready, or make a public collection browseable without exposing other data.'],
   ['Define the plant', 'Capture the accepted identity, aliases, reference links, registration context, and confidence level, with optional AI assistance.'],
-  ['Grow the accession', 'Track specimens, locations, acquisition history, generated plant IDs, photos, and propagation batches.'],
-  ['Observe and follow', 'Add notes, blooms, reminders, and suspected sport observations, while followers receive relevant updates by email.'],
-  ['Resolve and share', 'Confirm whether sport traits propagate true, promote stable lines, and share records through QR tags or public collection browsing.'],
-  ['Keep tending', 'Use the timeline, reminders, and photo history to keep steady habits around plants that are quietly doing well.'],
+  ['Grow the accession', 'Track specimens, locations, acquisition history, generated plant IDs, photos, husbandry, and propagation batches.'],
+  ['Care and observe', 'Use the Care Queue, notes, blooms, conditions, reminders, and Green Thumb notes to keep attention where it matters.'],
+  ['Resolve and share', 'Confirm whether sport traits propagate true, promote stable lines, share definitions, transfer specimens, or publish public collection records.'],
+  ['Keep tending', 'Use the timeline, care history, reminders, and photo record to build steady habits around plants that are quietly doing well.'],
 ] as const
 
 export default function SplashPage() {
@@ -77,8 +79,8 @@ export default function SplashPage() {
             <h1 className="text-5xl leading-[1.02] sm:text-6xl lg:text-7xl">A living database for plants with complicated names.</h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-stone-700">
               AxilDB tracks collection workspaces, plant definitions, accessioned specimens, propagations, blooms,
-              taxonomy uncertainty, aliases, generated plant IDs, photos, QR tags, sport stability, reminders,
-              follower notifications, and audit history in one self-hosted app.
+              taxonomy uncertainty, aliases, generated plant IDs, photos, QR tags, sport stability, husbandry,
+              care history, reminders, follower notifications, and audit history in one self-hosted app.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <a className="inline-flex items-center justify-center rounded-md bg-[#2f6b45] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#255537]" href={appUrl}>
@@ -148,6 +150,11 @@ export default function SplashPage() {
               <p className="mt-2 text-sm leading-6 text-stone-700">{text}</p>
             </article>
           ))}
+          <article className="rounded-lg border border-stone-200 bg-white/65 p-5 shadow-[0_8px_30px_rgba(47,38,24,0.06)] xl:col-span-2">
+            <ClipboardCheck className="mb-4 h-6 w-6 text-[#2f6b45]" />
+            <h3 className="font-serif text-xl">Smart Care Queue</h3>
+            <p className="mt-2 text-sm leading-6 text-stone-700">Turn husbandry, watering history, propagation stage, open conditions, blooms, and manual reminders into a prioritized daily worklist.</p>
+          </article>
           <article className="overflow-hidden rounded-lg border border-stone-200 bg-white/70 shadow-[0_8px_30px_rgba(47,38,24,0.06)] md:col-span-2 xl:col-span-4">
             <div className="grid h-full min-h-[260px] gap-4 md:grid-cols-[1.1fr_1fr]">
               <div className="flex flex-col justify-center p-5">
@@ -157,6 +164,20 @@ export default function SplashPage() {
               </div>
               <div className="flex items-center justify-center bg-[#fffdf7]">
                 <img src="/splash-bloom.png" alt="" className="h-full max-h-80 w-full object-cover object-center mix-blend-multiply" />
+              </div>
+            </div>
+          </article>
+          <article className="overflow-hidden rounded-lg border border-stone-200 bg-white/70 shadow-[0_8px_30px_rgba(47,38,24,0.06)] md:col-span-2 xl:col-span-4">
+            <div className="grid h-full min-h-[280px] gap-4 md:grid-cols-[1fr_1fr]">
+              <div className="flex items-center justify-center bg-[#fffdf7]">
+                <img src="/splash-green-thumb.png" alt="" className="h-full max-h-96 w-full object-cover object-center" />
+              </div>
+              <div className="flex flex-col justify-center p-5">
+                <Sprout className="mb-4 h-6 w-6 text-[#2f6b45]" />
+                <h3 className="font-serif text-xl">Green Thumb care assist</h3>
+                <p className="mt-2 text-sm leading-6 text-stone-700">
+                  Ask one focused care question per specimen per day. AxilDB includes plant identity, husbandry, recent care history, and optional photo context, then saves the concise answer as a care note.
+                </p>
               </div>
             </div>
           </article>
