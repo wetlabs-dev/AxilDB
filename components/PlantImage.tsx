@@ -46,7 +46,7 @@ export function PlantImage({
   const imageSrc = frame ? frame.path : typeof src === 'string' ? src : null
 
   if (imageSrc) {
-    return <img src={imageSrc} alt={alt} className={cn('h-full w-full object-cover', className)} style={frameStyle(frame)} />
+    return <img src={imageSrc} alt={alt} className={cn('block h-full w-full object-cover', className)} style={frameStyle(frame)} />
   }
 
   return (

@@ -72,7 +72,7 @@ export default async function SportReview() {
           return (
             <Card key={sport.id} className="flex h-full flex-col overflow-hidden p-0">
               <Link href={collectionPath(collection.slug, `/instances/${sport.id}`)} className="block flex-1">
-                <div className="aspect-[4/3]">
+                <div className="aspect-[4/3] overflow-hidden">
                   <PlantImage src={photoByInstance[sport.id]} alt={sport.plantId} />
                 </div>
                 <div className="min-h-0 overflow-hidden p-3">

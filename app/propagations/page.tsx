@@ -154,7 +154,7 @@ export default async function Propagations() {
           return (
             <Card key={event.id} className="flex h-full flex-col overflow-hidden p-0">
               <Link href={firstChild ? collectionPath(collection.slug, `/instances/${firstChild.id}`) : collectionPath(collection.slug, '/propagations')} className="block flex-1">
-                <div className="aspect-[4/3]">
+                <div className="aspect-[4/3] overflow-hidden">
                   <PlantImage src={image} alt={firstChild?.plantId || event.method} />
                 </div>
                 <div className="min-h-0 overflow-hidden p-3">

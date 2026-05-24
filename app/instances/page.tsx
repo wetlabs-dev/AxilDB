@@ -121,7 +121,7 @@ export default async function Instances() {
         {sortedInstances.map((instance) => (
           <Card key={instance.id} className="flex h-full flex-col overflow-hidden p-0">
             <Link href={collectionPath(collection.slug, `/instances/${instance.id}`)} className="block flex-1">
-              <div className="aspect-[4/3]">
+              <div className="aspect-[4/3] overflow-hidden">
                 <PlantImage src={photoByInstance[instance.id]} alt={instance.plantId} />
               </div>
               <div className="min-h-0 overflow-hidden p-3">

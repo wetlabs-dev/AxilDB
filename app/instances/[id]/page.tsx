@@ -321,7 +321,7 @@ export default async function InstanceDetail({
         {photos.length === 0 && <p className="text-sm text-stone-600">No specimen photos yet.</p>}
         {photos.map((p) => (
           <figure key={p.id} className="overflow-hidden rounded-lg border border-stone-200 bg-white/70">
-            <div className="aspect-[4/3]">
+            <div className="aspect-[4/3] overflow-hidden">
               <PlantImage src={p} alt={p.caption || 'Plant photo'} />
             </div>
             <figcaption className="space-y-3 p-3 text-xs">
@@ -942,7 +942,7 @@ export default async function InstanceDetail({
                     <div className="mt-4 grid grid-cols-2 gap-3">
                       {(photosByBloomId[b.id] || []).map((p) => (
                         <figure key={p.id} className="overflow-hidden rounded-xl border border-stone-200 bg-white/70">
-                          <div className="aspect-[4/3]">
+                          <div className="aspect-[4/3] overflow-hidden">
                             <PlantImage src={p} alt={p.caption || 'Bloom photo'} />
                           </div>
                           <figcaption className="space-y-2 p-2 text-xs">

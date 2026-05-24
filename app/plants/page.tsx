@@ -178,7 +178,7 @@ export default async function Plants() {
           const typePhoto = typePhotoByDefinition[plant.id] || plant.instances.map((instance) => typePhotoByInstance[instance.id]).find(Boolean)
           return (
             <Card key={plant.id} className="flex h-full flex-col overflow-hidden p-0">
-              <div className="aspect-[4/3]">
+              <div className="aspect-[4/3] overflow-hidden">
                 <PlantImage src={typePhoto} alt={plantName(plant)} />
               </div>
               <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-3">

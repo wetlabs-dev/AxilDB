@@ -101,7 +101,7 @@ export default async function Blooms() {
           return (
             <Link key={bloom.id} href={collectionPath(collection.slug, `/instances/${bloom.plantInstanceId}`)} className="group block h-full">
               <Card className="flex h-full flex-col overflow-hidden p-0 transition group-hover:-translate-y-0.5 group-hover:shadow-[0_14px_36px_rgba(47,38,24,0.10)]">
-                <div className="aspect-[4/3]">
+                <div className="aspect-[4/3] overflow-hidden">
                   <PlantImage src={image} alt={bloom.plantInstance.plantId} />
                 </div>
                 <div className="min-h-0 flex-1 overflow-hidden p-3">

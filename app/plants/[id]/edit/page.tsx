@@ -253,7 +253,7 @@ export default async function EditPlant({
         )}
         <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(16rem,22rem)_1fr]">
           <div className="overflow-hidden rounded-lg border border-stone-200 bg-white/70">
-            <div className="aspect-[4/3]">
+            <div className="aspect-[4/3] overflow-hidden">
               <PlantImage src={currentTypePhoto} alt={`${plant.genus} ${plant.species} type image`} />
             </div>
             <div className="space-y-3 p-3 text-sm">
