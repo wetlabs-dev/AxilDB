@@ -17,6 +17,7 @@ AXILDB_DOCS_BASE_URL=https://app.axildb.com AXILDB_DOCS_COLLECTION_SLUG=axildb n
 - [Plant Instances](#plant-instances)
 - [Photos and Gallery](#photos-gallery)
 - [Plant Husbandry](#husbandry)
+- [Care Queue and Green Thumb](#care-queue)
 - [Propagations and Lineage Graphs](#propagation-lineage)
 - [Bloom Tracker](#blooms)
 - [Sport Review](#sports)
@@ -28,7 +29,7 @@ AXILDB_DOCS_BASE_URL=https://app.axildb.com AXILDB_DOCS_COLLECTION_SLUG=axildb n
 
 ## Getting Started
 
-AxilDB organizes botanical accession records into collections. Each collection keeps its own plant definitions, plant specimens, photos, propagation history, bloom records, husbandry, follows, reminders, transfers, and administrative history.
+AxilDB organizes botanical accession records into collections. Each collection keeps its own plant definitions, plant specimens, photos, propagation history, bloom records, husbandry, care queue, follows, reminders, transfers, and administrative history.
 
 App route: `/`
 
@@ -38,7 +39,7 @@ App route: `/`
 
 - Sign in or create a viewer account from the app home page.
 - Choose a collection from the collection switcher in the sidebar or mobile menu.
-- Use Dashboard for recent activity, high-level counts, and quick links into the collection.
+- Use Dashboard for recent activity, high-level counts, care-at-a-glance, and quick links into the collection.
 - Use Search when you know a plant ID, name, cultivar, alias, location, source, note, or other record text.
 
 ### Notes
@@ -103,6 +104,7 @@ App route: `/plants`
 - Use AI draft for a short botanical description or Magic fill to draft taxonomy metadata and aliases when AI is enabled for the collection.
 - Upload a plant definition type image when the representative image comes from a reference source rather than your collection.
 - Use Copy on an existing definition to start a similar definition without copying cultivar-specific fields or images.
+- Use Share Definition when you have an active collection connection and want another collection to review and copy the definition.
 
 ### Notes
 
@@ -116,7 +118,7 @@ App route: `/plants`
 
 ## Plant Instances
 
-Plant instances are the actual specimens in a collection. Each instance receives a generated plant ID, status, location, acquisition details, source, notes, photos, bloom records, propagation relationships, sport review, reminders, and follows.
+Plant instances are the actual specimens in a collection. Each instance receives a generated plant ID, status, location, acquisition details, source, notes, photos, bloom records, propagation relationships, sport review, care history, reminders, and follows.
 
 App route: `/instances`
 
@@ -128,11 +130,14 @@ App route: `/instances`
 - Select a plant definition and enter specimen details such as type, acquisition date, location, source, distributor, stock label, and notes.
 - Open a specimen detail page to review identity, photos, husbandry summary, sport status, follows, children, notes, reminders, bloom tracker, and archive actions.
 - Use the generated QR label to open the specimen record quickly from a printed label.
+- Use the plant ID refresh action when the current ID no longer matches the generated ID format after type or date changes.
+- Use Green Thumb assist for one focused care question per specimen per day when AI is enabled for the collection.
 
 ### Notes
 
 - Plant IDs are generated from the plant definition and relevant date context, then made unique inside the collection.
 - Locations and similar text fields autosuggest values already used in the current collection.
+- Acquired propagation is for purchased or received cuttings, leaf props, starter plugs, and similar plants without an internal parent record.
 
 ## Photos and Gallery
 
@@ -149,10 +154,12 @@ App route: `/gallery`
 - Set a specimen photo as type photo when it should represent the plant definition.
 - Upload bloom photos from bloom records.
 - Use Gallery to browse all collection images and open larger versions.
+- Use photo framing controls to crop or set a center-bias point for card and preview layouts.
 
 ### Notes
 
 - Uploads are resized to a maximum dimension to reduce storage use while preserving useful detail.
+- Framing metadata is used by cards and previews so important plant details stay centered.
 - Source and source URL fields help document reference images used for plant definition type images.
 
 ### Warnings
@@ -171,18 +178,45 @@ App route: `/plants`
 
 - Open a plant definition and use the Husbandry panel to create, link, fork, edit, or delete a guide.
 - Use Magic Fill husbandry to draft the structured care guide with one AI call when AI is enabled.
-- Edit individual husbandry fields inline with the edit controls next to each field.
+- Edit individual husbandry fields inline with the edit controls next to each field instead of working through one large form.
 - Link a definition to another definition’s guide when care is identical, or make a local copy when it diverges.
 - On a specimen detail page, use override controls next to inherited husbandry values for local adjustments.
 
 ### Notes
 
 - Quick summary fields are standardized for consistent water, light, and toxicity badges.
+- Summary badges use standardized colors and icons for watering, light, and toxicity.
 - Full guides are grouped by care sections so future care sheets can include only selected topics.
 
 ### Warnings
 
 - Husbandry is collection-local in this version. Linked guides cannot cross collections.
+
+## Care Queue and Green Thumb
+
+The Care Queue answers “what needs attention today, and why?” by combining husbandry guidance, watering history, propagation stage, open conditions, bloom follow-ups, pest checks, and manual reminders.
+
+App route: `/care`
+
+![Care Queue and Green Thumb](../public/manual/screenshots/care-queue.png)
+
+### How It Is Used
+
+- Open Care Queue from the sidebar to review today’s tasks, overdue work, watering, propagation checks, health issues, pest checks, bloom follow-ups, custom reminders, and completed care.
+- Complete or snooze generated care tasks from the queue.
+- Open a specimen to log watering, add conditions such as wilting or pests, resolve conditions, and review recent care history.
+- Use Green Thumb assist on a specimen to ask one concise care question per day with plant identity, husbandry, recent care history, and optional photo context.
+- Delete a Green Thumb care note if the response was not useful.
+
+### Notes
+
+- Generated care tasks are dynamic; completed care is stored as care events.
+- Manual reminders continue to send email and are also merged into the queue when due.
+- Green Thumb requests are limited per specimen and per collection to control AI usage.
+
+### Warnings
+
+- Green Thumb responses are care suggestions, not guaranteed diagnoses. Review the plant directly before treating pests, disease, toxicity, or severe decline.
 
 ## Propagations and Lineage Graphs
 
@@ -198,6 +232,7 @@ App route: `/propagations`
 - Select parent and child specimens, propagation method, date, status, and notes.
 - Use Lineage Graphs to search for a specimen and view its connected tree.
 - Select nodes in the graph to change focus and follow ancestry and descendants.
+- Use Acquired propagation for starter plants or leaf props obtained from outside the collection.
 
 ### Notes
 
@@ -279,7 +314,7 @@ App route: `/labels`
 
 ### Notes
 
-- Labels show collection name, plant name, QR code, and plant ID.
+- Labels show collection name, plant name, QR code, and plant ID, using a compact mono font for the ID.
 - Private collection labels require sign-in before showing the specimen record.
 
 ## Collection Transfers and Definition Sharing
@@ -296,6 +331,7 @@ App route: `/transfers`
 - The target collection manager can allow, ignore, block, unblock, or remove the connection.
 - Use Connect back to make a reciprocal connection when another collection has already connected to yours.
 - Once a bidirectional connection exists, browse connected definitions and copy them into your collection.
+- Use Share Definition from a plant definition to queue a specific definition for another connected collection.
 - Gardeners and managers can request specimen transfers through active connections.
 - Receivers review a summary, then accept or decline the transfer.
 
@@ -303,6 +339,7 @@ App route: `/transfers`
 
 - Specimen transfers copy the package into the receiving collection and archive the source specimen after acceptance.
 - Pre-acceptance previews show summary/count information rather than full private data.
+- Connection and transfer events can send email alerts to the relevant collection managers.
 
 ### Warnings
 
@@ -328,7 +365,7 @@ App route: `/admin-tools`
 
 ## Server Management
 
-Server Management is restricted to server admins and covers sitewide users, collection creation and archival, AI availability, collection requests, backups, and health metrics.
+Server Management is restricted to server admins and covers sitewide users, collection creation and archival, AI availability, AI access requests, collection requests, backups, health metrics, and usage statistics.
 
 App route: `/server`
 
@@ -337,7 +374,7 @@ App route: `/server`
 ### How It Is Used
 
 - Open Server Management from the admin nav when signed in as a server admin.
-- Review server health, collection usage, AI usage, pending collection requests, and backup status.
+- Review server health, collection usage, AI usage, pending collection and AI access requests, backup status, and storage estimates.
 - Use Site Users to manage global roles and collection memberships.
 - Use Server Collections to create, archive, restore, or permanently delete collections.
 - Use backup controls to initiate sitewide backups.
