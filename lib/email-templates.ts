@@ -57,7 +57,7 @@ export function renderBrandedEmail({
             <tr>
               <td style="padding:28px 28px 18px;border-bottom:1px solid #eadfcb;background:#fffdf7;">
                 <div style="color:#2f6b45;font-weight:800;letter-spacing:.08em;text-transform:uppercase;font-size:12px;">AxilDB</div>
-                <h1 style="margin:8px 0 0;color:#25221d;font-family:Georgia,'Times New Roman',serif;font-size:28px;line-height:1.15;">${escapeHtml(title)}</h1>
+                <h1 style="margin:8px 0 0;color:#25221d;font-family:Fraunces,Georgia,'Times New Roman',serif;font-size:28px;line-height:1.15;">${escapeHtml(title)}</h1>
               </td>
             </tr>
             <tr>
