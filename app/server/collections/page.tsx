@@ -1,4 +1,4 @@
-import { archiveCollection, permanentlyDeleteCollection, restoreCollection, setCollectionAiFeatures } from '@/app/collection-actions'
+import { archiveCollection, permanentlyDeleteCollection, restoreCollection, setCollectionAiFeatures, setDefaultCollection } from '@/app/collection-actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { Button, Card, Field, LinkButton } from '@/components/ui'
 import { requireServerAdmin } from '@/lib/auth'
@@ -57,7 +57,7 @@ export default async function ServerCollections() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-3xl font-bold">Server Collections</h2>
-          <p className="mt-1 text-sm text-stone-600">Create collections, archive inactive workspaces, and permanently delete archived collections.</p>
+          <p className="mt-1 text-sm text-stone-600">Create collections, choose the default fallback collection, archive inactive workspaces, and permanently delete archived collections.</p>
         </div>
         <LinkButton href="/server/collections/new">New collection</LinkButton>
       </div>
@@ -75,6 +75,12 @@ export default async function ServerCollections() {
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
+                {collection.status === 'ACTIVE' && !collection.isDefault && (
+                  <form action={setDefaultCollection}>
+                    <input type="hidden" name="collectionId" value={collection.id} />
+                    <Button className="bg-[#3f6f52] px-3 py-1.5 hover:bg-[#31563f]">Make default</Button>
+                  </form>
+                )}
                 <form action={setCollectionAiFeatures}>
                   <input type="hidden" name="collectionId" value={collection.id} />
                   <input type="hidden" name="enabled" value={collection.aiFeaturesEnabled ? 'false' : 'true'} />

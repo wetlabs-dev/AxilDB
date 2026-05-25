@@ -524,6 +524,20 @@ export async function archiveCollection(fd: FormData) {
   redirect('/server/collections')
 }
 
+export async function setDefaultCollection(fd: FormData) {
+  const user = await requireServerAdmin()
+  const collectionId = val(fd, 'collectionId')
+  const collection = await prisma.collection.findUniqueOrThrow({ where: { id: collectionId } })
+  if (collection.status === 'ARCHIVED') throw new Error('Archived collections cannot be the default collection.')
+
+  await prisma.$transaction([
+    prisma.collection.updateMany({ where: { isDefault: true, NOT: { id: collection.id } }, data: { isDefault: false } }),
+    prisma.collection.update({ where: { id: collection.id }, data: { isDefault: true } }),
+  ])
+  await audit(user, 'UPDATE', 'COLLECTION', collection.id, `Set ${collection.name} as the default collection`, collection, collection.id)
+  redirect('/server/collections')
+}
+
 export async function restoreCollection(fd: FormData) {
   const user = await requireServerAdmin()
   const collectionId = val(fd, 'collectionId')
