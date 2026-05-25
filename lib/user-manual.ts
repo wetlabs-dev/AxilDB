@@ -249,7 +249,7 @@ export const manualSections: ManualSection[] = [
     purpose: 'Labels generate printable QR codes and plant IDs for specimen tags.',
     howTo: [
       'Open Bulk Tags to choose specimens or generate labels for active plants.',
-      'Print labels on 2.25 × 1.25 inch label stock.',
+      'Choose a label format: 2.25 × 1.25 inch single labels, a legacy ganged print sheet, or Brother DK-2210 continuous labels.',
       'Scan a label QR code to open the specimen detail page.',
     ],
     notes: [
