@@ -1,16 +1,11 @@
 import {
   BadgeCheck,
-  Bell,
   Camera,
   ClipboardCheck,
-  FlaskConical,
   Flower2,
   GitBranch,
   Github,
   Heart,
-  History,
-  LockKeyhole,
-  Mail,
   Search,
   ShieldCheck,
   Sparkles,
@@ -24,24 +19,22 @@ const donateUrl = process.env.NEXT_PUBLIC_DONATE_URL || 'https://ko-fi.com/wetla
 
 const features = [
   ['Multi-collection workspaces', 'Keep accession records separated by collection, with public or private visibility and collection-scoped membership.', Users],
-  ['Accession records', 'Trace living specimens, generated plant IDs, source details, propagation context, and stable cultivar lines without losing the story.', GitBranch],
-  ['Taxonomy confidence', 'Record accepted names, author citations, provisional labels, acquisition names, aliases, sources, reference URLs, and uncertainty.', BadgeCheck],
+  ['Accession and taxonomy records', 'Trace living specimens, generated plant IDs, accepted names, author citations, aliases, source details, and confidence levels without losing the story.', BadgeCheck],
+  ['Structured husbandry guides', 'Keep water, light, toxicity, soil, pest, propagation, bloom, and conservation guidance close to each definition and specimen.', Sprout],
   ['AI-assisted records', 'Draft concise descriptions, taxonomy metadata, aliases, reference links, and structured husbandry guides with review-first AI tools.', Sparkles],
-  ['Follow notifications', 'Follow plant types, specimens, or lineages and get email updates when relevant blooms, photos, notes, or propagations appear.', Bell],
-  ['Reminder emails', 'Schedule plant check-ins, bloom-cycle reminders, propagation follow-ups, and custom recurring reminders.', Mail],
-  ['Role-aware access', 'Let visitors browse public collections, viewers follow records, loggers add records, gardeners tend records, and managers handle membership.', LockKeyhole],
-  ['Collection search', 'Search plants by generated IDs, cultivars, aliases, old taxonomy, common names, locations, notes, and sources.', Search],
-  ['Activity timeline', 'Review recent propagations, blooms, sport observations, acquisitions, and archive actions in one chronological feed.', History],
-  ['Server and collection tools', 'Manage collection settings, governing bodies, audit history, backups, role boundaries, 2FA, and server-level operations.', FlaskConical],
+  ['Care sheets and sitter plans', 'Generate printable care sheets, weekly greenhouse checklists, and limited plant-sitter links from husbandry and care queue data.', ClipboardCheck],
+  ['Transfers and shared definitions', 'Connect collections, share plant definitions, and queue specimen transfers while keeping private data behind review gates.', GitBranch],
+  ['Secure roles and server tools', 'Use viewer, logger, gardener, manager, and server-admin boundaries with 2FA, backups, audit history, and health checks.', ShieldCheck],
+  ['Useful odds and ends', 'Search, follows, reminder emails, activity timelines, gallery browsing, AI access controls, documentation, and QR labels all stay close at hand.', Search],
 ] as const
 
 const workflow = [
   ['Create a collection', 'Start with a private workspace, invite members when ready, or make a public collection browseable without exposing other data.'],
   ['Define the plant', 'Capture the accepted identity, aliases, reference links, registration context, and confidence level, with optional AI assistance.'],
   ['Grow the accession', 'Track specimens, locations, acquisition history, generated plant IDs, photos, husbandry, and propagation batches.'],
-  ['Care and observe', 'Use the Care Queue, notes, blooms, conditions, reminders, and Green Thumb notes to keep attention where it matters.'],
-  ['Resolve and share', 'Confirm whether sport traits propagate true, promote stable lines, share definitions, transfer specimens, or publish public collection records.'],
-  ['Keep tending', 'Use the timeline, care history, reminders, and photo record to build steady habits around plants that are quietly doing well.'],
+  ['Care and observe', 'Use the Care Queue, notes, blooms, conditions, reminders, Green Thumb notes, and weekly checklists to keep attention where it matters.'],
+  ['Resolve and share', 'Confirm sport traits, promote stable lines, share definitions, transfer specimens, generate care sheets, or create a sitter plan.'],
+  ['Keep tending', 'Use the timeline, care history, reminders, photos, and documentation to build steady habits around plants that are quietly doing well.'],
 ] as const
 
 export default function SplashPage() {
@@ -80,7 +73,7 @@ export default function SplashPage() {
             <p className="mt-6 max-w-2xl text-lg leading-8 text-stone-700">
               AxilDB tracks collection workspaces, plant definitions, accessioned specimens, propagations, blooms,
               taxonomy uncertainty, aliases, generated plant IDs, photos, QR tags, sport stability, husbandry,
-              care history, reminders, follower notifications, and audit history in one self-hosted app.
+              care queues, care sheets, sitter plans, reminders, follower notifications, transfers, and audit history in one self-hosted app.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <a className="inline-flex items-center justify-center rounded-md bg-[#2f6b45] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#255537]" href={appUrl}>
@@ -121,7 +114,7 @@ export default function SplashPage() {
       <section className="mx-auto max-w-7xl px-5 py-16 sm:px-6 lg:px-8">
         <div className="mb-8 max-w-2xl">
           <h2 className="text-3xl">Built for real collection work</h2>
-          <p className="mt-3 text-stone-700">The app is designed around the day-to-day messiness of horticultural records, collaboration, and long-lived accession history.</p>
+          <p className="mt-3 text-stone-700">The app is designed around the day-to-day messiness of horticultural records, care, collaboration, and long-lived accession history.</p>
         </div>
         <div className="grid grid-flow-dense gap-4 md:grid-cols-2 xl:grid-cols-6">
           {features.slice(0, 3).map(([title, text, Icon]) => (
@@ -207,7 +200,7 @@ export default function SplashPage() {
             </div>
           </article>
           {features.slice(5).map(([title, text, Icon], index) => (
-            <article key={title} className={`rounded-lg border border-stone-200 bg-white/65 p-5 shadow-[0_8px_30px_rgba(47,38,24,0.06)] ${index === 4 ? 'xl:col-span-4' : 'xl:col-span-2'}`}>
+            <article key={title} className={`rounded-lg border border-stone-200 bg-white/65 p-5 shadow-[0_8px_30px_rgba(47,38,24,0.06)] ${index === 2 ? 'md:col-span-2 xl:col-span-4' : 'xl:col-span-2'}`}>
               <Icon className="mb-4 h-6 w-6 text-[#2f6b45]" />
               <h3 className="font-serif text-xl">{title}</h3>
               <p className="mt-2 text-sm leading-6 text-stone-700">{text}</p>

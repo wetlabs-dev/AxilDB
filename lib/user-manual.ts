@@ -116,8 +116,9 @@ export const manualSections: ManualSection[] = [
       'Upload specimen photos from a plant instance detail page.',
       'Set a specimen cover photo to control list/card presentation.',
       'Set a specimen photo as type photo when it should represent the plant definition.',
+      'Upload plant definition type images directly when the best representative image comes from a trusted reference source.',
       'Upload bloom photos from bloom records.',
-      'Use Gallery to browse all collection images and open larger versions.',
+      'Use Gallery to browse specimen, bloom, and definition images and open larger versions.',
       'Use photo framing controls to crop or set a center-bias point for card and preview layouts.',
     ],
     notes: [
@@ -160,6 +161,7 @@ export const manualSections: ManualSection[] = [
     howTo: [
       'Open Care Queue from the sidebar to review today’s tasks, overdue work, watering, propagation checks, health issues, pest checks, bloom follow-ups, custom reminders, and completed care.',
       'Complete or snooze generated care tasks from the queue.',
+      'Open Weekly checklist to group overdue, due, and upcoming care by location for a printable work session.',
       'Open a specimen to log watering, add conditions such as wilting or pests, resolve conditions, and review recent care history.',
       'Use Green Thumb assist on a specimen to ask one concise care question per day with plant identity, husbandry, recent care history, and optional photo context.',
       'Delete a Green Thumb care note if the response was not useful.',
@@ -171,6 +173,45 @@ export const manualSections: ManualSection[] = [
     ],
     warnings: [
       'Green Thumb responses are care suggestions, not guaranteed diagnoses. Review the plant directly before treating pests, disease, toxicity, or severe decline.',
+    ],
+  },
+  {
+    id: 'weekly-checklist',
+    title: 'Weekly Greenhouse Checklist',
+    route: '/care/checklist',
+    screenshot: 'weekly-checklist.png',
+    purpose: 'The Weekly Greenhouse Checklist turns due and upcoming care queue work into a location-grouped checklist for watering, pest checks, propagation follow-ups, bloom checks, health checks, and custom reminders.',
+    howTo: [
+      'Open Care Queue, then choose Weekly checklist.',
+      'Review tasks grouped by location with photos, plant IDs, due dates, and reasons.',
+      'Use View to open the plant record, Complete to log finished care, or Snooze to move a task forward.',
+      'Save the checklist as a printable care sheet when you want a stable handout or PDF.',
+    ],
+    notes: [
+      'The checklist uses the same care engine as Care Queue, so husbandry, local overrides, recent care events, open conditions, and acquired propagation age all affect what appears.',
+      'Saved checklists can be found in Care Sheets.',
+    ],
+  },
+  {
+    id: 'care-sheets',
+    title: 'Care Sheets and Plant Sitter Mode',
+    route: '/care-sheets',
+    screenshot: 'care-sheets.png',
+    purpose: 'Care Sheets package selected specimens, husbandry sections, photos, quick badges, and tasks into printable guides, weekly checklists, or limited plant-sitter sessions.',
+    howTo: [
+      'Open Care Sheets from the sidebar.',
+      'Create a new care sheet, weekly checklist, or plant sitter plan.',
+      'Select specimens, choose husbandry sections, and set print or sitter-session options.',
+      'Open a saved care sheet to review the web view, download the PDF, copy a tokenized sitter link, revoke access, or delete the sheet.',
+      'Use plant sitter links when someone needs limited access to selected plants and tasks without a full account.',
+    ],
+    notes: [
+      'Care sheets merge definition-level husbandry with plant-specific local overrides and mark local adjustments where they differ.',
+      'Sitter links expose only the selected plants and tasks, expire automatically, and can be revoked.',
+      'Deleting a care sheet removes that saved package; it does not delete the underlying plants, photos, husbandry, or care history.',
+    ],
+    warnings: [
+      'Tokenized sitter links can expose selected private collection data to anyone who has the link until the token expires or is revoked.',
     ],
   },
   {

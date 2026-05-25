@@ -18,6 +18,8 @@ AXILDB_DOCS_BASE_URL=https://app.axildb.com AXILDB_DOCS_COLLECTION_SLUG=axildb n
 - [Photos and Gallery](#photos-gallery)
 - [Plant Husbandry](#husbandry)
 - [Care Queue and Green Thumb](#care-queue)
+- [Weekly Greenhouse Checklist](#weekly-checklist)
+- [Care Sheets and Plant Sitter Mode](#care-sheets)
 - [Propagations and Lineage Graphs](#propagation-lineage)
 - [Bloom Tracker](#blooms)
 - [Sport Review](#sports)
@@ -152,8 +154,9 @@ App route: `/gallery`
 - Upload specimen photos from a plant instance detail page.
 - Set a specimen cover photo to control list/card presentation.
 - Set a specimen photo as type photo when it should represent the plant definition.
+- Upload plant definition type images directly when the best representative image comes from a trusted reference source.
 - Upload bloom photos from bloom records.
-- Use Gallery to browse all collection images and open larger versions.
+- Use Gallery to browse specimen, bloom, and definition images and open larger versions.
 - Use photo framing controls to crop or set a center-bias point for card and preview layouts.
 
 ### Notes
@@ -204,6 +207,7 @@ App route: `/care`
 
 - Open Care Queue from the sidebar to review today’s tasks, overdue work, watering, propagation checks, health issues, pest checks, bloom follow-ups, custom reminders, and completed care.
 - Complete or snooze generated care tasks from the queue.
+- Open Weekly checklist to group overdue, due, and upcoming care by location for a printable work session.
 - Open a specimen to log watering, add conditions such as wilting or pests, resolve conditions, and review recent care history.
 - Use Green Thumb assist on a specimen to ask one concise care question per day with plant identity, husbandry, recent care history, and optional photo context.
 - Delete a Green Thumb care note if the response was not useful.
@@ -217,6 +221,52 @@ App route: `/care`
 ### Warnings
 
 - Green Thumb responses are care suggestions, not guaranteed diagnoses. Review the plant directly before treating pests, disease, toxicity, or severe decline.
+
+## Weekly Greenhouse Checklist
+
+The Weekly Greenhouse Checklist turns due and upcoming care queue work into a location-grouped checklist for watering, pest checks, propagation follow-ups, bloom checks, health checks, and custom reminders.
+
+App route: `/care/checklist`
+
+![Weekly Greenhouse Checklist](../public/manual/screenshots/weekly-checklist.png)
+
+### How It Is Used
+
+- Open Care Queue, then choose Weekly checklist.
+- Review tasks grouped by location with photos, plant IDs, due dates, and reasons.
+- Use View to open the plant record, Complete to log finished care, or Snooze to move a task forward.
+- Save the checklist as a printable care sheet when you want a stable handout or PDF.
+
+### Notes
+
+- The checklist uses the same care engine as Care Queue, so husbandry, local overrides, recent care events, open conditions, and acquired propagation age all affect what appears.
+- Saved checklists can be found in Care Sheets.
+
+## Care Sheets and Plant Sitter Mode
+
+Care Sheets package selected specimens, husbandry sections, photos, quick badges, and tasks into printable guides, weekly checklists, or limited plant-sitter sessions.
+
+App route: `/care-sheets`
+
+![Care Sheets and Plant Sitter Mode](../public/manual/screenshots/care-sheets.png)
+
+### How It Is Used
+
+- Open Care Sheets from the sidebar.
+- Create a new care sheet, weekly checklist, or plant sitter plan.
+- Select specimens, choose husbandry sections, and set print or sitter-session options.
+- Open a saved care sheet to review the web view, download the PDF, copy a tokenized sitter link, revoke access, or delete the sheet.
+- Use plant sitter links when someone needs limited access to selected plants and tasks without a full account.
+
+### Notes
+
+- Care sheets merge definition-level husbandry with plant-specific local overrides and mark local adjustments where they differ.
+- Sitter links expose only the selected plants and tasks, expire automatically, and can be revoked.
+- Deleting a care sheet removes that saved package; it does not delete the underlying plants, photos, husbandry, or care history.
+
+### Warnings
+
+- Tokenized sitter links can expose selected private collection data to anyone who has the link until the token expires or is revoked.
 
 ## Propagations and Lineage Graphs
 
@@ -309,7 +359,7 @@ App route: `/labels`
 ### How It Is Used
 
 - Open Bulk Tags to choose specimens or generate labels for active plants.
-- Print labels on 2.25 × 1.25 inch label stock.
+- Choose a label format: 2.25 × 1.25 inch single labels, a legacy ganged print sheet, or Brother DK-2210 continuous labels.
 - Scan a label QR code to open the specimen detail page.
 
 ### Notes
