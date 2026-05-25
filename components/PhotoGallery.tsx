@@ -11,7 +11,7 @@ export type GalleryPhoto = {
   path: string
   caption: string
   createdAt: string
-  kind: 'Specimen' | 'Bloom'
+  kind: 'Specimen' | 'Bloom' | 'Type image'
   plantId: string
   plantName: string
   instanceHref: string
@@ -73,7 +73,7 @@ export function PhotoGallery({ photos }: { photos: GalleryPhoto[] }) {
     <>
       <div className="mb-4 flex flex-wrap gap-2 text-xs text-stone-600">
         <span className="rounded-full border border-stone-200 bg-white/70 px-3 py-1">{photos.length} photos</span>
-        <span className="rounded-full border border-stone-200 bg-white/70 px-3 py-1">{Object.keys(byPlant).length} specimens</span>
+        <span className="rounded-full border border-stone-200 bg-white/70 px-3 py-1">{Object.keys(byPlant).length} records</span>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6">
@@ -150,7 +150,7 @@ export function PhotoGallery({ photos }: { photos: GalleryPhoto[] }) {
                   {activePhoto.caption && <p className="mt-1 max-w-3xl text-sm text-white/85">{activePhoto.caption}</p>}
                 </div>
                 <Link href={activePhoto.instanceHref} className="inline-flex items-center gap-2 rounded-md bg-white/12 px-3 py-2 text-sm font-medium text-white transition hover:bg-white/20">
-                  Open specimen
+                  Open record
                   <ExternalLink className="h-4 w-4" />
                 </Link>
               </div>

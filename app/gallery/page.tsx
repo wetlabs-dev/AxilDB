@@ -19,7 +19,7 @@ export default async function GalleryPage() {
   const collectionWhere = { collectionId: collection.id }
   const sortKey = await sortPreference(user?.id, 'gallery', 'newest', gallerySortOptions.map((option) => option.value))
   const photos = await prisma.photo.findMany({
-    where: { ...collectionWhere, entityType: { in: ['PLANT_INSTANCE', 'BLOOM_EVENT'] } },
+    where: { ...collectionWhere, entityType: { in: ['PLANT_INSTANCE', 'BLOOM_EVENT', 'PLANT_DEFINITION'] } },
     orderBy: { createdAt: 'desc' },
   })
 
@@ -29,8 +29,11 @@ export default async function GalleryPage() {
   const bloomIds = photos
     .filter((photo) => photo.entityType === 'BLOOM_EVENT')
     .map((photo) => photo.entityId)
+  const definitionIds = photos
+    .filter((photo) => photo.entityType === 'PLANT_DEFINITION')
+    .map((photo) => photo.entityId)
 
-  const [instances, blooms] = await Promise.all([
+  const [instances, blooms, definitions] = await Promise.all([
     prisma.plantInstance.findMany({
       where: { ...collectionWhere, id: { in: instanceIds } },
       include: { plantDefinition: true },
@@ -39,10 +42,14 @@ export default async function GalleryPage() {
       where: { ...collectionWhere, id: { in: bloomIds } },
       include: { plantInstance: { include: { plantDefinition: true } } },
     }),
+    prisma.plantDefinition.findMany({
+      where: { ...collectionWhere, id: { in: definitionIds } },
+    }),
   ])
 
   const instanceById = new Map(instances.map((instance) => [instance.id, instance]))
   const bloomById = new Map(blooms.map((bloom) => [bloom.id, bloom]))
+  const definitionById = new Map(definitions.map((definition) => [definition.id, definition]))
 
   const galleryPhotos = photos.flatMap<GalleryPhoto>((photo) => {
     if (photo.entityType === 'PLANT_INSTANCE') {
@@ -63,6 +70,30 @@ export default async function GalleryPage() {
         plantId: instance.plantId,
         plantName: plantName(instance.plantDefinition),
         instanceHref: collectionPath(collection.slug, `/instances/${instance.id}`),
+        isCover: photo.isCover,
+        isType: photo.isType,
+      }]
+    }
+
+    if (photo.entityType === 'PLANT_DEFINITION') {
+      const definition = definitionById.get(photo.entityId)
+      if (!definition) return []
+      const definitionName = plantName(definition)
+      return [{
+        id: photo.id,
+        path: photo.path,
+        caption: photo.caption || 'Plant definition type image',
+        cropX: photo.cropX,
+        cropY: photo.cropY,
+        cropWidth: photo.cropWidth,
+        cropHeight: photo.cropHeight,
+        focalX: photo.focalX,
+        focalY: photo.focalY,
+        createdAt: photo.createdAt.toISOString(),
+        kind: 'Type image',
+        plantId: definitionName,
+        plantName: definitionName,
+        instanceHref: collectionPath(collection.slug, `/plants/${definition.id}/edit`),
         isCover: photo.isCover,
         isType: photo.isType,
       }]
@@ -102,7 +133,7 @@ export default async function GalleryPage() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-3xl font-bold">Gallery</h2>
-          <p className="mt-1 text-sm text-stone-600">Browse specimen and bloom photos across the collection.</p>
+          <p className="mt-1 text-sm text-stone-600">Browse specimen, bloom, and type images across the collection.</p>
         </div>
         <SortControl
           section="gallery"
