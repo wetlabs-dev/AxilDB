@@ -51,7 +51,7 @@ export function LinkButton({ href, children, className = '' }: any) {
 
 export function GhostLink({ href, children }: any) {
   return (
-    <Link className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm text-stone-800 transition hover:bg-[#d6dfc9]/70 hover:text-[#1f472f]" href={href}>
+    <Link className="flex w-full min-w-0 items-center gap-2 rounded-md px-3 py-2 text-sm text-stone-800 transition hover:bg-[#d6dfc9]/70 hover:text-[#1f472f]" href={href}>
       {children}
     </Link>
   )

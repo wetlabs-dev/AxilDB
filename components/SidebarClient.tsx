@@ -46,6 +46,8 @@ type SidebarUser = {
   role: string
 }
 
+export type SidebarBadges = Record<string, number | undefined>
+
 const navSections = [
   {
     label: 'Home',
@@ -104,15 +106,35 @@ function activeRole(collection: SidebarCollection | undefined) {
   return collection.membership.role
 }
 
+function CountBadge({ value, attention = false }: { value?: number; attention?: boolean }) {
+  if (!value || value < 1) return null
+  const label = value > 999 ? '999+' : String(value)
+  return (
+    <span
+      className={[
+        'ml-auto inline-flex min-w-5 shrink-0 items-center justify-center rounded-full border px-1.5 py-0.5 text-[0.65rem] font-semibold leading-none',
+        attention
+          ? 'border-[#c47a5a]/35 bg-[#fff0de] text-[#7d3b23]'
+          : 'border-[#8fa58f]/35 bg-[#e8efdf] text-[#2f6b45]',
+      ].join(' ')}
+      aria-label={`${label} items`}
+    >
+      {label}
+    </span>
+  )
+}
+
 export function SidebarClient({
   user,
   initialCollection,
   collections,
+  badges = {},
   logoutAction,
 }: {
   user: SidebarUser | null
   initialCollection: { name: string; slug: string }
   collections: SidebarCollection[]
+  badges?: SidebarBadges
   logoutAction: () => Promise<void>
 }) {
   const pathname = usePathname()
@@ -127,6 +149,8 @@ export function SidebarClient({
   const collectionAdminItemsForRole = collectionAdminItems.filter(([, , , minimumRole]) => isSiteAdmin || (role && collectionRoleAtLeast(role, minimumRole)))
   const globalPath = (href: string) => `${href}?collection=${encodeURIComponent(slug)}`
 
+  const badgeFor = (key: string) => badges[key] || 0
+
   const nav = (
     <nav className="grid gap-4">
       {navSections.map((section) => (
@@ -135,7 +159,8 @@ export function SidebarClient({
           {section.items.map(([href, label, Icon]) => (
             <GhostLink key={href} href={collectionPath(slug, href)}>
               <Icon className="h-4 w-4 shrink-0" />
-              <span>{label}</span>
+              <span className="min-w-0 flex-1 truncate">{label}</span>
+              <CountBadge value={badgeFor(href)} attention={href === '/care'} />
             </GhostLink>
           ))}
         </div>
@@ -146,13 +171,15 @@ export function SidebarClient({
           {collectionAdminItemsForRole.map(([href, label, Icon]) => (
             <GhostLink key={href} href={collectionPath(slug, href)}>
               <Icon className="h-4 w-4 shrink-0" />
-              <span>{label}</span>
+              <span className="min-w-0 flex-1 truncate">{label}</span>
+              <CountBadge value={badgeFor(href)} attention={href === '/transfers' || href === '/members'} />
             </GhostLink>
           ))}
           {isSiteAdmin && (
             <GhostLink href="/server">
               <FlaskConical className="h-4 w-4 shrink-0" />
-              <span>Server Management</span>
+              <span className="min-w-0 flex-1 truncate">Server Management</span>
+              <CountBadge value={badgeFor('server')} attention />
             </GhostLink>
           )}
         </div>
@@ -168,11 +195,11 @@ export function SidebarClient({
       </div>
       <GhostLink href={globalPath('/help')}>
         <CircleHelp className="h-4 w-4 shrink-0" />
-        <span>Help</span>
+        <span className="min-w-0 flex-1 truncate">Help</span>
       </GhostLink>
       <GhostLink href={globalPath('/account')}>
         <BookOpen className="h-4 w-4 shrink-0" />
-        <span>Account</span>
+        <span className="min-w-0 flex-1 truncate">Account</span>
       </GhostLink>
       <form action={logoutAction}>
         <Button className="w-full">Sign out</Button>
@@ -182,11 +209,11 @@ export function SidebarClient({
     <div className="grid gap-2">
       <GhostLink href={globalPath('/help')}>
         <CircleHelp className="h-4 w-4 shrink-0" />
-        <span>Help</span>
+        <span className="min-w-0 flex-1 truncate">Help</span>
       </GhostLink>
       <GhostLink href="/login">
         <BookOpen className="h-4 w-4 shrink-0" />
-        <span>Sign in</span>
+        <span className="min-w-0 flex-1 truncate">Sign in</span>
       </GhostLink>
     </div>
   )
