@@ -9,8 +9,21 @@ import { attachCareSheetPhotos, careSheetModeLabel, sectionValuesForInstance } f
 import { prisma } from '@/lib/prisma'
 import { plantName } from '@/lib/utils'
 
+function contentLeft(doc: PDFKit.PDFDocument) {
+  return doc.page.margins.left
+}
+
+function contentRight(doc: PDFKit.PDFDocument) {
+  return doc.page.width - doc.page.margins.right
+}
+
+function contentWidth(doc: PDFKit.PDFDocument) {
+  return contentRight(doc) - contentLeft(doc)
+}
+
 function line(doc: PDFKit.PDFDocument, text: string, options: PDFKit.Mixins.TextOptions = {}) {
-  doc.text(text, { width: 500, ...options })
+  doc.x = contentLeft(doc)
+  doc.text(text, { width: contentWidth(doc), ...options })
 }
 
 function maybeValue(value: unknown) {
@@ -23,6 +36,32 @@ function taskDate(date?: Date | null) {
 
 function ensureRoom(doc: PDFKit.PDFDocument, needed = 72) {
   if (doc.y > doc.page.height - doc.page.margins.bottom - needed) doc.addPage()
+}
+
+function drawChecklistTask(doc: PDFKit.PDFDocument, task: any) {
+  ensureRoom(doc, 72)
+  const left = contentLeft(doc)
+  const right = contentRight(doc)
+  const checkboxSize = 9
+  const gap = 8
+  const textX = left + checkboxSize + gap
+  const textWidth = right - textX
+  const startY = doc.y
+  const plant = task.plantInstance
+
+  doc.rect(left, startY + 2, checkboxSize, checkboxSize).stroke('#333')
+  doc.font('Helvetica-Bold').fontSize(9.5).fillColor('#222')
+  doc.text(`${careTaskLabel(task.taskType as any)} · ${taskDate(task.dueAt)} · ${task.title}`, textX, startY - 1, { width: textWidth })
+  doc.font('Helvetica').fontSize(9).fillColor('#555')
+  if (plant) {
+    doc.text(`${plant.plantId} · ${plantName(plant.plantDefinition)}`, textX, doc.y, { width: textWidth })
+  }
+  if (task.reason) {
+    doc.text(task.reason, textX, doc.y, { width: textWidth })
+  }
+  doc.fillColor('#222')
+  doc.x = left
+  doc.moveDown(0.45)
 }
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -87,17 +126,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   if (hydratedSheet.tasks.length > 0) {
     doc.font('Times-Bold').fontSize(16).text('Checklist')
     doc.moveDown(0.5)
-    doc.font('Helvetica').fontSize(10)
     for (const task of hydratedSheet.tasks) {
-      ensureRoom(doc, 44)
-      const plant = task.plantInstance
-      doc.rect(doc.x, doc.y + 2, 9, 9).stroke('#333')
-      doc.text(`${careTaskLabel(task.taskType as any)} · ${taskDate(task.dueAt)} · ${task.title}`, doc.x + 16, doc.y - 1, { width: 480 })
-      if (plant) {
-        doc.fillColor('#555').text(`${plant.plantId} · ${plantName(plant.plantDefinition)}`, { width: 480 })
-      }
-      if (task.reason) doc.fillColor('#555').text(task.reason, { width: 480 })
-      doc.fillColor('#222').moveDown(0.4)
+      drawChecklistTask(doc, task)
     }
     doc.moveDown(0.8)
   }

@@ -104,10 +104,10 @@ export default async function WeeklyChecklistPage() {
                       <p className="truncate font-serif text-lg font-bold">{item.plantId || item.title}</p>
                       {item.plantName && <p className="truncate text-sm text-stone-700">{item.plantName}</p>}
                       <p className="mt-1 line-clamp-2 text-xs text-stone-600">{item.reason}</p>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <Link href={item.href} className="text-xs font-medium text-[#2f6b45] underline">View</Link>
+                      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                        <Link href={item.href} className="inline-flex items-center whitespace-nowrap font-medium leading-5 text-[#2f6b45] underline">View</Link>
                         {canAct && (
-                          <form action={completeCareTask}>
+                          <form action={completeCareTask} className="inline-flex">
                             <input type="hidden" name="collectionSlug" value={context.collection.slug} />
                             <input type="hidden" name="back" value={back} />
                             <input type="hidden" name="taskType" value={item.taskType} />
@@ -115,17 +115,17 @@ export default async function WeeklyChecklistPage() {
                             {item.reminderId && <input type="hidden" name="reminderId" value={item.reminderId} />}
                             {item.conditionId && <input type="hidden" name="conditionId" value={item.conditionId} />}
                             {item.bloomEventId && <input type="hidden" name="bloomEventId" value={item.bloomEventId} />}
-                            <button className="text-xs font-medium text-[#2f6b45] underline">Complete</button>
+                            <button className="inline-flex items-center whitespace-nowrap font-medium leading-5 text-[#2f6b45] underline">Complete</button>
                           </form>
                         )}
                         {canAct && item.plantInstanceId && item.source === 'derived' && (
-                          <form action={snoozeCareTask}>
+                          <form action={snoozeCareTask} className="inline-flex">
                             <input type="hidden" name="collectionSlug" value={context.collection.slug} />
                             <input type="hidden" name="back" value={back} />
                             <input type="hidden" name="plantInstanceId" value={item.plantInstanceId} />
                             <input type="hidden" name="taskType" value={item.taskType} />
                             <input type="hidden" name="days" value="3" />
-                            <button className="text-xs font-medium text-stone-600 underline">Snooze 3d</button>
+                            <button className="inline-flex items-center whitespace-nowrap font-medium leading-5 text-stone-600 underline">Snooze 3d</button>
                           </form>
                         )}
                       </div>
