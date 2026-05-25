@@ -110,11 +110,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     doc.font('Times-Bold').fontSize(13).fillColor('#222').text(instance.plantId)
     doc.font('Helvetica').fontSize(10).fillColor('#444')
     line(doc, `${plantName(instance.plantDefinition)}${instance.location ? ` · ${instance.location}` : ''}`)
+    const guide = (instance.plantDefinition as any).resolvedHusbandryGuide || instance.plantDefinition.husbandryGuide
     const summaries = [
-      maybeValue(instance.husbandryOverride?.summaryWater) || maybeValue(instance.plantDefinition.husbandryGuide?.summaryWater),
-      maybeValue(instance.husbandryOverride?.summaryLight) || maybeValue(instance.plantDefinition.husbandryGuide?.summaryLight),
-      maybeValue(instance.husbandryOverride?.summaryToxicity) || maybeValue(instance.plantDefinition.husbandryGuide?.summaryToxicity),
-      maybeValue(instance.husbandryOverride?.summaryCare) || maybeValue(instance.plantDefinition.husbandryGuide?.summaryCare),
+      maybeValue(instance.husbandryOverride?.summaryWater) || maybeValue(guide?.summaryWater),
+      maybeValue(instance.husbandryOverride?.summaryLight) || maybeValue(guide?.summaryLight),
+      maybeValue(instance.husbandryOverride?.summaryToxicity) || maybeValue(guide?.summaryToxicity),
+      maybeValue(instance.husbandryOverride?.summaryCare) || maybeValue(guide?.summaryCare),
     ].filter(Boolean)
     if (summaries.length) line(doc, summaries.join(' · '))
 

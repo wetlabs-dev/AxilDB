@@ -1,4 +1,5 @@
-import { revokeCareSheet } from '@/app/actions'
+import { deleteCareSheet, revokeCareSheet } from '@/app/actions'
+import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { CareSheetView } from '@/components/CareSheetView'
 import { Button, Card } from '@/components/ui'
 import { attachCareSheetPhotos, careSheetStatusLabel, publicCareSheetUrl, sitterUrl } from '@/lib/care-sheets'
@@ -61,13 +62,29 @@ export default async function CareSheetDetailPage({
         </Card>
       )}
 
-      {canManage && sheet.status === 'ACTIVE' && (
-        <form action={revokeCareSheet}>
-          <input type="hidden" name="collectionSlug" value={context.collection.slug} />
-          <input type="hidden" name="id" value={sheet.id} />
-          <input type="hidden" name="back" value={collectionPath(context.collection.slug, `/care-sheets/${sheet.id}`)} />
-          <Button className="bg-[#9a3f35] hover:bg-[#7d3028]">Revoke share access</Button>
-        </form>
+      {canManage && (
+        <div className="flex flex-wrap gap-2">
+          {sheet.status === 'ACTIVE' && (
+            <form action={revokeCareSheet}>
+              <input type="hidden" name="collectionSlug" value={context.collection.slug} />
+              <input type="hidden" name="id" value={sheet.id} />
+              <input type="hidden" name="back" value={collectionPath(context.collection.slug, `/care-sheets/${sheet.id}`)} />
+              <Button className="bg-[#9a3f35] hover:bg-[#7d3028]">Revoke share access</Button>
+            </form>
+          )}
+          <form action={deleteCareSheet}>
+            <input type="hidden" name="collectionSlug" value={context.collection.slug} />
+            <input type="hidden" name="id" value={sheet.id} />
+            <input type="hidden" name="back" value={collectionPath(context.collection.slug, '/care-sheets')} />
+            <ConfirmDeleteButton
+              title="Delete care sheet?"
+              message={`This permanently removes "${sheet.title}" and its saved tasks. Plant records and care history will stay intact.`}
+              confirmLabel="Delete care sheet"
+            >
+              Delete care sheet
+            </ConfirmDeleteButton>
+          </form>
+        </div>
       )}
 
       <CareSheetView sheet={hydratedSheet} />

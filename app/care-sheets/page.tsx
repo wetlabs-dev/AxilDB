@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import { revokeCareSheet } from '@/app/actions'
+import { deleteCareSheet, revokeCareSheet } from '@/app/actions'
+import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { Button, Card, LinkButton } from '@/components/ui'
 import { careSheetModeLabel, careSheetStatusLabel } from '@/lib/care-sheets'
 import { canManageCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
@@ -55,13 +56,29 @@ export default async function CareSheetsPage() {
                   Open
                 </Link>
               </div>
-              {canManage && sheet.status === 'ACTIVE' && (
-                <form action={revokeCareSheet}>
-                  <input type="hidden" name="collectionSlug" value={context.collection.slug} />
-                  <input type="hidden" name="id" value={sheet.id} />
-                  <input type="hidden" name="back" value={collectionPath(context.collection.slug, '/care-sheets')} />
-                  <Button className="bg-[#9a3f35] hover:bg-[#7d3028]">Revoke</Button>
-                </form>
+              {canManage && (
+                <div className="flex flex-wrap gap-2">
+                  {sheet.status === 'ACTIVE' && (
+                    <form action={revokeCareSheet}>
+                      <input type="hidden" name="collectionSlug" value={context.collection.slug} />
+                      <input type="hidden" name="id" value={sheet.id} />
+                      <input type="hidden" name="back" value={collectionPath(context.collection.slug, '/care-sheets')} />
+                      <Button className="bg-[#9a3f35] hover:bg-[#7d3028]">Revoke</Button>
+                    </form>
+                  )}
+                  <form action={deleteCareSheet}>
+                    <input type="hidden" name="collectionSlug" value={context.collection.slug} />
+                    <input type="hidden" name="id" value={sheet.id} />
+                    <input type="hidden" name="back" value={collectionPath(context.collection.slug, '/care-sheets')} />
+                    <ConfirmDeleteButton
+                      title="Delete care sheet?"
+                      message={`This permanently removes "${sheet.title}" and its saved tasks. Plant records and care history will stay intact.`}
+                      confirmLabel="Delete care sheet"
+                    >
+                      Delete
+                    </ConfirmDeleteButton>
+                  </form>
+                </div>
               )}
             </Card>
           ))}

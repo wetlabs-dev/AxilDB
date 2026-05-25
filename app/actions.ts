@@ -967,6 +967,20 @@ export async function revokeCareSheet(fd: FormData) {
   redirect(back(fd))
 }
 
+export async function deleteCareSheet(fd: FormData) {
+  const context = await requireCollectionManager(await collectionSlug(fd))
+  const id = val(fd, 'id')!
+  const destination = back(fd) || collectionPath(context.collection.slug, '/care-sheets')
+  const sheet = await prisma.careSheet.findFirstOrThrow({
+    where: { id, collectionId: context.collection.id },
+    select: { id: true, title: true, mode: true },
+  })
+  await prisma.careSheet.delete({ where: { id: sheet.id } })
+  await audit(context.user, 'DELETE', 'CARE_SHEET', id, `Deleted ${sheet.title}`, { mode: sheet.mode }, context.collection.id)
+  revalidatePath(collectionPath(context.collection.slug, '/care-sheets'))
+  redirect(destination)
+}
+
 async function requirePublicCareSheetTask(fd: FormData) {
   const token = val(fd, 'token')
   if (!token) throw new Error('Care sheet token is required.')

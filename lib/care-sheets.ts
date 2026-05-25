@@ -118,33 +118,57 @@ export async function resolveCareSheetToken(prisma: PrismaClient, token: string)
 
 export async function attachCareSheetPhotos(prisma: PrismaClient, sheet: any) {
   const instanceIds = new Set<string>()
+  const sourceDefinitionIds = new Set<string>()
   for (const entry of sheet.plants || []) {
     if (entry.plantInstance?.id) instanceIds.add(entry.plantInstance.id)
+    const sourceId = entry.plantInstance?.plantDefinition?.husbandryGuide?.sourcePlantDefinitionId
+    if (sourceId) sourceDefinitionIds.add(sourceId)
   }
   for (const task of sheet.tasks || []) {
     if (task.plantInstance?.id) instanceIds.add(task.plantInstance.id)
+    const sourceId = task.plantInstance?.plantDefinition?.husbandryGuide?.sourcePlantDefinitionId
+    if (sourceId) sourceDefinitionIds.add(sourceId)
   }
-  if (instanceIds.size === 0) return sheet
 
-  const photos = await prisma.photo.findMany({
-    where: {
-      collectionId: sheet.collectionId,
-      entityType: 'PLANT_INSTANCE',
-      entityId: { in: Array.from(instanceIds) },
-    },
-    orderBy: [{ isCover: 'desc' }, { createdAt: 'desc' }],
-  })
+  const photos = instanceIds.size
+    ? await prisma.photo.findMany({
+        where: {
+          collectionId: sheet.collectionId,
+          entityType: 'PLANT_INSTANCE',
+          entityId: { in: Array.from(instanceIds) },
+        },
+        orderBy: [{ isCover: 'desc' }, { createdAt: 'desc' }],
+      })
+    : []
   const grouped = photos.reduce<Record<string, typeof photos>>((acc, photo) => {
     acc[photo.entityId] ||= []
     acc[photo.entityId].push(photo)
     return acc
   }, {})
 
+  const sourceGuides = sourceDefinitionIds.size
+    ? await prisma.plantHusbandryGuide.findMany({
+        where: {
+          collectionId: sheet.collectionId,
+          plantDefinitionId: { in: Array.from(sourceDefinitionIds) },
+        },
+      })
+    : []
+  const sourceGuideByDefinitionId = new Map(sourceGuides.map((guide) => [guide.plantDefinitionId, guide]))
+
+  const hydrateInstance = (instance: any) => {
+    if (!instance) return
+    instance.photos = grouped[instance.id] || []
+    const sourceId = instance.plantDefinition?.husbandryGuide?.sourcePlantDefinitionId
+    const sourceGuide = sourceId ? sourceGuideByDefinitionId.get(sourceId) : null
+    if (sourceGuide) instance.plantDefinition.resolvedHusbandryGuide = sourceGuide
+  }
+
   for (const entry of sheet.plants || []) {
-    if (entry.plantInstance) entry.plantInstance.photos = grouped[entry.plantInstance.id] || []
+    hydrateInstance(entry.plantInstance)
   }
   for (const task of sheet.tasks || []) {
-    if (task.plantInstance) task.plantInstance.photos = grouped[task.plantInstance.id] || []
+    hydrateInstance(task.plantInstance)
   }
   return sheet
 }
@@ -180,7 +204,7 @@ export function instanceImage(instance: any) {
 }
 
 export function effectiveHusbandry(instance: any) {
-  const guide = instance.plantDefinition?.husbandryGuide
+  const guide = instance.plantDefinition?.resolvedHusbandryGuide || instance.plantDefinition?.husbandryGuide
   const override = instance.husbandryOverride
   const values: Record<string, string> = {}
   const overridden = new Set<string>()
