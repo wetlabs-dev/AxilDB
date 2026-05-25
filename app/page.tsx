@@ -249,11 +249,12 @@ export default async function Dashboard({
     .sort((a, b) => b.date.getTime() - a.date.getTime())
     .filter((item) => !activeKind || item.kind === activeKind)
     .slice(0, activityTake)
+  const acquiredPropagationCount = acquired.filter((item) => item.instanceType === 'ACQUIRED_PROPAGATION').length
 
   const stats = [
     ['Care today', care.today, ClipboardCheck, collectionPath(collection.slug, '/care')],
     ['Active plants', active, Leaf, collectionPath(collection.slug, '/instances')],
-    ['Recent propagations', recentProps.length, GitBranch, collectionPath(collection.slug, '/propagations')],
+    ['Recent propagations', recentProps.length + acquiredPropagationCount, GitBranch, activityHref(collection.slug, activityTake, 'propagation')],
     ['Recent blooms', blooms.length, Flower2, collectionPath(collection.slug, '/blooms')],
     ['Sport candidates', sports.length, Sprout, collectionPath(collection.slug, '/sports')],
   ] as const
