@@ -10,9 +10,21 @@ import {
   collectionPath,
   getCurrentCollectionSlug,
   requireCollectionAdmin,
+  requireCollectionGardener,
   requireCollectionLogger,
+  requireCollectionManager,
   requireCollectionViewer,
 } from '@/lib/collections'
+import {
+  careSheetSettingsFromForm,
+  dateFromForm,
+  generateCareSheetToken,
+  hashCareSheetToken,
+  normalizeCareSheetMode,
+  selectedCareSheetSections,
+  taskSnapshotFromQueueItem,
+} from '@/lib/care-sheets'
+import { getCareQueue } from '@/lib/care-queue'
 import { createDemoData } from '@/lib/demo-data'
 import { notifyFollowers } from '@/lib/follows'
 import { expectedPlantIdForInstance, generatePlantId } from '@/lib/plant-id'
@@ -860,6 +872,154 @@ export async function completeReminder(fd: FormData) {
   })
 
   await audit(user, 'COMPLETE', 'REMINDER', id, nextSendAt ? `Completed reminder ${reminder.title}; next due ${nextSendAt.toLocaleDateString()}` : `Completed reminder ${reminder.title}`, undefined, reminder.collectionId)
+  revalidateDestination(destination)
+  redirect(destination)
+}
+
+export async function createCareSheet(fd: FormData) {
+  const slug = await collectionSlug(fd)
+  const mode = normalizeCareSheetMode(val(fd, 'mode'))
+  const context = mode === 'SITTER_SESSION'
+    ? await requireCollectionGardener(slug)
+    : await requireCollectionLogger(slug)
+  const destination = val(fd, 'destination')
+  const title = val(fd, 'title') || (mode === 'WEEKLY_CHECKLIST' ? 'Weekly greenhouse checklist' : mode === 'SITTER_SESSION' ? 'Plant sitter plan' : 'Care sheet')
+  const plantIds = Array.from(new Set(fd.getAll('plantInstanceId').map((value) => String(value)).filter(Boolean)))
+  const sections = selectedCareSheetSections(fd)
+  const startsAt = dateFromForm(fd, 'startsAt')
+  const expiresAt = dateFromForm(fd, 'expiresAt') || (mode === 'SITTER_SESSION' ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) : null)
+  const shouldTokenize = mode === 'SITTER_SESSION' || fd.get('shareable') === 'on'
+  const token = shouldTokenize ? generateCareSheetToken() : null
+  const settings = careSheetSettingsFromForm(fd)
+
+  const plants = await prisma.plantInstance.findMany({
+    where: {
+      collectionId: context.collection.id,
+      ...(plantIds.length ? { id: { in: plantIds } } : { status: 'ACTIVE' }),
+    },
+    select: { id: true, location: true },
+    orderBy: [{ location: 'asc' }, { plantId: 'asc' }],
+  })
+  if (plants.length === 0) throw new Error('Select at least one plant for this care sheet.')
+
+  const sheet = await prisma.careSheet.create({
+    data: {
+      collectionId: context.collection.id,
+      createdById: context.user.id,
+      title,
+      mode,
+      status: shouldTokenize || mode !== 'CARE_SHEET' ? 'ACTIVE' : 'DRAFT',
+      startsAt,
+      expiresAt,
+      publicTokenHash: token ? hashCareSheetToken(token) : null,
+      sections,
+      settings,
+      plants: {
+        create: plants.map((plant, index) => ({
+          collectionId: context.collection.id,
+          plantInstanceId: plant.id,
+          displayOrder: index,
+          notes: val(fd, `plantNote:${plant.id}`),
+        })),
+      },
+    },
+  })
+
+  if (mode === 'WEEKLY_CHECKLIST' || mode === 'SITTER_SESSION') {
+    const rangeEnd = expiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    const selectedTaskTypes = new Set(settings.taskTypes.length ? settings.taskTypes : ['WATER', 'PROPAGATION_CHECK', 'PEST_CHECK', 'HEALTH_CHECK', 'BLOOM_CHECK', 'REMINDER'])
+    const selectedPlantSet = new Set(plants.map((plant) => plant.id))
+    const queue = await getCareQueue(prisma, {
+      collectionId: context.collection.id,
+      collectionSlug: context.collection.slug,
+      userId: context.user.id,
+    })
+    const tasks = queue
+      .filter((item) => item.plantInstanceId && selectedPlantSet.has(item.plantInstanceId))
+      .filter((item) => selectedTaskTypes.has(item.taskType))
+      .filter((item) => item.dueAt <= rangeEnd)
+      .map(taskSnapshotFromQueueItem)
+
+    if (tasks.length > 0) {
+      await prisma.careSheetTask.createMany({
+        data: tasks.map((task) => ({
+          ...task,
+          careSheetId: sheet.id,
+          collectionId: context.collection.id,
+        })),
+      })
+    }
+  }
+
+  await audit(context.user, 'CREATE', 'CARE_SHEET', sheet.id, `Created ${mode.toLowerCase().replaceAll('_', ' ')} ${title}`, { tokenized: Boolean(token) }, context.collection.id)
+  revalidatePath(collectionPath(context.collection.slug, '/care-sheets'))
+  if (destination) redirect(destination)
+  redirect(collectionPath(context.collection.slug, `/care-sheets/${sheet.id}${token ? `?token=${encodeURIComponent(token)}` : ''}`))
+}
+
+export async function revokeCareSheet(fd: FormData) {
+  const context = await requireCollectionManager(await collectionSlug(fd))
+  const id = val(fd, 'id')!
+  const sheet = await prisma.careSheet.findFirstOrThrow({ where: { id, collectionId: context.collection.id } })
+  await prisma.careSheet.update({ where: { id }, data: { status: 'REVOKED' } })
+  await audit(context.user, 'REVOKE', 'CARE_SHEET', id, `Revoked ${sheet.title}`, undefined, context.collection.id)
+  revalidatePath(collectionPath(context.collection.slug, '/care-sheets'))
+  redirect(back(fd))
+}
+
+async function requirePublicCareSheetTask(fd: FormData) {
+  const token = val(fd, 'token')
+  if (!token) throw new Error('Care sheet token is required.')
+  const sheet = await prisma.careSheet.findUnique({
+    where: { publicTokenHash: hashCareSheetToken(token) },
+    include: { tasks: true },
+  })
+  if (!sheet || sheet.status !== 'ACTIVE') throw new Error('This care sheet is not available.')
+  const now = new Date()
+  if (sheet.startsAt && sheet.startsAt > now) throw new Error('This care sheet is not active yet.')
+  if (sheet.expiresAt && sheet.expiresAt < now) throw new Error('This care sheet has expired.')
+  const taskId = val(fd, 'taskId')!
+  const task = sheet.tasks.find((candidate) => candidate.id === taskId)
+  if (!task) throw new Error('Task not found.')
+  return { sheet, task, token }
+}
+
+export async function completeCareSheetTask(fd: FormData) {
+  const destination = back(fd)
+  const { sheet, task } = await requirePublicCareSheetTask(fd)
+  const completedAt = new Date()
+  const completedByName = val(fd, 'completedByName')
+  const notes = val(fd, 'notes')
+
+  await prisma.careSheetTask.update({
+    where: { id: task.id },
+    data: { status: 'COMPLETED', completedAt, completedByName, notes },
+  })
+
+  if (task.plantInstanceId) {
+    await prisma.plantCareEvent.create({
+      data: {
+        collectionId: sheet.collectionId,
+        plantInstanceId: task.plantInstanceId,
+        eventType: careEventForTask(task.taskType),
+        performedAt: completedAt,
+        notes: [notes, completedByName ? `Completed by ${completedByName}` : 'Completed from sitter plan'].filter(Boolean).join('\n'),
+        metadata: { careSheetId: sheet.id, careSheetTaskId: task.id, source: 'CARE_SHEET_TOKEN' },
+      },
+    })
+  }
+
+  revalidateDestination(destination)
+  redirect(destination)
+}
+
+export async function skipCareSheetTask(fd: FormData) {
+  const destination = back(fd)
+  const { task } = await requirePublicCareSheetTask(fd)
+  await prisma.careSheetTask.update({
+    where: { id: task.id },
+    data: { status: 'SKIPPED', notes: val(fd, 'notes'), completedByName: val(fd, 'completedByName'), completedAt: new Date() },
+  })
   revalidateDestination(destination)
   redirect(destination)
 }

@@ -57,6 +57,8 @@ model User {
   reviewedPlantTransfers PlantTransferRequest[] @relation("PlantTransferReviewer")
   requestedDefinitionShares PlantDefinitionShareRequest[] @relation("DefinitionShareRequester")
   reviewedDefinitionShares PlantDefinitionShareRequest[] @relation("DefinitionShareReviewer")
+  careSheets          CareSheet[]
+  completedCareSheetTasks CareSheetTask[] @relation("CareSheetTaskCompletedBy")
 
   @@index([role])
   @@index([emailVerifiedAt])
@@ -106,6 +108,10 @@ model Collection {
   incomingPlantTransferRequests PlantTransferRequest[] @relation("PlantTransferTargetCollection")
   outgoingDefinitionShareRequests PlantDefinitionShareRequest[] @relation("DefinitionShareSourceCollection")
   incomingDefinitionShareRequests PlantDefinitionShareRequest[] @relation("DefinitionShareTargetCollection")
+  careSheets          CareSheet[]
+  careSheetPlants     CareSheetPlant[]
+  careSheetTasks      CareSheetTask[]
+  careSheetAccessLogs CareSheetAccessLog[]
 
   @@index([visibility])
   @@index([status])
@@ -726,6 +732,8 @@ model PlantInstance {
   careAdjustments PlantCareAdjustment[]
   outgoingTransferRequests PlantTransferRequest[] @relation("SourcePlantTransferRequests")
   incomingTransferRequests PlantTransferRequest[] @relation("TargetPlantTransferRequests")
+  careSheetPlants CareSheetPlant[]
+  careSheetTasks  CareSheetTask[]
 
   @@index([collectionId])
   @@unique([collectionId, plantId])
@@ -892,6 +900,105 @@ model PlantCareAdjustment {
   @@index([disabled])
 }
 
+model CareSheet {
+  id              String    @id @default(cuid())
+  collectionId    String
+  createdById     String?
+  title           String
+  mode            String    @default("CARE_SHEET")
+  status          String    @default("DRAFT")
+  startsAt        DateTime?
+  expiresAt       DateTime?
+  publicTokenHash String?   @unique
+  sections        Json
+  settings        Json?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  createdBy  User?      @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  plants     CareSheetPlant[]
+  tasks      CareSheetTask[]
+  accessLogs CareSheetAccessLog[]
+
+  @@index([collectionId])
+  @@index([createdById])
+  @@index([mode])
+  @@index([status])
+  @@index([startsAt])
+  @@index([expiresAt])
+}
+
+model CareSheetPlant {
+  id              String  @id @default(cuid())
+  careSheetId     String
+  collectionId    String
+  plantInstanceId String
+  displayOrder    Int?
+  notes           String?
+
+  careSheet     CareSheet     @relation(fields: [careSheetId], references: [id], onDelete: Cascade)
+  collection    Collection    @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  plantInstance PlantInstance @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
+
+  @@unique([careSheetId, plantInstanceId])
+  @@index([careSheetId])
+  @@index([collectionId])
+  @@index([plantInstanceId])
+}
+
+model CareSheetTask {
+  id                 String    @id @default(cuid())
+  careSheetId        String
+  collectionId       String
+  plantInstanceId    String?
+  taskType           String
+  title              String
+  reason             String?
+  dueAt              DateTime?
+  status             String    @default("PENDING")
+  completedAt        DateTime?
+  completedByName    String?
+  completedByUserId  String?
+  notes              String?
+  sourceCareQueueKey String?
+  sourceReminderId   String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  careSheet       CareSheet      @relation(fields: [careSheetId], references: [id], onDelete: Cascade)
+  collection      Collection     @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  plantInstance   PlantInstance? @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
+  sourceReminder  Reminder?      @relation(fields: [sourceReminderId], references: [id], onDelete: SetNull)
+  completedByUser User?          @relation("CareSheetTaskCompletedBy", fields: [completedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([careSheetId])
+  @@index([collectionId])
+  @@index([plantInstanceId])
+  @@index([taskType])
+  @@index([status])
+  @@index([dueAt])
+  @@index([sourceReminderId])
+}
+
+model CareSheetAccessLog {
+  id          String   @id @default(cuid())
+  careSheetId String
+  collectionId String
+  accessedAt DateTime @default(now())
+  ipHash     String?
+  userAgent  String?
+  action     String?
+
+  careSheet  CareSheet  @relation(fields: [careSheetId], references: [id], onDelete: Cascade)
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@index([careSheetId])
+  @@index([collectionId])
+  @@index([accessedAt])
+  @@index([action])
+}
+
 model PropagationEvent {
   id            String   @id @default(cuid())
   collectionId  String?
@@ -1038,6 +1145,7 @@ model Reminder {
   collection Collection?        @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   deliveries ReminderDelivery[]
+  careSheetTasks CareSheetTask[]
 
   @@index([collectionId])
   @@index([userId])

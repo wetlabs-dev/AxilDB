@@ -18,6 +18,9 @@ It is designed for real collection work: messy taxonomy, acquisition names, alia
 - Smart Care Queue that combines husbandry cadence, watering history, propagation stage, open health conditions, bloom follow-ups, pest checks, and manual reminders into a prioritized collection worklist.
 - Care event history for watering, fertilizing, repotting, pest checks, health checks, propagation checks, bloom checks, and other care tasks.
 - Plant condition tracking for issues like wilting, yellowing leaves, crispy leaves, pests, disease, root issues, sunburn, nutrient issues, and mechanical damage, with severity/status follow-up.
+- Care sheets that combine selected specimens, photos, quick care badges, selected husbandry sections, and local care adjustments into a shareable web view or printable PDF.
+- Weekly greenhouse checklist generation from the care queue, grouped by location and covering overdue, due-today, and upcoming care tasks.
+- Plant sitter mode with expiring/revocable token links that expose only selected plants and tasks, allow limited checklist completion, and log sitter actions back into AxilDB.
 - Plant instances with generated plant IDs, acquisition/propagation dates, source/distributor metadata, location, archive status, notes, and photos.
 - Automatic plant ID generation based on plant definition, date, context, and sequence number.
 - Propagation events with parent/child links, method, date, success status, and generated child plant IDs.
@@ -352,6 +355,7 @@ Core models:
 - `EmailPreference`: user-configurable email categories, timezone, and quiet-hours settings.
 - `Reminder` and `ReminderDelivery`: reminder scheduling metadata and delivery history.
 - `Follow` and `FollowNotification`: event-based subscriptions and delivery history for followed specimens, plant types, and lineages.
+- `CareSheet`, `CareSheetPlant`, `CareSheetTask`, and `CareSheetAccessLog`: generated care sheets, weekly checklists, limited sitter sessions, token access logs, and interactive checklist task state.
 - `ServerMetricSnapshot`: rolling 36-hour best-effort server metrics and storage estimates.
 - `BackupRun`: sitewide backup request, worker status, output path, logs, and manifest metadata.
 - `GoverningBody`: registration or standards organizations.

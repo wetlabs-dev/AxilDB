@@ -53,6 +53,7 @@ const navSections = [
       ['/', 'Dashboard', Home],
       ['/search', 'Search', Search],
       ['/care', 'Care Queue', ClipboardCheck],
+      ['/care-sheets', 'Care Sheets', BookOpen],
     ],
   },
   {

@@ -375,7 +375,13 @@ export default async function InstanceDetail({
           <h3 className="font-bold">Care</h3>
           <p className="text-sm text-stone-600">Last watering, open conditions, and recent care history.</p>
         </div>
-        <Link className="text-sm font-medium text-[#2f6b45] underline" href={collectionPath(collection.slug, '/care')}>Care queue</Link>
+        <div className="flex flex-wrap gap-2 text-sm font-medium">
+          <Link className="text-[#2f6b45] underline" href={collectionPath(collection.slug, '/care')}>Care queue</Link>
+          <Link className="text-[#2f6b45] underline" href={collectionPath(collection.slug, `/care-sheets/new?plantInstanceId=${id}`)}>Add to care sheet</Link>
+          {canEditRecords && (
+            <Link className="text-[#2f6b45] underline" href={collectionPath(collection.slug, `/care-sheets/new?mode=sitter&plantInstanceId=${id}`)}>Create sitter plan</Link>
+          )}
+        </div>
       </div>
       <div className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
         <div className="rounded-lg border border-stone-200 bg-white/60 p-3">

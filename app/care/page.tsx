@@ -62,11 +62,19 @@ export default async function CareQueuePage({ searchParams }: { searchParams: Pr
           <h2 className="text-3xl font-bold">Care Queue</h2>
           <p className="text-sm text-stone-600">What needs attention today, and why.</p>
         </div>
-        <div className="grid grid-cols-4 gap-2 text-center text-xs sm:flex">
-          <div className="rounded-lg border border-stone-200 bg-white/60 px-3 py-2"><b className="block text-base">{summary.today}</b> due today</div>
-          <div className="rounded-lg border border-stone-200 bg-white/60 px-3 py-2"><b className="block text-base">{summary.overdue}</b> overdue</div>
-          <div className="rounded-lg border border-stone-200 bg-white/60 px-3 py-2"><b className="block text-base">{summary.health}</b> attention</div>
-          <div className="rounded-lg border border-stone-200 bg-white/60 px-3 py-2"><b className="block text-base">{summary.propagation}</b> props</div>
+        <div className="flex flex-wrap items-end justify-end gap-2">
+          <Link
+            href={collectionPath(context.collection.slug, '/care/checklist')}
+            className="rounded-md border border-[#c7d8bd] bg-white/70 px-3 py-2 text-sm font-semibold text-[#2f6b45] shadow-sm hover:bg-[#f5fbf0]"
+          >
+            Weekly checklist
+          </Link>
+          <div className="grid grid-cols-4 gap-2 text-center text-xs sm:flex">
+            <div className="rounded-lg border border-stone-200 bg-white/60 px-3 py-2"><b className="block text-base">{summary.today}</b> due today</div>
+            <div className="rounded-lg border border-stone-200 bg-white/60 px-3 py-2"><b className="block text-base">{summary.overdue}</b> overdue</div>
+            <div className="rounded-lg border border-stone-200 bg-white/60 px-3 py-2"><b className="block text-base">{summary.health}</b> attention</div>
+            <div className="rounded-lg border border-stone-200 bg-white/60 px-3 py-2"><b className="block text-base">{summary.propagation}</b> props</div>
+          </div>
         </div>
       </div>
 

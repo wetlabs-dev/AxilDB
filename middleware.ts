@@ -13,6 +13,8 @@ const collectionRoutePrefixes = [
   '/gallery',
   '/graphs',
   '/search',
+  '/care',
+  '/care-sheets',
   '/following',
   '/reminders',
   '/collection-settings',
@@ -40,6 +42,8 @@ const globalPrefixes = [
   '/server',
   '/collections',
   '/collection-access',
+  '/care-sheet',
+  '/sitter',
 ]
 
 function isCollectionRoute(pathname: string) {

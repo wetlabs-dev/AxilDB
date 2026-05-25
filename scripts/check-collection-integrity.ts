@@ -20,6 +20,10 @@ const requiredCollectionModels = [
   ['PlantCareEvent', 'plantCareEvent'],
   ['PlantCondition', 'plantCondition'],
   ['PlantCareAdjustment', 'plantCareAdjustment'],
+  ['CareSheet', 'careSheet'],
+  ['CareSheetPlant', 'careSheetPlant'],
+  ['CareSheetTask', 'careSheetTask'],
+  ['CareSheetAccessLog', 'careSheetAccessLog'],
 ] as const
 
 const relationshipChecks = [
