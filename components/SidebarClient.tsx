@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { MobileMenuAutoClose } from './MobileMenuAutoClose'
+import { ThemeToggle } from './ThemeToggle'
 import { Button, GhostLink } from './ui'
 import {
   Archive,
@@ -201,6 +202,7 @@ export function SidebarClient({
         <BookOpen className="h-4 w-4 shrink-0" />
         <span className="min-w-0 flex-1 truncate">Account</span>
       </GhostLink>
+      <ThemeToggle />
       <form action={logoutAction}>
         <Button className="w-full">Sign out</Button>
       </form>
@@ -215,6 +217,7 @@ export function SidebarClient({
         <BookOpen className="h-4 w-4 shrink-0" />
         <span className="min-w-0 flex-1 truncate">Sign in</span>
       </GhostLink>
+      <ThemeToggle />
     </div>
   )
 

@@ -15,7 +15,26 @@ export default async function RootLayout({children}:{children:React.ReactNode}) 
   const isMarketingRoute = requestHeaders.get('x-axildb-marketing') === '1'
 
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (() => {
+                try {
+                  const preference = localStorage.getItem('axildb-theme') || 'system';
+                  const dark = preference === 'dark' || (preference === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+                  document.documentElement.dataset.themePreference = preference;
+                } catch {
+                  document.documentElement.dataset.theme = 'light';
+                  document.documentElement.dataset.themePreference = 'system';
+                }
+              })();
+            `,
+          }}
+        />
+      </head>
       <body>
         {isMarketingHost || isMarketingRoute ? (
           children
