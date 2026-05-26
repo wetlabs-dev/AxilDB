@@ -202,6 +202,14 @@ export function SidebarClient({
         <BookOpen className="h-4 w-4 shrink-0" />
         <span className="min-w-0 flex-1 truncate">Account</span>
       </GhostLink>
+      <GhostLink href={globalPath('/privacy')}>
+        <ShieldCheck className="h-4 w-4 shrink-0" />
+        <span className="min-w-0 flex-1 truncate">Privacy</span>
+      </GhostLink>
+      <GhostLink href={globalPath('/terms')}>
+        <FileText className="h-4 w-4 shrink-0" />
+        <span className="min-w-0 flex-1 truncate">Terms</span>
+      </GhostLink>
       <ThemeToggle />
       <form action={logoutAction}>
         <Button className="w-full">Sign out</Button>
@@ -216,6 +224,14 @@ export function SidebarClient({
       <GhostLink href="/login">
         <BookOpen className="h-4 w-4 shrink-0" />
         <span className="min-w-0 flex-1 truncate">Sign in</span>
+      </GhostLink>
+      <GhostLink href={globalPath('/privacy')}>
+        <ShieldCheck className="h-4 w-4 shrink-0" />
+        <span className="min-w-0 flex-1 truncate">Privacy</span>
+      </GhostLink>
+      <GhostLink href={globalPath('/terms')}>
+        <FileText className="h-4 w-4 shrink-0" />
+        <span className="min-w-0 flex-1 truncate">Terms</span>
       </GhostLink>
       <ThemeToggle />
     </div>

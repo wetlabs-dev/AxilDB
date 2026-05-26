@@ -287,14 +287,16 @@ export default function SplashPage() {
               <img src="/wetlabs-logo.png" alt="WetLabs" className="h-full w-full object-contain" />
             </div>
             <div>
-              <p>AxilDB — Botanical Accession System</p>
+              <p>AxilDB - Botanical Accession System</p>
               <p className="text-xs">Made with love by WetLabs</p>
             </div>
           </div>
-          <div className="flex gap-4">
+          <div className="flex flex-wrap gap-4">
             <a className="underline" href={appUrl}>App</a>
             <a className="underline" href={githubUrl}>GitHub</a>
             <a className="underline" href={donateUrl}>Ko-fi</a>
+            <a className="underline" href="/privacy">Privacy</a>
+            <a className="underline" href="/terms">Terms</a>
           </div>
         </div>
       </footer>
