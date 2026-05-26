@@ -12,6 +12,7 @@ import {
   Sprout,
   Users,
 } from 'lucide-react'
+import { ForceLightTheme } from '@/components/ForceLightTheme'
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.axildb.com'
 const githubUrl = process.env.NEXT_PUBLIC_GITHUB_URL || 'https://github.com/wetlabs-dev/AxilDB'
@@ -39,10 +40,12 @@ const workflow = [
 
 export default function SplashPage() {
   return (
-    <main
-      className="min-h-screen overflow-hidden bg-[#fffaf0] bg-cover bg-top text-stone-900"
-      style={{ backgroundImage: "linear-gradient(rgba(255,250,240,.88), rgba(255,250,240,.94)), url('/splash-bg-wash.png')" }}
-    >
+    <>
+      <ForceLightTheme />
+      <main
+        className="min-h-screen overflow-hidden bg-[#fffaf0] bg-cover bg-top text-stone-900"
+        style={{ backgroundImage: "linear-gradient(rgba(255,250,240,.88), rgba(255,250,240,.94)), url('/splash-bg-wash.png')" }}
+      >
       <header className="sticky top-0 z-30 border-b border-stone-200/70 bg-[#fffaf0]/90 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4 sm:px-6 lg:px-8">
           <a href="/" className="flex items-center gap-3">
@@ -295,6 +298,7 @@ export default function SplashPage() {
           </div>
         </div>
       </footer>
-    </main>
+      </main>
+    </>
   )
 }
