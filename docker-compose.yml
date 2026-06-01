@@ -99,6 +99,7 @@ services:
         condition: service_completed_successfully
     environment:
       DATABASE_URL: postgresql://plants:plants@db:5432/axildb?schema=public
+      NEXT_PUBLIC_APP_URL: https://app.axildb.com
     volumes:
       - ./public/uploads:/app/public/uploads
       - ./public/labels:/app/public/labels

@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client'
 import { appUrl, sendEmail } from '../lib/email'
 import { reminderEmail } from '../lib/email-templates'
+import { sendCareQueueDigestAlerts } from '../lib/email-alerts'
 import { nextOccurrence, reminderCategoryLabel, reminderPreferenceKey } from '../lib/reminders'
 
 const prisma = new PrismaClient()
@@ -177,7 +178,8 @@ async function main() {
     }
   }
 
-  console.info(`Processed ${reminders.length} due reminder(s).`)
+  const digestResult = await sendCareQueueDigestAlerts(prisma, now)
+  console.info(`Processed ${reminders.length} due reminder(s). Sent ${digestResult.sent} care queue digest(s); ${digestResult.failed} failed.`)
 }
 
 main()

@@ -1,4 +1,6 @@
 import { ensureRecentServerMetricSnapshot, formatBytes } from '@/lib/server-metrics'
+import { sendServerHealthAlertEmails } from '@/lib/email-alerts'
+import { prisma } from '@/lib/prisma'
 
 async function main() {
   const snapshot = await ensureRecentServerMetricSnapshot()
@@ -10,6 +12,8 @@ async function main() {
   console.log(
     `Server metrics ${snapshot.capturedAt.toISOString()} · memory ${memoryPercent}% · disk ${diskPercent}% · uploads ${formatBytes(metrics.disk.uploadBytes)} · database ${formatBytes(metrics.disk.databaseBytes)}`,
   )
+  const alertResult = await sendServerHealthAlertEmails(prisma, snapshot)
+  console.log(`Server health email status: ${alertResult.status}; sent ${alertResult.sent}; failed ${alertResult.failed}.`)
 }
 
 main().catch((error) => {

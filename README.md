@@ -114,8 +114,8 @@ Production is managed with Docker Compose:
 - `db`: Postgres 16 database with a persistent Docker volume.
 - `migrate`: one-shot setup container that runs Prisma schema sync and bootstraps the initial admin user.
 - `app`: Next.js production server exposed internally on port 3000.
-- `reminders`: scheduled worker that checks for due reminders and sends email through the configured SMTP provider.
-- `metrics`: scheduled worker that samples best-effort server metrics and collection storage estimates for the server dashboard.
+- `reminders`: scheduled worker that checks for due reminders, sends opt-out-aware care queue digest emails, and sends email through the configured SMTP provider.
+- `metrics`: scheduled worker that samples best-effort server metrics and collection storage estimates for the server dashboard, and sends rate-limited server health emails to verified server admins when health is degraded.
 - `backups`: scheduled worker that processes server-admin sitewide backup requests into timestamped backup folders.
 
 Persistent production data lives in Docker volumes and bind mounts:
@@ -429,6 +429,9 @@ SMTP_PASSWORD=
 SMTP_FROM="AxilDB <no-reply@axildb.com>"
 SMTP_REPLY_TO=
 REMINDER_WORKER_INTERVAL_SECONDS=300
+METRICS_WORKER_INTERVAL_SECONDS=300
+CARE_QUEUE_DIGEST_COOLDOWN_HOURS=20
+SERVER_HEALTH_ALERT_COOLDOWN_HOURS=6
 OPENAI_API_KEY=
 OPENAI_DESCRIPTION_MODEL=gpt-5.4-mini
 OPENAI_DESCRIPTION_HOURLY_LIMIT=20
@@ -530,9 +533,11 @@ Current email foundation:
 - User email preferences on the account page.
 - Reminder creation from the reminders page, plant instance pages, and bloom events.
 - Reminder delivery history for sent, failed, and skipped reminder emails.
-- Scheduled Docker worker for due reminder delivery.
+- Scheduled Docker worker for due reminder delivery and care queue digest emails. The digest summarizes broad due/overdue care categories by collection, omits private notes/freeform detail, respects active collection memberships, and defaults to a 20-hour per-user cooldown.
 - Follow/unfollow controls on plant definitions and specimen detail pages.
 - Event-based follow notifications with a delivery history on the Following page.
+- Server health alert emails for verified `SERVER_ADMIN` users when the metrics worker sees degraded disk or memory health. These alerts default to a 6-hour per-admin cooldown.
+- Account-page opt-out toggles for care queue digest and server health alert emails.
 - Quiet botanical branded HTML and plain-text templates.
 - SMTP/log delivery abstraction.
 

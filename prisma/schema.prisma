@@ -480,6 +480,10 @@ model EmailPreference {
   propagationFollowUps  Boolean  @default(true)
   followNotifications   Boolean  @default(true)
   transferNotifications Boolean  @default(true)
+  careQueueDigestEmailEnabled Boolean @default(true)
+  serverHealthEmailEnabled Boolean @default(true)
+  careQueueDigestLastSentAt DateTime?
+  serverHealthAlertLastSentAt DateTime?
   quietHoursStart       String?
   quietHoursEnd         String?
   createdAt             DateTime @default(now())
