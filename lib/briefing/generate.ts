@@ -105,6 +105,7 @@ export async function generateBriefing(prisma: PrismaClient, input: {
           'Do not provide medical or pesticide safety claims beyond supplied records.',
           'Write in a calm, practical, lightly warm tone.',
           'Output markdown only with these sections: Needs attention, Coming up soon, Worth checking, Recent activity, Quiet notes / no action needed.',
+          'Use standard markdown headings and simple bullets. When referring to a specimen, include its plantId exactly as supplied so AxilDB can link it.',
         ].join(' '),
         input: JSON.stringify(input.source),
         max_output_tokens: 900,

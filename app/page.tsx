@@ -10,8 +10,10 @@ import { collectionRoleAtLeast, isServerAdminRole } from '@/lib/roles'
 import { cn, fmtDate, plantName } from '@/lib/utils'
 import { Archive, ClipboardCheck, Flower2, GitBranch, Leaf, Sparkles, Sprout } from 'lucide-react'
 import Link from 'next/link'
+import type { ReactNode } from 'react'
 
 type PhotoLookup = Record<string, PlantImageFrame | undefined>
+type BriefingPlantLink = { plantId: string; href: string }
 type ActivityKind = 'propagation' | 'bloom' | 'sport' | 'acquired' | 'archive'
 type ActivityItem = {
   id: string
@@ -108,12 +110,122 @@ function ActivityCard({
   )
 }
 
-function renderBriefingMarkdown(markdown: string) {
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function renderLinkedText(text: string, plantLinks: BriefingPlantLink[], keyPrefix: string): ReactNode[] {
+  if (!plantLinks.length || !text) return [text]
+
+  const pattern = new RegExp(`(${plantLinks.map((link) => escapeRegExp(link.plantId)).join('|')})`, 'g')
+  const nodes: ReactNode[] = []
+  let lastIndex = 0
+
+  for (const match of text.matchAll(pattern)) {
+    const value = match[0]
+    const index = match.index ?? 0
+    if (index > lastIndex) nodes.push(text.slice(lastIndex, index))
+
+    const href = plantLinks.find((link) => link.plantId === value)?.href
+    nodes.push(
+      href ? (
+        <Link
+          key={`${keyPrefix}-plant-${index}`}
+          href={href}
+          className="font-semibold text-[var(--ax-primary)] underline decoration-[color:var(--ax-primary)]/45 underline-offset-2 transition hover:text-[var(--ax-primary-strong)]"
+        >
+          {value}
+        </Link>
+      ) : value,
+    )
+    lastIndex = index + value.length
+  }
+
+  if (lastIndex < text.length) nodes.push(text.slice(lastIndex))
+  return nodes
+}
+
+function renderInlineBriefingMarkdown(text: string, plantLinks: BriefingPlantLink[], keyPrefix: string): ReactNode[] {
+  const tokenPattern = /(\*\*[^*]+?\*\*|`[^`]+?`|\*[^*\n]+?\*)/g
+  const nodes: ReactNode[] = []
+  let lastIndex = 0
+
+  for (const match of text.matchAll(tokenPattern)) {
+    const token = match[0]
+    const index = match.index ?? 0
+    if (index > lastIndex) nodes.push(...renderLinkedText(text.slice(lastIndex, index), plantLinks, `${keyPrefix}-text-${index}`))
+
+    if (token.startsWith('**')) {
+      nodes.push(
+        <strong key={`${keyPrefix}-bold-${index}`} className="font-semibold text-[var(--ax-heading)]">
+          {renderLinkedText(token.slice(2, -2), plantLinks, `${keyPrefix}-bold-${index}`)}
+        </strong>,
+      )
+    } else if (token.startsWith('`')) {
+      nodes.push(
+        <span
+          key={`${keyPrefix}-code-${index}`}
+          className="rounded border border-[color:var(--ax-border)] bg-[var(--ax-primary-wash)] px-1 py-0.5 font-mono text-[0.92em] text-[var(--ax-text)]"
+        >
+          {renderLinkedText(token.slice(1, -1), plantLinks, `${keyPrefix}-code-${index}`)}
+        </span>,
+      )
+    } else {
+      nodes.push(
+        <em key={`${keyPrefix}-italic-${index}`} className="italic text-[var(--ax-muted-strong)]">
+          {renderLinkedText(token.slice(1, -1), plantLinks, `${keyPrefix}-italic-${index}`)}
+        </em>,
+      )
+    }
+
+    lastIndex = index + token.length
+  }
+
+  if (lastIndex < text.length) nodes.push(...renderLinkedText(text.slice(lastIndex), plantLinks, `${keyPrefix}-text-end`))
+  return nodes
+}
+
+function renderBriefingMarkdown(markdown: string, links: BriefingPlantLink[]) {
+  const plantLinks = links
+    .filter((link) => markdown.includes(link.plantId))
+    .sort((a, b) => b.plantId.length - a.plantId.length)
+
   return markdown.split('\n').map((line, index) => {
-    if (line.startsWith('### ')) return <h4 key={index} className="mt-4 font-semibold text-stone-900">{line.slice(4)}</h4>
-    if (line.startsWith('- ')) return <p key={index} className="pl-4 text-sm leading-6 text-stone-700">• {line.slice(2)}</p>
-    if (!line.trim()) return <div key={index} className="h-2" />
-    return <p key={index} className="text-sm leading-6 text-stone-700">{line}</p>
+    const trimmed = line.trim()
+    if (!trimmed) return <div key={index} className="h-2" />
+
+    const heading = trimmed.match(/^(#{1,4})\s+(.+)$/)
+    if (heading) {
+      const level = heading[1].length
+      return (
+        <h4
+          key={index}
+          className={cn(
+            'font-semibold text-[var(--ax-heading)]',
+            level <= 2 ? 'mt-5 font-serif text-xl leading-tight first:mt-0' : 'mt-4 text-base',
+          )}
+        >
+          {renderInlineBriefingMarkdown(heading[2], plantLinks, `briefing-${index}-heading`)}
+        </h4>
+      )
+    }
+
+    const bullet = trimmed.match(/^[-*]\s+(.+)$/)
+    if (bullet) {
+      const indent = Math.min(Math.floor(line.search(/\S/) / 2), 3)
+      return (
+        <div key={index} className="flex gap-2 text-sm leading-6 text-[var(--ax-text)]" style={{ paddingLeft: `${indent * 1.25}rem` }}>
+          <span className="mt-[0.42rem] h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--ax-primary)]" aria-hidden="true" />
+          <span>{renderInlineBriefingMarkdown(bullet[1], plantLinks, `briefing-${index}-bullet`)}</span>
+        </div>
+      )
+    }
+
+    return (
+      <p key={index} className="text-sm leading-6 text-[var(--ax-text)]">
+        {renderInlineBriefingMarkdown(trimmed, plantLinks, `briefing-${index}-paragraph`)}
+      </p>
+    )
   })
 }
 
@@ -229,6 +341,16 @@ export default async function Dashboard({
       orderBy: { createdAt: 'desc' },
     }),
   ])
+  const briefingPlantLinks: BriefingPlantLink[] = briefing
+    ? (await prisma.plantInstance.findMany({
+        where: collectionWhere,
+        select: { id: true, plantId: true },
+        orderBy: { plantId: 'asc' },
+      })).map((instance) => ({
+        plantId: instance.plantId,
+        href: collectionPath(collection.slug, `/instances/${instance.id}`),
+      }))
+    : []
 
   const coverPhotosByInstance = coverPhotos.reduce<PhotoLookup>((acc, photo) => {
     if (!acc[photo.entityId]) acc[photo.entityId] = photo
@@ -365,8 +487,8 @@ export default async function Dashboard({
               )}
             </div>
           </div>
-          <div className="mt-4 rounded-lg border border-stone-200 bg-white/50 p-4">
-            {renderBriefingMarkdown(briefing.summaryMarkdown)}
+          <div className="mt-4 rounded-lg border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] p-4">
+            {renderBriefingMarkdown(briefing.summaryMarkdown, briefingPlantLinks)}
           </div>
         </Card>
       )}
