@@ -27,7 +27,7 @@ export default async function CollectionSettingsPage({
       </div>
 
       <Card>
-        <form action="/api/collections/update" method="post" className="grid max-w-4xl gap-x-3 gap-y-3 lg:grid-cols-3">
+        <form id="collection-settings-form" action="/api/collections/update" method="post" className="grid max-w-4xl gap-x-3 gap-y-3 lg:grid-cols-3">
           <input type="hidden" name="collectionSlug" value={collection.slug} />
           <Field label="Name" name="name" defaultValue={collection.name} required />
           <Field label="Slug" name="slug" defaultValue={collection.slug} required />
@@ -47,7 +47,7 @@ export default async function CollectionSettingsPage({
           <div>
             <h3 className="font-serif text-xl font-semibold">AI features</h3>
             <p className="mt-1 text-sm text-stone-600">
-              AI draft and Magic Fill tools are controlled by the server admin because they use metered API calls.
+              AI draft, Magic Fill, Green Thumb, and Collection Briefing tools are controlled by the server admin because they use metered API calls.
             </p>
           </div>
           <span className={collection.aiFeaturesEnabled ? 'rounded-full border border-green-200 bg-green-50 px-3 py-1 text-sm font-semibold text-green-900' : 'rounded-full border border-stone-200 bg-stone-50 px-3 py-1 text-sm font-semibold text-stone-700'}>
@@ -72,6 +72,24 @@ export default async function CollectionSettingsPage({
             )}
           </div>
         )}
+        <div className="mt-4 rounded-lg border border-stone-200 bg-white/50 p-3">
+          <label className={`flex items-start gap-2 text-sm ${collection.aiFeaturesEnabled ? 'text-stone-800' : 'text-stone-500'}`}>
+            <input
+              type="checkbox"
+              name="aiBriefingEnabled"
+              form="collection-settings-form"
+              defaultChecked={collection.aiFeaturesEnabled && collection.aiBriefingEnabled}
+              disabled={!collection.aiFeaturesEnabled}
+              className="mt-1"
+            />
+            <span>
+              <span className="font-medium">Enable daily Collection Briefing</span>
+              <span className="block text-stone-600">
+                Show one cached AI-generated or fallback collection briefing per local day on the dashboard. This option is available only while server-level AI features are enabled.
+              </span>
+            </span>
+          </label>
+        </div>
       </Card>
     </div>
   )

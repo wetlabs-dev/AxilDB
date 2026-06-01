@@ -9,6 +9,7 @@ import { sendEmail, appUrl } from '@/lib/email'
 import { renderBrandedEmail } from '@/lib/email-templates'
 import { prisma } from '@/lib/prisma'
 import { collectionRoles, normalizeCollectionRole } from '@/lib/roles'
+import { getOrCreateTodaysCollectionBriefing } from '@/lib/briefing'
 
 const val = (fd: FormData, key: string) => String(fd.get(key) || '').trim()
 const validRoles = new Set<string>(collectionRoles)
@@ -88,6 +89,7 @@ export async function saveCollectionSettings(fd: FormData) {
       slug: requestedSlug,
       visibility: val(fd, 'visibility') === 'PUBLIC' ? 'PUBLIC' : 'PRIVATE',
       description: val(fd, 'description'),
+      aiBriefingEnabled: collection.aiFeaturesEnabled && val(fd, 'aiBriefingEnabled') === 'on',
     },
   })
   await audit(user, 'UPDATE', 'COLLECTION', collection.id, `Updated collection ${updated.name}`, updated, collection.id)
@@ -97,6 +99,27 @@ export async function saveCollectionSettings(fd: FormData) {
   revalidatePath(collectionPath(updated.slug))
   revalidatePath(collectionPath(updated.slug, '/collection-settings'))
   return { collection, updated }
+}
+
+export async function regenerateCollectionBriefing(fd: FormData) {
+  const slug = val(fd, 'collectionSlug')
+  const { user, collection } = await requireCollectionManager(slug)
+  if (!collection.aiFeaturesEnabled || !collection.aiBriefingEnabled) {
+    throw new Error('Collection briefings are not enabled for this collection.')
+  }
+  const briefing = await getOrCreateTodaysCollectionBriefing(prisma, {
+    collectionId: collection.id,
+    collectionSlug: collection.slug,
+    userId: user.id,
+    force: true,
+  })
+  await audit(user, 'GENERATE', 'COLLECTION_BRIEFING', briefing.id, `Regenerated collection briefing for ${collection.name}`, {
+    status: briefing.status,
+    localDate: briefing.localDate,
+    model: briefing.model,
+  }, collection.id)
+  revalidatePath(collectionPath(collection.slug))
+  redirect(collectionPath(collection.slug))
 }
 
 export async function updateCollection(fd: FormData) {

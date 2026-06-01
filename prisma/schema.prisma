@@ -50,6 +50,7 @@ model User {
   aiUsageEvents       AiUsageEvent[]
   archivedCollections Collection[] @relation("CollectionArchivedBy")
   backupRuns          BackupRun[] @relation("BackupRunRequestedBy")
+  generatedCollectionBriefings CollectionBriefing[]
   sentCollectionInvitations CollectionInvitation[] @relation("CollectionInvitationInviter")
   acceptedCollectionInvitations CollectionInvitation[] @relation("CollectionInvitationAcceptedUser")
   requestedTransferConnections CollectionTransferConnection[] @relation("TransferConnectionRequester")
@@ -73,6 +74,7 @@ model Collection {
   status              String                 @default("ACTIVE")
   isDefault           Boolean                @default(false)
   aiFeaturesEnabled   Boolean                @default(true)
+  aiBriefingEnabled   Boolean                @default(false)
   description         String?
   archivedAt          DateTime?
   archivedById        String?
@@ -85,6 +87,7 @@ model Collection {
   collectionRequests  CollectionRequest[]
   aiAccessRequests    AiAccessRequest[]
   aiUsageEvents       AiUsageEvent[]
+  briefings           CollectionBriefing[]
   auditLogs           AuditLog[]
   follows             Follow[]
   followNotifications FollowNotification[]
@@ -118,6 +121,34 @@ model Collection {
   @@index([status])
   @@index([isDefault])
   @@index([aiFeaturesEnabled])
+  @@index([aiBriefingEnabled])
+}
+
+model CollectionBriefing {
+  id                String    @id @default(cuid())
+  collectionId      String
+  localDate         String
+  timezone          String
+  model             String?
+  promptVersion     String
+  sourceHash        String?
+  status            String    @default("READY")
+  title             String
+  summaryMarkdown   String
+  structuredJson    Json?
+  generatedAt       DateTime  @default(now())
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  generatedByUserId String?
+
+  collection      Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  generatedByUser User?      @relation(fields: [generatedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([collectionId, localDate])
+  @@index([collectionId])
+  @@index([localDate])
+  @@index([status])
+  @@index([generatedByUserId])
 }
 
 model CollectionMembership {

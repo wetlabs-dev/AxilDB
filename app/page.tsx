@@ -1,8 +1,12 @@
 import { PlantImage, type PlantImageFrame } from '@/components/PlantImage'
+import { regenerateCollectionBriefing } from '@/app/collection-actions'
+import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { Card } from '@/components/ui'
+import { getOrCreateTodaysCollectionBriefing } from '@/lib/briefing'
 import { careQueueSummary, getCareQueue } from '@/lib/care-queue'
 import { collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
+import { collectionRoleAtLeast, isServerAdminRole } from '@/lib/roles'
 import { cn, fmtDate, plantName } from '@/lib/utils'
 import { Archive, ClipboardCheck, Flower2, GitBranch, Leaf, Sparkles, Sprout } from 'lucide-react'
 import Link from 'next/link'
@@ -104,6 +108,15 @@ function ActivityCard({
   )
 }
 
+function renderBriefingMarkdown(markdown: string) {
+  return markdown.split('\n').map((line, index) => {
+    if (line.startsWith('### ')) return <h4 key={index} className="mt-4 font-semibold text-stone-900">{line.slice(4)}</h4>
+    if (line.startsWith('- ')) return <p key={index} className="pl-4 text-sm leading-6 text-stone-700">• {line.slice(2)}</p>
+    if (!line.trim()) return <div key={index} className="h-2" />
+    return <p key={index} className="text-sm leading-6 text-stone-700">{line}</p>
+  })
+}
+
 export default async function Dashboard({
   searchParams,
 }: {
@@ -118,6 +131,26 @@ export default async function Dashboard({
   const queryTake = activeKind ? Math.max(activityTake * 4, 48) : activityTake
   const preferences = context.user
     ? await prisma.emailPreference.findUnique({ where: { userId: context.user.id } })
+    : null
+  const canGenerateBriefing = Boolean(
+    collection.aiFeaturesEnabled
+      && collection.aiBriefingEnabled
+      && context.user
+      && context.membership?.status === 'ACTIVE',
+  )
+  const canRegenerateBriefing = Boolean(
+    collection.aiFeaturesEnabled
+      && collection.aiBriefingEnabled
+      && context.user
+      && (isServerAdminRole(context.user.role) || collectionRoleAtLeast(context.membership?.role, 'MANAGER')),
+  )
+  const briefing = canGenerateBriefing
+    ? await getOrCreateTodaysCollectionBriefing(prisma, {
+        collectionId: collection.id,
+        collectionSlug: collection.slug,
+        userId: context.user!.id,
+        timezone: preferences?.timezone,
+      })
     : null
   const [
     active,
@@ -302,6 +335,41 @@ export default async function Dashboard({
           </Link>
         ))}
       </div>
+
+      {briefing && (
+        <Card>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="font-serif text-2xl font-semibold">{briefing.title}</h3>
+              <p className="mt-1 text-sm text-stone-600">
+                {briefing.status === 'READY' ? 'AI generated' : briefing.status === 'FAILED' ? 'Fallback after AI failure' : 'Fallback summary'} ·{' '}
+                {fmtDate(briefing.generatedAt, briefing.timezone)} · {briefing.localDate} ({briefing.timezone})
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full border border-stone-200 bg-white/60 px-3 py-1 text-xs font-semibold text-stone-700">
+                Refresh available tomorrow
+              </span>
+              {canRegenerateBriefing && (
+                <form action={regenerateCollectionBriefing}>
+                  <input type="hidden" name="collectionSlug" value={collection.slug} />
+                  <ConfirmDeleteButton
+                    title="Regenerate today's briefing?"
+                    message="This replaces today's cached briefing for the collection. It may use one AI briefing request if AI briefing generation is enabled and available."
+                    confirmLabel="Regenerate"
+                    className="px-3 py-1.5 text-xs"
+                  >
+                    Regenerate today
+                  </ConfirmDeleteButton>
+                </form>
+              )}
+            </div>
+          </div>
+          <div className="mt-4 rounded-lg border border-stone-200 bg-white/50 p-4">
+            {renderBriefingMarkdown(briefing.summaryMarkdown)}
+          </div>
+        </Card>
+      )}
 
       <Card>
         <div className="flex flex-wrap items-end justify-between gap-3">
