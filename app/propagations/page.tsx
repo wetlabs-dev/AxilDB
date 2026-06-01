@@ -1,5 +1,4 @@
-import { createPropagationEvent, deletePropagationEvent } from '@/app/actions'
-import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
+import { createPropagationEvent } from '@/app/actions'
 import { PlantImage } from '@/components/PlantImage'
 import { SortControl } from '@/components/SortControl'
 import { AddPanel, Button, Card, Field, HelpTooltip, SuggestionDatalist, TextArea } from '@/components/ui'
@@ -222,13 +221,6 @@ export default async function Propagations() {
               {canEditInCollection(user, context) && (
                 <div className="flex flex-wrap gap-2 border-t border-stone-200 p-3">
                   <Link className="plant-card-action inline-flex items-center justify-center rounded-md border px-4 py-2 text-sm" href={collectionPath(collection.slug, `/propagations/${event.id}/edit`)}>Edit</Link>
-                  <form action={deletePropagationEvent}>
-                    <input type="hidden" name="id" value={event.id} />
-                    <input type="hidden" name="collectionSlug" value={collection.slug} />
-                    <ConfirmDeleteButton title="Delete propagation event?" message="This will permanently delete the propagation event and its parent/child links. Child plant instances will remain.">
-                      Delete
-                    </ConfirmDeleteButton>
-                  </form>
                 </div>
               )}
             </Card>
