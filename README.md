@@ -49,6 +49,7 @@ It is designed for real collection work: messy taxonomy, acquisition names, alia
 - Collection-gardener edit/delete tools, governing bodies page, and audit log.
 - Server-admin-only site user management and collection archive/permanent-delete tools.
 - Confirmation modals for destructive delete actions.
+- Collection-scoped plant definition CSV export from Admin Tools for offline review, backup, and duplicate cleanup planning.
 - Demo data generator for populating realistic test records.
 - Web-based Help page and generated Markdown user manual, with repeatable Playwright screenshot capture for documentation.
 
@@ -236,7 +237,7 @@ If the documentation account has a role that requires two-factor authentication,
 
 ## Backup And Restore
 
-Back up before production schema changes, major pulls, or server maintenance. AxilDB backups are **sitewide**: collection-specific export/import is intentionally deferred.
+Back up before production schema changes, major pulls, or server maintenance. AxilDB backups are **sitewide**: full collection-specific export/import is intentionally deferred. Admin Tools includes a read-only plant definition CSV export for offline review and lightweight data portability.
 
 Server admins can request a backup from **Server Management → Backups**. The `backups` Docker service checks for queued requests and writes a timestamped folder under `backups/` containing:
 
@@ -632,4 +633,4 @@ If the Ko-fi handle changes, update `NEXT_PUBLIC_DONATE_URL` in `.env` or `docke
 - Add sitewide verified/reference plant definitions that collections can link to or fork.
 - Move uploads to durable object storage.
 - Add automated tests for auth, permissions, plant ID generation, uploads, destructive actions, sport logic, and lineage graph construction.
-- Add CSV import/export and duplicate plant definition merge tools.
+- Add CSV import and duplicate plant definition merge tools.

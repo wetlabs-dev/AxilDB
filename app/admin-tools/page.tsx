@@ -1,6 +1,6 @@
 import { populateDemoData } from '@/app/actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
-import { Card } from '@/components/ui'
+import { Card, LinkButton } from '@/components/ui'
 import { requireCollectionAdmin } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
 import { formatDateTime } from '@/lib/time'
@@ -41,6 +41,19 @@ export default async function AdminToolsPage() {
           <p className="mt-2 font-serif text-4xl font-semibold">{propagations}</p>
         </Card>
       </div>
+
+      <Card>
+        <h3 className="font-bold">Export plant definitions</h3>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-stone-700">
+          Download a collection-scoped CSV of plant definitions, taxonomy fields, reference links, aliases, and instance counts.
+          This is a read-only export for offline review, backup, and duplicate cleanup planning.
+        </p>
+        <div className="mt-4">
+          <LinkButton href={`/api/exports/plant-definitions?collectionSlug=${encodeURIComponent(collection.slug)}`}>
+            Download definitions CSV
+          </LinkButton>
+        </div>
+      </Card>
 
       <Card>
         <h3 className="font-bold">Populate demo data</h3>
