@@ -91,11 +91,12 @@ export const manualSections: ManualSection[] = [
     title: 'Plant Instances',
     route: '/instances',
     screenshot: 'plant-instances.png',
-    purpose: 'Plant instances are the actual specimens in a collection. Each instance receives a generated plant ID, status, location, acquisition details, source, notes, photos, bloom records, propagation relationships, sport review, care history, reminders, and follows.',
+    purpose: 'Plant instances are the actual specimens in a collection. Each instance receives a generated plant ID, status, location, acquisition details, source, notes, photos, bloom records, propagation relationships, sport review, care history, reminders, follows, and a Plant Health Timeline.',
     howTo: [
       'Open Plant Instances and choose Add plant instance.',
       'Select a plant definition and enter specimen details such as type, acquisition date, location, source, distributor, stock label, and notes.',
-      'Open a specimen detail page to review identity, photos, husbandry summary, sport status, follows, children, notes, reminders, bloom tracker, and archive actions.',
+      'Open a specimen detail page to review identity, photos, Plant Health Timeline, husbandry summary, sport status, follows, children, notes, reminders, bloom tracker, and archive actions.',
+      'Use the Plant Health Timeline to scan accession, propagation, care, condition, bloom, photo, note, reminder, archive, and sport activity in a compact strip, then open the Life Story list for grouped deterministic history.',
       'Use the generated QR label to open the specimen record quickly from a printed label.',
       'Use the plant ID refresh action when the current ID no longer matches the generated ID format after type or date changes.',
       'Use Green Thumb assist for one focused care question per specimen per day when AI is enabled for the collection.',
@@ -104,6 +105,7 @@ export const manualSections: ManualSection[] = [
       'Plant IDs are generated from the plant definition and relevant date context, then made unique inside the collection.',
       'Locations and similar text fields autosuggest values already used in the current collection.',
       'Acquired propagation is for purchased or received cuttings, leaf props, starter plugs, and similar plants without an internal parent record.',
+      'Timeline v1 uses existing records. Dedicated historical location-change, label-change, restore, and sport-transition events are future data-source candidates.',
     ],
   },
   {

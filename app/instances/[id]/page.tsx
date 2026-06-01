@@ -27,6 +27,7 @@ import { createPlantTransferRequest } from '@/app/transfer-actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { GreenThumbAssist } from '@/components/GreenThumbAssist'
 import { PlantImage } from '@/components/PlantImage'
+import { PlantHealthTimeline } from '@/components/PlantHealthTimeline'
 import { PhotoFramingEditor } from '@/components/PhotoFramingEditor'
 import { Button, Card, Field, Select, TextArea } from '@/components/ui'
 import { HusbandryBadges, HusbandryGuideView } from '@/components/Husbandry'
@@ -39,6 +40,7 @@ import { recurrenceLabel, reminderCategories, reminderCategoryLabel, reminderRec
 import { hasHusbandryData, mergeHusbandryValues } from '@/lib/husbandry'
 import { isServerAdminRole } from '@/lib/roles'
 import { addCalendarDays, formatDateTime, startOfDayInTimeZone } from '@/lib/time'
+import { collectPlantTimelineEvents, getPlantTimelineMetrics } from '@/lib/timeline/plantTimeline'
 import { dateInput, fmtDate, plantName, taxonomyLabel } from '@/lib/utils'
 import Link from 'next/link'
 import QRCode from 'qrcode'
@@ -199,6 +201,12 @@ export default async function InstanceDetail({
   const nextWatering = addCalendarDays(lastWatered || i.acquisitionDate || i.propagationDate || i.createdAt, waterCadence, timezone || undefined)
   const greenThumbUsedToday = !!greenThumbToday
   const canUseGreenThumb = canCreateRecords && !!user && (collection.aiFeaturesEnabled || isServerAdminRole(user.role))
+  const timelineEvents = await collectPlantTimelineEvents(prisma, {
+    collectionId: collection.id,
+    collectionSlug: collection.slug,
+    plantInstanceId: id,
+  })
+  const timelineMetrics = getPlantTimelineMetrics(timelineEvents, i)
 
   const follows = user
     ? await prisma.follow.findMany({
@@ -372,7 +380,7 @@ export default async function InstanceDetail({
   )
 
   const careCard = (
-    <Card>
+    <Card id="care-history">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="font-bold">Care</h3>
@@ -634,6 +642,10 @@ export default async function InstanceDetail({
         </Card>
 
         {photosCard}
+
+        <div className="xl:col-span-2">
+          <PlantHealthTimeline events={timelineEvents} metrics={timelineMetrics} timezone={timezone} />
+        </div>
 
         <div className="xl:col-span-2">{careCard}</div>
 

@@ -23,6 +23,7 @@ It is designed for real collection work: messy taxonomy, acquisition names, alia
 - Weekly greenhouse checklist generation from the care queue, grouped by location and covering overdue, due-today, and upcoming care tasks.
 - Plant sitter mode with expiring/revocable token links that expose only selected plants and tasks, allow limited checklist completion, and log sitter actions back into AxilDB.
 - Plant instances with generated plant IDs, acquisition/propagation dates, source/distributor metadata, location, archive status, notes, and photos.
+- Plant Health Timeline on specimen pages, combining existing accession, propagation, care, condition, bloom, photo, note, reminder, archive, and sport records into a compact horizontal history with deterministic insights and a Life Story list.
 - Automatic plant ID generation based on plant definition, date, context, and sequence number.
 - Propagation events with parent/child links, method, date, success status, and generated child plant IDs.
 - Bloom tracker with bloom start, peak, closure, first-bloom marker, flower counts, notes, and bloom photos.
@@ -54,6 +55,8 @@ It is designed for real collection work: messy taxonomy, acquisition names, alia
 - Duplicate plant definition merge tool that safely moves dependent records into a selected definition before deleting the duplicate.
 - Demo data generator for populating realistic test records.
 - Web-based Help page and generated Markdown user manual, with repeatable Playwright screenshot capture for documentation.
+
+Plant Health Timeline v1 derives history from records AxilDB already stores. Explicit historical location-change events, label-change events, restore events, and fine-grained sport status transitions remain future enhancements unless they are represented by existing notes, audit records, or current instance state.
 
 ## Collections And Roles
 
