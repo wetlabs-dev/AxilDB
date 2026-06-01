@@ -358,7 +358,7 @@ Core models:
 - `User`, `Session`, and `AuditLog`: local auth, sessions, and mutation history.
 - `UserTwoFactor`, `TwoFactorChallenge`, and `TwoFactorRecoveryCode`: encrypted authenticator secrets, short-lived login challenges, and one-time recovery-code hashes.
 - `EmailToken`: hashed single-use tokens for email verification, password resets, and magic links.
-- `EmailPreference`: user-configurable email categories, timezone, and quiet-hours settings.
+- `EmailPreference`: user-configurable email categories, daily care digest time, timezone, and quiet-hours settings.
 - `Reminder` and `ReminderDelivery`: reminder scheduling metadata and delivery history.
 - `Follow` and `FollowNotification`: event-based subscriptions and delivery history for followed specimens, plant types, and lineages.
 - `CareSheet`, `CareSheetPlant`, `CareSheetTask`, and `CareSheetAccessLog`: generated care sheets, weekly checklists, limited sitter sessions, token access logs, and interactive checklist task state.
@@ -438,7 +438,6 @@ TZ=America/New_York
 AXILDB_DEFAULT_TIMEZONE=America/New_York
 REMINDER_WORKER_INTERVAL_SECONDS=300
 METRICS_WORKER_INTERVAL_SECONDS=300
-CARE_QUEUE_DIGEST_COOLDOWN_HOURS=20
 SERVER_HEALTH_ALERT_COOLDOWN_HOURS=6
 NEXT_PUBLIC_ENABLE_WEB_PUSH=false
 NEXT_PUBLIC_VAPID_PUBLIC_KEY=
@@ -586,7 +585,7 @@ Current email foundation:
 - User email preferences on the account page.
 - Reminder creation from the reminders page, plant instance pages, and bloom events.
 - Reminder delivery history for sent, failed, and skipped reminder emails.
-- Scheduled Docker worker for due reminder delivery and care queue digest emails. The digest summarizes broad due/overdue care categories by collection, omits private notes/freeform detail, respects active collection memberships, and defaults to a 20-hour per-user cooldown.
+- Scheduled Docker worker for due reminder delivery and daily care queue digest emails/push alerts. The digest summarizes broad due/overdue care categories by collection, omits private notes/freeform detail, respects active collection memberships, and sends once per local day at the user's selected account preference time.
 - Follow/unfollow controls on plant definitions and specimen detail pages.
 - Event-based follow notifications with a delivery history on the Following page.
 - Server health alert emails for verified `SERVER_ADMIN` users when the metrics worker sees degraded disk or memory health. These alerts default to a 6-hour per-admin cooldown.

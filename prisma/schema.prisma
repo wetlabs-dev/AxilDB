@@ -490,6 +490,7 @@ model EmailPreference {
   followNotificationsPushEnabled Boolean @default(false)
   careQueueDigestPushEnabled Boolean @default(false)
   serverHealthPushEnabled Boolean @default(false)
+  careQueueDigestSendTime String @default("08:00")
   careQueueDigestLastSentAt DateTime?
   serverHealthAlertLastSentAt DateTime?
   quietHoursStart       String?

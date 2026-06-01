@@ -20,6 +20,11 @@ function checkbox(fd: FormData, key: string) {
   return fd.get(key) === 'on'
 }
 
+function timeOfDayFromForm(fd: FormData, key: string, fallback: string) {
+  const value = val(fd, key)
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(value) ? value : fallback
+}
+
 function roleFromForm(fd: FormData) {
   const role = val(fd, 'role').toUpperCase()
   return roles.has(role) ? role : 'USER'
@@ -632,6 +637,7 @@ export async function requestMagicLogin(fd: FormData) {
 export async function updateEmailPreferences(fd: FormData) {
   const user = await requireUser()
   const timezone = normalizeTimeZone(val(fd, 'timezone') || defaultTimeZone())
+  const careQueueDigestSendTime = timeOfDayFromForm(fd, 'careQueueDigestSendTime', '08:00')
 
   await prisma.emailPreference.upsert({
     where: { userId: user.id },
@@ -654,6 +660,7 @@ export async function updateEmailPreferences(fd: FormData) {
       followNotificationsPushEnabled: checkbox(fd, 'followNotificationsPushEnabled'),
       careQueueDigestPushEnabled: checkbox(fd, 'careQueueDigestPushEnabled'),
       serverHealthPushEnabled: checkbox(fd, 'serverHealthPushEnabled'),
+      careQueueDigestSendTime,
       quietHoursStart: val(fd, 'quietHoursStart') || undefined,
       quietHoursEnd: val(fd, 'quietHoursEnd') || undefined,
     },
@@ -677,6 +684,7 @@ export async function updateEmailPreferences(fd: FormData) {
       followNotificationsPushEnabled: checkbox(fd, 'followNotificationsPushEnabled'),
       careQueueDigestPushEnabled: checkbox(fd, 'careQueueDigestPushEnabled'),
       serverHealthPushEnabled: checkbox(fd, 'serverHealthPushEnabled'),
+      careQueueDigestSendTime,
       quietHoursStart: val(fd, 'quietHoursStart') || undefined,
       quietHoursEnd: val(fd, 'quietHoursEnd') || undefined,
     },

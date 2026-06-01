@@ -109,6 +109,13 @@ export default async function Account({
               </div>
             ))}
           </div>
+          <Field
+            label="Daily care digest time"
+            help="Local time to send the daily care queue digest by email and/or push when due care exists."
+            name="careQueueDigestSendTime"
+            type="time"
+            defaultValue={preferences?.careQueueDigestSendTime || '08:00'}
+          />
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Quiet hours start" name="quietHoursStart" type="time" defaultValue={preferences?.quietHoursStart || ''} />
             <Field label="Quiet hours end" name="quietHoursEnd" type="time" defaultValue={preferences?.quietHoursEnd || ''} />

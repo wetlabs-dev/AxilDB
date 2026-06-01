@@ -53,8 +53,8 @@ export type ServerHealthAlert = {
   metricsUrl: string
 }
 
-const CARE_DIGEST_COOLDOWN_HOURS = cooldownHours(process.env.CARE_QUEUE_DIGEST_COOLDOWN_HOURS, 20)
 const SERVER_HEALTH_COOLDOWN_HOURS = cooldownHours(process.env.SERVER_HEALTH_ALERT_COOLDOWN_HOURS, 6)
+const DEFAULT_CARE_DIGEST_SEND_TIME = '08:00'
 
 const careDigestCategories = [
   'watering',
@@ -75,6 +75,37 @@ function cooldownHours(value: string | undefined, fallback: number) {
 
 function hoursAgo(hours: number) {
   return new Date(Date.now() - Math.max(1, hours) * 60 * 60 * 1000)
+}
+
+function minutesFromTime(value?: string | null, fallback = DEFAULT_CARE_DIGEST_SEND_TIME) {
+  const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(value || fallback)
+  if (!match) return 8 * 60
+  return Number(match[1]) * 60 + Number(match[2])
+}
+
+function currentMinutesInTimeZone(timezone: string, now = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: timezone,
+  }).formatToParts(now)
+  const hours = Number(parts.find((part) => part.type === 'hour')?.value || 0)
+  const minutes = Number(parts.find((part) => part.type === 'minute')?.value || 0)
+  return hours * 60 + minutes
+}
+
+function shouldSendCareQueueDigest(
+  preference: { timezone?: string | null; careQueueDigestSendTime?: string | null; careQueueDigestLastSentAt?: Date | null } | null | undefined,
+  now = new Date(),
+) {
+  const timezone = timeZoneForPreference(preference)
+  const sendMinute = minutesFromTime(preference?.careQueueDigestSendTime)
+  if (currentMinutesInTimeZone(timezone, now) < sendMinute) return false
+
+  const lastSent = preference?.careQueueDigestLastSentAt
+  if (!lastSent) return true
+  return calendarDayIndexInTimeZone(lastSent, timezone) < calendarDayIndexInTimeZone(now, timezone)
 }
 
 function formatBytes(bytes: number) {
@@ -199,7 +230,6 @@ export function serverHealthAlertFromSnapshot(snapshot: ServerMetricSnapshot): S
 }
 
 export async function sendCareQueueDigestAlerts(prisma: PrismaClient, now = new Date()) {
-  const cooldownCutoff = hoursAgo(CARE_DIGEST_COOLDOWN_HOURS)
   const users = await prisma.user.findMany({
     where: {
       OR: [
@@ -207,11 +237,6 @@ export async function sendCareQueueDigestAlerts(prisma: PrismaClient, now = new 
         {
           emailPreference: {
             OR: [{ careQueueDigestEmailEnabled: true }, { careQueueDigestPushEnabled: true }],
-            AND: [
-              {
-                OR: [{ careQueueDigestLastSentAt: null }, { careQueueDigestLastSentAt: { lt: cooldownCutoff } }],
-              },
-            ],
           },
         },
       ],
@@ -233,9 +258,8 @@ export async function sendCareQueueDigestAlerts(prisma: PrismaClient, now = new 
     const emailEnabled = enabled(user.emailPreference?.careQueueDigestEmailEnabled)
     const pushEnabled = user.emailPreference?.careQueueDigestPushEnabled === true
     if (!emailEnabled && !pushEnabled) continue
-    const lastSent = user.emailPreference?.careQueueDigestLastSentAt
-    if (lastSent && lastSent >= cooldownCutoff) continue
     const timezone = timeZoneForPreference(user.emailPreference)
+    if (!shouldSendCareQueueDigest(user.emailPreference, now)) continue
 
     const digest: CareQueueDigest = {
       totalDue: 0,
