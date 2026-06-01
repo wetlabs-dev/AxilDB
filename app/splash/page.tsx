@@ -202,8 +202,8 @@ export default function SplashPage() {
               <img src="/splash-lineage-diagram.png" alt="" className="max-h-72 w-full object-contain mix-blend-multiply" />
             </div>
           </article>
-          {features.slice(5).map(([title, text, Icon], index) => (
-            <article key={title} className={`rounded-lg border border-stone-200 bg-white/65 p-5 shadow-[0_8px_30px_rgba(47,38,24,0.06)] ${index === 2 ? 'md:col-span-2 xl:col-span-4' : 'xl:col-span-2'}`}>
+          {features.slice(5).map(([title, text, Icon]) => (
+            <article key={title} className="rounded-lg border border-stone-200 bg-white/65 p-5 shadow-[0_8px_30px_rgba(47,38,24,0.06)] xl:col-span-2">
               <Icon className="mb-4 h-6 w-6 text-[#2f6b45]" />
               <h3 className="font-serif text-xl">{title}</h3>
               <p className="mt-2 text-sm leading-6 text-stone-700">{text}</p>
