@@ -38,7 +38,7 @@ services:
       TZ: ${TZ:-America/New_York}
       AXILDB_DEFAULT_TIMEZONE: ${AXILDB_DEFAULT_TIMEZONE:-America/New_York}
       DATABASE_URL: postgresql://plants:plants@db:5432/axildb?schema=public
-    command: sh -c "npx prisma db push --accept-data-loss && npm run db:bootstrap"
+    command: sh -c "npm run db:migrate:deploy && npm run db:bootstrap"
   app:
     build: .
     restart: unless-stopped

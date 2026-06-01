@@ -10,6 +10,8 @@
     "lint": "next lint",
     "prisma:generate": "prisma generate",
     "db:push": "prisma db push",
+    "db:migrate:dev": "prisma migrate dev",
+    "db:migrate:deploy": "sh scripts/deploy-migrations.sh",
     "db:seed": "tsx prisma/seed.ts",
     "db:bootstrap": "tsx prisma/bootstrap.ts",
     "email:send-reminders": "tsx scripts/send-reminders.ts",
