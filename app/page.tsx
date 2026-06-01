@@ -6,7 +6,7 @@ import { getOrCreateTodaysCollectionBriefing } from '@/lib/briefing'
 import { careQueueSummary, getCareQueue } from '@/lib/care-queue'
 import { collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
-import { collectionRoleAtLeast, isServerAdminRole } from '@/lib/roles'
+import { isServerAdminRole } from '@/lib/roles'
 import { cn, fmtDate, plantName } from '@/lib/utils'
 import { Archive, ClipboardCheck, Flower2, GitBranch, Leaf, Sparkles, Sprout } from 'lucide-react'
 import Link from 'next/link'
@@ -254,7 +254,7 @@ export default async function Dashboard({
     collection.aiFeaturesEnabled
       && collection.aiBriefingEnabled
       && context.user
-      && (isServerAdminRole(context.user.role) || collectionRoleAtLeast(context.membership?.role, 'MANAGER')),
+      && isServerAdminRole(context.user.role),
   )
   const briefing = canGenerateBriefing
     ? await getOrCreateTodaysCollectionBriefing(prisma, {
@@ -487,9 +487,18 @@ export default async function Dashboard({
               )}
             </div>
           </div>
-          <div className="mt-4 rounded-lg border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] p-4">
-            {renderBriefingMarkdown(briefing.summaryMarkdown, briefingPlantLinks)}
-          </div>
+          <details open className="group mt-4">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] px-4 py-3 text-sm font-semibold text-[var(--ax-heading)] transition hover:bg-[var(--ax-primary-wash)] [&::-webkit-details-marker]:hidden">
+              <span>Briefing summary</span>
+              <span className="text-xs text-[var(--ax-muted)]">
+                <span className="group-open:hidden">Show</span>
+                <span className="hidden group-open:inline">Hide</span>
+              </span>
+            </summary>
+            <div className="mt-3 rounded-lg border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] p-4">
+              {renderBriefingMarkdown(briefing.summaryMarkdown, briefingPlantLinks)}
+            </div>
+          </details>
         </Card>
       )}
 

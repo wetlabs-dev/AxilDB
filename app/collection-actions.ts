@@ -102,8 +102,9 @@ export async function saveCollectionSettings(fd: FormData) {
 }
 
 export async function regenerateCollectionBriefing(fd: FormData) {
+  const user = await requireServerAdmin()
   const slug = val(fd, 'collectionSlug')
-  const { user, collection } = await requireCollectionManager(slug)
+  const collection = await prisma.collection.findUniqueOrThrow({ where: { slug } })
   if (!collection.aiFeaturesEnabled || !collection.aiBriefingEnabled) {
     throw new Error('Collection briefings are not enabled for this collection.')
   }
