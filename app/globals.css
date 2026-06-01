@@ -795,6 +795,11 @@ section {
   color: #000;
 }
 
+.tag-print.portrait {
+  width: 1.25in;
+  height: 2.25in;
+}
+
 .tag-collection {
   position: absolute;
   top: 0.045in;
@@ -806,6 +811,12 @@ section {
   line-height: 1;
   text-align: center;
   white-space: nowrap;
+}
+
+.tag-print.portrait .tag-collection {
+  top: 0.07in;
+  right: 0.07in;
+  left: 0.07in;
 }
 
 .tag-name {
@@ -821,12 +832,30 @@ section {
   line-height: 0.9;
 }
 
+.tag-print.portrait .tag-name {
+  top: 1.23in;
+  right: 0.07in;
+  left: 0.07in;
+  width: auto;
+  max-height: 0.55in;
+  line-height: 1.05;
+  text-align: center;
+}
+
 .tag-qr {
   position: absolute;
   top: 0.32in;
   right: 0.08in;
   width: 0.66in;
   height: 0.66in;
+}
+
+.tag-print.portrait .tag-qr {
+  top: 0.34in;
+  right: auto;
+  left: 0.22in;
+  width: 0.8in;
+  height: 0.8in;
 }
 
 .tag-plant-id {
@@ -839,6 +868,12 @@ section {
   line-height: 1;
   text-align: center;
   white-space: nowrap;
+}
+
+.tag-print.portrait .tag-plant-id {
+  right: 0.06in;
+  bottom: 0.07in;
+  left: 0.06in;
 }
 
 @media print { .no-print { display: none; } body { background: white; } }

@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
-import { Button, Card, Select } from '@/components/ui'
+import { LabelExportControls } from '@/components/LabelExportControls'
+import { Button, Card } from '@/components/ui'
 import { plantName } from '@/lib/utils'
 import { collectionPath, requireCollectionViewer } from '@/lib/collections'
 
@@ -20,17 +21,7 @@ export default async function BulkLabels() {
       <Card>
         <form action="/api/labels/bulk" method="get" className="grid gap-3">
           <input type="hidden" name="collectionSlug" value={collection.slug} />
-          <Select
-            label="Print format"
-            name="format"
-            defaultValue="fixed"
-            help="Choose one label per PDF page, a letter-size sheet of ganged labels, or narrow continuous Brother DK-2210 labels."
-            wrapperClassName="max-w-xl"
-          >
-            <option value="fixed">2.25 × 1.25 inch label, one per page</option>
-            <option value="sheet">Legacy print sheet, ganged labels</option>
-            <option value="brother-dk-2210">Brother DK-2210 continuous 1 1/7 inch label</option>
-          </Select>
+          <LabelExportControls />
           <div className="grid max-h-[520px] gap-2 overflow-auto rounded-lg border border-stone-200 bg-[#fffdf7] p-3">
             {instances.map((instance) => (
               <label key={instance.id} className="flex min-w-0 items-start gap-2 text-sm">
