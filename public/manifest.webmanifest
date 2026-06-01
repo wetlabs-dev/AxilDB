@@ -1,0 +1,18 @@
+{
+  "name": "AxilDB",
+  "short_name": "AxilDB",
+  "description": "Botanical accession system for plant records, propagation history, and lineage tracking.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f8f5ea",
+  "theme_color": "#3f6212",
+  "icons": [
+    {
+      "src": "/axildb-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

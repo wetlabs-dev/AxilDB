@@ -1,6 +1,7 @@
 import type { PrismaClient } from '@prisma/client'
 import { followNotificationEmail } from '@/lib/email-templates'
 import { appUrl, sendEmail } from '@/lib/email'
+import { sendPushNotification } from '@/lib/push'
 
 type NotifyFollowersInput = {
   collectionId?: string | null
@@ -21,6 +22,17 @@ export const followScopes = [
 
 export function followScopeLabel(scope?: string | null) {
   return followScopes.find(([value]) => value === scope)?.[1] || 'Follow'
+}
+
+function followPushTitle(eventType: string) {
+  if (eventType.includes('BLOOM')) return 'New bloom recorded'
+  if (eventType.includes('PROPAGATION')) return 'Propagation update recorded'
+  if (eventType.includes('PHOTO')) return 'A followed plant has a new photo'
+  if (eventType.includes('NOTE')) return 'A followed plant has a new note'
+  if (eventType.includes('ARCHIVE')) return 'A followed plant was archived'
+  if (eventType.includes('SPORT')) return 'A followed plant has a sport update'
+  if (eventType.includes('SPECIMEN')) return 'New specimen of a followed type'
+  return 'A followed plant has a new update'
 }
 
 async function connectedLineageIds(prisma: PrismaClient, seedIds: string[], collectionId?: string | null) {
@@ -121,6 +133,15 @@ export async function notifyFollowers(prisma: PrismaClient, input: NotifyFollowe
       continue
     }
 
+    const recordUrl = appUrl(input.recordPath)
+    await sendPushNotification(follow.userId, {
+      title: followPushTitle(input.eventType),
+      body: 'Open AxilDB for details.',
+      url: recordUrl,
+      tag: `follow-${input.eventType}-${follow.id}`,
+      preferenceKey: 'followNotificationsPushEnabled',
+    }, prisma)
+
     if (!follow.user.emailVerifiedAt || follow.user.emailPreference?.followNotifications === false) {
       await prisma.followNotification.create({
         data: {
@@ -138,7 +159,6 @@ export async function notifyFollowers(prisma: PrismaClient, input: NotifyFollowe
       continue
     }
 
-    const recordUrl = appUrl(input.recordPath)
     const template = followNotificationEmail(input.subject, recordUrl, [
       input.body || 'A record you follow was updated in AxilDB.',
       follow.collection ? `Collection: ${follow.collection.name}.` : '',

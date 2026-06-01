@@ -434,6 +434,10 @@ REMINDER_WORKER_INTERVAL_SECONDS=300
 METRICS_WORKER_INTERVAL_SECONDS=300
 CARE_QUEUE_DIGEST_COOLDOWN_HOURS=20
 SERVER_HEALTH_ALERT_COOLDOWN_HOURS=6
+NEXT_PUBLIC_ENABLE_WEB_PUSH=false
+NEXT_PUBLIC_VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_KEY=
+VAPID_SUBJECT=mailto:admin@axildb.com
 OPENAI_API_KEY=
 OPENAI_DESCRIPTION_MODEL=gpt-5.4-mini
 OPENAI_DESCRIPTION_HOURLY_LIMIT=20
@@ -453,6 +457,37 @@ openssl rand -base64 32
 ```
 
 Set `EMAIL_DELIVERY_MODE=smtp` and provide SMTP credentials to send real email. Docker Compose loads app-level email settings from `/etc/axildb/axildb.env` on the server, so SMTP credentials do not need to live in the repository.
+
+## Web Push notifications
+
+AxilDB can send browser and installed PWA notifications alongside email alerts. Web Push is optional and disabled unless `NEXT_PUBLIC_ENABLE_WEB_PUSH=true` and VAPID keys are configured.
+
+Generate VAPID keys with:
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+Then set:
+
+```text
+NEXT_PUBLIC_ENABLE_WEB_PUSH=true
+NEXT_PUBLIC_VAPID_PUBLIC_KEY=...
+VAPID_PRIVATE_KEY=...
+VAPID_SUBJECT=mailto:admin@axildb.com
+```
+
+Users can enable push from Account → Web Push devices and choose push alert types in Account → Notification preferences. Push payloads intentionally use short generic copy with a click-through URL; plant notes, private collection names, user emails, and other freeform sensitive content are not included in notification payloads.
+
+Production Web Push requires HTTPS. On iPhone and iPad, users must install AxilDB to the Home Screen before Safari/iOS will allow PWA push notifications.
+
+Manual verification:
+
+1. Set the Web Push env vars and restart AxilDB.
+2. Open Account, enable a push alert type, then select “Enable push notifications.”
+3. Select “Send test push notification” and confirm the notification appears.
+4. Click the notification and confirm it opens AxilDB.
+5. Select “Disable push notifications,” then confirm test or scheduled notifications are no longer delivered to that browser.
 
 Set `AXILDB_DEFAULT_TIMEZONE` to the collection's normal local timezone, for example `America/New_York`. AxilDB still stores absolute timestamps in UTC, but reminder form input, recurring reminder calculations, care queue day boundaries, and timestamp display use each user's account email preference timezone when available, falling back to `AXILDB_DEFAULT_TIMEZONE`. Docker Compose also passes `TZ` and `AXILDB_DEFAULT_TIMEZONE` into the app, migrate, reminders, metrics, backups, and docs services so scheduled workers agree on the same local default.
 

@@ -42,7 +42,8 @@
     "react-dom": "^19.0.0",
     "reactflow": "^11.11.4",
     "sharp": "^0.34.5",
-    "tailwind-merge": "^2.5.4"
+    "tailwind-merge": "^2.5.4",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
@@ -52,6 +53,7 @@
     "@types/qrcode": "^1.5.5",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@types/web-push": "^3.6.4",
     "autoprefixer": "^10.4.20",
     "eslint": "^9.15.0",
     "eslint-config-next": "^15.0.3",

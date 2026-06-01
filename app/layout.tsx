@@ -6,6 +6,15 @@ import { headers } from 'next/headers'
 export const metadata = {
   title: 'AxilDB — Botanical Accession System',
   description: 'Personal horticultural accession database for plant records, propagation history, and lineage tracking.',
+  manifest: '/manifest.webmanifest',
+  icons: {
+    icon: '/axildb-logo.png',
+    apple: '/axildb-logo.png',
+  },
+}
+
+export const viewport = {
+  themeColor: '#3f6212',
 }
 
 export default async function RootLayout({children}:{children:React.ReactNode}) {

@@ -647,6 +647,13 @@ export async function updateEmailPreferences(fd: FormData) {
       transferNotifications: checkbox(fd, 'transferNotifications'),
       careQueueDigestEmailEnabled: checkbox(fd, 'careQueueDigestEmailEnabled'),
       serverHealthEmailEnabled: checkbox(fd, 'serverHealthEmailEnabled'),
+      generalRemindersPushEnabled: checkbox(fd, 'generalRemindersPushEnabled'),
+      plantCheckInRemindersPushEnabled: checkbox(fd, 'plantCheckInRemindersPushEnabled'),
+      bloomCycleRemindersPushEnabled: checkbox(fd, 'bloomCycleRemindersPushEnabled'),
+      propagationFollowUpsPushEnabled: checkbox(fd, 'propagationFollowUpsPushEnabled'),
+      followNotificationsPushEnabled: checkbox(fd, 'followNotificationsPushEnabled'),
+      careQueueDigestPushEnabled: checkbox(fd, 'careQueueDigestPushEnabled'),
+      serverHealthPushEnabled: checkbox(fd, 'serverHealthPushEnabled'),
       quietHoursStart: val(fd, 'quietHoursStart') || undefined,
       quietHoursEnd: val(fd, 'quietHoursEnd') || undefined,
     },
@@ -663,12 +670,19 @@ export async function updateEmailPreferences(fd: FormData) {
       transferNotifications: checkbox(fd, 'transferNotifications'),
       careQueueDigestEmailEnabled: checkbox(fd, 'careQueueDigestEmailEnabled'),
       serverHealthEmailEnabled: checkbox(fd, 'serverHealthEmailEnabled'),
+      generalRemindersPushEnabled: checkbox(fd, 'generalRemindersPushEnabled'),
+      plantCheckInRemindersPushEnabled: checkbox(fd, 'plantCheckInRemindersPushEnabled'),
+      bloomCycleRemindersPushEnabled: checkbox(fd, 'bloomCycleRemindersPushEnabled'),
+      propagationFollowUpsPushEnabled: checkbox(fd, 'propagationFollowUpsPushEnabled'),
+      followNotificationsPushEnabled: checkbox(fd, 'followNotificationsPushEnabled'),
+      careQueueDigestPushEnabled: checkbox(fd, 'careQueueDigestPushEnabled'),
+      serverHealthPushEnabled: checkbox(fd, 'serverHealthPushEnabled'),
       quietHoursStart: val(fd, 'quietHoursStart') || undefined,
       quietHoursEnd: val(fd, 'quietHoursEnd') || undefined,
     },
   })
 
-  await audit(user, 'UPDATE', 'EMAIL_PREFERENCES', user.id, `${user.email} updated email preferences`)
+  await audit(user, 'UPDATE', 'EMAIL_PREFERENCES', user.id, `${user.email} updated notification preferences`)
   redirect('/account')
 }
 

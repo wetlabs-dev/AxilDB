@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client'
 import { appUrl, sendEmail } from '../lib/email'
 import { reminderEmail } from '../lib/email-templates'
 import { sendCareQueueDigestAlerts } from '../lib/email-alerts'
+import { sendPushNotification, pushPreferenceKeys } from '../lib/push'
 import { nextOccurrence, reminderCategoryLabel, reminderPreferenceKey } from '../lib/reminders'
 import { timeZoneForPreference } from '../lib/time'
 
@@ -52,6 +53,13 @@ async function finishReminder(id: string, dueAt: Date, rrule: string | null, tim
   })
 }
 
+function pushTitle(category: string) {
+  if (category === 'PLANT_CHECK_IN') return 'Plant check-in due'
+  if (category === 'BLOOM_CYCLE') return 'Bloom check due'
+  if (category === 'PROPAGATION_FOLLOW_UP') return 'Propagation follow-up due'
+  return 'Plant reminder due'
+}
+
 async function main() {
   const now = new Date()
   const reminders = await prisma.reminder.findMany({
@@ -80,7 +88,7 @@ async function main() {
     const preferenceKey = reminderPreferenceKey(reminder.category)
     const preferences = reminder.user.emailPreference as Record<string, unknown> | null
     const timezone = timeZoneForPreference(reminder.user.emailPreference)
-    const preferenceEnabled = preferences?.[preferenceKey] !== false
+    const emailEnabled = preferences?.[preferenceKey] !== false
     const hasCollectionAccess =
       reminder.collection?.visibility === 'PUBLIC' ||
       !reminder.collectionId ||
@@ -102,6 +110,15 @@ async function main() {
       continue
     }
 
+    const url = await recordUrl(reminder)
+    await sendPushNotification(reminder.userId, {
+      title: pushTitle(reminder.category),
+      body: 'Open AxilDB for details.',
+      url,
+      tag: `reminder-${reminder.id}`,
+      preferenceKey: pushPreferenceKeys[reminder.category as keyof typeof pushPreferenceKeys] || 'generalRemindersPushEnabled',
+    }, prisma)
+
     if (!reminder.user.emailVerifiedAt) {
       await prisma.reminderDelivery.create({
         data: {
@@ -118,7 +135,7 @@ async function main() {
       continue
     }
 
-    if (!preferenceEnabled) {
+    if (!emailEnabled) {
       await prisma.reminderDelivery.create({
         data: {
           reminderId: reminder.id,
@@ -134,7 +151,6 @@ async function main() {
       continue
     }
 
-    const url = await recordUrl(reminder)
     const template = reminderEmail(reminder.title, url, [
       reminder.body || 'A reminder you scheduled in AxilDB is ready.',
       reminder.collection ? `Collection: ${reminder.collection.name}.` : '',

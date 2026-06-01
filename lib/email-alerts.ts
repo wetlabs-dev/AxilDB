@@ -2,6 +2,7 @@ import type { PrismaClient } from '@prisma/client'
 import { appUrl, sendEmail } from '@/lib/email'
 import { renderBrandedEmail } from '@/lib/email-templates'
 import { getCareQueue, type CareQueueItem, type CareTaskType } from '@/lib/care-queue'
+import { sendPushNotification } from '@/lib/push'
 import { calendarDayIndexInTimeZone, timeZoneForPreference } from '@/lib/time'
 
 type ServerMetricSnapshot = {
@@ -201,13 +202,16 @@ export async function sendCareQueueDigestAlerts(prisma: PrismaClient, now = new 
   const cooldownCutoff = hoursAgo(CARE_DIGEST_COOLDOWN_HOURS)
   const users = await prisma.user.findMany({
     where: {
-      emailVerifiedAt: { not: null },
       OR: [
         { emailPreference: null },
         {
           emailPreference: {
-            careQueueDigestEmailEnabled: true,
-            OR: [{ careQueueDigestLastSentAt: null }, { careQueueDigestLastSentAt: { lt: cooldownCutoff } }],
+            OR: [{ careQueueDigestEmailEnabled: true }, { careQueueDigestPushEnabled: true }],
+            AND: [
+              {
+                OR: [{ careQueueDigestLastSentAt: null }, { careQueueDigestLastSentAt: { lt: cooldownCutoff } }],
+              },
+            ],
           },
         },
       ],
@@ -226,7 +230,9 @@ export async function sendCareQueueDigestAlerts(prisma: PrismaClient, now = new 
   let failed = 0
 
   for (const user of users) {
-    if (!enabled(user.emailPreference?.careQueueDigestEmailEnabled)) continue
+    const emailEnabled = enabled(user.emailPreference?.careQueueDigestEmailEnabled)
+    const pushEnabled = user.emailPreference?.careQueueDigestPushEnabled === true
+    if (!emailEnabled && !pushEnabled) continue
     const lastSent = user.emailPreference?.careQueueDigestLastSentAt
     if (lastSent && lastSent >= cooldownCutoff) continue
     const timezone = timeZoneForPreference(user.emailPreference)
@@ -276,14 +282,31 @@ export async function sendCareQueueDigestAlerts(prisma: PrismaClient, now = new 
 
     if (!digest.totalDue) continue
 
+    let delivered = false
+    if (pushEnabled) {
+      const result = await sendPushNotification(user.id, {
+        title: 'Care queue items are due',
+        body: `${digest.totalDue} care queue item${digest.totalDue === 1 ? '' : 's'} need attention.`,
+        url: '/care',
+        tag: 'care-queue-digest',
+        preferenceKey: 'careQueueDigestPushEnabled',
+      }, prisma)
+      delivered = result.sent > 0 || delivered
+    }
+
     try {
-      await sendCareQueueDigestEmail(user, digest)
-      await prisma.emailPreference.upsert({
-        where: { userId: user.id },
-        update: { careQueueDigestLastSentAt: now },
-        create: { userId: user.id, careQueueDigestLastSentAt: now },
-      })
-      sent += 1
+      if (emailEnabled && user.emailVerifiedAt) {
+        await sendCareQueueDigestEmail(user, digest)
+        delivered = true
+        sent += 1
+      }
+      if (delivered) {
+        await prisma.emailPreference.upsert({
+          where: { userId: user.id },
+          update: { careQueueDigestLastSentAt: now },
+          create: { userId: user.id, careQueueDigestLastSentAt: now },
+        })
+      }
     } catch (error) {
       failed += 1
       console.error('Failed to send AxilDB care queue digest', { userId: user.id, error: error instanceof Error ? error.message : String(error) })
@@ -301,13 +324,16 @@ export async function sendServerHealthAlertEmails(prisma: PrismaClient, snapshot
   const admins = await prisma.user.findMany({
     where: {
       role: 'SERVER_ADMIN',
-      emailVerifiedAt: { not: null },
       OR: [
         { emailPreference: null },
         {
           emailPreference: {
-            serverHealthEmailEnabled: true,
-            OR: [{ serverHealthAlertLastSentAt: null }, { serverHealthAlertLastSentAt: { lt: cooldownCutoff } }],
+            OR: [{ serverHealthEmailEnabled: true }, { serverHealthPushEnabled: true }],
+            AND: [
+              {
+                OR: [{ serverHealthAlertLastSentAt: null }, { serverHealthAlertLastSentAt: { lt: cooldownCutoff } }],
+              },
+            ],
           },
         },
       ],
@@ -318,18 +344,36 @@ export async function sendServerHealthAlertEmails(prisma: PrismaClient, snapshot
   let sent = 0
   let failed = 0
   for (const admin of admins) {
-    if (!enabled(admin.emailPreference?.serverHealthEmailEnabled)) continue
+    const emailEnabled = enabled(admin.emailPreference?.serverHealthEmailEnabled)
+    const pushEnabled = admin.emailPreference?.serverHealthPushEnabled === true
+    if (!emailEnabled && !pushEnabled) continue
     const lastSent = admin.emailPreference?.serverHealthAlertLastSentAt
     if (lastSent && lastSent >= cooldownCutoff) continue
 
     try {
-      await sendServerHealthAlertEmail(admin, alert)
-      await prisma.emailPreference.upsert({
-        where: { userId: admin.id },
-        update: { serverHealthAlertLastSentAt: now },
-        create: { userId: admin.id, serverHealthAlertLastSentAt: now },
-      })
-      sent += 1
+      let delivered = false
+      if (pushEnabled) {
+        const result = await sendPushNotification(admin.id, {
+          title: 'AxilDB server health needs attention',
+          body: `Server health is ${alert.status}.`,
+          url: '/server',
+          tag: 'server-health',
+          preferenceKey: 'serverHealthPushEnabled',
+        }, prisma)
+        delivered = result.sent > 0 || delivered
+      }
+      if (emailEnabled && admin.emailVerifiedAt) {
+        await sendServerHealthAlertEmail(admin, alert)
+        delivered = true
+        sent += 1
+      }
+      if (delivered) {
+        await prisma.emailPreference.upsert({
+          where: { userId: admin.id },
+          update: { serverHealthAlertLastSentAt: now },
+          create: { userId: admin.id, serverHealthAlertLastSentAt: now },
+        })
+      }
     } catch (error) {
       failed += 1
       console.error('Failed to send AxilDB server health alert', { userId: admin.id, error: error instanceof Error ? error.message : String(error) })

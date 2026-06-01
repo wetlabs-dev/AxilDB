@@ -32,6 +32,7 @@ model User {
   auditLogs           AuditLog[]
   emailTokens         EmailToken[]
   emailPreference     EmailPreference?
+  pushSubscriptions   PushSubscription[]
   sortPreferences     UserSortPreference[]
   reminders           Reminder[]
   follows             Follow[]
@@ -482,6 +483,13 @@ model EmailPreference {
   transferNotifications Boolean  @default(true)
   careQueueDigestEmailEnabled Boolean @default(true)
   serverHealthEmailEnabled Boolean @default(true)
+  generalRemindersPushEnabled Boolean @default(false)
+  plantCheckInRemindersPushEnabled Boolean @default(false)
+  bloomCycleRemindersPushEnabled Boolean @default(false)
+  propagationFollowUpsPushEnabled Boolean @default(false)
+  followNotificationsPushEnabled Boolean @default(false)
+  careQueueDigestPushEnabled Boolean @default(false)
+  serverHealthPushEnabled Boolean @default(false)
   careQueueDigestLastSentAt DateTime?
   serverHealthAlertLastSentAt DateTime?
   quietHoursStart       String?
@@ -490,6 +498,30 @@ model EmailPreference {
   updatedAt             DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PushSubscription {
+  id           String    @id @default(cuid())
+  userId       String
+  endpoint     String    @unique
+  p256dh       String
+  auth         String
+  userAgent    String?
+  deviceLabel  String?
+  enabled      Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  lastSeenAt   DateTime?
+  revokedAt    DateTime?
+  failureCount Int       @default(0)
+  lastFailureAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([enabled])
+  @@index([revokedAt])
+  @@index([lastSeenAt])
 }
 
 model UserSortPreference {
