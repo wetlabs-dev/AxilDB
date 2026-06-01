@@ -119,8 +119,24 @@ export default async function Dashboard({
   const preferences = context.user
     ? await prisma.emailPreference.findUnique({ where: { userId: context.user.id } })
     : null
-  const [active, recentProps, blooms, sports, acquired, archived, careItems] = await Promise.all([
+  const [
+    active,
+    propagationEvents,
+    acquiredPropagations,
+    bloomCount,
+    sportCandidates,
+    recentProps,
+    blooms,
+    sports,
+    acquired,
+    archived,
+    careItems,
+  ] = await Promise.all([
     prisma.plantInstance.count({ where: { ...collectionWhere, status: 'ACTIVE' } }),
+    prisma.propagationEvent.count({ where: collectionWhere }),
+    prisma.plantInstance.count({ where: { ...collectionWhere, status: { not: 'ARCHIVED' }, instanceType: 'ACQUIRED_PROPAGATION' } }),
+    prisma.bloomEvent.count({ where: collectionWhere }),
+    prisma.plantInstance.count({ where: { ...collectionWhere, OR: [{ isSportCandidate: true }, { sportStatus: { not: 'NONE' } }] } }),
     prisma.propagationEvent.findMany({
       where: collectionWhere,
       take: activeKind && activeKind !== 'propagation' ? 0 : queryTake,
@@ -254,14 +270,12 @@ export default async function Dashboard({
     .sort((a, b) => b.date.getTime() - a.date.getTime())
     .filter((item) => !activeKind || item.kind === activeKind)
     .slice(0, activityTake)
-  const acquiredPropagationCount = acquired.filter((item) => item.instanceType === 'ACQUIRED_PROPAGATION').length
-
   const stats = [
     ['Care today', care.today, ClipboardCheck, collectionPath(collection.slug, '/care')],
     ['Active plants', active, Leaf, collectionPath(collection.slug, '/instances')],
-    ['Propagations', recentProps.length + acquiredPropagationCount, GitBranch, activityHref(collection.slug, activityTake, 'propagation')],
-    ['Recent blooms', blooms.length, Flower2, collectionPath(collection.slug, '/blooms')],
-    ['Sport candidates', sports.length, Sprout, collectionPath(collection.slug, '/sports')],
+    ['Propagations', propagationEvents + acquiredPropagations, GitBranch, activityHref(collection.slug, activityTake, 'propagation')],
+    ['Recent blooms', bloomCount, Flower2, collectionPath(collection.slug, '/blooms')],
+    ['Sport candidates', sportCandidates, Sprout, collectionPath(collection.slug, '/sports')],
   ] as const
 
   return (
