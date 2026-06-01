@@ -9,8 +9,8 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'AxilDB'
   const options = {
     body: data.body || 'Open AxilDB for details.',
-    icon: '/axildb-logo.png',
-    badge: '/axildb-logo.png',
+    icon: '/app-icon-192.png',
+    badge: '/app-icon-192.png',
     tag: data.tag || 'axildb',
     data: {
       url: data.url || '/',
