@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { MobileMenuAutoClose } from './MobileMenuAutoClose'
 import { ThemeToggle } from './ThemeToggle'
 import { Button, GhostLink } from './ui'
@@ -11,6 +12,7 @@ import {
   BarChart3,
   Bell,
   BookOpen,
+  ChevronDown,
   CircleHelp,
   ClipboardCheck,
   Eye,
@@ -149,6 +151,20 @@ export function SidebarClient({
   const isSiteAdmin = isServerAdminRole(user?.role)
   const collectionAdminItemsForRole = collectionAdminItems.filter(([, , , minimumRole]) => isSiteAdmin || (role && collectionRoleAtLeast(role, minimumRole)))
   const globalPath = (href: string) => `${href}?collection=${encodeURIComponent(slug)}`
+  const [accountExpanded, setAccountExpanded] = useState(true)
+
+  useEffect(() => {
+    const stored = localStorage.getItem('axildb-sidebar-account-expanded')
+    if (stored === 'false') setAccountExpanded(false)
+  }, [])
+
+  function toggleAccountExpanded() {
+    setAccountExpanded((expanded) => {
+      const next = !expanded
+      localStorage.setItem('axildb-sidebar-account-expanded', String(next))
+      return next
+    })
+  }
 
   const badgeFor = (key: string) => badges[key] || 0
 
@@ -190,27 +206,46 @@ export function SidebarClient({
 
   const account = user ? (
     <div className="grid gap-2">
-      <div>
-        <p className="truncate font-medium">{user.email}</p>
-        <p className="text-stone-600">{isServerAdminRole(user.role) ? 'server admin' : role ? collectionRoleLabel(role) : 'user'}</p>
+      <div className="flex min-w-0 items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="truncate font-medium">{user.email}</p>
+          <p className="text-stone-600">{isServerAdminRole(user.role) ? 'server admin' : role ? collectionRoleLabel(role) : 'user'}</p>
+        </div>
+        <button
+          type="button"
+          aria-expanded={accountExpanded}
+          aria-label={accountExpanded ? 'Collapse account utilities' : 'Expand account utilities'}
+          onClick={toggleAccountExpanded}
+          className="account-utility-toggle inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-stone-200 bg-white/45 text-stone-700 shadow-sm transition hover:bg-[#d6dfc9]/60 hover:text-[#1f472f] focus:outline-none focus:ring-2 focus:ring-[#8fa58f]/30"
+        >
+          <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${accountExpanded ? 'rotate-180' : ''}`} />
+        </button>
       </div>
-      <GhostLink href={globalPath('/help')}>
-        <CircleHelp className="h-4 w-4 shrink-0" />
-        <span className="min-w-0 flex-1 truncate">Help</span>
-      </GhostLink>
-      <GhostLink href={globalPath('/account')}>
-        <BookOpen className="h-4 w-4 shrink-0" />
-        <span className="min-w-0 flex-1 truncate">Account</span>
-      </GhostLink>
-      <GhostLink href={globalPath('/privacy')}>
-        <ShieldCheck className="h-4 w-4 shrink-0" />
-        <span className="min-w-0 flex-1 truncate">Privacy</span>
-      </GhostLink>
-      <GhostLink href={globalPath('/terms')}>
-        <FileText className="h-4 w-4 shrink-0" />
-        <span className="min-w-0 flex-1 truncate">Terms</span>
-      </GhostLink>
-      <ThemeToggle />
+      <div
+        className={`grid overflow-hidden transition-[grid-template-rows,opacity] duration-200 ease-out ${accountExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}
+        aria-hidden={!accountExpanded}
+        inert={accountExpanded ? undefined : true}
+      >
+        <div className="grid min-h-0 gap-2">
+          <GhostLink href={globalPath('/help')}>
+            <CircleHelp className="h-4 w-4 shrink-0" />
+            <span className="min-w-0 flex-1 truncate">Help</span>
+          </GhostLink>
+          <GhostLink href={globalPath('/account')}>
+            <BookOpen className="h-4 w-4 shrink-0" />
+            <span className="min-w-0 flex-1 truncate">Account</span>
+          </GhostLink>
+          <GhostLink href={globalPath('/privacy')}>
+            <ShieldCheck className="h-4 w-4 shrink-0" />
+            <span className="min-w-0 flex-1 truncate">Privacy</span>
+          </GhostLink>
+          <GhostLink href={globalPath('/terms')}>
+            <FileText className="h-4 w-4 shrink-0" />
+            <span className="min-w-0 flex-1 truncate">Terms</span>
+          </GhostLink>
+          <ThemeToggle />
+        </div>
+      </div>
       <form action={logoutAction}>
         <Button className="w-full">Sign out</Button>
       </form>

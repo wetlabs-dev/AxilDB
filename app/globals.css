@@ -267,6 +267,36 @@ section {
   border-radius: .5rem;
 }
 
+.rounded-lg,
+.rounded-xl,
+.rounded-2xl {
+  background-clip: padding-box;
+}
+
+.plant-card-action {
+  border-color: rgba(143, 165, 143, .48);
+  background-color: rgba(255, 253, 247, .42);
+  color: #2d4f35;
+  font-weight: 500;
+  transition:
+    border-color .16s ease,
+    background-color .16s ease,
+    color .16s ease,
+    box-shadow .16s ease;
+}
+
+.plant-card-action:hover {
+  border-color: rgba(104, 132, 91, .68);
+  background-color: rgba(214, 223, 201, .58);
+  color: #1f472f;
+}
+
+.plant-card-action:focus-visible {
+  outline: none;
+  border-color: rgba(47, 107, 69, .72);
+  box-shadow: 0 0 0 2px rgba(143, 165, 143, .3);
+}
+
 @media (max-width: 640px) {
   h2 {
     font-size: 1.65rem !important;
@@ -333,6 +363,23 @@ section {
 :root[data-theme='dark'] .theme-toggle [aria-pressed='true'] {
   background: #7fa66f !important;
   color: #0f160f !important;
+}
+
+:root[data-theme='dark'] .plant-card-action {
+  border-color: rgba(132, 154, 112, .5) !important;
+  background-color: rgba(18, 27, 17, .38) !important;
+  color: #e8e1d0 !important;
+}
+
+:root[data-theme='dark'] .plant-card-action:hover {
+  border-color: rgba(155, 195, 138, .62) !important;
+  background-color: rgba(55, 74, 48, .66) !important;
+  color: #fff3dc !important;
+}
+
+:root[data-theme='dark'] .plant-card-action:focus-visible {
+  border-color: rgba(155, 195, 138, .82) !important;
+  box-shadow: 0 0 0 2px rgba(155, 195, 138, .28) !important;
 }
 
 :root[data-theme='dark'] .text-stone-900,

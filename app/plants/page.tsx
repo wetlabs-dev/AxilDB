@@ -224,7 +224,7 @@ export default async function Plants() {
                   {(canEdit || canCreate) && (
                     <div className="flex shrink-0 flex-col gap-1">
                       {canEdit && (
-                        <Link className="rounded-md border px-2 py-1 text-center text-xs" href={collectionPath(collection.slug, `/plants/${plant.id}/edit`)}>
+                        <Link className="plant-card-action rounded-md border px-2 py-1 text-center text-xs" href={collectionPath(collection.slug, `/plants/${plant.id}/edit`)}>
                           Edit
                         </Link>
                       )}
@@ -232,7 +232,7 @@ export default async function Plants() {
                         <form action={copyPlantDefinition}>
                           <input type="hidden" name="id" value={plant.id} />
                           <input type="hidden" name="collectionSlug" value={collection.slug} />
-                          <button type="submit" className="w-full rounded-md border px-2 py-1 text-center text-xs">
+                          <button type="submit" className="plant-card-action w-full rounded-md border px-2 py-1 text-center text-xs">
                             Copy
                           </button>
                         </form>
