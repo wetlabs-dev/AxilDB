@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import { deletePlantDefinition, deletePlantHusbandryGuide, forkPlantHusbandryGuide, linkPlantHusbandryGuide, savePlantHusbandryGuide, savePlantHusbandryGuideField, updatePhotoFraming, updatePlantDefinition } from '@/app/actions'
+import { deletePlantDefinition, deletePlantHusbandryGuide, forkPlantHusbandryGuide, linkPlantHusbandryGuide, mergePlantDefinition, savePlantHusbandryGuide, savePlantHusbandryGuideField, updatePhotoFraming, updatePlantDefinition } from '@/app/actions'
 import { Button, Card, Field, HelpTooltip, SuggestionDatalist, TextArea } from '@/components/ui'
 import { ConfidenceSelect, PlantAliasFields } from '@/components/PlantAliasFields'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
@@ -32,7 +32,7 @@ export default async function EditPlant({
   const { collection } = await requireCollectionAdmin()
   const { id } = await params
   const { uploadError } = await searchParams
-  const [plant, bodies, typePhotos, definitionSuggestionRows, guideSourceOptions] = await Promise.all([
+  const [plant, bodies, typePhotos, definitionSuggestionRows, guideSourceOptions, mergeTargetOptions] = await Promise.all([
     prisma.plantDefinition.findFirstOrThrow({
       where: { id, collectionId: collection.id },
       include: {
@@ -63,6 +63,11 @@ export default async function EditPlant({
       where: { collectionId: collection.id, NOT: { id }, husbandryGuide: { is: { sourcePlantDefinitionId: null } } },
       include: { husbandryGuide: true },
       orderBy: [{ genus: 'asc' }, { species: 'asc' }],
+    }),
+    prisma.plantDefinition.findMany({
+      where: { collectionId: collection.id, NOT: { id } },
+      include: { _count: { select: { instances: true } } },
+      orderBy: [{ genus: 'asc' }, { species: 'asc' }, { cultivarName: 'asc' }],
     }),
   ])
   const currentTypePhoto = typePhotos[0]
@@ -304,6 +309,41 @@ export default async function EditPlant({
             <Button className="justify-self-start">Upload type image</Button>
           </form>
         </div>
+      </Card>
+      <Card>
+        <h3 className="font-bold">Merge duplicate definition</h3>
+        <p className="mt-1 max-w-3xl text-sm leading-6 text-stone-700">
+          Move this definition&apos;s specimens, aliases, definition photos, notes, reminders, follows, and husbandry links into another definition,
+          then delete this duplicate definition. The target definition&apos;s taxonomy fields are kept.
+        </p>
+        {mergeTargetOptions.length === 0 ? (
+          <p className="mt-3 text-sm text-stone-600">No other plant definitions are available as merge targets.</p>
+        ) : (
+          <form action={mergePlantDefinition} className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+            <input type="hidden" name="collectionSlug" value={collection.slug} />
+            <input type="hidden" name="sourcePlantDefinitionId" value={plant.id} />
+            <label className="grid gap-1 text-sm font-medium text-stone-800">
+              Merge into
+              <select className={selectClass} name="targetPlantDefinitionId" required defaultValue="">
+                <option value="">Choose the definition to keep...</option>
+                {mergeTargetOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {plantName(option)} · {option._count.instances} instance{option._count.instances === 1 ? '' : 's'}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="self-end">
+              <ConfirmDeleteButton
+                title="Merge this duplicate definition?"
+                message={`This will move records from ${plantName(plant)} into the selected target definition and permanently delete this definition. The target taxonomy fields will not be overwritten.`}
+                confirmLabel="Merge definition"
+              >
+                Merge duplicate
+              </ConfirmDeleteButton>
+            </div>
+          </form>
+        )}
       </Card>
       <Card>
         <h3 className="font-bold">Delete</h3>

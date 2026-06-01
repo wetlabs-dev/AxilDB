@@ -50,6 +50,7 @@ It is designed for real collection work: messy taxonomy, acquisition names, alia
 - Server-admin-only site user management and collection archive/permanent-delete tools.
 - Confirmation modals for destructive delete actions.
 - Collection-scoped plant definition CSV export from Admin Tools for offline review, backup, and duplicate cleanup planning.
+- Duplicate plant definition merge tool that safely moves dependent records into a selected definition before deleting the duplicate.
 - Demo data generator for populating realistic test records.
 - Web-based Help page and generated Markdown user manual, with repeatable Playwright screenshot capture for documentation.
 
@@ -633,4 +634,4 @@ If the Ko-fi handle changes, update `NEXT_PUBLIC_DONATE_URL` in `.env` or `docke
 - Add sitewide verified/reference plant definitions that collections can link to or fork.
 - Move uploads to durable object storage.
 - Add automated tests for auth, permissions, plant ID generation, uploads, destructive actions, sport logic, and lineage graph construction.
-- Add CSV import and duplicate plant definition merge tools.
+- Add CSV import tools.

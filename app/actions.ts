@@ -443,6 +443,105 @@ export async function deletePlantDefinition(fd: FormData) {
   redirect(collectionPath(collection.slug, '/plants'))
 }
 
+export async function mergePlantDefinition(fd: FormData) {
+  const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
+  const sourceId = val(fd, 'sourcePlantDefinitionId')!
+  const targetId = val(fd, 'targetPlantDefinitionId')!
+  if (sourceId === targetId) throw new Error('Choose a different target definition for the merge.')
+
+  const result = await prisma.$transaction(async (tx) => {
+    const [source, target] = await Promise.all([
+      tx.plantDefinition.findFirstOrThrow({
+        where: { id: sourceId, collectionId: collection.id },
+        include: { husbandryGuide: true },
+      }),
+      tx.plantDefinition.findFirstOrThrow({
+        where: { id: targetId, collectionId: collection.id },
+        include: { husbandryGuide: true },
+      }),
+    ])
+
+    const sourceFollows = await tx.follow.findMany({
+      where: { collectionId: collection.id, scope: 'TYPE', entityType: 'PLANT_DEFINITION', entityId: source.id },
+      select: { id: true, userId: true },
+    })
+    const targetFollows = await tx.follow.findMany({
+      where: { collectionId: collection.id, scope: 'TYPE', entityType: 'PLANT_DEFINITION', entityId: target.id },
+      select: { userId: true },
+    })
+    const targetFollowUserIds = new Set(targetFollows.map((follow) => follow.userId))
+    for (const follow of sourceFollows) {
+      if (targetFollowUserIds.has(follow.userId)) {
+        await tx.follow.delete({ where: { id: follow.id } })
+      } else {
+        await tx.follow.update({
+          where: { id: follow.id },
+          data: { entityId: target.id, label: plantName(target) },
+        })
+      }
+    }
+
+    await tx.plantInstance.updateMany({ where: { collectionId: collection.id, plantDefinitionId: source.id }, data: { plantDefinitionId: target.id } })
+    await tx.plantAlias.updateMany({ where: { collectionId: collection.id, plantDefinitionId: source.id }, data: { plantDefinitionId: target.id } })
+    await tx.photo.updateMany({ where: { collectionId: collection.id, entityType: 'PLANT_DEFINITION', entityId: source.id }, data: { entityId: target.id } })
+    await tx.note.updateMany({ where: { collectionId: collection.id, entityType: 'PLANT_DEFINITION', entityId: source.id }, data: { entityId: target.id } })
+    await tx.reminder.updateMany({ where: { collectionId: collection.id, entityType: 'PLANT_DEFINITION', entityId: source.id }, data: { entityId: target.id } })
+    await tx.plantDefinitionShareRequest.updateMany({
+      where: { sourceCollectionId: collection.id, sourcePlantDefinitionId: source.id },
+      data: { sourcePlantDefinitionId: target.id },
+    })
+    await tx.plantDefinitionShareRequest.updateMany({
+      where: { targetCollectionId: collection.id, targetPlantDefinitionId: source.id },
+      data: { targetPlantDefinitionId: target.id },
+    })
+
+    const sourceGuide = source.husbandryGuide
+    const targetGuide = target.husbandryGuide
+    if (targetGuide?.sourcePlantDefinitionId === source.id && sourceGuide) {
+      await tx.plantHusbandryGuide.update({
+        where: { id: targetGuide.id },
+        data: {
+          ...Object.fromEntries(husbandryFieldNames.map((field) => [field, (sourceGuide as any)[field] ?? null])),
+          sourcePlantDefinitionId: sourceGuide.sourcePlantDefinitionId === target.id ? null : sourceGuide.sourcePlantDefinitionId,
+          aiGeneratedAt: sourceGuide.aiGeneratedAt,
+          aiModel: sourceGuide.aiModel,
+          reviewStatus: sourceGuide.reviewStatus,
+          reviewNotes: sourceGuide.reviewNotes,
+        },
+      })
+    }
+
+    await tx.plantHusbandryGuide.updateMany({
+      where: { collectionId: collection.id, sourcePlantDefinitionId: source.id, NOT: { plantDefinitionId: target.id } },
+      data: { sourcePlantDefinitionId: target.id },
+    })
+
+    if (sourceGuide && !targetGuide) {
+      await tx.plantHusbandryGuide.update({
+        where: { id: sourceGuide.id },
+        data: {
+          plantDefinitionId: target.id,
+          sourcePlantDefinitionId: sourceGuide.sourcePlantDefinitionId === target.id ? null : sourceGuide.sourcePlantDefinitionId,
+        },
+      })
+    } else if (sourceGuide && targetGuide) {
+      await tx.plantHusbandryGuide.delete({ where: { id: sourceGuide.id } })
+    }
+
+    await tx.plantDefinition.delete({ where: { id: source.id } })
+
+    return { source, target }
+  })
+
+  await audit(user, 'MERGE', 'PLANT_DEFINITION', result.target.id, `Merged ${plantName(result.source)} into ${plantName(result.target)}`, {
+    sourcePlantDefinitionId: result.source.id,
+    targetPlantDefinitionId: result.target.id,
+  }, collection.id)
+
+  revalidatePath(collectionPath(collection.slug, '/plants'))
+  redirect(collectionPath(collection.slug, `/plants/${targetId}/edit`))
+}
+
 export async function savePlantHusbandryGuide(fd: FormData) {
   const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const plantDefinitionId = val(fd, 'plantDefinitionId')!
