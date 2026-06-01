@@ -3,6 +3,7 @@ import type { PrismaClient } from '@prisma/client'
 import { collectionPath } from '@/lib/collections'
 import { careTaskLabel, type CareQueueItem } from '@/lib/care-queue'
 import { husbandrySections, type HusbandryFieldName } from '@/lib/husbandry'
+import { parseDateLocal } from '@/lib/time'
 import { plantName } from '@/lib/utils'
 
 export const careSheetModes = ['CARE_SHEET', 'WEEKLY_CHECKLIST', 'SITTER_SESSION'] as const
@@ -59,9 +60,9 @@ export function careSheetSettingsFromForm(fd: FormData) {
   }
 }
 
-export function dateFromForm(fd: FormData, key: string) {
+export function dateFromForm(fd: FormData, key: string, timezone?: string | null) {
   const value = String(fd.get(key) || '').trim()
-  return value ? new Date(value) : null
+  return parseDateLocal(value, timezone || undefined) || null
 }
 
 export function normalizeCareSheetMode(value: string | null | undefined): CareSheetMode {

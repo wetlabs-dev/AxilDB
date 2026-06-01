@@ -428,6 +428,8 @@ SMTP_USER=
 SMTP_PASSWORD=
 SMTP_FROM="AxilDB <no-reply@axildb.com>"
 SMTP_REPLY_TO=
+TZ=America/New_York
+AXILDB_DEFAULT_TIMEZONE=America/New_York
 REMINDER_WORKER_INTERVAL_SECONDS=300
 METRICS_WORKER_INTERVAL_SECONDS=300
 CARE_QUEUE_DIGEST_COOLDOWN_HOURS=20
@@ -452,6 +454,14 @@ openssl rand -base64 32
 
 Set `EMAIL_DELIVERY_MODE=smtp` and provide SMTP credentials to send real email. Docker Compose loads app-level email settings from `/etc/axildb/axildb.env` on the server, so SMTP credentials do not need to live in the repository.
 
+Set `AXILDB_DEFAULT_TIMEZONE` to the collection's normal local timezone, for example `America/New_York`. AxilDB still stores absolute timestamps in UTC, but reminder form input, recurring reminder calculations, care queue day boundaries, and timestamp display use each user's account email preference timezone when available, falling back to `AXILDB_DEFAULT_TIMEZONE`. Docker Compose also passes `TZ` and `AXILDB_DEFAULT_TIMEZONE` into the app, migrate, reminders, metrics, backups, and docs services so scheduled workers agree on the same local default.
+
+To sanity-check reminder recurrence across local midnight and daylight-saving boundaries, run:
+
+```bash
+npm run check:timezone
+```
+
 For Amazon SES in `us-east-2`, create the server config file:
 
 ```bash
@@ -471,6 +481,8 @@ SMTP_PASSWORD=your-ses-smtp-password
 SMTP_FROM=AxilDB <no-reply@axildb.com>
 SMTP_REPLY_TO=
 TOTP_ENCRYPTION_KEY=your-long-random-secret
+TZ=America/New_York
+AXILDB_DEFAULT_TIMEZONE=America/New_York
 ```
 
 Then restrict the file permissions:

@@ -2,6 +2,7 @@ import { requestAiAccess } from '@/app/collection-actions'
 import { Button, Card, Field, Select, TextArea } from '@/components/ui'
 import { requireCollectionManager } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
+import { formatDate } from '@/lib/time'
 
 export default async function CollectionSettingsPage({
   searchParams,
@@ -60,7 +61,7 @@ export default async function CollectionSettingsPage({
           <div className="mt-4">
             {pendingAiRequest ? (
               <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
-                AI access was requested on {pendingAiRequest.createdAt.toLocaleDateString()} and is awaiting server admin review.
+                AI access was requested on {formatDate(pendingAiRequest.createdAt)} and is awaiting server admin review.
               </p>
             ) : (
               <form action={requestAiAccess} className="grid max-w-2xl gap-3">

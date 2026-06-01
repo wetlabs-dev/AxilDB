@@ -2,6 +2,7 @@ import type { PrismaClient } from '@prisma/client'
 import { appUrl, sendEmail } from '@/lib/email'
 import { renderBrandedEmail } from '@/lib/email-templates'
 import { getCareQueue, type CareQueueItem, type CareTaskType } from '@/lib/care-queue'
+import { calendarDayIndexInTimeZone, timeZoneForPreference } from '@/lib/time'
 
 type ServerMetricSnapshot = {
   id: string
@@ -104,8 +105,8 @@ function isDue(item: CareQueueItem, now: Date) {
   return !item.completedAt && item.dueAt <= now
 }
 
-function isDueToday(item: CareQueueItem, now: Date) {
-  return item.dueAt.toDateString() === now.toDateString() && item.overdueDays === 0
+function isDueToday(item: CareQueueItem, now: Date, timezone?: string) {
+  return calendarDayIndexInTimeZone(item.dueAt, timezone) === calendarDayIndexInTimeZone(now, timezone) && item.overdueDays === 0
 }
 
 function categorySummary(categories: Record<CareDigestCategory, number>) {
@@ -228,6 +229,7 @@ export async function sendCareQueueDigestAlerts(prisma: PrismaClient, now = new 
     if (!enabled(user.emailPreference?.careQueueDigestEmailEnabled)) continue
     const lastSent = user.emailPreference?.careQueueDigestLastSentAt
     if (lastSent && lastSent >= cooldownCutoff) continue
+    const timezone = timeZoneForPreference(user.emailPreference)
 
     const digest: CareQueueDigest = {
       totalDue: 0,
@@ -245,6 +247,7 @@ export async function sendCareQueueDigestAlerts(prisma: PrismaClient, now = new 
         collectionSlug: collection.slug,
         userId: user.id,
         now,
+        timezone,
       })
       const dueItems = items.filter((item) => isDue(item, now))
       if (!dueItems.length) continue
@@ -255,7 +258,7 @@ export async function sendCareQueueDigestAlerts(prisma: PrismaClient, now = new 
         slug: collection.slug,
         totalDue: dueItems.length,
         overdue: dueItems.filter((item) => item.overdueDays > 0).length,
-        dueToday: dueItems.filter((item) => isDueToday(item, now)).length,
+        dueToday: dueItems.filter((item) => isDueToday(item, now, timezone)).length,
         categories: blankCareCategories(),
       }
 

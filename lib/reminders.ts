@@ -1,3 +1,5 @@
+import { addCalendarDays, addCalendarMonths, addCalendarYears, defaultTimeZone } from '@/lib/time'
+
 export const reminderCategories = [
   ['GENERAL', 'General reminder'],
   ['PLANT_CHECK_IN', 'Plant check-in'],
@@ -22,14 +24,14 @@ export function recurrenceLabel(rrule?: string | null) {
   return reminderRecurrences.find(([value]) => value === rrule)?.[1] || rrule
 }
 
-export function nextOccurrence(from: Date, rrule?: string | null) {
+export function nextOccurrence(from: Date, rrule?: string | null, timeZone = defaultTimeZone()) {
   if (!rrule) return null
 
-  const next = new Date(from)
-  if (rrule === 'FREQ=DAILY') next.setDate(next.getDate() + 1)
-  else if (rrule === 'FREQ=WEEKLY') next.setDate(next.getDate() + 7)
-  else if (rrule === 'FREQ=MONTHLY') next.setMonth(next.getMonth() + 1)
-  else if (rrule === 'FREQ=YEARLY') next.setFullYear(next.getFullYear() + 1)
+  let next: Date | null = null
+  if (rrule === 'FREQ=DAILY') next = addCalendarDays(from, 1, timeZone)
+  else if (rrule === 'FREQ=WEEKLY') next = addCalendarDays(from, 7, timeZone)
+  else if (rrule === 'FREQ=MONTHLY') next = addCalendarMonths(from, 1, timeZone)
+  else if (rrule === 'FREQ=YEARLY') next = addCalendarYears(from, 1, timeZone)
   else return null
 
   return next

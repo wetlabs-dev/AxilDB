@@ -29,6 +29,7 @@ import { createDemoData } from '@/lib/demo-data'
 import { notifyFollowers } from '@/lib/follows'
 import { expectedPlantIdForInstance, generatePlantId } from '@/lib/plant-id'
 import { nextOccurrence } from '@/lib/reminders'
+import { addCalendarDays, formatDate, parseDateLocal, parseDateTimeLocal, timeZoneForPreference } from '@/lib/time'
 import { plantName } from '@/lib/utils'
 import { husbandryFieldNames, husbandryFormValues } from '@/lib/husbandry'
 
@@ -538,7 +539,7 @@ export async function forkPlantHusbandryGuide(fd: FormData) {
       ...data,
       sourcePlantDefinitionId: null,
       reviewStatus: 'DRAFT',
-      reviewNotes: `Forked from linked guide on ${new Date().toLocaleDateString()}. Review local care before relying on it.`,
+      reviewNotes: `Forked from linked guide on ${formatDate(new Date())}. Review local care before relying on it.`,
       aiGeneratedAt: source.aiGeneratedAt,
       aiModel: source.aiModel,
     } as any,
@@ -816,7 +817,10 @@ async function requireReminderAccess(id: string, collectionSlugValue: string) {
   const context = await requireCollectionViewer(collectionSlugValue)
   const reminder = await prisma.reminder.findFirstOrThrow({
     where: { id, collectionId: context.collection.id },
-    include: { collection: { select: { slug: true } } },
+    include: {
+      collection: { select: { slug: true } },
+      user: { include: { emailPreference: true } },
+    },
   })
 
   if (reminder.userId !== user.id) {
@@ -830,7 +834,9 @@ async function requireReminderAccess(id: string, collectionSlugValue: string) {
 export async function createReminder(fd: FormData) {
   const user = await requireUser()
   const context = await requireCollectionViewer(await collectionSlug(fd))
-  const dueAt = date(val(fd, 'dueAt'))
+  const preferences = await prisma.emailPreference.findUnique({ where: { userId: user.id } })
+  const timezone = timeZoneForPreference(preferences)
+  const dueAt = parseDateTimeLocal(val(fd, 'dueAt'), timezone)
   const destination = back(fd)
 
   if (!dueAt || Number.isNaN(dueAt.getTime())) {
@@ -862,7 +868,8 @@ export async function completeReminder(fd: FormData) {
   const destination = back(fd)
   const { user, reminder } = await requireReminderAccess(id, await collectionSlug(fd))
   const completedAt = new Date()
-  const nextSendAt = nextOccurrence(completedAt, reminder.rrule)
+  const timezone = timeZoneForPreference(reminder.user.emailPreference)
+  const nextSendAt = nextOccurrence(completedAt, reminder.rrule, timezone)
 
   await prisma.reminder.update({
     where: { id },
@@ -871,7 +878,7 @@ export async function completeReminder(fd: FormData) {
       : { completedAt, nextSendAt: null },
   })
 
-  await audit(user, 'COMPLETE', 'REMINDER', id, nextSendAt ? `Completed reminder ${reminder.title}; next due ${nextSendAt.toLocaleDateString()}` : `Completed reminder ${reminder.title}`, undefined, reminder.collectionId)
+  await audit(user, 'COMPLETE', 'REMINDER', id, nextSendAt ? `Completed reminder ${reminder.title}; next due ${formatDate(nextSendAt, timezone)}` : `Completed reminder ${reminder.title}`, undefined, reminder.collectionId)
   revalidateDestination(destination)
   redirect(destination)
 }
@@ -886,8 +893,10 @@ export async function createCareSheet(fd: FormData) {
   const title = val(fd, 'title') || (mode === 'WEEKLY_CHECKLIST' ? 'Weekly greenhouse checklist' : mode === 'SITTER_SESSION' ? 'Plant sitter plan' : 'Care sheet')
   const plantIds = Array.from(new Set(fd.getAll('plantInstanceId').map((value) => String(value)).filter(Boolean)))
   const sections = selectedCareSheetSections(fd)
-  const startsAt = dateFromForm(fd, 'startsAt')
-  const expiresAt = dateFromForm(fd, 'expiresAt') || (mode === 'SITTER_SESSION' ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) : null)
+  const preferences = await prisma.emailPreference.findUnique({ where: { userId: context.user.id } })
+  const timezone = timeZoneForPreference(preferences)
+  const startsAt = dateFromForm(fd, 'startsAt', timezone)
+  const expiresAt = dateFromForm(fd, 'expiresAt', timezone) || (mode === 'SITTER_SESSION' ? addCalendarDays(new Date(), 14, timezone) : null)
   const shouldTokenize = mode === 'SITTER_SESSION' || fd.get('shareable') === 'on'
   const token = shouldTokenize ? generateCareSheetToken() : null
   const settings = careSheetSettingsFromForm(fd)
@@ -1042,13 +1051,16 @@ export async function completeCareTask(fd: FormData) {
   const destination = back(fd)
   const slug = await collectionSlug(fd)
   const context = await requireCollectionLogger(slug)
+  const preferences = await prisma.emailPreference.findUnique({ where: { userId: context.user.id } })
+  const timezone = timeZoneForPreference(preferences)
   const taskType = val(fd, 'taskType') || 'OTHER'
   const reminderId = val(fd, 'reminderId')
 
   if (reminderId) {
     const { reminder } = await requireReminderAccess(reminderId, slug)
     const completedAt = new Date()
-    const nextSendAt = nextOccurrence(completedAt, reminder.rrule)
+    const reminderTimezone = timeZoneForPreference(reminder.user.emailPreference)
+    const nextSendAt = nextOccurrence(completedAt, reminder.rrule, reminderTimezone)
     await prisma.reminder.update({
       where: { id: reminderId },
       data: nextSendAt
@@ -1072,7 +1084,7 @@ export async function completeCareTask(fd: FormData) {
       plantInstanceId,
       userId: context.user.id,
       eventType: careEventForTask(taskType),
-      performedAt: date(val(fd, 'performedAt')) || new Date(),
+      performedAt: parseDateLocal(val(fd, 'performedAt'), timezone) || new Date(),
       notes: val(fd, 'notes'),
       metadata: {
         taskType,
@@ -1098,8 +1110,8 @@ export async function snoozeCareTask(fd: FormData) {
   const taskType = val(fd, 'taskType')!
   await prisma.plantInstance.findFirstOrThrow({ where: { id: plantInstanceId, collectionId: context.collection.id }, select: { id: true } })
   const days = boundedInt(val(fd, 'days'), 1, 1, 30)
-  const snoozedUntil = new Date()
-  snoozedUntil.setDate(snoozedUntil.getDate() + days)
+  const preferences = await prisma.emailPreference.findUnique({ where: { userId: context.user.id } })
+  const snoozedUntil = addCalendarDays(new Date(), days, timeZoneForPreference(preferences))
 
   await prisma.plantCareAdjustment.upsert({
     where: { collectionId_plantInstanceId_taskType: { collectionId: context.collection.id, plantInstanceId, taskType } },

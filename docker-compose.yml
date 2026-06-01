@@ -35,6 +35,8 @@ services:
       db:
         condition: service_healthy
     environment:
+      TZ: ${TZ:-America/New_York}
+      AXILDB_DEFAULT_TIMEZONE: ${AXILDB_DEFAULT_TIMEZONE:-America/New_York}
       DATABASE_URL: postgresql://plants:plants@db:5432/axildb?schema=public
     command: sh -c "npx prisma db push --accept-data-loss && npm run db:bootstrap"
   app:
@@ -51,6 +53,8 @@ services:
       migrate:
         condition: service_completed_successfully
     environment:
+      TZ: ${TZ:-America/New_York}
+      AXILDB_DEFAULT_TIMEZONE: ${AXILDB_DEFAULT_TIMEZONE:-America/New_York}
       DATABASE_URL: postgresql://plants:plants@db:5432/axildb?schema=public
       NEXT_PUBLIC_APP_URL: https://app.axildb.com
       NEXT_PUBLIC_MARKETING_URL: https://axildb.com
@@ -79,6 +83,8 @@ services:
       migrate:
         condition: service_completed_successfully
     environment:
+      TZ: ${TZ:-America/New_York}
+      AXILDB_DEFAULT_TIMEZONE: ${AXILDB_DEFAULT_TIMEZONE:-America/New_York}
       DATABASE_URL: postgresql://plants:plants@db:5432/axildb?schema=public
       NEXT_PUBLIC_APP_URL: https://app.axildb.com
     command: sh -c "while true; do npm run email:send-reminders; sleep $${REMINDER_WORKER_INTERVAL_SECONDS:-300}; done"
@@ -98,6 +104,8 @@ services:
       migrate:
         condition: service_completed_successfully
     environment:
+      TZ: ${TZ:-America/New_York}
+      AXILDB_DEFAULT_TIMEZONE: ${AXILDB_DEFAULT_TIMEZONE:-America/New_York}
       DATABASE_URL: postgresql://plants:plants@db:5432/axildb?schema=public
       NEXT_PUBLIC_APP_URL: https://app.axildb.com
     volumes:
@@ -120,6 +128,8 @@ services:
       migrate:
         condition: service_completed_successfully
     environment:
+      TZ: ${TZ:-America/New_York}
+      AXILDB_DEFAULT_TIMEZONE: ${AXILDB_DEFAULT_TIMEZONE:-America/New_York}
       DATABASE_URL: postgresql://plants:plants@db:5432/axildb?schema=public
     volumes:
       - ./public/uploads:/app/public/uploads
@@ -137,6 +147,8 @@ services:
       - path: /etc/axildb/axildb.env
         required: false
     environment:
+      TZ: ${TZ:-America/New_York}
+      AXILDB_DEFAULT_TIMEZONE: ${AXILDB_DEFAULT_TIMEZONE:-America/New_York}
       DATABASE_URL: postgresql://plants:plants@db:5432/axildb?schema=public
     volumes:
       - .:/app

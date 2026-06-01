@@ -2,6 +2,7 @@ import type { PrismaClient } from '@prisma/client'
 import type { PlantImageFrame } from '@/components/PlantImage'
 import { collectionPath } from '@/lib/collections'
 import { nextOccurrence, reminderCategoryLabel } from '@/lib/reminders'
+import { addCalendarDays, calendarDayIndexInTimeZone, endOfDayInTimeZone, startOfDayInTimeZone } from '@/lib/time'
 import { plantName } from '@/lib/utils'
 
 export const careTaskTypes = [
@@ -38,29 +39,12 @@ export type CareQueueItem = {
   snoozedUntil?: Date | null
 }
 
-const DAY = 24 * 60 * 60 * 1000
-
-function startOfToday(now = new Date()) {
-  const date = new Date(now)
-  date.setHours(0, 0, 0, 0)
-  return date
+function addDays(date: Date, days: number, timezone?: string) {
+  return addCalendarDays(date, days, timezone)
 }
 
-function endOfToday(now = new Date()) {
-  const date = startOfToday(now)
-  date.setDate(date.getDate() + 1)
-  date.setMilliseconds(-1)
-  return date
-}
-
-function addDays(date: Date, days: number) {
-  const next = new Date(date)
-  next.setDate(next.getDate() + days)
-  return next
-}
-
-function daysBetween(a: Date, b: Date) {
-  return Math.floor((startOfToday(a).getTime() - startOfToday(b).getTime()) / DAY)
+function daysBetween(a: Date, b: Date, timezone?: string) {
+  return calendarDayIndexInTimeZone(a, timezone) - calendarDayIndexInTimeZone(b, timezone)
 }
 
 function clampPriority(value: number) {
@@ -144,12 +128,14 @@ export async function getCareQueue(
     userId,
     now = new Date(),
     includeCompleted = false,
+    timezone,
   }: {
     collectionId: string
     collectionSlug: string
     userId?: string
     now?: Date
     includeCompleted?: boolean
+    timezone?: string
   },
 ) {
   const [instances, careEvents, conditions, adjustments, photos, openBlooms, reminders] = await Promise.all([
@@ -219,7 +205,7 @@ export async function getCareQueue(
   const pushDerived = (item: Omit<CareQueueItem, 'source' | 'href' | 'overdueDays' | 'priority'> & { basePriority: number }) => {
     const adjustment = item.plantInstanceId ? adjustmentMap.get(`${item.plantInstanceId}:${item.taskType}`) : null
     if (isSuppressed(adjustment, now)) return
-    const overdueDays = Math.max(0, daysBetween(now, item.dueAt))
+    const overdueDays = Math.max(0, daysBetween(now, item.dueAt, timezone))
     items.push({
       ...item,
       source: 'derived',
@@ -239,7 +225,7 @@ export async function getCareQueue(
     const waterAdjustment = adjustmentMap.get(`${instance.id}:WATER`)
     const waterDays = waterCadenceDays(guide.summaryWater || guide.wateringCadence, waterAdjustment?.cadenceOverrideDays)
     const lastWatered = latestWater.get(instance.id)?.performedAt || baseDate
-    const waterDue = addDays(lastWatered, waterDays)
+    const waterDue = addDays(lastWatered, waterDays, timezone)
     pushDerived({
       key: `WATER:${instance.id}`,
       taskType: 'WATER',
@@ -262,7 +248,7 @@ export async function getCareQueue(
       const cadence = ageDays <= 30 ? 3 : ageDays <= 90 ? 7 : null
       if (cadence) {
         const lastCheck = latestPropagationCheck.get(instance.id)?.performedAt || start
-        const dueAt = addDays(lastCheck, cadence)
+        const dueAt = addDays(lastCheck, cadence, timezone)
         pushDerived({
           key: `PROPAGATION_CHECK:${instance.id}`,
           taskType: 'PROPAGATION_CHECK',
@@ -287,7 +273,7 @@ export async function getCareQueue(
       taskType: 'PEST_CHECK',
       title: `Pest check ${instance.plantId}`,
       reason: `Pest check cadence is about ${pestDays} days${guide.susceptibilityLevel ? ` based on ${guide.susceptibilityLevel.toLowerCase()} susceptibility` : ''}.`,
-      dueAt: addDays(pestBaseline, pestDays),
+      dueAt: addDays(pestBaseline, pestDays, timezone),
       basePriority: pestDays <= 14 ? 80 : 45,
       plantInstanceId: instance.id,
       plantId: instance.plantId,
@@ -306,7 +292,7 @@ export async function getCareQueue(
         taskType: 'HEALTH_CHECK',
         title: `Follow up: ${condition.category.replaceAll('_', ' ').toLowerCase()}`,
         reason: `${condition.severity.toLowerCase()} ${condition.category.replaceAll('_', ' ').toLowerCase()} is ${condition.status.toLowerCase()}.`,
-        dueAt: addDays(baseline, severityDays),
+        dueAt: addDays(baseline, severityDays, timezone),
         basePriority: conditionPriority(condition.severity),
         plantInstanceId: instance.id,
         plantId: instance.plantId,
@@ -326,7 +312,7 @@ export async function getCareQueue(
       taskType: 'BLOOM_CHECK',
       title: `Check bloom ${bloom.plantInstance.plantId}`,
       reason: bloom.peakBloomDate ? 'Bloom is past peak; check whether it should be closed.' : 'Bloom is open; check for peak timing and photos.',
-      dueAt: addDays(lastCheck, cadence),
+      dueAt: addDays(lastCheck, cadence, timezone),
       basePriority: 70,
       plantInstanceId: bloom.plantInstanceId,
       plantId: bloom.plantInstance.plantId,
@@ -339,7 +325,7 @@ export async function getCareQueue(
 
   for (const reminder of reminders) {
     const dueAt = reminder.nextSendAt || reminder.dueAt
-    const overdueDays = Math.max(0, daysBetween(now, dueAt))
+    const overdueDays = Math.max(0, daysBetween(now, dueAt, timezone))
     const reminderInstance = reminder.entityType === 'PLANT_INSTANCE' && reminder.entityId
       ? instanceById.get(reminder.entityId)
       : reminder.entityType === 'BLOOM_EVENT' && reminder.entityId
@@ -376,11 +362,11 @@ export async function getCareQueue(
   })
 }
 
-export function filterCareQueue(items: CareQueueItem[], filter?: string | null, now = new Date()) {
-  const end = endOfToday(now)
+export function filterCareQueue(items: CareQueueItem[], filter?: string | null, now = new Date(), timezone?: string) {
+  const end = endOfDayInTimeZone(now, timezone)
   if (!filter || filter === 'all') return items.filter((item) => !item.completedAt)
   if (filter === 'today') return items.filter((item) => !item.completedAt && item.dueAt <= end)
-  if (filter === 'overdue') return items.filter((item) => !item.completedAt && item.dueAt < startOfToday(now))
+  if (filter === 'overdue') return items.filter((item) => !item.completedAt && item.dueAt < startOfDayInTimeZone(now, timezone))
   if (filter === 'completed') return items.filter((item) => item.completedAt)
   if (filter === 'water') return items.filter((item) => !item.completedAt && item.taskType === 'WATER')
   if (filter === 'propagation') return items.filter((item) => !item.completedAt && item.taskType === 'PROPAGATION_CHECK')
@@ -391,17 +377,17 @@ export function filterCareQueue(items: CareQueueItem[], filter?: string | null, 
   return items.filter((item) => !item.completedAt)
 }
 
-export function careQueueSummary(items: CareQueueItem[], now = new Date()) {
+export function careQueueSummary(items: CareQueueItem[], now = new Date(), timezone?: string) {
   const active = items.filter((item) => !item.completedAt)
   return {
-    today: active.filter((item) => item.dueAt <= endOfToday(now)).length,
-    overdue: active.filter((item) => item.dueAt < startOfToday(now)).length,
+    today: active.filter((item) => item.dueAt <= endOfDayInTimeZone(now, timezone)).length,
+    overdue: active.filter((item) => item.dueAt < startOfDayInTimeZone(now, timezone)).length,
     health: active.filter((item) => item.taskType === 'HEALTH_CHECK').length,
     propagation: active.filter((item) => item.taskType === 'PROPAGATION_CHECK').length,
   }
 }
 
-export function nextReminderDate(reminder: { dueAt: Date; nextSendAt: Date | null; rrule: string | null }) {
-  const next = nextOccurrence(reminder.nextSendAt || reminder.dueAt, reminder.rrule)
+export function nextReminderDate(reminder: { dueAt: Date; nextSendAt: Date | null; rrule: string | null }, timezone?: string) {
+  const next = nextOccurrence(reminder.nextSendAt || reminder.dueAt, reminder.rrule, timezone)
   return next
 }

@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { Card, Field, Button } from '@/components/ui'
 import { requireUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { defaultTimeZone, formatDate } from '@/lib/time'
 
 export default async function Account({
   searchParams,
@@ -31,7 +32,7 @@ export default async function Account({
         {sp.emailStatus === 'limited' && <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">Please wait a bit before requesting another verification email.</p>}
         {sp.emailStatus === 'error' && <p className="mb-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">AxilDB could not send the verification email. Check the audit log and app logs for details.</p>}
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-stone-200 bg-white/50 p-3 text-sm text-stone-700">
-          <span>Email status: {account?.emailVerifiedAt ? `verified ${account.emailVerifiedAt.toLocaleDateString()}` : 'not verified yet'}</span>
+          <span>Email status: {account?.emailVerifiedAt ? `verified ${formatDate(account.emailVerifiedAt, preferences?.timezone)}` : 'not verified yet'}</span>
           {!account?.emailVerifiedAt && (
             <form action={resendOwnVerificationEmail}>
               <Button className="px-3 py-1.5 text-xs">Resend verification</Button>
@@ -49,7 +50,7 @@ export default async function Account({
         <h3 className="font-bold">Email preferences</h3>
         <p className="mt-1 text-sm text-stone-600">Choose which AxilDB emails should reach you once reminders and scheduled mail are enabled.</p>
         <form action={updateEmailPreferences} className="mt-4 grid max-w-3xl gap-3">
-          <Field label="Timezone" name="timezone" defaultValue={preferences?.timezone || 'America/New_York'} />
+          <Field label="Timezone" name="timezone" defaultValue={preferences?.timezone || defaultTimeZone()} />
           <div className="grid gap-2 sm:grid-cols-2">
             {[
               ['authSecurityEmails', 'Account security emails', preferences?.authSecurityEmails ?? true],

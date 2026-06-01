@@ -3,6 +3,7 @@ import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { Card } from '@/components/ui'
 import { requireCollectionAdmin } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
+import { formatDateTime } from '@/lib/time'
 
 export default async function AdminToolsPage() {
   const { collection } = await requireCollectionAdmin()
@@ -65,7 +66,7 @@ export default async function AdminToolsPage() {
         {demoBatches.length === 0 && <p className="mt-2 text-sm text-stone-600">No demo batches have been created yet.</p>}
         {demoBatches.map((batch) => (
           <p key={batch.id} className="mt-2 border-t border-stone-200 pt-2 text-sm">
-            {batch.createdAt.toLocaleString()} · {batch.summary}
+            {formatDateTime(batch.createdAt)} · {batch.summary}
           </p>
         ))}
       </Card>

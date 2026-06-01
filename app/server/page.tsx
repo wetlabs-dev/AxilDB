@@ -6,6 +6,7 @@ import { Button, Card, LinkButton, TextArea } from '@/components/ui'
 import { requireServerAdmin } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ensureRecentServerMetricSnapshot, formatBytes, serverMetricHistory } from '@/lib/server-metrics'
+import { formatDateTime } from '@/lib/time'
 
 function formatDuration(start?: Date | null, end?: Date | null) {
   if (!start || !end) return '—'
@@ -34,9 +35,10 @@ export default async function ServerDashboard({
 }: {
   searchParams: Promise<{ backup?: string; collectionRequest?: string; aiAccess?: string }>
 }) {
-  await requireServerAdmin()
+  const admin = await requireServerAdmin()
   const sp = await searchParams
-  const [users, collections, archived, memberships, photos, latestSnapshot, backupRuns, collectionRequests, aiAccessRequests, aiUsageByCollection, aiUsageByFeature] = await Promise.all([
+  const [preferences, users, collections, archived, memberships, photos, latestSnapshot, backupRuns, collectionRequests, aiAccessRequests, aiUsageByCollection, aiUsageByFeature] = await Promise.all([
+    prisma.emailPreference.findUnique({ where: { userId: admin.id } }),
     prisma.user.count(),
     prisma.collection.count({ where: { status: 'ACTIVE' } }),
     prisma.collection.count({ where: { status: 'ARCHIVED' } }),
@@ -76,6 +78,7 @@ export default async function ServerDashboard({
       _sum: { totalTokens: true },
     }),
   ])
+  const timezone = preferences?.timezone
   const aiUsageCollections = aiUsageByCollection.length
     ? await prisma.collection.findMany({
         where: { id: { in: aiUsageByCollection.map((row) => row.collectionId) } },
@@ -287,7 +290,7 @@ export default async function ServerDashboard({
             <p className="mt-1 text-sm text-stone-600">Prometheus-style snapshots are retained for the last 36 hours. Host-level values are best-effort from inside the app container.</p>
           </div>
           <p className="rounded-full border border-stone-200 bg-white/60 px-3 py-1 text-xs text-stone-600">
-            Last sample {latestSnapshot.capturedAt.toLocaleString()}
+            Last sample {formatDateTime(latestSnapshot.capturedAt, timezone)}
           </p>
         </div>
         <div className="mt-4 grid gap-4 lg:grid-cols-3">
@@ -405,14 +408,14 @@ export default async function ServerDashboard({
                 <div className="min-w-0">
                   <p className="truncate font-semibold">{run.backupPath || 'Path assigned when worker starts'}</p>
                   <p className="text-xs text-stone-500">
-                    Requested {run.requestedAt.toLocaleString()} by {run.requestedBy?.email || 'unknown'}
+                    Requested {formatDateTime(run.requestedAt, timezone)} by {run.requestedBy?.email || 'unknown'}
                   </p>
                   {run.notes && <p className="mt-1 text-xs text-stone-600">{run.notes}</p>}
                   {run.error && <p className="mt-1 text-xs text-red-800">{run.error}</p>}
                 </div>
                 <div className="text-xs text-stone-600">
-                  <p>Started: {run.startedAt ? run.startedAt.toLocaleString() : '—'}</p>
-                  <p>Finished: {run.finishedAt ? run.finishedAt.toLocaleString() : '—'}</p>
+                  <p>Started: {formatDateTime(run.startedAt, timezone)}</p>
+                  <p>Finished: {formatDateTime(run.finishedAt, timezone)}</p>
                 </div>
                 <p className="text-xs text-stone-600">Duration: {formatDuration(run.startedAt, run.finishedAt)}</p>
               </div>

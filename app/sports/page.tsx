@@ -6,6 +6,7 @@ import { getCurrentUser } from '@/lib/auth'
 import { canCreateInCollection, canEditInCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
 import { compareText, sortPreference, timeValue, type SortOption } from '@/lib/sort-preferences'
+import { formatDate } from '@/lib/time'
 import { plantName } from '@/lib/utils'
 import Link from 'next/link'
 
@@ -99,7 +100,7 @@ export default async function SportReview() {
                         <select className="rounded-md border px-2 py-1 font-normal" name="propagationEventId">
                           {events.map((event) => (
                             <option key={event.id} value={event.id}>
-                              {event.date.toLocaleDateString()} · {event.method} · {event.children.map((child) => child.childPlantInstance.plantId).join(', ')}
+                              {formatDate(event.date)} · {event.method} · {event.children.map((child) => child.childPlantInstance.plantId).join(', ')}
                             </option>
                           ))}
                         </select>

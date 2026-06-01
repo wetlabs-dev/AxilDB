@@ -4,6 +4,7 @@ import { AddPanel, Button, Card, Field, Select } from '@/components/ui'
 import { requireServerAdmin } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { collectionRoleLabel } from '@/lib/roles'
+import { formatDate } from '@/lib/time'
 
 const roleOptions = ['USER', 'SERVER_ADMIN']
 const collectionRoleOptions = ['VIEWER', 'LOGGER', 'GARDENER', 'MANAGER']
@@ -16,7 +17,8 @@ export default async function ServerUsers({
 }) {
   const currentUser = await requireServerAdmin()
   const sp = await searchParams
-  const [users, collections] = await Promise.all([
+  const [preferences, users, collections] = await Promise.all([
+    prisma.emailPreference.findUnique({ where: { userId: currentUser.id } }),
     prisma.user.findMany({
       orderBy: { email: 'asc' },
       include: {
@@ -76,7 +78,7 @@ export default async function ServerUsers({
                 <Button className="justify-self-start md:col-span-3">Save user</Button>
               </form>
               <div className="mt-3 text-xs text-stone-600">
-                Email {user.emailVerifiedAt ? `verified ${user.emailVerifiedAt.toLocaleDateString()}` : 'not verified'}
+                Email {user.emailVerifiedAt ? `verified ${formatDate(user.emailVerifiedAt, preferences?.timezone)}` : 'not verified'}
               </div>
               <div className="mt-4 rounded-lg border border-stone-200 bg-white/45 p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">

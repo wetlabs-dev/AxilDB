@@ -7,16 +7,14 @@ import { canCreateInCollection, collectionPath, requireCollectionViewer } from '
 import { careTaskLabel, getCareQueue, type CareQueueItem } from '@/lib/care-queue'
 import { careSheetSectionOptions } from '@/lib/care-sheets'
 import { prisma } from '@/lib/prisma'
+import { addCalendarDays, dateInputValue, endOfDayInTimeZone, formatDate } from '@/lib/time'
 
-function endOfChecklistRange() {
-  const date = new Date()
-  date.setDate(date.getDate() + 7)
-  date.setHours(23, 59, 59, 999)
-  return date
+function endOfChecklistRange(timezone?: string | null) {
+  return endOfDayInTimeZone(addCalendarDays(new Date(), 7, timezone || undefined), timezone || undefined)
 }
 
-function dateLabel(date: Date) {
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+function dateLabel(date: Date, timezone?: string | null) {
+  return formatDate(date, timezone || undefined)
 }
 
 function groupByLocation(items: CareQueueItem[]) {
@@ -31,11 +29,16 @@ function groupByLocation(items: CareQueueItem[]) {
 export default async function WeeklyChecklistPage() {
   const context = await requireCollectionViewer()
   const canAct = canCreateInCollection(context.user, context)
-  const rangeEnd = endOfChecklistRange()
+  const preferences = context.user
+    ? await prisma.emailPreference.findUnique({ where: { userId: context.user.id } })
+    : null
+  const timezone = preferences?.timezone
+  const rangeEnd = endOfChecklistRange(timezone)
   const queue = await getCareQueue(prisma, {
     collectionId: context.collection.id,
     collectionSlug: context.collection.slug,
     userId: context.user?.id,
+    timezone,
   })
   const items = queue.filter((item) => !item.completedAt && item.dueAt <= rangeEnd)
   const grouped = groupByLocation(items)
@@ -56,14 +59,14 @@ export default async function WeeklyChecklistPage() {
       <Card className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-sm text-stone-700">
           <CalendarDays className="h-4 w-4 text-[#2f6b45]" />
-          <span>Planning window: today through {dateLabel(rangeEnd)}</span>
+          <span>Planning window: today through {dateLabel(rangeEnd, timezone)}</span>
         </div>
         {canAct && items.length > 0 && (
           <form action={createCareSheet} className="flex flex-wrap items-center gap-2">
             <input type="hidden" name="collectionSlug" value={context.collection.slug} />
             <input type="hidden" name="mode" value="WEEKLY_CHECKLIST" />
-            <input type="hidden" name="title" value={`Weekly checklist ${new Date().toLocaleDateString()}`} />
-            <input type="hidden" name="expiresAt" value={rangeEnd.toISOString().slice(0, 10)} />
+            <input type="hidden" name="title" value={`Weekly checklist ${formatDate(new Date(), timezone)}`} />
+            <input type="hidden" name="expiresAt" value={dateInputValue(rangeEnd, timezone || undefined)} />
             {items.map((item) => item.plantInstanceId && (
               <input key={`${item.key}:${item.plantInstanceId}`} type="hidden" name="plantInstanceId" value={item.plantInstanceId} />
             ))}
@@ -100,7 +103,7 @@ export default async function WeeklyChecklistPage() {
                       <PlantImage src={item.image} alt={item.plantName || item.title} />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#2f6b45]">{careTaskLabel(item.taskType)} · {dateLabel(item.dueAt)}</p>
+                      <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#2f6b45]">{careTaskLabel(item.taskType)} · {dateLabel(item.dueAt, timezone)}</p>
                       <p className="truncate font-serif text-lg font-bold">{item.plantId || item.title}</p>
                       {item.plantName && <p className="truncate text-sm text-stone-700">{item.plantName}</p>}
                       <p className="mt-1 line-clamp-2 text-xs text-stone-600">{item.reason}</p>
@@ -145,8 +148,8 @@ export default async function WeeklyChecklistPage() {
           <form action={createCareSheet} className="mt-3 grid gap-2">
             <input type="hidden" name="collectionSlug" value={context.collection.slug} />
             <input type="hidden" name="mode" value="WEEKLY_CHECKLIST" />
-            <input type="hidden" name="title" value={`Weekly checklist ${new Date().toLocaleDateString()}`} />
-            <input type="hidden" name="expiresAt" value={rangeEnd.toISOString().slice(0, 10)} />
+            <input type="hidden" name="title" value={`Weekly checklist ${formatDate(new Date(), timezone)}`} />
+            <input type="hidden" name="expiresAt" value={dateInputValue(rangeEnd, timezone || undefined)} />
             {items.map((item) => item.plantInstanceId && (
               <input key={`note:${item.key}:${item.plantInstanceId}`} type="hidden" name="plantInstanceId" value={item.plantInstanceId} />
             ))}

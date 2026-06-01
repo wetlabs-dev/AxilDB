@@ -1,6 +1,7 @@
 import { Card } from '@/components/ui'
 import { requireCollectionAdmin } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
+import { formatDateTime } from '@/lib/time'
 
 export default async function AuditLog() {
   const { collection } = await requireCollectionAdmin()
@@ -18,7 +19,7 @@ export default async function AuditLog() {
                 <p className="text-sm">{log.summary || log.entityId}</p>
               </div>
               <div className="text-right text-sm text-stone-600">
-                <p>{log.createdAt.toLocaleString()}</p>
+                <p>{formatDateTime(log.createdAt)}</p>
                 <p>{log.userEmail || 'System'}{log.userRole ? ` · ${log.userRole}` : ''}</p>
               </div>
             </div>

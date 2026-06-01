@@ -8,6 +8,7 @@ import { magicLoginEmail, passwordResetEmail, welcomeEmail } from '@/lib/email-t
 import { prisma } from '@/lib/prisma'
 import { pathWithNext, safeNextPath } from '@/lib/redirects'
 import { collectionRoles, normalizeCollectionRole } from '@/lib/roles'
+import { defaultTimeZone, normalizeTimeZone } from '@/lib/time'
 import { decryptTotpSecret, encryptRecoveryCodes, encryptTotpSecret, generateRecoveryCodes, generateTotpSecret, hashRecoveryCode, verifyTotp } from '@/lib/totp'
 
 const val = (fd: FormData, key: string) => String(fd.get(key) || '').trim()
@@ -630,7 +631,7 @@ export async function requestMagicLogin(fd: FormData) {
 
 export async function updateEmailPreferences(fd: FormData) {
   const user = await requireUser()
-  const timezone = val(fd, 'timezone') || 'America/New_York'
+  const timezone = normalizeTimeZone(val(fd, 'timezone') || defaultTimeZone())
 
   await prisma.emailPreference.upsert({
     where: { userId: user.id },

@@ -69,8 +69,10 @@ function activityHref(slug: string, activityTake: number, kind?: ActivityKind) {
 
 function ActivityCard({
   item,
+  timezone,
 }: {
   item: ActivityItem
+  timezone?: string | null
 }) {
   const style = activityStyles[item.kind]
   const Icon = style.icon
@@ -92,7 +94,7 @@ function ActivityCard({
             <Icon className="h-3.5 w-3.5" />
             {style.label}
           </span>
-          <span className="text-xs font-medium text-stone-500">{fmtDate(item.date)}</span>
+          <span className="text-xs font-medium text-stone-500">{fmtDate(item.date, timezone)}</span>
         </div>
         <h4 className="mt-2 truncate font-serif text-lg leading-tight">{item.title}</h4>
         <p className="mt-1 truncate text-sm text-stone-700">{item.subtitle}</p>
@@ -114,6 +116,9 @@ export default async function Dashboard({
   const activityTake = Math.min(Math.max(Number(sp.activity || 12) || 12, 12), 48)
   const activeKind = activityKinds.includes(sp.type as ActivityKind) ? (sp.type as ActivityKind) : undefined
   const queryTake = activeKind ? Math.max(activityTake * 4, 48) : activityTake
+  const preferences = context.user
+    ? await prisma.emailPreference.findUnique({ where: { userId: context.user.id } })
+    : null
   const [active, recentProps, blooms, sports, acquired, archived, careItems] = await Promise.all([
     prisma.plantInstance.count({ where: { ...collectionWhere, status: 'ACTIVE' } }),
     prisma.propagationEvent.findMany({
@@ -149,9 +154,9 @@ export default async function Dashboard({
       orderBy: { archiveDate: 'desc' },
       include: { plantDefinition: true },
     }),
-    getCareQueue(prisma, { collectionId: collection.id, collectionSlug: collection.slug, userId: context.user?.id }),
+    getCareQueue(prisma, { collectionId: collection.id, collectionSlug: collection.slug, userId: context.user?.id, timezone: preferences?.timezone }),
   ])
-  const care = careQueueSummary(careItems)
+  const care = careQueueSummary(careItems, new Date(), preferences?.timezone)
 
   const instanceIds = Array.from(new Set([
     ...recentProps.flatMap((event) => [
@@ -317,7 +322,7 @@ export default async function Dashboard({
         </div>
         <div className="mt-4 grid gap-3 xl:grid-cols-2 2xl:grid-cols-3">
           {activity.map((item) => (
-            <ActivityCard key={`${item.kind}-${item.id}`} item={item} />
+            <ActivityCard key={`${item.kind}-${item.id}`} item={item} timezone={preferences?.timezone} />
           ))}
           {activity.length === 0 && <p className="text-sm text-stone-600">No recent activity yet.</p>}
         </div>

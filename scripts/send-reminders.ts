@@ -3,6 +3,7 @@ import { appUrl, sendEmail } from '../lib/email'
 import { reminderEmail } from '../lib/email-templates'
 import { sendCareQueueDigestAlerts } from '../lib/email-alerts'
 import { nextOccurrence, reminderCategoryLabel, reminderPreferenceKey } from '../lib/reminders'
+import { timeZoneForPreference } from '../lib/time'
 
 const prisma = new PrismaClient()
 
@@ -32,12 +33,12 @@ async function recordUrl(reminder: { collectionId: string | null; entityType: st
   return appUrl(collectionPath(reminder.collection?.slug, '/reminders'))
 }
 
-async function finishReminder(id: string, dueAt: Date, rrule: string | null) {
-  let next = nextOccurrence(dueAt, rrule)
+async function finishReminder(id: string, dueAt: Date, rrule: string | null, timezone: string) {
+  let next = nextOccurrence(dueAt, rrule, timezone)
   const now = new Date()
 
   while (next && next <= now) {
-    next = nextOccurrence(next, rrule)
+    next = nextOccurrence(next, rrule, timezone)
   }
 
   await prisma.reminder.update({
@@ -78,6 +79,7 @@ async function main() {
   for (const reminder of reminders) {
     const preferenceKey = reminderPreferenceKey(reminder.category)
     const preferences = reminder.user.emailPreference as Record<string, unknown> | null
+    const timezone = timeZoneForPreference(reminder.user.emailPreference)
     const preferenceEnabled = preferences?.[preferenceKey] !== false
     const hasCollectionAccess =
       reminder.collection?.visibility === 'PUBLIC' ||
@@ -96,7 +98,7 @@ async function main() {
           error: 'User no longer has access to this private collection.',
         },
       })
-      await finishReminder(reminder.id, reminder.nextSendAt || reminder.dueAt, reminder.rrule)
+      await finishReminder(reminder.id, reminder.nextSendAt || reminder.dueAt, reminder.rrule, timezone)
       continue
     }
 
@@ -112,7 +114,7 @@ async function main() {
           error: 'Email address is not verified.',
         },
       })
-      await finishReminder(reminder.id, reminder.nextSendAt || reminder.dueAt, reminder.rrule)
+      await finishReminder(reminder.id, reminder.nextSendAt || reminder.dueAt, reminder.rrule, timezone)
       continue
     }
 
@@ -128,7 +130,7 @@ async function main() {
           error: `${reminderCategoryLabel(reminder.category)} emails are disabled for this user.`,
         },
       })
-      await finishReminder(reminder.id, reminder.nextSendAt || reminder.dueAt, reminder.rrule)
+      await finishReminder(reminder.id, reminder.nextSendAt || reminder.dueAt, reminder.rrule, timezone)
       continue
     }
 
@@ -160,7 +162,7 @@ async function main() {
           sentAt: new Date(),
         },
       })
-      await finishReminder(reminder.id, reminder.nextSendAt || reminder.dueAt, reminder.rrule)
+      await finishReminder(reminder.id, reminder.nextSendAt || reminder.dueAt, reminder.rrule, timezone)
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       console.error('Failed to send AxilDB reminder', { reminderId: reminder.id, error: message })

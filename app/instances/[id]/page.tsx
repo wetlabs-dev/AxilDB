@@ -38,6 +38,7 @@ import { prisma } from '@/lib/prisma'
 import { recurrenceLabel, reminderCategories, reminderCategoryLabel, reminderRecurrences } from '@/lib/reminders'
 import { hasHusbandryData, mergeHusbandryValues } from '@/lib/husbandry'
 import { isServerAdminRole } from '@/lib/roles'
+import { addCalendarDays, formatDateTime, startOfDayInTimeZone } from '@/lib/time'
 import { dateInput, fmtDate, plantName, taxonomyLabel } from '@/lib/utils'
 import Link from 'next/link'
 import QRCode from 'qrcode'
@@ -82,6 +83,10 @@ export default async function InstanceDetail({
   const collectionWhere = { collectionId: collection.id }
   const canCreateRecords = canCreateInCollection(user, context)
   const canEditRecords = canEditInCollection(user, context)
+  const preferences = user
+    ? await prisma.emailPreference.findUnique({ where: { userId: user.id } })
+    : null
+  const timezone = preferences?.timezone
 
   const i = await prisma.plantInstance.findFirstOrThrow({
     where: { id, ...collectionWhere },
@@ -166,8 +171,7 @@ export default async function InstanceDetail({
       })
     : []
 
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
+  const today = startOfDayInTimeZone(new Date(), timezone)
 
   const [careEvents, careConditions, greenThumbToday] = await Promise.all([
     prisma.plantCareEvent.findMany({
@@ -192,8 +196,7 @@ export default async function InstanceDetail({
   const lastWatered = careEvents.find((event) => event.eventType === 'WATERED')?.performedAt
   const openConditions = careConditions.filter((condition) => condition.status !== 'RESOLVED')
   const waterCadence = waterCadenceDays(effectiveHusbandry.summaryWater || effectiveHusbandry.wateringCadence)
-  const nextWatering = new Date(lastWatered || i.acquisitionDate || i.propagationDate || i.createdAt)
-  nextWatering.setDate(nextWatering.getDate() + waterCadence)
+  const nextWatering = addCalendarDays(lastWatered || i.acquisitionDate || i.propagationDate || i.createdAt, waterCadence, timezone || undefined)
   const greenThumbUsedToday = !!greenThumbToday
   const canUseGreenThumb = canCreateRecords && !!user && (collection.aiFeaturesEnabled || isServerAdminRole(user.role))
 
@@ -386,11 +389,11 @@ export default async function InstanceDetail({
       <div className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
         <div className="rounded-lg border border-stone-200 bg-white/60 p-3">
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-stone-500">Last watered</p>
-          <p className="mt-1 font-medium">{fmtDate(lastWatered)}</p>
+          <p className="mt-1 font-medium">{fmtDate(lastWatered, timezone)}</p>
         </div>
         <div className="rounded-lg border border-stone-200 bg-white/60 p-3">
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-stone-500">Next estimate</p>
-          <p className="mt-1 font-medium">{fmtDate(nextWatering)}</p>
+          <p className="mt-1 font-medium">{fmtDate(nextWatering, timezone)}</p>
         </div>
         <div className="rounded-lg border border-stone-200 bg-white/60 p-3">
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-stone-500">Open conditions</p>
@@ -405,7 +408,7 @@ export default async function InstanceDetail({
             <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}`)} />
             <input type="hidden" name="plantInstanceId" value={id} />
             <input type="hidden" name="taskType" value="WATER" />
-            <Field label="Watered on" name="performedAt" type="date" defaultValue={dateInput(new Date())} />
+            <Field label="Watered on" name="performedAt" type="date" defaultValue={dateInput(new Date(), timezone)} />
             <TextArea label="Notes" name="notes" className="min-h-14" />
             <Button>Log watering</Button>
           </form>
@@ -437,7 +440,7 @@ export default async function InstanceDetail({
                 <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}`)} />
                 <div className="min-w-0">
                   <p className="font-medium">{condition.category.replaceAll('_', ' ').toLowerCase()}</p>
-                  <p className="text-xs text-stone-600">Observed {fmtDate(condition.observedAt)}</p>
+                  <p className="text-xs text-stone-600">Observed {fmtDate(condition.observedAt, timezone)}</p>
                   <input name="notes" defaultValue={condition.notes || ''} className="mt-2 w-full min-w-0 rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm" />
                 </div>
                 <Select label="Severity" name="severity" defaultValue={condition.severity}>
@@ -451,7 +454,7 @@ export default async function InstanceDetail({
             ) : (
               <div key={condition.id} className="rounded-lg border border-stone-200 bg-white/60 p-3 text-sm">
                 <p className="font-medium">{condition.category.replaceAll('_', ' ').toLowerCase()} · {condition.severity.toLowerCase()} · {condition.status.toLowerCase()}</p>
-                <p className="text-xs text-stone-600">Observed {fmtDate(condition.observedAt)}</p>
+                <p className="text-xs text-stone-600">Observed {fmtDate(condition.observedAt, timezone)}</p>
                 {condition.notes && <p className="mt-1 whitespace-pre-wrap text-stone-700">{condition.notes}</p>}
               </div>
             )
@@ -489,7 +492,7 @@ export default async function InstanceDetail({
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className={isGreenThumb ? 'font-bold text-[#255537]' : 'font-medium'}>
-                    {careEventLabel(event.eventType)} · {fmtDate(event.performedAt)}
+                    {careEventLabel(event.eventType)} · {fmtDate(event.performedAt, timezone)}
                   </p>
                   {question && <p className="mt-1 text-xs font-medium text-stone-600">Q: {question}</p>}
                 </div>
@@ -557,7 +560,7 @@ export default async function InstanceDetail({
         </form>
       ) : (
         <p>
-          {i.archiveReason} on {fmtDate(i.archiveDate)}
+          {i.archiveReason} on {fmtDate(i.archiveDate, timezone)}
         </p>
       )}
     </Card>
@@ -611,8 +614,8 @@ export default async function InstanceDetail({
           <p>Status: {i.status}</p>
           <p>Type: {i.instanceType}</p>
           <p>Location: {i.location || '—'}</p>
-          <p>Acquired: {fmtDate(i.acquisitionDate)}</p>
-          <p>Propagated: {fmtDate(i.propagationDate)}</p>
+          <p>Acquired: {fmtDate(i.acquisitionDate, timezone)}</p>
+          <p>Propagated: {fmtDate(i.propagationDate, timezone)}</p>
           <p>Source: {i.source || '—'}</p>
           <p>Stock: {i.stockNumber || '—'}</p>
           <Link className="mt-3 inline-block underline" href={collectionPath(collection.slug, `/graphs?root=${i.id}`)}>
@@ -702,7 +705,7 @@ export default async function InstanceDetail({
                   <p className="font-medium">Stability records</p>
                   {i.sportRecords.map((record) => (
                     <p key={record.id}>
-                      Gen {record.generationNumber}: {record.propagatedTrue ? 'true' : 'not true'} · {fmtDate(record.propagationEvent.date)}
+                      Gen {record.generationNumber}: {record.propagatedTrue ? 'true' : 'not true'} · {fmtDate(record.propagationEvent.date, timezone)}
                     </p>
                   ))}
                 </div>
@@ -744,7 +747,7 @@ export default async function InstanceDetail({
 
           {notes.map((n) => (
             <p className="mt-3 border-t pt-3 text-sm" key={n.id}>
-              {n.createdAt.toLocaleString()}
+              {formatDateTime(n.createdAt, timezone)}
               <br />
               {n.note}
             </p>
@@ -791,7 +794,7 @@ export default async function InstanceDetail({
               <div key={reminder.id} className="rounded-lg border border-stone-200 bg-white/60 p-3 text-sm">
                 <p className="font-medium">{reminder.title}</p>
                 <p className="text-stone-600">
-                  {reminderCategoryLabel(reminder.category)} · Due {fmtDate(reminder.nextSendAt || reminder.dueAt)} · {recurrenceLabel(reminder.rrule)}
+                  {reminderCategoryLabel(reminder.category)} · Due {fmtDate(reminder.nextSendAt || reminder.dueAt, timezone)} · {recurrenceLabel(reminder.rrule)}
                 </p>
                 {reminder.body && <p className="mt-1 whitespace-pre-wrap text-stone-700">{reminder.body}</p>}
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -860,13 +863,13 @@ export default async function InstanceDetail({
                 <div key={b.id} id={`bloom-${b.id}`} className="rounded-xl border p-4">
                   <div className="mb-3 flex items-start justify-between gap-3">
                     <div>
-                      <p className="font-bold">Bloom started {fmtDate(b.bloomStartDate)}</p>
+                      <p className="font-bold">Bloom started {fmtDate(b.bloomStartDate, timezone)}</p>
                       <p className="text-sm text-neutral-600">Status: {status}</p>
                     </div>
                   </div>
 
                   <p className="text-sm">
-                    Peak: {fmtDate(b.peakBloomDate)} · End: {fmtDate(b.bloomEndDate)} · Flowers:{' '}
+                    Peak: {fmtDate(b.peakBloomDate, timezone)} · End: {fmtDate(b.bloomEndDate, timezone)} · Flowers:{' '}
                     {b.flowerCount || '—'}
                   </p>
 
@@ -935,7 +938,7 @@ export default async function InstanceDetail({
                             <div key={reminder.id} className="text-sm">
                               <p className="font-medium">{reminder.title}</p>
                               <p className="text-stone-600">
-                                Due {fmtDate(reminder.nextSendAt || reminder.dueAt)} · {recurrenceLabel(reminder.rrule)}
+                                Due {fmtDate(reminder.nextSendAt || reminder.dueAt, timezone)} · {recurrenceLabel(reminder.rrule)}
                               </p>
                             </div>
                           ))}

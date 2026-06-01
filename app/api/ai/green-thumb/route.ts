@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server'
 import { audit } from '@/lib/auth'
 import { recordAiUsage, requireAiFeatureAccess, tokenUsage } from '@/lib/ai-usage'
 import { prisma } from '@/lib/prisma'
+import { startOfDayInTimeZone, timeZoneForPreference } from '@/lib/time'
 import { fmtDate, plantName, taxonomyLabel } from '@/lib/utils'
 
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses'
@@ -45,14 +46,8 @@ function collectionDailyLimit() {
   return Number.isFinite(configured) && configured > 0 ? Math.floor(configured) : 5
 }
 
-function startOfToday() {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  return today
-}
-
-async function collectionDailyUsage(collectionId: string) {
-  const since = startOfToday()
+async function collectionDailyUsage(collectionId: string, timezone?: string) {
+  const since = startOfDayInTimeZone(new Date(), timezone)
   const used = await prisma.aiUsageEvent.count({
     where: {
       collectionId,
@@ -83,6 +78,8 @@ export async function POST(req: Request) {
   const access = await requireAiFeatureAccess(trimmedString(body.collectionSlug, 80))
   if (access.error) return access.error
   const { user, collection } = access.context
+  const preferences = await prisma.emailPreference.findUnique({ where: { userId: user.id } })
+  const timezone = timeZoneForPreference(preferences)
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) {
     return NextResponse.json({ error: 'OpenAI API key is not configured.' }, { status: 503 })
@@ -91,7 +88,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Green Thumb assist limit reached. Try again later.' }, { status: 429 })
   }
 
-  const dailyUsage = await collectionDailyUsage(collection.id)
+  const dailyUsage = await collectionDailyUsage(collection.id, timezone)
   if (dailyUsage.used >= dailyUsage.limit) {
     return NextResponse.json(
       { error: `This collection has reached its Green Thumb daily limit (${dailyUsage.limit} requests). Try again tomorrow.` },
@@ -124,7 +121,7 @@ export async function POST(req: Request) {
       collectionId: collection.id,
       plantInstanceId: plant.id,
       eventType: 'GREEN_THUMB_NOTE',
-      performedAt: { gte: startOfToday() },
+      performedAt: { gte: startOfDayInTimeZone(new Date(), timezone) },
     },
     select: { id: true, performedAt: true },
   })
@@ -179,8 +176,8 @@ export async function POST(req: Request) {
     type: plant.instanceType,
     status: plant.status,
     location: plant.location || null,
-    acquired: fmtDate(plant.acquisitionDate),
-    propagated: fmtDate(plant.propagationDate),
+    acquired: fmtDate(plant.acquisitionDate, timezone),
+    propagated: fmtDate(plant.propagationDate, timezone),
     source: plant.source || null,
     distributor: plant.distributor || null,
     definition: {
@@ -206,18 +203,18 @@ export async function POST(req: Request) {
       category: condition.category,
       severity: condition.severity,
       status: condition.status,
-      observedAt: fmtDate(condition.observedAt),
+      observedAt: fmtDate(condition.observedAt, timezone),
       notes: condition.notes || null,
     })),
     recentCare: recentCareEvents.map((event) => ({
       type: event.eventType,
-      date: fmtDate(event.performedAt),
+      date: fmtDate(event.performedAt, timezone),
       notes: event.notes || null,
     })),
     recentBlooms: plant.blooms.map((bloom) => ({
-      start: fmtDate(bloom.bloomStartDate),
-      peak: fmtDate(bloom.peakBloomDate),
-      end: fmtDate(bloom.bloomEndDate),
+      start: fmtDate(bloom.bloomStartDate, timezone),
+      peak: fmtDate(bloom.peakBloomDate, timezone),
+      end: fmtDate(bloom.bloomEndDate, timezone),
       flowerCount: bloom.flowerCount || null,
       notes: bloom.notes || null,
     })),

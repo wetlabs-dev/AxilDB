@@ -34,6 +34,8 @@ function reminderStatus(reminder: {
 export default async function RemindersPage() {
   const user = await requireUser()
   const { collection } = await requireCollectionViewer()
+  const preferences = await prisma.emailPreference.findUnique({ where: { userId: user.id } })
+  const timezone = preferences?.timezone
   const reminders = await prisma.reminder.findMany({
     where: { userId: user.id, collectionId: collection.id },
     include: {
@@ -86,7 +88,7 @@ export default async function RemindersPage() {
           <input type="hidden" name="collectionSlug" value={collection.slug} />
           <input type="hidden" name="back" value={collectionPath(collection.slug, '/reminders')} />
           <Field label="Title" name="title" required />
-          <Field label="Send at" help="The first date and time this reminder should be emailed." name="dueAt" type="datetime-local" required />
+          <Field label="Send at" help={`The first date and time this reminder should be emailed (${timezone || 'default timezone'}).`} name="dueAt" type="datetime-local" required />
           <Select label="Category" name="category" defaultValue="GENERAL">
             {reminderCategories.map(([value, label]) => (
               <option key={value} value={value}>{label}</option>
@@ -125,7 +127,7 @@ export default async function RemindersPage() {
                 <h3 className="mt-2 font-serif text-xl font-bold">{reminder.title}</h3>
                 {reminder.body && <p className="mt-2 whitespace-pre-wrap text-sm text-stone-700">{reminder.body}</p>}
                 <p className="mt-3 text-sm text-stone-600">
-                  Due {fmtDate(reminder.nextSendAt || reminder.dueAt)} · {recurrenceLabel(reminder.rrule)} · {entityLabel(reminder.entityType)}
+                  Due {fmtDate(reminder.nextSendAt || reminder.dueAt, timezone)} · {recurrenceLabel(reminder.rrule)} · {entityLabel(reminder.entityType)}
                 </p>
                 {path && (
                   <Link className="mt-2 inline-block text-sm font-medium underline" href={path}>
@@ -138,7 +140,7 @@ export default async function RemindersPage() {
                     <p className="font-medium text-stone-800">Recent delivery history</p>
                     {reminder.deliveries.map((delivery) => (
                       <p key={delivery.id}>
-                        {delivery.status} · {delivery.recipient} · {delivery.sentAt ? fmtDate(delivery.sentAt) : fmtDate(delivery.createdAt)}
+                        {delivery.status} · {delivery.recipient} · {delivery.sentAt ? fmtDate(delivery.sentAt, timezone) : fmtDate(delivery.createdAt, timezone)}
                         {delivery.error ? ` · ${delivery.error}` : ''}
                       </p>
                     ))}

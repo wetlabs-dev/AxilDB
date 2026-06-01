@@ -7,6 +7,7 @@ import { requireCollectionViewer } from '@/lib/collections'
 import { careTaskLabel } from '@/lib/care-queue'
 import { attachCareSheetPhotos, careSheetModeLabel, sectionValuesForInstance } from '@/lib/care-sheets'
 import { prisma } from '@/lib/prisma'
+import { formatDate } from '@/lib/time'
 import { plantName } from '@/lib/utils'
 
 function contentLeft(doc: PDFKit.PDFDocument) {
@@ -31,7 +32,7 @@ function maybeValue(value: unknown) {
 }
 
 function taskDate(date?: Date | null) {
-  return date ? date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'No due date'
+  return date ? formatDate(date) : 'No due date'
 }
 
 function ensureRoom(doc: PDFKit.PDFDocument, needed = 72) {
@@ -107,7 +108,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   doc.font('Times-Bold').fontSize(24).text(hydratedSheet.title)
   doc.moveDown(0.25)
   doc.font('Helvetica').fontSize(10).fillColor('#555')
-  line(doc, `${hydratedSheet.collection.name} · ${careSheetModeLabel(hydratedSheet.mode)} · Generated ${new Date().toLocaleDateString()}`)
+  line(doc, `${hydratedSheet.collection.name} · ${careSheetModeLabel(hydratedSheet.mode)} · Generated ${formatDate(new Date())}`)
   if (hydratedSheet.startsAt || hydratedSheet.expiresAt) {
     line(doc, `Window: ${taskDate(hydratedSheet.startsAt)} through ${taskDate(hydratedSheet.expiresAt)}`)
   }

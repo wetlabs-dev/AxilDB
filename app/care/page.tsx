@@ -6,6 +6,7 @@ import { Button, Card, TextArea } from '@/components/ui'
 import { canCreateInCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { careQueueSummary, careTaskLabel, filterCareQueue, getCareQueue, type CareQueueItem } from '@/lib/care-queue'
 import { prisma } from '@/lib/prisma'
+import { formatDate } from '@/lib/time'
 
 const filters = [
   ['today', 'Today'],
@@ -36,14 +37,18 @@ function priorityLabel(priority: number) {
   return 'Routine'
 }
 
-function dateLabel(date: Date) {
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+function dateLabel(date: Date, timezone?: string | null) {
+  return formatDate(date, timezone || undefined)
 }
 
 export default async function CareQueuePage({ searchParams }: { searchParams: Promise<{ filter?: string }> }) {
   const params = await searchParams
   const context = await requireCollectionViewer()
   const canAct = canCreateInCollection(context.user, context)
+  const preferences = context.user
+    ? await prisma.emailPreference.findUnique({ where: { userId: context.user.id } })
+    : null
+  const timezone = preferences?.timezone
   const filter = params.filter || 'today'
   const back = `${collectionPath(context.collection.slug, '/care')}?filter=${encodeURIComponent(filter)}`
   const allItems = await getCareQueue(prisma, {
@@ -51,9 +56,10 @@ export default async function CareQueuePage({ searchParams }: { searchParams: Pr
     collectionSlug: context.collection.slug,
     userId: context.user?.id,
     includeCompleted: filter === 'completed',
+    timezone,
   })
-  const summary = careQueueSummary(allItems)
-  const items = filterCareQueue(allItems, filter)
+  const summary = careQueueSummary(allItems, new Date(), timezone)
+  const items = filterCareQueue(allItems, filter, new Date(), timezone)
 
   return (
     <div className="space-y-5">
@@ -108,7 +114,7 @@ export default async function CareQueuePage({ searchParams }: { searchParams: Pr
                   <span className="inline-flex items-center gap-1 rounded-full border border-stone-200 bg-white/70 px-2 py-0.5 font-bold uppercase tracking-[0.14em] text-stone-700">
                     {taskIcon(item)} {careTaskLabel(item.taskType)}
                   </span>
-                  <span>{dateLabel(item.dueAt)}</span>
+                  <span>{dateLabel(item.dueAt, timezone)}</span>
                   <span className={item.priority >= 100 ? 'font-semibold text-[#9a3f35]' : 'font-medium text-stone-600'}>{priorityLabel(item.priority)}</span>
                 </div>
                 <div>

@@ -5,6 +5,7 @@ import { getCurrentUser } from '@/lib/auth'
 import { collectionPath, publicCollectionsForUser } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
 import { isServerAdminRole } from '@/lib/roles'
+import { formatDate } from '@/lib/time'
 
 export default async function CollectionsPage({
   searchParams,
@@ -69,7 +70,7 @@ export default async function CollectionsPage({
               <div key={request.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-stone-200 bg-white/50 px-3 py-2 text-sm">
                 <div>
                   <p className="font-semibold">{request.requestedName}</p>
-                  <p className="text-xs text-stone-500">/{request.requestedSlug} · {request.visibility.toLowerCase()} · requested {request.createdAt.toLocaleDateString()}</p>
+                  <p className="text-xs text-stone-500">/{request.requestedSlug} · {request.visibility.toLowerCase()} · requested {formatDate(request.createdAt)}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="rounded-full border border-stone-200 bg-white px-2 py-1 text-xs">{request.status.toLowerCase()}</span>

@@ -5,10 +5,11 @@ import { Button, Card, LinkButton } from '@/components/ui'
 import { careSheetModeLabel, careSheetStatusLabel } from '@/lib/care-sheets'
 import { canManageCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
+import { formatDate as formatLocalDate } from '@/lib/time'
 
 function formatDate(date?: Date | null) {
   if (!date) return 'No expiration'
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+  return formatLocalDate(date)
 }
 
 export default async function CareSheetsPage() {
