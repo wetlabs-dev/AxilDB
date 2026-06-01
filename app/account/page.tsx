@@ -74,7 +74,7 @@ export default async function Account({
 
       <Card>
         <h3 className="font-bold">Notification preferences</h3>
-        <p className="mt-1 text-sm text-stone-600">Choose which AxilDB email and push alerts should reach you.</p>
+        <p className="mt-1 text-sm text-[var(--ax-muted)]">Choose which AxilDB email and push alerts should reach you.</p>
         <form action={updateEmailPreferences} className="mt-4 grid max-w-3xl gap-3">
           <Field label="Timezone" name="timezone" defaultValue={preferences?.timezone || defaultTimeZone()} />
           <div className="grid gap-2">
@@ -83,20 +83,20 @@ export default async function Account({
               ['welcomeEmails', 'Welcome and onboarding emails', preferences?.welcomeEmails ?? true],
               ['transferNotifications', 'Collection transfer workflow emails', preferences?.transferNotifications ?? true],
             ].map(([name, label, checked]) => (
-              <label key={String(name)} className="flex items-center gap-2 rounded-lg border border-stone-200 bg-white/50 px-3 py-2 text-sm">
+              <label key={String(name)} className="flex items-center gap-2 rounded-lg border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] px-3 py-2 text-sm text-[var(--ax-text)]">
                 <input type="checkbox" name={String(name)} defaultChecked={Boolean(checked)} />
                 <span>{label}</span>
               </label>
             ))}
           </div>
-          <div className="overflow-hidden rounded-lg border border-stone-200">
-            <div className="grid grid-cols-[minmax(0,1fr)_5rem_5rem] gap-2 bg-white/60 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-stone-500">
+          <div className="overflow-hidden rounded-lg border border-[color:var(--ax-border)]">
+            <div className="grid grid-cols-[minmax(0,1fr)_5rem_5rem] gap-2 bg-[var(--ax-surface-muted)] px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--ax-muted)]">
               <span>Alert type</span>
               <span>Email</span>
               <span>Push</span>
             </div>
             {notificationRows.map(([emailName, pushName, label, emailChecked, pushChecked]) => (
-              <div key={emailName} className="grid grid-cols-[minmax(0,1fr)_5rem_5rem] items-center gap-2 border-t border-stone-200 bg-white/40 px-3 py-2 text-sm">
+              <div key={emailName} className="grid grid-cols-[minmax(0,1fr)_5rem_5rem] items-center gap-2 border-t border-[color:var(--ax-border)] bg-[var(--ax-surface)] px-3 py-2 text-sm text-[var(--ax-text)]">
                 <span>{label}</span>
                 <label className="inline-flex items-center gap-2">
                   <input type="checkbox" name={emailName} defaultChecked={Boolean(emailChecked)} />
@@ -119,7 +119,7 @@ export default async function Account({
 
       <Card>
         <h3 className="font-bold">Web Push devices</h3>
-        <p className="mt-1 text-sm text-stone-600">Enable browser or installed PWA push notifications for the push alert types selected above.</p>
+        <p className="mt-1 text-sm text-[var(--ax-muted)]">Enable browser or installed PWA push notifications for the push alert types selected above.</p>
         <PushNotificationSettings
           enabled={process.env.NEXT_PUBLIC_ENABLE_WEB_PUSH === 'true'}
           publicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || ''}

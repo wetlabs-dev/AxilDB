@@ -43,10 +43,11 @@ export function PushNotificationSettings({ enabled, publicKey, devices }: Props)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [currentEndpoint, setCurrentEndpoint] = useState<string | null>(null)
+  const [registeredDevices, setRegisteredDevices] = useState(devices)
 
   const currentEnabled = useMemo(
-    () => devices.some((device) => device.enabled && device.endpoint === currentEndpoint),
-    [devices, currentEndpoint],
+    () => registeredDevices.some((device) => device.enabled && device.endpoint === currentEndpoint),
+    [registeredDevices, currentEndpoint],
   )
 
   useEffect(() => {
@@ -77,6 +78,8 @@ export function PushNotificationSettings({ enabled, publicKey, devices }: Props)
     try {
       if (!enabled || !publicKey) throw new Error('Web Push is not enabled on this server.')
       if (!supported) throw new Error('This browser does not support Web Push notifications.')
+      if (!window.isSecureContext) throw new Error('Web Push requires HTTPS, except on localhost during development.')
+      if (permission === 'denied') throw new Error('Notifications are blocked in this browser. Update the browser or site settings before enabling push.')
 
       const nextPermission = await Notification.requestPermission()
       setPermission(nextPermission)
@@ -96,9 +99,13 @@ export function PushNotificationSettings({ enabled, publicKey, devices }: Props)
         body: JSON.stringify(subscription.toJSON()),
       })
       if (!response.ok) throw new Error('AxilDB could not save this push subscription.')
+      const result = await response.json()
       setCurrentEndpoint(subscription.endpoint)
+      setRegisteredDevices((current) => {
+        const next = current.filter((device) => device.endpoint !== subscription.endpoint)
+        return [{ ...result.subscription, userAgent: navigator.userAgent, createdAt: new Date().toISOString(), lastSeenAt: new Date().toISOString() }, ...next]
+      })
       setMessage('Push notifications are enabled for this browser.')
-      window.location.reload()
     } catch (error) {
       setMessage(error instanceof Error ? error.message : String(error))
     } finally {
@@ -121,8 +128,10 @@ export function PushNotificationSettings({ enabled, publicKey, devices }: Props)
         await subscription.unsubscribe()
       }
       setCurrentEndpoint(null)
+      if (subscription?.endpoint) {
+        setRegisteredDevices((current) => current.map((device) => device.endpoint === subscription.endpoint ? { ...device, enabled: false } : device))
+      }
       setMessage('Push notifications are disabled for this browser.')
-      window.location.reload()
     } catch (error) {
       setMessage(error instanceof Error ? error.message : String(error))
     } finally {
@@ -147,40 +156,41 @@ export function PushNotificationSettings({ enabled, publicKey, devices }: Props)
 
   return (
     <div className="mt-4 grid gap-4">
-      <div className="rounded-lg border border-stone-200 bg-white/50 p-3 text-sm text-stone-700">
+      <div className="rounded-lg border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] p-3 text-sm text-[var(--ax-text)]">
         <p>Web Push support: {supported ? 'supported in this browser' : 'not supported in this browser'}</p>
         <p>Notification permission: {permission === 'default' ? 'not requested' : permission}</p>
-        {!enabled && <p className="mt-2 text-amber-800">Web Push is disabled on this AxilDB server.</p>}
-        <p className="mt-2">On iPhone and iPad, push notifications require AxilDB to be added to the Home Screen first.</p>
+        {!enabled && <p className="mt-2 text-[var(--ax-warning)]">Web Push is disabled on this AxilDB server.</p>}
+        {permission === 'denied' && <p className="mt-2 text-[var(--ax-warning)]">Notifications are blocked in this browser. Change the site permission before enabling push.</p>}
+        <p className="mt-2 text-[var(--ax-muted)]">On iPhone and iPad, push notifications require AxilDB to be added to the Home Screen first.</p>
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <Button type="button" onClick={enablePush} disabled={busy || !enabled || !supported || permission === 'denied'}>
+        <Button type="button" onClick={enablePush} disabled={busy}>
           Enable push notifications
         </Button>
-        <Button type="button" className="border border-stone-300 bg-white/70 text-stone-900 hover:bg-[#f5f0e2]" onClick={disablePush} disabled={busy || !currentEndpoint}>
+        <Button type="button" className="border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] text-[var(--ax-text)] hover:bg-[var(--ax-primary-wash)]" onClick={disablePush} disabled={busy || !currentEndpoint}>
           Disable push notifications
         </Button>
-        <Button type="button" className="border border-stone-300 bg-white/70 text-stone-900 hover:bg-[#f5f0e2]" onClick={sendTest} disabled={busy || !enabled || !currentEnabled}>
+        <Button type="button" className="border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] text-[var(--ax-text)] hover:bg-[var(--ax-primary-wash)]" onClick={sendTest} disabled={busy || !enabled || !currentEnabled}>
           Send test push notification
         </Button>
       </div>
 
-      {message && <p className="rounded-lg border border-stone-200 bg-white/60 p-3 text-sm text-stone-700">{message}</p>}
+      {message && <p className="rounded-lg border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] p-3 text-sm text-[var(--ax-text)]">{message}</p>}
 
       <div>
         <h4 className="text-sm font-semibold">Registered devices</h4>
-        {devices.length === 0 ? (
-          <p className="mt-1 text-sm text-stone-600">No push devices are registered yet.</p>
+        {registeredDevices.length === 0 ? (
+          <p className="mt-1 text-sm text-[var(--ax-muted)]">No push devices are registered yet.</p>
         ) : (
           <ul className="mt-2 grid gap-2">
-            {devices.map((device) => (
-              <li key={device.id} className="rounded-lg border border-stone-200 bg-white/50 px-3 py-2 text-sm">
+            {registeredDevices.map((device) => (
+              <li key={device.id} className="rounded-lg border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] px-3 py-2 text-sm">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="font-medium">{device.deviceLabel || deviceName(device.userAgent)}</span>
-                  <span className={device.enabled ? 'text-green-800' : 'text-stone-500'}>{device.enabled ? 'enabled' : 'disabled'}</span>
+                  <span className={device.enabled ? 'text-green-800' : 'text-[var(--ax-muted)]'}>{device.enabled ? 'enabled' : 'disabled'}</span>
                 </div>
-                <p className="mt-1 text-xs text-stone-500">
+                <p className="mt-1 text-xs text-[var(--ax-muted)]">
                   Last seen {device.lastSeenAt ? new Date(device.lastSeenAt).toLocaleString() : 'not yet'}
                 </p>
               </li>
