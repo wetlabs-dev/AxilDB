@@ -25,7 +25,7 @@ export default async function Propagations() {
   const { collection } = context
   const collectionWhere = { collectionId: collection.id }
   const sortKey = await sortPreference(user?.id, 'propagations', 'dateDesc', propagationSortOptions.map((option) => option.value))
-  const [instances, events, instanceSuggestionRows] = await Promise.all([
+  const [instances, events, acquiredPropagations, instanceSuggestionRows] = await Promise.all([
     prisma.plantInstance.findMany({
       where: { ...collectionWhere, status: 'ACTIVE' },
       include: { plantDefinition: true },
@@ -40,6 +40,11 @@ export default async function Propagations() {
       orderBy: { date: 'desc' },
     }),
     prisma.plantInstance.findMany({
+      where: { ...collectionWhere, status: { not: 'ARCHIVED' }, instanceType: 'ACQUIRED_PROPAGATION' },
+      include: { plantDefinition: true },
+      orderBy: { propagationDate: 'desc' },
+    }),
+    prisma.plantInstance.findMany({
       where: collectionWhere,
       select: { location: true },
     }),
@@ -49,7 +54,7 @@ export default async function Propagations() {
   const instanceIds = Array.from(new Set(events.flatMap((event) => [
     ...event.parents.map((parent) => parent.parentPlantInstanceId),
     ...event.children.map((child) => child.childPlantInstanceId),
-  ])))
+  ]).concat(acquiredPropagations.map((instance) => instance.id))))
   const photos = await prisma.photo.findMany({
     where: { ...collectionWhere, entityType: 'PLANT_INSTANCE', entityId: { in: instanceIds } },
     orderBy: [{ isCover: 'desc' }, { createdAt: 'desc' }],
@@ -58,12 +63,25 @@ export default async function Propagations() {
     if (!acc[photo.entityId]) acc[photo.entityId] = photo
     return acc
   }, {})
-  const sortedEvents = [...events].sort((left, right) => {
-    if (sortKey === 'dateAsc') return timeValue(left.date) - timeValue(right.date)
-    if (sortKey === 'updatedDesc') return timeValue(right.updatedAt) - timeValue(left.updatedAt)
-    if (sortKey === 'methodAsc') return compareText(left.method, right.method) || timeValue(right.date) - timeValue(left.date)
-    if (sortKey === 'statusAsc') return compareText(left.successStatus, right.successStatus) || timeValue(right.date) - timeValue(left.date)
-    return timeValue(right.date) - timeValue(left.date)
+  const propagationItems = [
+    ...events.map((event) => ({ kind: 'event' as const, event })),
+    ...acquiredPropagations.map((instance) => ({ kind: 'acquired' as const, instance })),
+  ]
+  const sortedPropagationItems = propagationItems.sort((left, right) => {
+    const leftDate = left.kind === 'event' ? left.event.date : (left.instance.propagationDate || left.instance.acquisitionDate || left.instance.createdAt)
+    const rightDate = right.kind === 'event' ? right.event.date : (right.instance.propagationDate || right.instance.acquisitionDate || right.instance.createdAt)
+    const leftUpdated = left.kind === 'event' ? left.event.updatedAt : left.instance.updatedAt
+    const rightUpdated = right.kind === 'event' ? right.event.updatedAt : right.instance.updatedAt
+    const leftMethod = left.kind === 'event' ? left.event.method : 'ACQUIRED'
+    const rightMethod = right.kind === 'event' ? right.event.method : 'ACQUIRED'
+    const leftStatus = left.kind === 'event' ? left.event.successStatus : left.instance.status
+    const rightStatus = right.kind === 'event' ? right.event.successStatus : right.instance.status
+
+    if (sortKey === 'dateAsc') return timeValue(leftDate) - timeValue(rightDate)
+    if (sortKey === 'updatedDesc') return timeValue(rightUpdated) - timeValue(leftUpdated)
+    if (sortKey === 'methodAsc') return compareText(leftMethod, rightMethod) || timeValue(rightDate) - timeValue(leftDate)
+    if (sortKey === 'statusAsc') return compareText(leftStatus, rightStatus) || timeValue(rightDate) - timeValue(leftDate)
+    return timeValue(rightDate) - timeValue(leftDate)
   })
 
   return (
@@ -146,7 +164,39 @@ export default async function Propagations() {
       )}
 
       <div className="grid auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
-        {sortedEvents.map((event) => {
+        {sortedPropagationItems.map((item) => {
+          if (item.kind === 'acquired') {
+            const { instance } = item
+            const date = instance.propagationDate || instance.acquisitionDate || instance.createdAt
+
+            return (
+              <Card key={`acquired-${instance.id}`} className="flex h-full flex-col overflow-hidden p-0">
+                <Link href={collectionPath(collection.slug, `/instances/${instance.id}`)} className="block flex-1">
+                  <div className="aspect-[4/3] overflow-hidden">
+                    <PlantImage src={photoByInstance[instance.id]} alt={instance.plantId} />
+                  </div>
+                  <div className="min-h-0 overflow-hidden p-3">
+                    <p className="text-xs font-medium uppercase tracking-[0.12em] text-[#2f6b45]">{fmtDate(date)} · ACQUIRED</p>
+                    <h3 className="mt-1 line-clamp-2 text-sm font-bold leading-tight">{instance.plantId}</h3>
+                    <p className="mt-1 text-xs text-stone-600">{instance.status}</p>
+                    <p className="mt-2 line-clamp-2 text-xs text-stone-700">
+                      Acquired propagation · {plantName(instance.plantDefinition)}
+                    </p>
+                    <p className="mt-1 line-clamp-2 text-xs text-stone-600">
+                      Source: {instance.source || instance.distributor || 'External source'}
+                    </p>
+                  </div>
+                </Link>
+                {canEditInCollection(user, context) && (
+                  <div className="flex flex-wrap gap-2 border-t border-stone-200 p-3">
+                    <Link className="plant-card-action inline-flex items-center justify-center rounded-md border px-4 py-2 text-sm" href={collectionPath(collection.slug, `/instances/${instance.id}/edit`)}>Edit</Link>
+                  </div>
+                )}
+              </Card>
+            )
+          }
+
+          const { event } = item
           const firstChild = event.children[0]?.childPlantInstance
           const firstParent = event.parents[0]?.parentPlantInstance
           const image = photoByInstance[firstChild?.id || ''] || photoByInstance[firstParent?.id || '']
@@ -171,7 +221,7 @@ export default async function Propagations() {
               </Link>
               {canEditInCollection(user, context) && (
                 <div className="flex flex-wrap gap-2 border-t border-stone-200 p-3">
-                  <Link className="rounded-md border px-2 py-1 text-xs" href={collectionPath(collection.slug, `/propagations/${event.id}/edit`)}>Edit</Link>
+                  <Link className="plant-card-action inline-flex items-center justify-center rounded-md border px-4 py-2 text-sm" href={collectionPath(collection.slug, `/propagations/${event.id}/edit`)}>Edit</Link>
                   <form action={deletePropagationEvent}>
                     <input type="hidden" name="id" value={event.id} />
                     <input type="hidden" name="collectionSlug" value={collection.slug} />
