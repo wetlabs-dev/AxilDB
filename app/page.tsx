@@ -479,6 +479,8 @@ export default async function Dashboard({
                     title="Regenerate today's briefing?"
                     message="This replaces today's cached briefing for the collection. It may use one AI briefing request if AI briefing generation is enabled and available."
                     confirmLabel="Regenerate"
+                    pendingLabel="Regenerating..."
+                    pendingMessage="Regenerating today's Collection Briefing. The AI request can take a few moments."
                     className="px-3 py-1.5 text-xs"
                   >
                     Regenerate today
