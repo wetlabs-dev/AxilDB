@@ -8,34 +8,36 @@ const colorStyles = {
   green: {
     dot: 'border-[#5f8f5f] bg-[#dcebd0] text-[#245737]',
     rail: 'bg-[#6f9b63]',
-    card: 'border-[#b7caa9] bg-[#f4f8ed]',
+    accent: 'border-l-[#6f9b63]',
   },
   sage: {
     dot: 'border-[#7a9d96] bg-[#e2eeea] text-[#315c56]',
     rail: 'bg-[#7a9d96]',
-    card: 'border-[#bed3ce] bg-[#f0f7f4]',
+    accent: 'border-l-[#7a9d96]',
   },
   amber: {
     dot: 'border-[#b79b45] bg-[#fff2c2] text-[#6f541f]',
     rail: 'bg-[#b79b45]',
-    card: 'border-[#dfcc87] bg-[#fff8dc]',
+    accent: 'border-l-[#b79b45]',
   },
   rust: {
     dot: 'border-[#b56b56] bg-[#ffe4dc] text-[#8a3b2f]',
     rail: 'bg-[#b56b56]',
-    card: 'border-[#e3b8a9] bg-[#fff1ec]',
+    accent: 'border-l-[#b56b56]',
   },
   mauve: {
     dot: 'border-[#9675b0] bg-[#eadcf4] text-[#63477a]',
     rail: 'bg-[#9675b0]',
-    card: 'border-[#d7c2e8] bg-[#fbf4ff]',
+    accent: 'border-l-[#9675b0]',
   },
   gray: {
     dot: 'border-[#a6a095] bg-[#efebe2] text-[#575247]',
     rail: 'bg-[#a6a095]',
-    card: 'border-stone-300 bg-stone-100/70',
+    accent: 'border-l-[#a6a095]',
   },
 } as const
+
+const eventPanelClass = 'border-[color:var(--ax-border)] border-l-4 bg-[var(--ax-surface-solid)] text-[var(--ax-text)] shadow-[0_16px_48px_var(--ax-shadow)]'
 
 function monthKey(date: Date, timezone?: string | null) {
   return new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric', timeZone: timezone || undefined }).format(date)
@@ -112,7 +114,7 @@ function EventDetails({
 
   if (!event.href) return content
   return (
-    <Link href={event.href} className="block rounded-md transition hover:opacity-85">
+    <Link href={event.href} className="block rounded-md transition hover:bg-[var(--ax-primary-wash)]">
       {content}
     </Link>
   )
@@ -193,9 +195,10 @@ export function PlantHealthTimeline({
                 </summary>
                 <div
                   className={cn(
-                    'absolute left-1/2 z-20 mt-2 w-72 -translate-x-1/2 rounded-lg border p-3 shadow-xl',
+                    'absolute left-1/2 z-20 mt-2 w-72 -translate-x-1/2 rounded-lg border p-3',
                     above ? '' : '-translate-y-[calc(100%+3.3rem)]',
-                    styles.card,
+                    eventPanelClass,
+                    styles.accent,
                   )}
                 >
                   <EventDetails event={event} timezone={timezone} />
@@ -228,7 +231,7 @@ export function PlantHealthTimeline({
                 {group.events.map((event) => {
                   const styles = colorStyles[event.colorVariant]
                   return (
-                    <div key={event.id} className={cn('rounded-lg border p-3', styles.card)}>
+                    <div key={event.id} className={cn('rounded-lg border p-3', eventPanelClass, styles.accent)}>
                       <EventDetails event={event} timezone={timezone} />
                     </div>
                   )
