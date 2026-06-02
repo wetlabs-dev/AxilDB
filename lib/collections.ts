@@ -5,8 +5,8 @@ import { prisma } from '@/lib/prisma'
 import { collectionRoleAtLeast, collectionRoleRank, isServerAdminRole, normalizeCollectionRole, type CollectionRole } from '@/lib/roles'
 import { pathWithNext, RETURN_TO_HEADER } from '@/lib/redirects'
 
-export const DEFAULT_COLLECTION_SLUG = 'axildb'
 export const COLLECTION_HEADER = 'x-axildb-collection'
+const INITIAL_COLLECTION_SLUG = 'axildb'
 
 export type CollectionVisibility = 'PUBLIC' | 'PRIVATE'
 export type CollectionStatus = 'ACTIVE' | 'ARCHIVED'
@@ -47,7 +47,9 @@ export function legacyPathFromCollectionPath(pathname: string) {
 
 export async function getCurrentCollectionSlug() {
   const requestHeaders = await headers()
-  return requestHeaders.get(COLLECTION_HEADER) || DEFAULT_COLLECTION_SLUG
+  const headerSlug = requestHeaders.get(COLLECTION_HEADER)
+  if (headerSlug) return headerSlug
+  return (await getDefaultCollection()).slug
 }
 
 async function getReturnToPath() {
@@ -70,11 +72,11 @@ export async function ensureDefaultCollection() {
 
   const collection = existingDefault
     || oldestOwnedCollection
-    || await prisma.collection.findUnique({ where: { slug: DEFAULT_COLLECTION_SLUG } })
+    || await prisma.collection.findUnique({ where: { slug: INITIAL_COLLECTION_SLUG } })
     || await prisma.collection.create({
       data: {
         name: 'AxilDB',
-        slug: DEFAULT_COLLECTION_SLUG,
+        slug: INITIAL_COLLECTION_SLUG,
         visibility: 'PRIVATE',
         status: 'ACTIVE',
         description: 'Default AxilDB collection.',
@@ -116,6 +118,15 @@ export async function ensureDefaultCollection() {
   return defaultCollection
 }
 
+async function getDefaultCollection() {
+  const collection = await prisma.collection.findFirst({
+    where: { isDefault: true },
+    orderBy: { createdAt: 'asc' },
+  })
+
+  return collection || ensureDefaultCollection()
+}
+
 export async function backfillDefaultCollection(collectionId?: string) {
   const collection = collectionId ? await prisma.collection.findUniqueOrThrow({ where: { id: collectionId } }) : await ensureDefaultCollection()
   const id = collection.id
@@ -153,10 +164,6 @@ export async function getCollectionContext(slug?: string): Promise<CollectionCon
   })
 
   if (!collection) {
-    if (resolvedSlug === DEFAULT_COLLECTION_SLUG) {
-      const created = await ensureDefaultCollection()
-      return getCollectionContext(created.slug)
-    }
     redirect('/collections')
   }
 
