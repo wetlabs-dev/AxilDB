@@ -53,6 +53,33 @@ function eventPosition(event: PlantTimelineEvent, firstDate: Date, span: number)
   return Math.max(2, Math.min(98, percent))
 }
 
+function visibleEventPositions(events: PlantTimelineEvent[], firstDate?: Date, span = 0) {
+  const items = events
+    .map((event, index) => ({
+      id: event.id,
+      order: index,
+      position: firstDate ? eventPosition(event, firstDate, span) : 50,
+    }))
+    .sort((left, right) => left.position - right.position || left.order - right.order)
+
+  if (items.length <= 1) return new Map(items.map((item) => [item.id, item.position]))
+
+  const minGap = Math.min(8, Math.max(3.25, 88 / (items.length + 4)))
+  for (let index = 1; index < items.length; index += 1) {
+    const previous = items[index - 1]
+    const current = items[index]
+    if (current.position < previous.position + minGap) current.position = previous.position + minGap
+  }
+
+  const overflow = items[items.length - 1].position - 98
+  if (overflow > 0) items.forEach((item) => { item.position -= overflow })
+
+  const underflow = 2 - items[0].position
+  if (underflow > 0) items.forEach((item) => { item.position += underflow })
+
+  return new Map(items.map((item) => [item.id, Math.max(2, Math.min(98, item.position))]))
+}
+
 function groupedEvents(events: PlantTimelineEvent[], timezone?: string | null) {
   return events.reduce<Array<{ label: string; events: PlantTimelineEvent[] }>>((groups, event) => {
     const label = monthKey(event.date, timezone)
@@ -138,6 +165,7 @@ export function PlantHealthTimeline({
   const span = firstDate && lastDate ? Math.max(0, lastDate.getTime() - firstDate.getTime()) : 0
   const groups = groupedEvents(sorted, timezone)
   const shownEvents = sorted.slice(-28)
+  const displayPositions = visibleEventPositions(shownEvents, firstDate, span)
   const [openEventId, setOpenEventId] = useState<string | null>(null)
 
   return (
@@ -164,10 +192,10 @@ export function PlantHealthTimeline({
       </div>
 
       <div className="mt-5 overflow-x-auto pb-2">
-        <div className="relative z-20 min-h-[18rem] min-w-[44rem] py-8">
-          <div className="absolute left-4 right-4 top-24 h-1 rounded-full bg-[var(--ax-border)]" />
+        <div className={cn('relative z-20 min-w-[44rem] py-8', openEventId ? 'min-h-[15rem]' : 'min-h-[8rem]')}>
+          <div className="absolute left-4 right-4 top-14 h-1 rounded-full bg-[var(--ax-border)]" />
           {firstDate && lastDate && (
-            <div className="absolute left-4 right-4 top-28 flex justify-between text-xs font-medium text-[var(--ax-muted)]">
+            <div className="absolute left-4 right-4 top-20 flex justify-between text-xs font-medium text-[var(--ax-muted)]">
               <span>{fmtDate(firstDate, timezone)}</span>
               <span>{fmtDate(lastDate, timezone)}</span>
             </div>
@@ -179,13 +207,13 @@ export function PlantHealthTimeline({
           )}
           {shownEvents.map((event) => {
             const styles = colorStyles[event.colorVariant]
-            const position = firstDate ? eventPosition(event, firstDate, span) : 50
+            const position = displayPositions.get(event.id) ?? (firstDate ? eventPosition(event, firstDate, span) : 50)
             const isOpen = openEventId === event.id
             return (
               <div
                 key={event.id}
                 className={cn('absolute h-10 w-10', isOpen ? 'z-[90]' : 'z-30')}
-                style={{ left: `${position}%`, top: '6rem', transform: 'translate(-50%, -50%)' }}
+                style={{ left: `${position}%`, top: '3.5rem', transform: 'translate(-50%, -50%)' }}
               >
                 <button
                   type="button"
