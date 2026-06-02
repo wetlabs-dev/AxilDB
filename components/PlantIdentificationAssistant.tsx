@@ -4,7 +4,7 @@ import { useRef, useState } from 'react'
 import { Search, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-const control = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
+const control = 'rounded-md border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] px-2.5 py-1.5 text-sm font-normal text-[var(--ax-text)] shadow-inner shadow-stone-200/30 outline-none transition placeholder:text-[var(--ax-muted)] file:mr-3 file:rounded-md file:border-0 file:bg-[var(--ax-surface-solid)] file:px-2 file:py-1 file:text-[var(--ax-text)] focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
 
 type PlantIdSuggestion = {
   genus?: string | null
@@ -155,19 +155,41 @@ export function PlantIdentificationAssistant({
       </button>
 
       {open && (
-        <div className="mt-3 rounded-lg border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] p-3 text-sm text-[var(--ax-text)]">
+        <div className="mt-3 rounded-lg border border-[color:var(--ax-border)] bg-[var(--ax-surface-solid)] p-3 text-sm text-[var(--ax-text)] shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
+            <div className="max-w-3xl">
               <h4 className="font-semibold text-[var(--ax-heading)]">ID My Plant</h4>
-              <p className="mt-1 text-[var(--ax-muted)]">
+              <p className="mt-1 text-[var(--ax-text)]">
                 Not sure what the scientific name is? Add a short description, any common names you know, and optionally a clear photo. AxilDB will suggest likely taxonomy for you to review.
               </p>
-              <p className="mt-1 text-xs text-[var(--ax-muted)]">
+              <p className="mt-1 text-xs font-medium text-[var(--ax-muted-strong)]">
                 This sends only your description, known names, and selected image to the configured OpenAI model. It does not save a plant definition automatically.
               </p>
             </div>
-            {status && <p className="max-w-md rounded-md bg-[var(--ax-surface-solid)] px-3 py-2 text-xs text-[var(--ax-muted-strong)]">{status}</p>}
+            {status && (
+              <p
+                className={cn(
+                  'max-w-md rounded-md border px-3 py-2 text-xs font-semibold',
+                  loading
+                    ? 'border-[#8fa58f]/70 bg-[#edf3e6] text-[#255537]'
+                    : 'border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] text-[var(--ax-text)]',
+                )}
+              >
+                {status}
+              </p>
+            )}
           </div>
+
+          {loading && (
+            <div
+              className="mt-3 flex items-center gap-3 rounded-lg border border-[#8fa58f]/60 bg-[#edf3e6] px-3 py-3 text-sm font-semibold text-[#255537]"
+              role="status"
+              aria-live="polite"
+            >
+              <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-[#8fa58f] border-t-[#2f6b45]" aria-hidden="true" />
+              <span>Thinking through the plant details. This can take a few moments, especially with a photo.</span>
+            </div>
+          )}
 
           <div className="mt-3 grid gap-2 md:grid-cols-2">
             <label className="grid gap-1 font-medium text-[var(--ax-text)] md:col-span-2">
