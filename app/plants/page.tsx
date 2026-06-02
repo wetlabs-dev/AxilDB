@@ -6,6 +6,7 @@ import { ConfidenceSelect, PlantAliasFields } from '@/components/PlantAliasField
 import { PlantImage } from '@/components/PlantImage'
 import { SortControl } from '@/components/SortControl'
 import { AIDescriptionField, AIMagicFillButton } from '@/components/AIDescriptionField'
+import { PlantIdentificationAssistant } from '@/components/PlantIdentificationAssistant'
 import { HusbandryBadges } from '@/components/Husbandry'
 import { getCurrentUser } from '@/lib/auth'
 import { canCreateInCollection, canEditInCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
@@ -139,9 +140,12 @@ export default async function Plants() {
             <Field label="Species" name="species" required list="definition-species-suggestions" autoCapitalize="none" />
             <Field label="Hybrid notation" help="Use for botanical hybrid markers or formula context, such as x, grex, or parentage notation that belongs with the name." name="hybridNotation" list="definition-hybrid-notation-suggestions" />
             <Field label="Cultivar name" help="The named cultivated variety, usually written in single quotes, such as 'Morning Glow'. Leave blank for unnamed species or clones." name="cultivarName" list="definition-cultivar-name-suggestions" />
-            <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-lg border border-[#d6dfc9] bg-[#f7f4e8]/80 px-3 py-2 text-sm text-stone-700 lg:col-span-4">
-              <span className="min-w-0">Enter the core name first, then let AxilDB draft taxonomy metadata and suggested aliases.</span>
-              <AIMagicFillButton governingBodies={governingBodyOptions} />
+            <div className="min-w-0 rounded-lg border border-[#d6dfc9] bg-[#f7f4e8]/80 px-3 py-2 text-sm text-stone-700 lg:col-span-4">
+              <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+                <span className="min-w-0">Enter the core name first, then let AxilDB draft taxonomy metadata and suggested aliases.</span>
+                <AIMagicFillButton governingBodies={governingBodyOptions} />
+              </div>
+              <PlantIdentificationAssistant collectionSlug={collection.slug} className="mt-3" />
             </div>
             <Field label="Author citation" help="The author citation for the scientific name, such as (L.f.) R.Br. It records who validly published the name or combination." name="authority" list="definition-authority-suggestions" />
             <Field label="Cultivar registration number" help="Use when a formal cultivar registry or governing body assigns a registration number to the cultivar." name="cultivarRegistrationNumber" />

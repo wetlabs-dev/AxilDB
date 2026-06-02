@@ -15,6 +15,7 @@ It is designed for real collection work: messy taxonomy, acquisition names, alia
 - Live-linked husbandry guides so similar definitions can reuse the same care guidance, with fork-to-local-copy support.
 - Specimen-level husbandry overrides that highlight local care differences from the inherited definition guide.
 - AI Magic Fill for complete husbandry guide drafts, stored as editable draft content with model/review metadata.
+- ID My Plant assistant for cautious AI-assisted plant definition identification from user-provided descriptions, known names, and optional images.
 - Daily Collection Briefing on the dashboard, with collection-manager opt-in, one cached briefing per local day, AI generation when enabled, and deterministic fallback summaries when AI is unavailable.
 - Smart Care Queue that combines husbandry cadence, watering history, propagation stage, open health conditions, bloom follow-ups, pest checks, and manual reminders into a prioritized collection worklist.
 - Care event history for watering, fertilizing, repotting, pest checks, health checks, propagation checks, bloom checks, and other care tasks.
@@ -452,6 +453,8 @@ OPENAI_DESCRIPTION_MODEL=gpt-5.4-mini
 OPENAI_DESCRIPTION_HOURLY_LIMIT=20
 OPENAI_MAGIC_FILL_MODEL=gpt-5.4-mini
 OPENAI_MAGIC_FILL_HOURLY_LIMIT=10
+OPENAI_PLANT_ID_MODEL=gpt-5.4-mini
+OPENAI_PLANT_ID_HOURLY_LIMIT=10
 OPENAI_HUSBANDRY_FILL_MODEL=gpt-5.4-mini
 OPENAI_HUSBANDRY_FILL_HOURLY_LIMIT=10
 OPENAI_GREEN_THUMB_MODEL=gpt-5.4-mini
@@ -547,7 +550,7 @@ Recommended production provider: Amazon SES. It fits well with the AWS/Lightsail
 
 ## Optional OpenAI Plant Definition Drafting
 
-Plant definition forms include optional OpenAI buttons. **AI draft** uses the genus, species, and cultivar fields to draft a description under 40 words. **Magic fill** asks OpenAI for a structured plant definition draft: accepted genus/species, authority, cultivar registration number, governing body, taxonomy/reference URLs, description, and aliases. **Magic Fill husbandry** asks for one structured draft covering the entire care guide. **Green Thumb assist** lets a logger ask one care question per plant specimen per day and stores the answer as a highlighted care note. **Collection Briefing** can be enabled by a collection manager after server-level AI access is enabled; it creates one cached dashboard briefing per collection local day when an active authenticated member first opens the dashboard. The API key is never sent to the browser, and generated definition/husbandry data is never saved automatically; review it before saving.
+Plant definition forms include optional OpenAI buttons. **AI draft** uses the genus, species, and cultivar fields to draft a description under 40 words. **Magic fill** asks OpenAI for a structured plant definition draft: accepted genus/species, authority, cultivar registration number, governing body, taxonomy/reference URLs, description, and aliases. **ID My Plant** suggests a cautious identification draft from a user description, known common/trade names, and an optional plant image; it marks applied suggestions as **AI Determined** and never saves or overwrites the definition until the user clicks Apply and saves the form. **Magic Fill husbandry** asks for one structured draft covering the entire care guide. **Green Thumb assist** lets a logger ask one care question per plant specimen per day and stores the answer as a highlighted care note. **Collection Briefing** can be enabled by a collection manager after server-level AI access is enabled; it creates one cached dashboard briefing per collection local day when an active authenticated member first opens the dashboard. The API key is never sent to the browser, and generated definition/husbandry data is never saved automatically; review it before saving.
 
 To enable it, create an OpenAI API key in the OpenAI Platform dashboard and add it to the server-level config file that Docker Compose already loads:
 
@@ -563,6 +566,8 @@ OPENAI_DESCRIPTION_MODEL=gpt-5.4-mini
 OPENAI_DESCRIPTION_HOURLY_LIMIT=20
 OPENAI_MAGIC_FILL_MODEL=gpt-5.4-mini
 OPENAI_MAGIC_FILL_HOURLY_LIMIT=10
+OPENAI_PLANT_ID_MODEL=gpt-5.4-mini
+OPENAI_PLANT_ID_HOURLY_LIMIT=10
 OPENAI_HUSBANDRY_FILL_MODEL=gpt-5.4-mini
 OPENAI_HUSBANDRY_FILL_HOURLY_LIMIT=10
 OPENAI_GREEN_THUMB_MODEL=gpt-5.4-mini
@@ -579,7 +584,7 @@ Then redeploy/recreate the app container so the environment changes are loaded:
 docker compose up -d --build
 ```
 
-`OPENAI_DESCRIPTION_HOURLY_LIMIT`, `OPENAI_MAGIC_FILL_HOURLY_LIMIT`, `OPENAI_HUSBANDRY_FILL_HOURLY_LIMIT`, and `OPENAI_GREEN_THUMB_HOURLY_LIMIT` are lightweight per-user in-process limits for the OpenAI buttons. `OPENAI_GREEN_THUMB_DAILY_COLLECTION_LIMIT` is a persisted per-collection daily cap for Green Thumb requests and defaults to 5 when unset. `OPENAI_BRIEFING_DAILY_COLLECTION_LIMIT` limits AI-generated Collection Briefings per UTC day and defaults to 1; manager-triggered regeneration bypasses that limit but still requires server-level AI access, the collection briefing toggle, and `AXILDB_AI_BRIEFING_ENABLED=true`. Green Thumb also has a once-per-specimen-per-day cooldown. Collection Briefing sends compact care, note, bloom, propagation, condition, and metadata summaries to the model; uploaded image content, user emails, and private membership data are not sent. For stricter cost control, also set project usage limits in the OpenAI Platform billing settings.
+`OPENAI_DESCRIPTION_HOURLY_LIMIT`, `OPENAI_MAGIC_FILL_HOURLY_LIMIT`, `OPENAI_PLANT_ID_HOURLY_LIMIT`, `OPENAI_HUSBANDRY_FILL_HOURLY_LIMIT`, and `OPENAI_GREEN_THUMB_HOURLY_LIMIT` are lightweight per-user in-process limits for the OpenAI buttons. ID My Plant falls back to `OPENAI_MAGIC_FILL_MODEL` and `OPENAI_MAGIC_FILL_HOURLY_LIMIT` when its specific settings are not configured. `OPENAI_GREEN_THUMB_DAILY_COLLECTION_LIMIT` is a persisted per-collection daily cap for Green Thumb requests and defaults to 5 when unset. `OPENAI_BRIEFING_DAILY_COLLECTION_LIMIT` limits AI-generated Collection Briefings per UTC day and defaults to 1; manager-triggered regeneration bypasses that limit but still requires server-level AI access, the collection briefing toggle, and `AXILDB_AI_BRIEFING_ENABLED=true`. Green Thumb also has a once-per-specimen-per-day cooldown. ID My Plant sends only the description, known names, and selected image to OpenAI; it does not send user emails, membership data, unrelated collection records, or saved specimen history. Collection Briefing sends compact care, note, bloom, propagation, condition, and metadata summaries to the model; uploaded image content, user emails, and private membership data are not sent. For stricter cost control, also set project usage limits in the OpenAI Platform billing settings.
 
 Current email foundation:
 

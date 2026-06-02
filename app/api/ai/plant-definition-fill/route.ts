@@ -7,7 +7,7 @@ const DEFAULT_MODEL = 'gpt-5.4-mini'
 const requestLog = new Map<string, number[]>()
 
 const aliasTypes = new Set(['SYNONYM', 'TRADE_NAME', 'OBSOLETE_TAXONOMY', 'COMMON_NAME', 'MISAPPLIED_NAME', 'SHORTHAND'])
-const confidenceLevels = new Set(['CONFIRMED', 'PROBABLE', 'UNCERTAIN', 'TRADE_ASSUMED', 'DISPUTED'])
+const confidenceLevels = new Set(['CONFIRMED', 'PROBABLE', 'AI_DETERMINED', 'UNCERTAIN', 'TRADE_ASSUMED', 'DISPUTED'])
 
 function trimmedString(value: unknown, maxLength = 200) {
   return String(value || '').trim().slice(0, maxLength)

@@ -72,7 +72,7 @@ export const manualSections: ManualSection[] = [
       'Open Plant Definitions from the sidebar.',
       'Use Add plant definition to create a new definition.',
       'Enter genus, species, cultivar, author citation, governing body, reference URLs, aliases, description, and notes.',
-      'Use AI draft for a short botanical description or Magic fill to draft taxonomy metadata and aliases when AI is enabled for the collection.',
+      'Use AI draft for a short botanical description, Magic fill to draft taxonomy metadata and aliases, or ID My Plant to suggest an identification from your description, known names, and optional image when AI is enabled for the collection.',
       'Upload a plant definition type image when the representative image comes from a reference source rather than your collection.',
       'Use Copy on an existing definition to start a similar definition without copying cultivar-specific fields or images.',
       'Use Share Definition when you have an active collection connection and want another collection to review and copy the definition.',
@@ -84,6 +84,7 @@ export const manualSections: ManualSection[] = [
     ],
     warnings: [
       'AI output is a draft. Review reference URLs, aliases, conservation notes, and toxicity before relying on them.',
+      'ID My Plant sends only the description, known names, and selected image to OpenAI. It does not send member emails, unrelated records, or save the suggested definition automatically.',
     ],
   },
   {

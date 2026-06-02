@@ -25,6 +25,7 @@ function statusClass(status: string) {
 function featureLabel(feature: string) {
   if (feature === 'AI_DESCRIPTION') return 'Description drafts'
   if (feature === 'AI_MAGIC_FILL') return 'Definition Magic Fill'
+  if (feature === 'AI_PLANT_IDENTIFICATION') return 'ID My Plant'
   if (feature === 'AI_HUSBANDRY_FILL') return 'Husbandry Magic Fill'
   if (feature === 'AI_GREEN_THUMB') return 'Green Thumb assist'
   if (feature === 'AI_COLLECTION_BRIEFING') return 'Collection Briefing'

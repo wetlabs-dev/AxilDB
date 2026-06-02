@@ -1,6 +1,7 @@
 export const confidenceOptions = [
   ['CONFIRMED', 'Confirmed'],
   ['PROBABLE', 'Probable'],
+  ['AI_DETERMINED', 'AI Determined'],
   ['UNCERTAIN', 'Uncertain'],
   ['TRADE_ASSUMED', 'Trade-assumed'],
   ['DISPUTED', 'Disputed'],
