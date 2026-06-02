@@ -462,6 +462,7 @@ OPENAI_GREEN_THUMB_HOURLY_LIMIT=20
 OPENAI_GREEN_THUMB_DAILY_COLLECTION_LIMIT=5
 AXILDB_AI_BRIEFING_ENABLED=false
 OPENAI_BRIEFING_MODEL=gpt-5.4-mini
+OPENAI_BRIEFING_MAX_OUTPUT_TOKENS=2400
 OPENAI_BRIEFING_DAILY_COLLECTION_LIMIT=1
 ```
 
@@ -575,6 +576,7 @@ OPENAI_GREEN_THUMB_HOURLY_LIMIT=20
 OPENAI_GREEN_THUMB_DAILY_COLLECTION_LIMIT=5
 AXILDB_AI_BRIEFING_ENABLED=true
 OPENAI_BRIEFING_MODEL=gpt-5.4-mini
+OPENAI_BRIEFING_MAX_OUTPUT_TOKENS=2400
 OPENAI_BRIEFING_DAILY_COLLECTION_LIMIT=1
 ```
 
@@ -584,7 +586,7 @@ Then redeploy/recreate the app container so the environment changes are loaded:
 docker compose up -d --build
 ```
 
-`OPENAI_DESCRIPTION_HOURLY_LIMIT`, `OPENAI_MAGIC_FILL_HOURLY_LIMIT`, `OPENAI_PLANT_ID_HOURLY_LIMIT`, `OPENAI_HUSBANDRY_FILL_HOURLY_LIMIT`, and `OPENAI_GREEN_THUMB_HOURLY_LIMIT` are lightweight per-user in-process limits for the OpenAI buttons. ID My Plant falls back to `OPENAI_MAGIC_FILL_MODEL` and `OPENAI_MAGIC_FILL_HOURLY_LIMIT` when its specific settings are not configured. `OPENAI_GREEN_THUMB_DAILY_COLLECTION_LIMIT` is a persisted per-collection daily cap for Green Thumb requests and defaults to 5 when unset. `OPENAI_BRIEFING_DAILY_COLLECTION_LIMIT` limits AI-generated Collection Briefings per UTC day and defaults to 1; manager-triggered regeneration bypasses that limit but still requires server-level AI access, the collection briefing toggle, and `AXILDB_AI_BRIEFING_ENABLED=true`. Green Thumb also has a once-per-specimen-per-day cooldown. ID My Plant sends only the description, known names, and selected image to OpenAI; it does not send user emails, membership data, unrelated collection records, or saved specimen history. Collection Briefing sends compact care, note, bloom, propagation, condition, and metadata summaries to the model; uploaded image content, user emails, and private membership data are not sent. For stricter cost control, also set project usage limits in the OpenAI Platform billing settings.
+`OPENAI_DESCRIPTION_HOURLY_LIMIT`, `OPENAI_MAGIC_FILL_HOURLY_LIMIT`, `OPENAI_PLANT_ID_HOURLY_LIMIT`, `OPENAI_HUSBANDRY_FILL_HOURLY_LIMIT`, and `OPENAI_GREEN_THUMB_HOURLY_LIMIT` are lightweight per-user in-process limits for the OpenAI buttons. ID My Plant falls back to `OPENAI_MAGIC_FILL_MODEL` and `OPENAI_MAGIC_FILL_HOURLY_LIMIT` when its specific settings are not configured. `OPENAI_GREEN_THUMB_DAILY_COLLECTION_LIMIT` is a persisted per-collection daily cap for Green Thumb requests and defaults to 5 when unset. `OPENAI_BRIEFING_DAILY_COLLECTION_LIMIT` limits AI-generated Collection Briefings per UTC day and defaults to 1; manager-triggered regeneration bypasses that limit but still requires server-level AI access, the collection briefing toggle, and `AXILDB_AI_BRIEFING_ENABLED=true`. `OPENAI_BRIEFING_MAX_OUTPUT_TOKENS` defaults to 2400, and AxilDB retries once with a larger output budget if OpenAI reports the briefing was truncated. Green Thumb also has a once-per-specimen-per-day cooldown. ID My Plant sends only the description, known names, and selected image to OpenAI; it does not send user emails, membership data, unrelated collection records, or saved specimen history. Collection Briefing sends compact care, note, bloom, propagation, condition, and metadata summaries to the model; uploaded image content, user emails, and private membership data are not sent. For stricter cost control, also set project usage limits in the OpenAI Platform billing settings.
 
 Current email foundation:
 

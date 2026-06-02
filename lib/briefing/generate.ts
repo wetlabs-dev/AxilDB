@@ -5,6 +5,8 @@ import type { BriefingSource } from '@/lib/briefing/collect'
 export const BRIEFING_PROMPT_VERSION = 'collection-briefing-v1'
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses'
 const DEFAULT_MODEL = 'gpt-5.4-mini'
+const DEFAULT_MAX_OUTPUT_TOKENS = 2400
+const RETRY_MAX_OUTPUT_TOKENS = 4800
 
 function outputText(payload: any) {
   if (typeof payload.output_text === 'string') return payload.output_text
@@ -17,6 +19,19 @@ function outputText(payload: any) {
 
 function line(label: string, count: number) {
   return count ? `- ${label}: ${count}` : `- ${label}: none noted`
+}
+
+function briefingMaxOutputTokens() {
+  const configured = Number(process.env.OPENAI_BRIEFING_MAX_OUTPUT_TOKENS || DEFAULT_MAX_OUTPUT_TOKENS)
+  return Number.isFinite(configured) && configured >= 900 ? Math.floor(configured) : DEFAULT_MAX_OUTPUT_TOKENS
+}
+
+function isIncompleteResponse(payload: any) {
+  if (payload?.status === 'incomplete') return true
+  if (String(payload?.incomplete_details?.reason || '').includes('max_output_tokens')) return true
+  return Boolean(payload?.output?.some((item: any) =>
+    item?.status === 'incomplete' || item?.content?.some((content: any) => content?.status === 'incomplete')
+  ))
 }
 
 export function fallbackBriefing(source: BriefingSource, status: 'FALLBACK' | 'FAILED' = 'FALLBACK') {
@@ -89,32 +104,49 @@ export async function generateBriefing(prisma: PrismaClient, input: {
   }
 
   try {
-    const response = await fetch(OPENAI_RESPONSES_URL, {
+    const instructions = [
+      'You are generating a concise botanical collection briefing for AxilDB.',
+      'Use only the supplied data. Do not invent observations.',
+      'Use cautious language for inferred reminders.',
+      'Do not include private user identity data.',
+      'Do not provide medical or pesticide safety claims beyond supplied records.',
+      'Write in a calm, practical, lightly warm tone.',
+      'Output markdown only with these sections: Needs attention, Coming up soon, Worth checking, Recent activity, Quiet notes / no action needed.',
+      'Use standard markdown headings and simple bullets. When referring to a specimen, include its plantId exactly as supplied so AxilDB can link it.',
+    ].join(' ')
+    const requestBody = (maxOutputTokens: number) => ({
+      model,
+      instructions,
+      input: JSON.stringify(input.source),
+      max_output_tokens: maxOutputTokens,
+      store: false,
+    })
+    const runRequest = (maxOutputTokens: number) => fetch(OPENAI_RESPONSES_URL, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model,
-        instructions: [
-          'You are generating a concise botanical collection briefing for AxilDB.',
-          'Use only the supplied data. Do not invent observations.',
-          'Use cautious language for inferred reminders.',
-          'Do not include private user identity data.',
-          'Do not provide medical or pesticide safety claims beyond supplied records.',
-          'Write in a calm, practical, lightly warm tone.',
-          'Output markdown only with these sections: Needs attention, Coming up soon, Worth checking, Recent activity, Quiet notes / no action needed.',
-          'Use standard markdown headings and simple bullets. When referring to a specimen, include its plantId exactly as supplied so AxilDB can link it.',
-        ].join(' '),
-        input: JSON.stringify(input.source),
-        max_output_tokens: 900,
-        store: false,
-      }),
+      body: JSON.stringify(requestBody(maxOutputTokens)),
     })
-    const payload = await response.json().catch(() => ({}))
+
+    const requestedTokens = briefingMaxOutputTokens()
+    let response = await runRequest(requestedTokens)
+    let payload = await response.json().catch(() => ({}))
+
+    if (response.ok && isIncompleteResponse(payload)) {
+      const retryTokens = Math.max(requestedTokens * 2, RETRY_MAX_OUTPUT_TOKENS)
+      response = await runRequest(retryTokens)
+      payload = await response.json().catch(() => ({}))
+    }
+
     if (!response.ok) {
       const message = payload.error?.message || 'OpenAI briefing request failed.'
+      await recordAiUsage({ collectionId: input.collectionId, userId: input.userId, feature: 'AI_COLLECTION_BRIEFING', model, success: false, error: message })
+      return fallbackBriefing(input.source, 'FAILED')
+    }
+    if (isIncompleteResponse(payload)) {
+      const message = 'OpenAI briefing response was truncated before completion.'
       await recordAiUsage({ collectionId: input.collectionId, userId: input.userId, feature: 'AI_COLLECTION_BRIEFING', model, success: false, error: message })
       return fallbackBriefing(input.source, 'FAILED')
     }
@@ -125,7 +157,7 @@ export async function generateBriefing(prisma: PrismaClient, input: {
     return {
       status: 'READY' as const,
       title: "Today's Collection Briefing",
-      summaryMarkdown: markdown.slice(0, 8000),
+      summaryMarkdown: markdown,
       model,
     }
   } catch (error) {
