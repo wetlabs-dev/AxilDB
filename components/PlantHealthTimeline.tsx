@@ -10,32 +10,26 @@ import { useState } from 'react'
 const colorStyles = {
   green: {
     dot: 'border-[#5f8f5f] bg-[#dcebd0] text-[#245737]',
-    rail: 'bg-[#6f9b63]',
     accent: 'border-l-[#6f9b63]',
   },
   sage: {
     dot: 'border-[#7a9d96] bg-[#e2eeea] text-[#315c56]',
-    rail: 'bg-[#7a9d96]',
     accent: 'border-l-[#7a9d96]',
   },
   amber: {
     dot: 'border-[#b79b45] bg-[#fff2c2] text-[#6f541f]',
-    rail: 'bg-[#b79b45]',
     accent: 'border-l-[#b79b45]',
   },
   rust: {
     dot: 'border-[#b56b56] bg-[#ffe4dc] text-[#8a3b2f]',
-    rail: 'bg-[#b56b56]',
     accent: 'border-l-[#b56b56]',
   },
   mauve: {
     dot: 'border-[#9675b0] bg-[#eadcf4] text-[#63477a]',
-    rail: 'bg-[#9675b0]',
     accent: 'border-l-[#9675b0]',
   },
   gray: {
     dot: 'border-[#a6a095] bg-[#efebe2] text-[#575247]',
-    rail: 'bg-[#a6a095]',
     accent: 'border-l-[#a6a095]',
   },
 } as const
@@ -171,9 +165,9 @@ export function PlantHealthTimeline({
 
       <div className="mt-5 overflow-x-auto pb-2">
         <div className="relative z-20 min-h-[18rem] min-w-[44rem] py-8">
-          <div className="absolute left-4 right-4 top-1/2 h-1 rounded-full bg-[var(--ax-border)]" />
+          <div className="absolute left-4 right-4 top-24 h-1 rounded-full bg-[var(--ax-border)]" />
           {firstDate && lastDate && (
-            <div className="absolute left-4 right-4 top-[calc(50%+1rem)] flex justify-between text-xs font-medium text-[var(--ax-muted)]">
+            <div className="absolute left-4 right-4 top-28 flex justify-between text-xs font-medium text-[var(--ax-muted)]">
               <span>{fmtDate(firstDate, timezone)}</span>
               <span>{fmtDate(lastDate, timezone)}</span>
             </div>
@@ -183,16 +177,15 @@ export function PlantHealthTimeline({
               No timeline events yet.
             </p>
           )}
-          {shownEvents.map((event, index) => {
+          {shownEvents.map((event) => {
             const styles = colorStyles[event.colorVariant]
             const position = firstDate ? eventPosition(event, firstDate, span) : 50
-            const above = index % 2 === 0
             const isOpen = openEventId === event.id
             return (
               <div
                 key={event.id}
                 className={cn('absolute h-10 w-10', isOpen ? 'z-[90]' : 'z-30')}
-                style={{ left: `${position}%`, top: above ? '0.75rem' : '5rem', transform: 'translateX(-50%)' }}
+                style={{ left: `${position}%`, top: '6rem', transform: 'translate(-50%, -50%)' }}
               >
                 <button
                   type="button"
@@ -220,11 +213,6 @@ export function PlantHealthTimeline({
                     <EventDetails event={event} timezone={timezone} />
                   </div>
                 )}
-                <span
-                  className={cn('absolute left-1/2 h-8 w-0.5 -translate-x-1/2', styles.rail)}
-                  style={{ top: above ? '2.5rem' : '-1.8rem' }}
-                  aria-hidden="true"
-                />
               </div>
             )
           })}
