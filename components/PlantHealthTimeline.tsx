@@ -137,7 +137,7 @@ export function PlantHealthTimeline({
   const shownEvents = sorted.slice(-28)
 
   return (
-    <Card>
+    <Card className="overflow-visible">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="font-serif text-2xl font-semibold">Plant Health Timeline</h3>
@@ -159,8 +159,8 @@ export function PlantHealthTimeline({
         ))}
       </div>
 
-      <div className="mt-5 overflow-x-auto pb-2">
-        <div className="relative min-w-[44rem] py-12">
+      <div className="mt-5 overflow-x-auto overflow-y-visible pb-2">
+        <div className="relative z-20 min-w-[44rem] py-12">
           <div className="absolute left-4 right-4 top-1/2 h-1 rounded-full bg-[var(--ax-border)]" />
           {firstDate && lastDate && (
             <div className="absolute left-4 right-4 top-[calc(50%+1rem)] flex justify-between text-xs font-medium text-[var(--ax-muted)]">
@@ -180,7 +180,7 @@ export function PlantHealthTimeline({
             return (
               <details
                 key={event.id}
-                className="group absolute z-10"
+                className="group absolute z-30 open:z-[90]"
                 style={{ left: `${position}%`, top: above ? '0.25rem' : '3.6rem', transform: 'translateX(-50%)' }}
               >
                 <summary
@@ -195,7 +195,7 @@ export function PlantHealthTimeline({
                 </summary>
                 <div
                   className={cn(
-                    'absolute left-1/2 z-20 mt-2 w-72 -translate-x-1/2 rounded-lg border p-3',
+                    'absolute left-1/2 z-[100] mt-2 w-72 -translate-x-1/2 rounded-lg border p-3',
                     above ? '' : '-translate-y-[calc(100%+3.3rem)]',
                     eventPanelClass,
                     styles.accent,
