@@ -1,8 +1,11 @@
+'use client'
+
 import { PlantImage } from '@/components/PlantImage'
 import { Card } from '@/components/ui'
 import type { PlantTimelineEvent, PlantTimelineMetrics } from '@/lib/timeline/plantTimeline'
 import { cn, fmtDate } from '@/lib/utils'
 import Link from 'next/link'
+import { useState } from 'react'
 
 const colorStyles = {
   green: {
@@ -64,6 +67,12 @@ function groupedEvents(events: PlantTimelineEvent[], timezone?: string | null) {
     else groups.push({ label, events: [event] })
     return groups
   }, [])
+}
+
+function panelAlignClass(position: number) {
+  if (position < 18) return 'left-0'
+  if (position > 82) return 'right-0'
+  return 'left-1/2 -translate-x-1/2'
 }
 
 function insightItems(metrics: PlantTimelineMetrics) {
@@ -135,6 +144,7 @@ export function PlantHealthTimeline({
   const span = firstDate && lastDate ? Math.max(0, lastDate.getTime() - firstDate.getTime()) : 0
   const groups = groupedEvents(sorted, timezone)
   const shownEvents = sorted.slice(-28)
+  const [openEventId, setOpenEventId] = useState<string | null>(null)
 
   return (
     <Card className="overflow-visible">
@@ -159,8 +169,8 @@ export function PlantHealthTimeline({
         ))}
       </div>
 
-      <div className="mt-5 overflow-x-auto overflow-y-visible pb-2">
-        <div className="relative z-20 min-w-[44rem] py-12">
+      <div className="mt-5 overflow-x-auto pb-2">
+        <div className="relative z-20 min-h-[18rem] min-w-[44rem] py-8">
           <div className="absolute left-4 right-4 top-1/2 h-1 rounded-full bg-[var(--ax-border)]" />
           {firstDate && lastDate && (
             <div className="absolute left-4 right-4 top-[calc(50%+1rem)] flex justify-between text-xs font-medium text-[var(--ax-muted)]">
@@ -177,38 +187,45 @@ export function PlantHealthTimeline({
             const styles = colorStyles[event.colorVariant]
             const position = firstDate ? eventPosition(event, firstDate, span) : 50
             const above = index % 2 === 0
+            const isOpen = openEventId === event.id
             return (
-              <details
+              <div
                 key={event.id}
-                className="group absolute z-30 open:z-[90]"
-                style={{ left: `${position}%`, top: above ? '0.25rem' : '3.6rem', transform: 'translateX(-50%)' }}
+                className={cn('absolute h-10 w-10', isOpen ? 'z-[90]' : 'z-30')}
+                style={{ left: `${position}%`, top: above ? '0.75rem' : '5rem', transform: 'translateX(-50%)' }}
               >
-                <summary
+                <button
+                  type="button"
+                  aria-expanded={isOpen}
+                  onClick={() => setOpenEventId((current) => current === event.id ? null : event.id)}
                   className={cn(
-                    'flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-full border-2 text-lg shadow-sm transition hover:-translate-y-0.5 hover:shadow-md group-open:ring-2 group-open:ring-[var(--ax-focus)] [&::-webkit-details-marker]:hidden',
+                    'flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-full border-2 text-lg shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[var(--ax-focus)]',
+                    isOpen && 'ring-2 ring-[var(--ax-focus)]',
                     styles.dot,
                   )}
                   title={`${event.title} · ${fmtDate(event.date, timezone)}`}
                 >
                   <span aria-hidden="true">{event.icon}</span>
                   <span className="sr-only">{event.title}</span>
-                </summary>
-                <div
-                  className={cn(
-                    'absolute left-1/2 z-[100] mt-2 w-72 -translate-x-1/2 rounded-lg border p-3',
-                    above ? '' : '-translate-y-[calc(100%+3.3rem)]',
-                    eventPanelClass,
-                    styles.accent,
-                  )}
-                >
-                  <EventDetails event={event} timezone={timezone} />
-                </div>
+                </button>
+                {isOpen && (
+                  <div
+                    className={cn(
+                      'absolute top-12 z-[100] w-72 rounded-lg border p-3',
+                      panelAlignClass(position),
+                      eventPanelClass,
+                      styles.accent,
+                    )}
+                  >
+                    <EventDetails event={event} timezone={timezone} />
+                  </div>
+                )}
                 <span
                   className={cn('absolute left-1/2 h-8 w-0.5 -translate-x-1/2', styles.rail)}
                   style={{ top: above ? '2.5rem' : '-1.8rem' }}
                   aria-hidden="true"
                 />
-              </details>
+              </div>
             )
           })}
         </div>
