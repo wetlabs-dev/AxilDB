@@ -274,7 +274,13 @@ export function SidebarClient({
 
   const collectionSwitcher = (
     <details className="mb-5 rounded-lg border border-stone-200 bg-white/45 p-2 text-sm">
-      <summary className="cursor-pointer list-none font-medium text-stone-800">{currentName}</summary>
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-md px-2 py-1 text-stone-800 transition hover:bg-[#d6dfc9]/50">
+        <span className="min-w-0">
+          <span className="block font-medium">Collections</span>
+          <span className="block truncate text-xs text-stone-600">Active: {currentName}</span>
+        </span>
+        <ChevronDown className="h-4 w-4 shrink-0 text-stone-500" />
+      </summary>
       <div className="mt-2 grid gap-1">
         {collections.map((collection) => (
           <a
