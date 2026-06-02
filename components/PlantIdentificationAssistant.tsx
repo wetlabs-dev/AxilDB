@@ -38,6 +38,12 @@ function referenceField(url: string) {
   return null
 }
 
+function capitalizeGenus(value?: string | null) {
+  const text = String(value || '').trim()
+  if (!text) return null
+  return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase()
+}
+
 function aliasesFromSuggestion(suggestion: PlantIdSuggestion) {
   return (suggestion.suggestedAliases || [])
     .map((name) => String(name || '').trim())
@@ -127,7 +133,7 @@ export function PlantIdentificationAssistant({
   async function applySuggestion() {
     const form = rootRef.current?.closest('form')
     if (!form || !suggestion) return
-    setControlValue(form, 'genus', suggestion.genus)
+    setControlValue(form, 'genus', capitalizeGenus(suggestion.genus))
     setControlValue(form, 'species', suggestion.species?.toLowerCase())
     setControlValue(form, 'hybridNotation', suggestion.hybridNotation)
     setControlValue(form, 'cultivarName', suggestion.cultivarName)
