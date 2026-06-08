@@ -65,14 +65,14 @@ export function HelpTooltip({ children }: { children: string }) {
         aria-label="Field help"
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
-        className="inline-flex h-4 w-4 cursor-pointer items-center justify-center rounded-full border border-[#8fa58f]/50 bg-white/70 text-[0.65rem] font-bold leading-none text-[#2f6b45] shadow-sm transition hover:bg-[#d6dfc9]/70 focus:outline-none focus:ring-2 focus:ring-[#8fa58f]/30"
+        className="inline-flex h-4 w-4 cursor-pointer items-center justify-center rounded-full border border-[color:var(--ax-border-strong)] bg-[var(--ax-primary-wash)] text-[0.65rem] font-bold leading-none text-[var(--ax-primary)] shadow-sm transition hover:border-[color:var(--ax-primary)] hover:bg-[var(--ax-primary-soft)] focus:outline-none focus:ring-2 focus:ring-[var(--ax-focus)]"
       >
         ?
       </button>
       {open && (
         <span
           ref={tooltipRef}
-          className="help-tooltip fixed z-50 rounded-lg border border-[#8fa58f]/50 bg-[#edf3e6] p-3 text-xs font-normal leading-5 text-[#233429] shadow-[0_14px_38px_rgba(47,38,24,0.22)]"
+          className="help-tooltip fixed z-50 rounded-lg border border-[color:var(--ax-border-strong)] bg-[var(--ax-surface-solid)] p-3 text-xs font-normal leading-5 text-[var(--ax-text)] shadow-[0_14px_38px_var(--ax-shadow)]"
           style={{ left: position.left, top: position.top, width: position.width }}
         >
           {children}
