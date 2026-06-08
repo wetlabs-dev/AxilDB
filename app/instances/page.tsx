@@ -31,7 +31,10 @@ export default async function Instances() {
       include: { plantDefinition: true },
       orderBy: { plantId: 'asc' },
     }),
-    prisma.plantDefinition.findMany({ where: collectionWhere, orderBy: { genus: 'asc' } }),
+    prisma.plantDefinition.findMany({
+      where: { OR: [collectionWhere, { collectionId: null, isValidated: true }] },
+      orderBy: [{ isValidated: 'desc' }, { genus: 'asc' }, { species: 'asc' }, { cultivarName: 'asc' }],
+    }),
     prisma.plantInstance.findMany({
       where: collectionWhere,
       select: { location: true, source: true, distributor: true, stockNumber: true },
@@ -85,7 +88,7 @@ export default async function Instances() {
               <select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="plantDefinitionId" required>
                 {defs.map((definition) => (
                   <option key={definition.id} value={definition.id}>
-                    {plantName(definition)}
+                    {definition.isValidated ? 'Validated: ' : ''}{plantName(definition)}
                   </option>
                 ))}
               </select>
@@ -126,7 +129,9 @@ export default async function Instances() {
               </div>
               <div className="min-h-0 overflow-hidden p-3">
                 <p className="line-clamp-2 text-sm font-bold underline">{instance.plantId}</p>
-                <p className="line-clamp-2 text-sm text-stone-700">{plantName(instance.plantDefinition)}</p>
+                <p className="line-clamp-2 text-sm text-stone-700">
+                  {instance.plantDefinition.isValidated ? 'Validated: ' : ''}{plantName(instance.plantDefinition)}
+                </p>
                 <p className="truncate text-sm text-stone-600">{instance.instanceType} · {instance.location || 'No location'}</p>
               </div>
             </Link>

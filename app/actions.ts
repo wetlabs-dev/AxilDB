@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { unlink } from 'fs/promises'
 import path from 'path'
 import { prisma } from '@/lib/prisma'
-import { audit, requireUser } from '@/lib/auth'
+import { audit, requireServerAdmin, requireUser } from '@/lib/auth'
 import {
   collectionPath,
   getCurrentCollectionSlug,
@@ -32,6 +32,7 @@ import { nextOccurrence } from '@/lib/reminders'
 import { addCalendarDays, formatDate, parseDateLocal, parseDateTimeLocal, timeZoneForPreference } from '@/lib/time'
 import { plantName } from '@/lib/utils'
 import { husbandryFieldNames, husbandryFormValues } from '@/lib/husbandry'
+import { definitionData, findMatchingValidatedDefinition, globalGoverningBodyId, husbandryData } from '@/lib/validated-definitions'
 
 const val = (fd: FormData, k: string) =>
   String(fd.get(k) || '').trim() || undefined
@@ -94,6 +95,18 @@ function aliasRows(fd: FormData) {
       notes: notes[index] || undefined,
     }))
     .filter((alias) => alias.name)
+}
+
+function validationReviewAction(fd: FormData) {
+  const action = val(fd, 'reviewAction') || 'REJECT'
+  if (['APPROVE', 'REJECT', 'REQUEST_REVISIONS'].includes(action)) return action
+  return 'REJECT'
+}
+
+function disputeReviewStatus(fd: FormData) {
+  const status = val(fd, 'status') || 'RESOLVED'
+  if (['RESOLVED', 'REJECTED'].includes(status)) return status
+  return 'RESOLVED'
 }
 
 async function cleanupGenericEntity(collectionId: string, entityType: string, entityId: string) {
@@ -385,6 +398,258 @@ export async function copyPlantDefinition(fd: FormData) {
   redirect(collectionPath(collection.slug, `/plants/${definition.id}/edit`))
 }
 
+export async function nominatePlantDefinitionForValidation(fd: FormData) {
+  const { user, collection } = await requireCollectionManager(await collectionSlug(fd))
+  const id = val(fd, 'id')!
+  const notes = clearableVal(fd, 'notes')
+  const definition = await prisma.plantDefinition.findFirstOrThrow({
+    where: { id, collectionId: collection.id },
+    include: { validationCandidates: { where: { status: 'PENDING' }, take: 1 } },
+  })
+  if (definition.isValidated || definition.validatedPlantDefinitionId) throw new Error('This definition is already connected to a validated definition.')
+  if (definition.validationCandidates.length) throw new Error('This definition already has a pending validation nomination.')
+
+  const match = await findMatchingValidatedDefinition(prisma, definition)
+  if (match) throw new Error(`A matching validated definition already exists: ${plantName(match)}.`)
+
+  const candidate = await prisma.plantDefinitionValidationCandidate.create({
+    data: {
+      collectionId: collection.id,
+      plantDefinitionId: definition.id,
+      nominatedByUserId: user.id,
+      notes,
+    },
+  })
+  await audit(user, 'NOMINATE', 'PLANT_DEFINITION_VALIDATION_CANDIDATE', candidate.id, `Nominated ${plantName(definition)} for validation`, { plantDefinitionId: id }, collection.id)
+  redirect(collectionPath(collection.slug, `/plants/${id}/edit#validation`))
+}
+
+export async function reviewPlantDefinitionValidationCandidate(fd: FormData) {
+  const user = await requireServerAdmin()
+  const candidateId = val(fd, 'candidateId')!
+  const action = validationReviewAction(fd)
+  const reviewNotes = clearableVal(fd, 'reviewNotes')
+
+  const result = await prisma.$transaction(async (tx) => {
+    const candidate = await tx.plantDefinitionValidationCandidate.findUniqueOrThrow({
+      where: { id: candidateId },
+      include: {
+        collection: true,
+        plantDefinition: {
+          include: {
+            aliases: true,
+            husbandryGuide: true,
+            governingBody: true,
+          },
+        },
+      },
+    })
+    if (candidate.status !== 'PENDING') throw new Error('This validation nomination has already been reviewed.')
+    const source = candidate.plantDefinition
+    if (!source) throw new Error('The nominated plant definition no longer exists.')
+    if (source.isValidated) throw new Error('This nomination source is already validated.')
+
+    if (action !== 'APPROVE') {
+      const status = action === 'REQUEST_REVISIONS' ? 'REVISION_REQUESTED' : 'REJECTED'
+      const updated = await tx.plantDefinitionValidationCandidate.update({
+        where: { id: candidate.id },
+        data: { status, reviewedByUserId: user.id, reviewedAt: new Date(), reviewNotes },
+      })
+      return { candidate: updated, source, validated: null as any, collection: candidate.collection, status }
+    }
+
+    const existing = await findMatchingValidatedDefinition(tx, source)
+    if (existing) throw new Error(`A matching validated definition already exists: ${plantName(existing)}.`)
+
+    const governingBodyId = await globalGoverningBodyId(tx, source.governingBodyId)
+    const validated = await tx.plantDefinition.create({
+      data: definitionData(source, {
+        collectionId: null,
+        governingBodyId,
+        isValidated: true,
+        validatedAt: new Date(),
+        validatedByUserId: user.id,
+        validatedSourceCollectionId: candidate.collectionId,
+        validatedSourceDefinitionId: source.id,
+        validationNotes: reviewNotes,
+        aliases: {
+          create: source.aliases.map((alias) => ({
+            collectionId: null,
+            name: alias.name,
+            aliasType: alias.aliasType,
+            source: alias.source,
+            confidence: alias.confidence,
+            notes: alias.notes,
+          })),
+        },
+      }),
+    })
+
+    if (source.husbandryGuide) {
+      await tx.plantHusbandryGuide.create({
+        data: husbandryData(source.husbandryGuide, {
+          collectionId: null,
+          plantDefinitionId: validated.id,
+          sourcePlantDefinitionId: null,
+        }) as any,
+      })
+    }
+
+    const sourcePhotos = await tx.photo.findMany({ where: { collectionId: candidate.collectionId, entityType: 'PLANT_DEFINITION', entityId: source.id } })
+    for (const photo of sourcePhotos) {
+      await tx.photo.create({
+        data: {
+          collectionId: null,
+          entityType: 'PLANT_DEFINITION',
+          entityId: validated.id,
+          filename: photo.filename,
+          path: photo.path,
+          caption: photo.caption,
+          source: photo.source,
+          sourceUrl: photo.sourceUrl,
+          cropX: photo.cropX,
+          cropY: photo.cropY,
+          cropWidth: photo.cropWidth,
+          cropHeight: photo.cropHeight,
+          focalX: photo.focalX,
+          focalY: photo.focalY,
+          isCover: photo.isCover,
+          isType: photo.isType,
+        },
+      })
+    }
+
+    await tx.plantInstance.updateMany({ where: { collectionId: candidate.collectionId, plantDefinitionId: source.id }, data: { plantDefinitionId: validated.id } })
+    await tx.photo.updateMany({ where: { collectionId: candidate.collectionId, entityType: 'PLANT_DEFINITION', entityId: source.id }, data: { entityId: validated.id } })
+    await tx.note.updateMany({ where: { collectionId: candidate.collectionId, entityType: 'PLANT_DEFINITION', entityId: source.id }, data: { entityId: validated.id } })
+    await tx.reminder.updateMany({ where: { collectionId: candidate.collectionId, entityType: 'PLANT_DEFINITION', entityId: source.id }, data: { entityId: validated.id } })
+    await tx.follow.updateMany({ where: { collectionId: candidate.collectionId, scope: 'TYPE', entityType: 'PLANT_DEFINITION', entityId: source.id }, data: { entityId: validated.id, label: plantName(validated) } })
+    await tx.plantHusbandryGuide.updateMany({ where: { collectionId: candidate.collectionId, sourcePlantDefinitionId: source.id }, data: { sourcePlantDefinitionId: validated.id } })
+
+    await tx.plantDefinitionValidationCandidate.update({
+      where: { id: candidate.id },
+      data: { status: 'APPROVED', reviewedByUserId: user.id, reviewedAt: new Date(), reviewNotes, approvedPlantDefinitionId: validated.id },
+    })
+    await tx.plantDefinition.delete({ where: { id: source.id } })
+    return { candidate, source, validated, collection: candidate.collection, status: 'APPROVED' }
+  })
+
+  await audit(user, result.status, 'PLANT_DEFINITION_VALIDATION_CANDIDATE', candidateId, `${result.status.toLowerCase().replace('_', ' ')} validation nomination for ${plantName(result.source)}`, {
+    sourcePlantDefinitionId: result.source.id,
+    validatedPlantDefinitionId: result.validated?.id,
+  }, result.collection.id)
+  redirect('/server/validated-definitions')
+}
+
+export async function disputeValidatedPlantDefinition(fd: FormData) {
+  const { user, collection } = await requireCollectionManager(await collectionSlug(fd))
+  const id = val(fd, 'id')!
+  const reason = val(fd, 'reason')!
+  const notes = clearableVal(fd, 'notes')
+  const definition = await prisma.plantDefinition.findFirstOrThrow({ where: { id, isValidated: true, collectionId: null } })
+  const dispute = await prisma.plantDefinitionDispute.create({
+    data: {
+      collectionId: collection.id,
+      validatedPlantDefinitionId: definition.id,
+      submittedByUserId: user.id,
+      reason,
+      notes,
+    },
+  })
+  await audit(user, 'DISPUTE', 'PLANT_DEFINITION_DISPUTE', dispute.id, `Disputed validated definition ${plantName(definition)}`, { reason, validatedPlantDefinitionId: id }, collection.id)
+  redirect(collectionPath(collection.slug, `/plants/${id}/edit#validation`))
+}
+
+export async function reviewPlantDefinitionDispute(fd: FormData) {
+  const user = await requireServerAdmin()
+  const id = val(fd, 'disputeId')!
+  const status = disputeReviewStatus(fd)
+  const resolutionNotes = clearableVal(fd, 'resolutionNotes')
+  const dispute = await prisma.plantDefinitionDispute.update({
+    where: { id },
+    data: { status, reviewedByUserId: user.id, reviewedAt: new Date(), resolutionNotes },
+    include: { validatedPlantDefinition: true, collection: true },
+  })
+  await audit(user, status, 'PLANT_DEFINITION_DISPUTE', dispute.id, `${status.toLowerCase()} dispute for ${plantName(dispute.validatedPlantDefinition)}`, {
+    validatedPlantDefinitionId: dispute.validatedPlantDefinitionId,
+    reason: dispute.reason,
+  }, dispute.collectionId)
+  redirect('/server/validated-definitions')
+}
+
+export async function createLocalCopyFromValidatedDefinition(fd: FormData) {
+  const { user, collection } = await requireCollectionManager(await collectionSlug(fd))
+  const id = val(fd, 'id')!
+  const selected = fd.getAll('plantInstanceId').map((value) => String(value || '').trim()).filter(Boolean)
+  const validated = await prisma.plantDefinition.findFirstOrThrow({
+    where: { id, isValidated: true, collectionId: null },
+    include: { aliases: true, husbandryGuide: true },
+  })
+
+  const local = await prisma.$transaction(async (tx) => {
+    const definition = await tx.plantDefinition.create({
+      data: definitionData(validated, {
+        collectionId: collection.id,
+        isValidated: false,
+        validatedPlantDefinitionId: null,
+        validationNotes: null,
+        aliases: {
+          create: validated.aliases.map((alias) => ({
+            collectionId: collection.id,
+            name: alias.name,
+            aliasType: alias.aliasType,
+            source: alias.source,
+            confidence: alias.confidence,
+            notes: alias.notes,
+          })),
+        },
+      }),
+    })
+    if (validated.husbandryGuide) {
+      await tx.plantHusbandryGuide.create({
+        data: husbandryData(validated.husbandryGuide, {
+          collectionId: collection.id,
+          plantDefinitionId: definition.id,
+          sourcePlantDefinitionId: null,
+        }) as any,
+      })
+    }
+    const photos = await tx.photo.findMany({ where: { collectionId: null, entityType: 'PLANT_DEFINITION', entityId: validated.id } })
+    for (const photo of photos) {
+      await tx.photo.create({
+        data: {
+          collectionId: collection.id,
+          entityType: 'PLANT_DEFINITION',
+          entityId: definition.id,
+          filename: photo.filename,
+          path: photo.path,
+          caption: photo.caption,
+          source: photo.source,
+          sourceUrl: photo.sourceUrl,
+          cropX: photo.cropX,
+          cropY: photo.cropY,
+          cropWidth: photo.cropWidth,
+          cropHeight: photo.cropHeight,
+          focalX: photo.focalX,
+          focalY: photo.focalY,
+          isCover: photo.isCover,
+          isType: photo.isType,
+        },
+      })
+    }
+    if (selected.length) {
+      await tx.plantInstance.updateMany({ where: { collectionId: collection.id, plantDefinitionId: validated.id, id: { in: selected } }, data: { plantDefinitionId: definition.id } })
+    }
+    return definition
+  })
+
+  await audit(user, 'DETACH', 'PLANT_DEFINITION', local.id, `Created local copy of validated definition ${plantName(validated)}`, {
+    validatedPlantDefinitionId: validated.id,
+    movedPlantInstanceIds: selected,
+  }, collection.id)
+  redirect(collectionPath(collection.slug, `/plants/${local.id}/edit#validation`))
+}
+
 export async function updatePlantDefinition(fd: FormData) {
   const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const id = val(fd, 'id')!
@@ -662,7 +927,13 @@ export async function deletePlantHusbandryGuide(fd: FormData) {
 export async function createPlantInstance(fd: FormData) {
   const { user, collection } = await requireCollectionLogger(await collectionSlug(fd))
   const plantDefinitionId = val(fd, 'plantDefinitionId')!
-  await prisma.plantDefinition.findFirstOrThrow({ where: { id: plantDefinitionId, collectionId: collection.id }, select: { id: true } })
+  const definition = await prisma.plantDefinition.findFirstOrThrow({
+    where: {
+      id: plantDefinitionId,
+      OR: [{ collectionId: collection.id }, { collectionId: null, isValidated: true }],
+    },
+    select: { id: true, genus: true, species: true, cultivarName: true },
+  })
   const instanceType = val(fd, 'instanceType')!
   const acquisitionDate = date(val(fd, 'acquisitionDate'))
   const propagationDate = date(val(fd, 'propagationDate'))
@@ -701,7 +972,7 @@ export async function createPlantInstance(fd: FormData) {
     actorUserId: user.id,
     eventType: 'NEW_PLANT',
     subject: `New ${instance.instanceType.toLowerCase()} plant: ${instance.plantId}`,
-    body: `${instance.plantId} was added to ${plantName(await prisma.plantDefinition.findFirstOrThrow({ where: { id: plantDefinitionId, collectionId: collection.id } }))}.`,
+    body: `${instance.plantId} was added to ${plantName(definition)}.`,
     collectionId: collection.id,
     recordPath: collectionPath(collection.slug, `/instances/${instance.id}`),
     plantInstanceIds: [instance.id],
@@ -715,11 +986,19 @@ export async function updatePlantInstance(fd: FormData) {
   const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const id = val(fd, 'id')!
   await prisma.plantInstance.findFirstOrThrow({ where: { id, collectionId: collection.id }, select: { id: true } })
+  const plantDefinitionId = val(fd, 'plantDefinitionId')!
+  await prisma.plantDefinition.findFirstOrThrow({
+    where: {
+      id: plantDefinitionId,
+      OR: [{ collectionId: collection.id }, { collectionId: null, isValidated: true }],
+    },
+    select: { id: true },
+  })
 
   const instance = await prisma.plantInstance.update({
     where: { id },
     data: {
-      plantDefinitionId: val(fd, 'plantDefinitionId')!,
+      plantDefinitionId,
       instanceType: val(fd, 'instanceType')!,
       status: val(fd, 'status') || 'ACTIVE',
       location: clearableVal(fd, 'location'),

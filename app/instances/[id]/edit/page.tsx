@@ -13,7 +13,10 @@ export default async function EditInstance({ params }: { params: Promise<{ id: s
   const { id } = await params
   const [instance, definitions, instanceSuggestionRows] = await Promise.all([
     prisma.plantInstance.findFirstOrThrow({ where: { id, collectionId: collection.id } }),
-    prisma.plantDefinition.findMany({ where: { collectionId: collection.id }, orderBy: { genus: 'asc' } }),
+    prisma.plantDefinition.findMany({
+      where: { OR: [{ collectionId: collection.id }, { collectionId: null, isValidated: true }] },
+      orderBy: [{ isValidated: 'desc' }, { genus: 'asc' }, { species: 'asc' }, { cultivarName: 'asc' }],
+    }),
     prisma.plantInstance.findMany({
       where: { collectionId: collection.id },
       select: { location: true, source: true, distributor: true, stockNumber: true },
@@ -40,7 +43,7 @@ export default async function EditInstance({ params }: { params: Promise<{ id: s
             <select className={selectClass} name="plantDefinitionId" defaultValue={instance.plantDefinitionId}>
               {definitions.map((definition) => (
                 <option key={definition.id} value={definition.id}>
-                  {plantName(definition)}
+                  {definition.isValidated ? 'Validated: ' : ''}{plantName(definition)}
                 </option>
               ))}
             </select>

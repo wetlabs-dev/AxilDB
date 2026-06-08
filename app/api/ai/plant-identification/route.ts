@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { audit } from '@/lib/auth'
 import { recordAiUsage, requireAiFeatureAccess, tokenUsage } from '@/lib/ai-usage'
+import { prisma } from '@/lib/prisma'
+import { findMatchingValidatedDefinition } from '@/lib/validated-definitions'
 
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses'
 const DEFAULT_MODEL = 'gpt-5.4-mini'
@@ -190,7 +192,19 @@ export async function POST(req: Request) {
       genus: suggestion.genus,
       species: suggestion.species,
     }, collection.id)
-    return NextResponse.json({ suggestion })
+    const validatedMatch = await findMatchingValidatedDefinition(prisma, suggestion)
+    return NextResponse.json({
+      suggestion,
+      validatedMatch: validatedMatch
+        ? {
+            id: validatedMatch.id,
+            genus: validatedMatch.genus,
+            species: validatedMatch.species,
+            hybridNotation: validatedMatch.hybridNotation,
+            cultivarName: validatedMatch.cultivarName,
+          }
+        : null,
+    })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'OpenAI plant identification request failed.'
     await recordAiUsage({ collectionId: collection.id, userId: user.id, feature: 'AI_PLANT_IDENTIFICATION', model, success: false, error: message })

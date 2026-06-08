@@ -125,6 +125,7 @@ export default async function ServerDashboard({
           <p className="mt-1 text-sm text-stone-600">Global AxilDB administration, collection lifecycle, health, and backup status.</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <LinkButton href="/server/validated-definitions">Validated Definitions</LinkButton>
           <LinkButton href="/server/collections">Collections</LinkButton>
           <LinkButton href="/server/users">Users</LinkButton>
         </div>

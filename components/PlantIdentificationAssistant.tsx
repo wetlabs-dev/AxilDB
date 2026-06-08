@@ -20,6 +20,14 @@ type PlantIdSuggestion = {
   suggestedReferences?: string[]
 }
 
+type ValidatedMatch = {
+  id: string
+  genus: string
+  species: string
+  hybridNotation?: string | null
+  cultivarName?: string | null
+}
+
 function setControlValue(form: HTMLFormElement, name: string, value?: string | null) {
   if (value === undefined || value === null) return
   const field = form.elements.namedItem(name) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null
@@ -42,6 +50,10 @@ function capitalizeGenus(value?: string | null) {
   const text = String(value || '').trim()
   if (!text) return null
   return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase()
+}
+
+function displayName(definition: ValidatedMatch) {
+  return `${definition.genus} ${definition.hybridNotation ? `${definition.hybridNotation} ` : ''}${definition.species}${definition.cultivarName ? ` '${definition.cultivarName}'` : ''}`
 }
 
 function aliasesFromSuggestion(suggestion: PlantIdSuggestion) {
@@ -79,6 +91,7 @@ export function PlantIdentificationAssistant({
   const [loading, setLoading] = useState(false)
   const [status, setStatus] = useState('')
   const [suggestion, setSuggestion] = useState<PlantIdSuggestion | null>(null)
+  const [validatedMatch, setValidatedMatch] = useState<ValidatedMatch | null>(null)
   const [saveAsTypeImage, setSaveAsTypeImage] = useState(false)
 
   async function suggestId() {
@@ -101,11 +114,13 @@ export function PlantIdentificationAssistant({
     setLoading(true)
     setStatus('Asking AxilDB to suggest a likely ID...')
     setSuggestion(null)
+    setValidatedMatch(null)
     try {
       const response = await fetch('/api/ai/plant-identification', { method: 'POST', body })
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || 'Plant identification failed.')
       setSuggestion(result.suggestion)
+      setValidatedMatch(result.validatedMatch || null)
       setStatus('Suggestion ready. Review before applying.')
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Plant identification failed.')
@@ -247,6 +262,14 @@ export function PlantIdentificationAssistant({
 
           {suggestion && (
             <div className="mt-4 rounded-lg border border-[color:var(--ax-border)] bg-[var(--ax-surface-solid)] p-3">
+              {validatedMatch && (
+                <div className="mb-3 rounded-lg border border-[#b7caa9] bg-[#edf3e6] p-3 text-sm text-[#255537]">
+                  <p className="font-semibold">This plant already exists as a Validated Plant Definition.</p>
+                  <p className="mt-1">
+                    {displayName(validatedMatch)} is curated site-wide. Use the validated definition when creating a plant instance, or apply this draft only if you need an independent local definition.
+                  </p>
+                </div>
+              )}
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
                   <p className="font-semibold text-[var(--ax-heading)]">

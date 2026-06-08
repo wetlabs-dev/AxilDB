@@ -59,6 +59,11 @@ model User {
   reviewedPlantTransfers PlantTransferRequest[] @relation("PlantTransferReviewer")
   requestedDefinitionShares PlantDefinitionShareRequest[] @relation("DefinitionShareRequester")
   reviewedDefinitionShares PlantDefinitionShareRequest[] @relation("DefinitionShareReviewer")
+  validatedPlantDefinitions PlantDefinition[] @relation("PlantDefinitionValidatedBy")
+  submittedPlantDefinitionValidationCandidates PlantDefinitionValidationCandidate[] @relation("PlantDefinitionValidationCandidateSubmitter")
+  reviewedPlantDefinitionValidationCandidates PlantDefinitionValidationCandidate[] @relation("PlantDefinitionValidationCandidateReviewer")
+  submittedPlantDefinitionDisputes PlantDefinitionDispute[] @relation("PlantDefinitionDisputeSubmitter")
+  reviewedPlantDefinitionDisputes PlantDefinitionDispute[] @relation("PlantDefinitionDisputeReviewer")
   careSheets          CareSheet[]
   completedCareSheetTasks CareSheetTask[] @relation("CareSheetTaskCompletedBy")
 
@@ -92,6 +97,9 @@ model Collection {
   follows             Follow[]
   followNotifications FollowNotification[]
   plantDefinitions    PlantDefinition[]
+  sourceValidatedPlantDefinitions PlantDefinition[] @relation("ValidatedPlantDefinitionSourceCollection")
+  plantDefinitionValidationCandidates PlantDefinitionValidationCandidate[]
+  plantDefinitionDisputes PlantDefinitionDispute[]
   plantAliases        PlantAlias[]
   plantInstances      PlantInstance[]
   propagationEvents   PropagationEvent[]
@@ -636,21 +644,95 @@ model PlantDefinition {
   gbifUrl                    String?
   description                String?
   notes                      String?
+  isValidated                Boolean  @default(false)
+  validatedAt                DateTime?
+  validatedByUserId          String?
+  validatedSourceCollectionId String?
+  validatedSourceDefinitionId String?
+  validatedPlantDefinitionId String?
+  validationNotes            String?
   createdAt                  DateTime @default(now())
   updatedAt                  DateTime @updatedAt
 
   collection    Collection?      @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   governingBody GoverningBody?  @relation(fields: [governingBodyId], references: [id], onDelete: SetNull)
+  validatedBy   User?           @relation("PlantDefinitionValidatedBy", fields: [validatedByUserId], references: [id], onDelete: SetNull)
+  validatedSourceCollection Collection? @relation("ValidatedPlantDefinitionSourceCollection", fields: [validatedSourceCollectionId], references: [id], onDelete: SetNull)
+  validatedPlantDefinition PlantDefinition? @relation("LocalValidatedDefinitionLink", fields: [validatedPlantDefinitionId], references: [id], onDelete: SetNull)
+  localLinkedDefinitions PlantDefinition[] @relation("LocalValidatedDefinitionLink")
   instances     PlantInstance[]
   aliases       PlantAlias[]
   husbandryGuide PlantHusbandryGuide?
   husbandrySourceFor PlantHusbandryGuide[] @relation("HusbandrySourceDefinition")
   outgoingDefinitionShareRequests PlantDefinitionShareRequest[] @relation("SourceDefinitionShareRequests")
   incomingDefinitionShareRequests PlantDefinitionShareRequest[] @relation("TargetDefinitionShareRequests")
+  validationCandidates PlantDefinitionValidationCandidate[] @relation("ValidationCandidateSourceDefinition")
+  approvedValidationCandidates PlantDefinitionValidationCandidate[] @relation("ValidationCandidateApprovedDefinition")
+  disputes PlantDefinitionDispute[] @relation("ValidatedDefinitionDisputes")
 
   @@index([collectionId])
   @@index([governingBodyId])
   @@index([confidence])
+  @@index([isValidated])
+  @@index([validatedByUserId])
+  @@index([validatedSourceCollectionId])
+  @@index([validatedSourceDefinitionId])
+  @@index([validatedPlantDefinitionId])
+}
+
+model PlantDefinitionValidationCandidate {
+  id                         String   @id @default(cuid())
+  collectionId               String
+  plantDefinitionId          String?
+  nominatedByUserId          String?
+  notes                      String?
+  status                     String   @default("PENDING")
+  reviewedByUserId           String?
+  reviewedAt                 DateTime?
+  reviewNotes                String?
+  approvedPlantDefinitionId  String?
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+
+  collection              Collection      @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  plantDefinition         PlantDefinition? @relation("ValidationCandidateSourceDefinition", fields: [plantDefinitionId], references: [id], onDelete: SetNull)
+  nominatedByUser         User?           @relation("PlantDefinitionValidationCandidateSubmitter", fields: [nominatedByUserId], references: [id], onDelete: SetNull)
+  reviewedByUser          User?           @relation("PlantDefinitionValidationCandidateReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  approvedPlantDefinition PlantDefinition? @relation("ValidationCandidateApprovedDefinition", fields: [approvedPlantDefinitionId], references: [id], onDelete: SetNull)
+
+  @@index([collectionId])
+  @@index([plantDefinitionId])
+  @@index([nominatedByUserId])
+  @@index([reviewedByUserId])
+  @@index([approvedPlantDefinitionId])
+  @@index([status])
+}
+
+model PlantDefinitionDispute {
+  id                         String   @id @default(cuid())
+  collectionId               String
+  validatedPlantDefinitionId String
+  submittedByUserId          String?
+  reason                     String
+  notes                      String?
+  status                     String   @default("PENDING")
+  reviewedByUserId           String?
+  reviewedAt                 DateTime?
+  resolutionNotes            String?
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+
+  collection               Collection      @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  validatedPlantDefinition PlantDefinition @relation("ValidatedDefinitionDisputes", fields: [validatedPlantDefinitionId], references: [id], onDelete: Cascade)
+  submittedByUser          User?           @relation("PlantDefinitionDisputeSubmitter", fields: [submittedByUserId], references: [id], onDelete: SetNull)
+  reviewedByUser           User?           @relation("PlantDefinitionDisputeReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([collectionId])
+  @@index([validatedPlantDefinitionId])
+  @@index([submittedByUserId])
+  @@index([reviewedByUserId])
+  @@index([reason])
+  @@index([status])
 }
 
 model PlantHusbandryGuide {

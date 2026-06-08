@@ -121,6 +121,7 @@ export default async function Plants() {
             back={collectionPath(collection.slug, '/plants')}
             disabled={!user}
           />
+          <LinkButton href={collectionPath(collection.slug, '/validated-definitions')}>Validated</LinkButton>
           <LinkButton href={collectionPath(collection.slug, '/search')}>Search</LinkButton>
         </div>
       </div>

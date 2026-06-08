@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import { deletePlantDefinition, deletePlantHusbandryGuide, forkPlantHusbandryGuide, linkPlantHusbandryGuide, mergePlantDefinition, savePlantHusbandryGuide, savePlantHusbandryGuideField, updatePhotoFraming, updatePlantDefinition } from '@/app/actions'
+import { deletePlantDefinition, deletePlantHusbandryGuide, forkPlantHusbandryGuide, linkPlantHusbandryGuide, mergePlantDefinition, nominatePlantDefinitionForValidation, savePlantHusbandryGuide, savePlantHusbandryGuideField, updatePhotoFraming, updatePlantDefinition } from '@/app/actions'
 import { Button, Card, Field, HelpTooltip, SuggestionDatalist, TextArea } from '@/components/ui'
 import { ConfidenceSelect, PlantAliasFields } from '@/components/PlantAliasFields'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
@@ -12,6 +12,7 @@ import { collectionPath, requireCollectionAdmin } from '@/lib/collections'
 import { HusbandryBadges, HusbandryGuideView } from '@/components/Husbandry'
 import { HusbandryMagicFillButton } from '@/components/HusbandryMagicFillButton'
 import { husbandryFieldNames } from '@/lib/husbandry'
+import { findMatchingValidatedDefinition } from '@/lib/validated-definitions'
 import { plantName } from '@/lib/utils'
 
 const selectClass = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
@@ -39,6 +40,7 @@ export default async function EditPlant({
       include: {
         aliases: { orderBy: { name: 'asc' } },
         husbandryGuide: true,
+        validationCandidates: { orderBy: { createdAt: 'desc' }, take: 5 },
         _count: { select: { instances: true } },
       },
     }),
@@ -90,6 +92,8 @@ export default async function EditPlant({
     aliasSource: rankedSuggestions(definitionSuggestionRows.flatMap((definition) => definition.aliases.map((alias) => alias.source))),
   }
   const governingBodyOptions = bodies.map((body) => ({ id: body.id, name: body.name, abbreviation: body.abbreviation }))
+  const matchingValidatedDefinition = plant.validatedPlantDefinitionId ? null : await findMatchingValidatedDefinition(prisma, plant)
+  const pendingValidationCandidate = plant.validationCandidates.find((candidate) => candidate.status === 'PENDING')
 
   return (
     <div className="space-y-6">
@@ -143,6 +147,41 @@ export default async function EditPlant({
           <TextArea label="Notes" name="notes" defaultValue={plant.notes} wrapperClassName="lg:col-span-2" />
           <PlantAliasFields aliases={plant.aliases} submitLabel="Save changes" sourceSuggestions={definitionSuggestions.aliasSource} />
         </form>
+      </Card>
+      <Card id="validation">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="font-serif text-2xl font-semibold">Validation</h3>
+            <p className="mt-1 text-sm text-stone-600">Nominate high-quality definitions for site-level validation so other collections can use the curated definition.</p>
+          </div>
+          {plant.validatedPlantDefinitionId && <span className="rounded-full bg-[#edf3e6] px-3 py-1 text-xs font-semibold text-[#2f6b45]">Linked to validated</span>}
+        </div>
+        {matchingValidatedDefinition ? (
+          <p className="mt-3 rounded-lg border border-[#d6dfc9] bg-[#f7f4e8]/80 p-3 text-sm text-stone-700">
+            A matching validated definition already exists: <strong>{plantName(matchingValidatedDefinition)}</strong>. Use the validated definition for new instances, or keep this local definition independent.
+          </p>
+        ) : pendingValidationCandidate ? (
+          <p className="mt-3 rounded-lg border border-[#dfcc87] bg-[#fff8dc] p-3 text-sm text-[#6f541f]">
+            Validation nomination pending review.
+          </p>
+        ) : (
+          <form action={nominatePlantDefinitionForValidation} className="mt-3 grid gap-2">
+            <input type="hidden" name="id" value={plant.id} />
+            <input type="hidden" name="collectionSlug" value={collection.slug} />
+            <TextArea label="Nomination notes" name="notes" help="Summarize why this definition is ready for site-level validation." />
+            <Button className="w-fit">Nominate for Validation</Button>
+          </form>
+        )}
+        {plant.validationCandidates.length > 0 && (
+          <div className="mt-4 grid gap-2 text-sm">
+            {plant.validationCandidates.map((candidate) => (
+              <div key={candidate.id} className="rounded-md border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] px-3 py-2">
+                <span className="font-semibold">{candidate.status.replace('_', ' ')}</span>
+                {candidate.reviewNotes ? ` · ${candidate.reviewNotes}` : ''}
+              </div>
+            ))}
+          </div>
+        )}
       </Card>
       <Card id="husbandry">
         <div className="flex flex-wrap items-start justify-between gap-3">

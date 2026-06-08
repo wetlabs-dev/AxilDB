@@ -133,9 +133,9 @@ export async function backfillDefaultCollection(collectionId?: string) {
 
   await prisma.$transaction([
     prisma.governingBody.updateMany({ where: { collectionId: null }, data: { collectionId: id } }),
-    prisma.plantDefinition.updateMany({ where: { collectionId: null }, data: { collectionId: id } }),
-    prisma.plantHusbandryGuide.updateMany({ where: { collectionId: null }, data: { collectionId: id } }),
-    prisma.plantAlias.updateMany({ where: { collectionId: null }, data: { collectionId: id } }),
+    prisma.plantDefinition.updateMany({ where: { collectionId: null, isValidated: false }, data: { collectionId: id } }),
+    prisma.plantHusbandryGuide.updateMany({ where: { collectionId: null, plantDefinition: { is: { isValidated: false } } }, data: { collectionId: id } }),
+    prisma.plantAlias.updateMany({ where: { collectionId: null, plantDefinition: { is: { isValidated: false } } }, data: { collectionId: id } }),
     prisma.plantInstance.updateMany({ where: { collectionId: null }, data: { collectionId: id } }),
     prisma.plantHusbandryOverride.updateMany({ where: { collectionId: null }, data: { collectionId: id } }),
     prisma.propagationEvent.updateMany({ where: { collectionId: null }, data: { collectionId: id } }),

@@ -10,6 +10,7 @@ It is designed for real collection work: messy taxonomy, acquisition names, alia
 - Main application at `https://app.axildb.com`.
 - Multi-collection workspaces at `/c/[collectionSlug]`, with private/public visibility and collection-scoped memberships.
 - Plant definitions with genus, species, hybrid notation, cultivar name, authority, governing body, registration number, confidence, provisional taxon, acquisition label, reference URLs, notes, and aliases.
+- Site-level Validated Plant Definitions with reviewed taxonomy, aliases, type images, and husbandry that can be reused across collections without depending on the originating collection.
 - Alias tracking for synonyms, old taxonomy, trade names, common names, shorthand, and misapplied names.
 - Structured plant husbandry guides for definitions, with watering, light, temperature, humidity, medium, fertilization, repotting, propagation, pest/disease, toxicity, dormancy, bloom, growth habit, and conservation fields.
 - Live-linked husbandry guides so similar definitions can reuse the same care guidance, with fork-to-local-copy support.
@@ -371,7 +372,9 @@ Core models:
 - `BackupRun`: sitewide backup request, worker status, output path, logs, and manifest metadata.
 - `GoverningBody`: registration or standards organizations.
 
-Most domain records carry `collectionId`, including plant definitions, aliases, plant instances, propagations, blooms, notes, photos, reminders, follows, governing bodies, and audit logs. Suggestions/autocomplete, search, gallery, lineage graphs, labels, dashboard activity, and follow counts are scoped per collection.
+Validated Plant Definitions are site-level `PlantDefinition` records with `collectionId = null` and `isValidated = true`. They are not owned by the collection that nominated them, so deleting or archiving a collection does not delete approved validated definitions or break plant instances linked to them. Collection managers can nominate a local definition for validation, server admins review nominations under Server Management, and approval creates a site-level validated definition with copied taxonomy, aliases, husbandry, type-image metadata, and governing body metadata. Managers can dispute validated definitions or create a local copy for selected specimens when they need to detach from future validated updates. Specimen-level husbandry overrides remain available, so collections do not need to detach solely for local care differences.
+
+Most domain records carry `collectionId`, including local plant definitions, aliases, plant instances, propagations, blooms, notes, photos, reminders, follows, governing bodies, and audit logs. Suggestions/autocomplete, search, gallery, lineage graphs, labels, dashboard activity, and follow counts are scoped per collection. Validated plant definitions, their aliases, husbandry guides, and type-image metadata intentionally remain site-level.
 
 The schema intentionally uses string fields rather than Prisma enums for many domain states. This keeps taxonomy, sport states, propagation methods, and future horticultural vocabulary easier to evolve.
 
