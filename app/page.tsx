@@ -13,7 +13,7 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 
 type PhotoLookup = Record<string, PlantImageFrame | undefined>
-type BriefingPlantLink = { plantId: string; href: string }
+type BriefingPlantLink = { plantId: string; href: string; aliases: string[] }
 type ActivityKind = 'propagation' | 'bloom' | 'sport' | 'acquired' | 'archive'
 type ActivityItem = {
   id: string
@@ -117,7 +117,12 @@ function escapeRegExp(value: string) {
 function renderLinkedText(text: string, plantLinks: BriefingPlantLink[], keyPrefix: string): ReactNode[] {
   if (!plantLinks.length || !text) return [text]
 
-  const pattern = new RegExp(`(${plantLinks.map((link) => escapeRegExp(link.plantId)).join('|')})`, 'g')
+  const tokens = plantLinks.flatMap((link) => [link.plantId, ...link.aliases].map((value) => ({ value, link })))
+    .filter((item) => item.value)
+    .sort((a, b) => b.value.length - a.value.length)
+  if (!tokens.length) return [text]
+
+  const pattern = new RegExp(`(${tokens.map((item) => escapeRegExp(item.value)).join('|')})`, 'g')
   const nodes: ReactNode[] = []
   let lastIndex = 0
 
@@ -126,15 +131,15 @@ function renderLinkedText(text: string, plantLinks: BriefingPlantLink[], keyPref
     const index = match.index ?? 0
     if (index > lastIndex) nodes.push(text.slice(lastIndex, index))
 
-    const href = plantLinks.find((link) => link.plantId === value)?.href
+    const link = tokens.find((item) => item.value === value)?.link
     nodes.push(
-      href ? (
+      link ? (
         <Link
           key={`${keyPrefix}-plant-${index}`}
-          href={href}
+          href={link.href}
           className="font-semibold text-[var(--ax-primary)] underline decoration-[color:var(--ax-primary)]/45 underline-offset-2 transition hover:text-[var(--ax-primary-strong)]"
         >
-          {value}
+          {link.plantId}
         </Link>
       ) : value,
     )
@@ -187,8 +192,8 @@ function renderInlineBriefingMarkdown(text: string, plantLinks: BriefingPlantLin
 
 function renderBriefingMarkdown(markdown: string, links: BriefingPlantLink[]) {
   const plantLinks = links
-    .filter((link) => markdown.includes(link.plantId))
-    .sort((a, b) => b.plantId.length - a.plantId.length)
+    .filter((link) => [link.plantId, ...link.aliases].some((value) => markdown.includes(value)))
+    .sort((a, b) => Math.max(b.plantId.length, ...b.aliases.map((value) => value.length)) - Math.max(a.plantId.length, ...a.aliases.map((value) => value.length)))
 
   return markdown.split('\n').map((line, index) => {
     const trimmed = line.trim()
@@ -348,6 +353,7 @@ export default async function Dashboard({
         orderBy: { plantId: 'asc' },
       })).map((instance) => ({
         plantId: instance.plantId,
+        aliases: [instance.id],
         href: collectionPath(collection.slug, `/instances/${instance.id}`),
       }))
     : []

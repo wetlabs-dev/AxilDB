@@ -152,6 +152,10 @@ function enabled(value: boolean | null | undefined) {
   return value !== false
 }
 
+function explicitlyEnabled(value: boolean | null | undefined) {
+  return value === true
+}
+
 export async function sendCareQueueDigestEmail(user: AlertUser, digest: CareQueueDigest) {
   const collectionLines = digest.collections.map(
     (collection) =>
@@ -232,14 +236,9 @@ export function serverHealthAlertFromSnapshot(snapshot: ServerMetricSnapshot): S
 export async function sendCareQueueDigestAlerts(prisma: PrismaClient, now = new Date()) {
   const users = await prisma.user.findMany({
     where: {
-      OR: [
-        { emailPreference: null },
-        {
-          emailPreference: {
-            OR: [{ careQueueDigestEmailEnabled: true }, { careQueueDigestPushEnabled: true }],
-          },
-        },
-      ],
+      emailPreference: {
+        OR: [{ careQueueDigestEmailEnabled: true }, { careQueueDigestPushEnabled: true }],
+      },
       memberships: { some: { status: 'ACTIVE', collection: { status: 'ACTIVE' } } },
     },
     include: {
@@ -255,8 +254,8 @@ export async function sendCareQueueDigestAlerts(prisma: PrismaClient, now = new 
   let failed = 0
 
   for (const user of users) {
-    const emailEnabled = enabled(user.emailPreference?.careQueueDigestEmailEnabled)
-    const pushEnabled = user.emailPreference?.careQueueDigestPushEnabled === true
+    const emailEnabled = explicitlyEnabled(user.emailPreference?.careQueueDigestEmailEnabled)
+    const pushEnabled = explicitlyEnabled(user.emailPreference?.careQueueDigestPushEnabled)
     if (!emailEnabled && !pushEnabled) continue
     const timezone = timeZoneForPreference(user.emailPreference)
     if (!shouldSendCareQueueDigest(user.emailPreference, now)) continue

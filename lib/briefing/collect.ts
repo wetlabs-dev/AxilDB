@@ -14,6 +14,10 @@ function dueSoon(now: Date, days: number, timezone: string) {
   return addCalendarDays(startOfDayInTimeZone(now, timezone), days, timezone)
 }
 
+function entityKey(entityType?: string | null, entityId?: string | null) {
+  return entityType && entityId ? `${entityType}:${entityId}` : ''
+}
+
 export async function collectBriefingSource(prisma: PrismaClient, options: {
   collectionId: string
   collectionSlug: string
@@ -115,6 +119,40 @@ export async function collectBriefingSource(prisma: PrismaClient, options: {
     }),
   ])
 
+  const referencedPlantInstanceIds = new Set<string>()
+  const referencedBloomIds = new Set<string>()
+  for (const item of [...reminders, ...notes, ...photoMetadata]) {
+    if (item.entityType === 'PLANT_INSTANCE' && item.entityId) referencedPlantInstanceIds.add(item.entityId)
+    if (item.entityType === 'BLOOM_EVENT' && item.entityId) referencedBloomIds.add(item.entityId)
+  }
+  const [referencedPlantInstances, referencedBlooms] = await Promise.all([
+    referencedPlantInstanceIds.size
+      ? prisma.plantInstance.findMany({
+          where: { collectionId: options.collectionId, id: { in: Array.from(referencedPlantInstanceIds) } },
+          include: { plantDefinition: true },
+        })
+      : Promise.resolve([]),
+    referencedBloomIds.size
+      ? prisma.bloomEvent.findMany({
+          where: { collectionId: options.collectionId, id: { in: Array.from(referencedBloomIds) } },
+          include: { plantInstance: { include: { plantDefinition: true } } },
+        })
+      : Promise.resolve([]),
+  ])
+  const plantReferenceByEntity = new Map<string, { plantId: string; plantName: string }>()
+  for (const item of referencedPlantInstances) {
+    plantReferenceByEntity.set(entityKey('PLANT_INSTANCE', item.id), {
+      plantId: item.plantId,
+      plantName: plantName(item.plantDefinition),
+    })
+  }
+  for (const item of referencedBlooms) {
+    plantReferenceByEntity.set(entityKey('BLOOM_EVENT', item.id), {
+      plantId: item.plantInstance.plantId,
+      plantName: plantName(item.plantInstance.plantDefinition),
+    })
+  }
+
   const source = {
     localDate: dateInputValue(now, options.timezone),
     timezone: options.timezone,
@@ -133,7 +171,8 @@ export async function collectBriefingSource(prisma: PrismaClient, options: {
       category: item.category,
       dueAt: item.dueAt.toISOString(),
       entityType: item.entityType,
-      entityId: item.entityId,
+      plantId: plantReferenceByEntity.get(entityKey(item.entityType, item.entityId))?.plantId || null,
+      plantName: plantReferenceByEntity.get(entityKey(item.entityType, item.entityId))?.plantName || null,
     })),
     blooms: blooms.map((item) => ({
       plantId: item.plantInstance.plantId,
@@ -169,13 +208,15 @@ export async function collectBriefingSource(prisma: PrismaClient, options: {
     })),
     recentNotes: notes.map((item) => ({
       entityType: item.entityType,
-      entityId: item.entityId,
+      plantId: plantReferenceByEntity.get(entityKey(item.entityType, item.entityId))?.plantId || null,
+      plantName: plantReferenceByEntity.get(entityKey(item.entityType, item.entityId))?.plantName || null,
       createdAt: item.createdAt.toISOString(),
       note: preview(item.note),
     })),
     recentPhotoMetadata: photoMetadata.map((item) => ({
       entityType: item.entityType,
-      entityId: item.entityId,
+      plantId: plantReferenceByEntity.get(entityKey(item.entityType, item.entityId))?.plantId || null,
+      plantName: plantReferenceByEntity.get(entityKey(item.entityType, item.entityId))?.plantName || null,
       caption: preview(item.caption),
       source: preview(item.source, 80),
       isCover: item.isCover,
