@@ -10,6 +10,8 @@ import { cn } from '@/lib/utils'
 
 const WELL_LOVED_THRESHOLD = 5
 const sunshineCountLabel = (count: number) => `${count} sunshine`
+const sunshineAnchor = (id: string) => `sunshine-photo-${id}`
+const backToSunshine = (back: string, id: string) => `${back.split('#')[0] || '/'}#${sunshineAnchor(id)}`
 
 export type GalleryPhoto = {
   id: string
@@ -122,16 +124,16 @@ export function PhotoGallery({ photos }: { photos: GalleryPhoto[] }) {
                     <span className="rounded-full border border-[#e4a950] bg-[#fff3d1] px-2 py-1 font-bold text-[#7a4b00]">☀️ Well Loved</span>
                   )}
                   {photo.canToggleSunshine ? (
-                    <form action={toggleSunshine}>
+                    <form id={sunshineAnchor(photo.id)} action={toggleSunshine}>
                       <input type="hidden" name="collectionSlug" value={photo.collectionSlug} />
                       <input type="hidden" name="targetType" value="PHOTO" />
                       <input type="hidden" name="targetId" value={photo.id} />
-                      <input type="hidden" name="back" value={photo.back} />
+                      <input type="hidden" name="back" value={backToSunshine(photo.back, photo.id)} />
                       <Button
                         className={cn(
                           'px-2 py-1 text-xs',
                           photo.sunshined
-                            ? 'border border-[#d5a12e] bg-[#fff3cf] text-[#6c5300] hover:bg-[#ffe7a8]'
+                            ? 'border border-[#f7c948] bg-[#f9b934] text-[#1f1600] shadow-[0_0_0_1px_rgba(255,248,216,0.55),0_6px_14px_rgba(0,0,0,0.18)] hover:bg-[#ffd15a]'
                             : 'bg-[#2f6b45] text-white',
                         )}
                       >
