@@ -4,6 +4,7 @@ import { Card, Field, Button } from '@/components/ui'
 import { PushNotificationSettings } from '@/components/PushNotificationSettings'
 import { requireUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { resolveSunshineTarget } from '@/lib/sunshine'
 import { defaultTimeZone, formatDate } from '@/lib/time'
 
 export default async function Account({
@@ -40,9 +41,21 @@ export default async function Account({
     ['bloomCycleReminders', 'bloomCycleRemindersPushEnabled', 'Bloom-cycle reminders', preferences?.bloomCycleReminders ?? true, preferences?.bloomCycleRemindersPushEnabled ?? false],
     ['propagationFollowUps', 'propagationFollowUpsPushEnabled', 'Propagation follow-up reminders', preferences?.propagationFollowUps ?? true, preferences?.propagationFollowUpsPushEnabled ?? false],
     ['followNotifications', 'followNotificationsPushEnabled', 'Followed plant updates', preferences?.followNotifications ?? true, preferences?.followNotificationsPushEnabled ?? false],
+    ['sunshineNotifications', null, 'Email me when one of my plants, blooms, or photos receives sunshine', preferences?.sunshineNotifications ?? false, false],
     ['careQueueDigestEmailEnabled', 'careQueueDigestPushEnabled', 'Care queue digest', preferences?.careQueueDigestEmailEnabled ?? true, preferences?.careQueueDigestPushEnabled ?? false],
     ['serverHealthEmailEnabled', 'serverHealthPushEnabled', 'Server health alerts', preferences?.serverHealthEmailEnabled ?? true, preferences?.serverHealthPushEnabled ?? false],
   ] as const
+  const sunshineRows = await prisma.sunshine.findMany({
+    where: { userId: user.id },
+    include: { collection: { select: { id: true, slug: true, name: true, status: true } } },
+    orderBy: { createdAt: 'desc' },
+    take: 30,
+  })
+  const sunshineHistory = (await Promise.all(sunshineRows.map(async (row) => {
+    if (row.collection.status !== 'ACTIVE') return null
+    const target = await resolveSunshineTarget(prisma, row.collectionId, row.collection.slug, row.targetType, row.targetId)
+    return target ? { id: row.id, createdAt: row.createdAt, collectionName: row.collection.name, target } : null
+  }))).filter(Boolean)
 
   return (
     <div className="space-y-6">
@@ -103,8 +116,14 @@ export default async function Account({
                   <span className="sr-only">Email</span>
                 </label>
                 <label className="inline-flex items-center gap-2">
-                  <input type="checkbox" name={pushName} defaultChecked={Boolean(pushChecked)} />
-                  <span className="sr-only">Push</span>
+                  {pushName ? (
+                    <>
+                      <input type="checkbox" name={pushName} defaultChecked={Boolean(pushChecked)} />
+                      <span className="sr-only">Push</span>
+                    </>
+                  ) : (
+                    <span className="text-xs text-[var(--ax-muted)]">—</span>
+                  )}
                 </label>
               </div>
             ))}
@@ -136,6 +155,26 @@ export default async function Account({
             lastSeenAt: subscription.lastSeenAt?.toISOString() || null,
           }))}
         />
+      </Card>
+
+      <Card>
+        <h3 className="font-bold">Your sunshine history</h3>
+        <p className="mt-1 text-sm text-[var(--ax-muted)]">A private list of records you have appreciated. Other users only see counts.</p>
+        <div className="mt-4 grid gap-2">
+          {sunshineHistory.length === 0 && <p className="text-sm text-stone-600">No sunshine given yet.</p>}
+          {sunshineHistory.map((item) => item && (
+            <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] px-3 py-2 text-sm">
+              <div className="min-w-0">
+                <Link href={item.target.href} className="font-semibold text-[var(--ax-primary)] underline underline-offset-2">
+                  {item.target.label}
+                </Link>
+                <p className="text-xs text-[var(--ax-muted)]">
+                  {item.collectionName} · {formatDate(item.createdAt, preferences?.timezone)}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
       </Card>
     </div>
   )

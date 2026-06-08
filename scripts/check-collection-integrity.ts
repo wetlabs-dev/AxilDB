@@ -15,6 +15,7 @@ const requiredCollectionModels = [
   ['ReminderDelivery', 'reminderDelivery'],
   ['Follow', 'follow'],
   ['FollowNotification', 'followNotification'],
+  ['Sunshine', 'sunshine'],
   ['PlantHusbandryGuide', 'plantHusbandryGuide'],
   ['PlantHusbandryOverride', 'plantHusbandryOverride'],
   ['PlantCareEvent', 'plantCareEvent'],
@@ -528,6 +529,46 @@ const relationshipChecks = [
         'DEMO_DATA'
       )
         AND audit."collectionId" IS NULL
+    `,
+  },
+  {
+    label: 'Plant-instance sunshine stays in the plant collection',
+    sql: `
+      SELECT COUNT(*)::int AS count
+      FROM "Sunshine" sunshine
+      LEFT JOIN "PlantInstance" instance ON instance.id = sunshine."targetId"
+      WHERE sunshine."targetType" = 'PLANT_INSTANCE'
+        AND (
+          instance.id IS NULL
+          OR sunshine."collectionId" IS DISTINCT FROM instance."collectionId"
+        )
+    `,
+  },
+  {
+    label: 'Bloom sunshine stays in the bloom collection',
+    sql: `
+      SELECT COUNT(*)::int AS count
+      FROM "Sunshine" sunshine
+      LEFT JOIN "BloomEvent" bloom ON bloom.id = sunshine."targetId"
+      WHERE sunshine."targetType" = 'BLOOM_EVENT'
+        AND (
+          bloom.id IS NULL
+          OR sunshine."collectionId" IS DISTINCT FROM bloom."collectionId"
+        )
+    `,
+  },
+  {
+    label: 'Photo sunshine stays in the photo collection',
+    sql: `
+      SELECT COUNT(*)::int AS count
+      FROM "Sunshine" sunshine
+      LEFT JOIN "Photo" photo ON photo.id = sunshine."targetId"
+      WHERE sunshine."targetType" = 'PHOTO'
+        AND (
+          photo.id IS NULL
+          OR photo."entityType" = 'PLANT_DEFINITION'
+          OR sunshine."collectionId" IS DISTINCT FROM photo."collectionId"
+        )
     `,
   },
   {

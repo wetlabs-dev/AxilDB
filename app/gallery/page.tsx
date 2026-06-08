@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/auth'
 import { collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
 import { compareText, sortPreference, timeValue, type SortOption } from '@/lib/sort-preferences'
+import { sunshineCounts, sunshineKey, sunshineStateForUser } from '@/lib/sunshine'
 import { fmtDate, plantName } from '@/lib/utils'
 
 const gallerySortOptions: SortOption[] = [
@@ -11,6 +12,8 @@ const gallerySortOptions: SortOption[] = [
   { value: 'oldest', label: 'Oldest photos' },
   { value: 'plantIdAsc', label: 'Plant ID A-Z' },
   { value: 'typeAsc', label: 'Photo type A-Z' },
+  { value: 'sunshineDesc', label: 'Sunshine high-low' },
+  { value: 'sunshineAsc', label: 'Sunshine low-high' },
 ]
 
 export default async function GalleryPage() {
@@ -50,8 +53,18 @@ export default async function GalleryPage() {
   const instanceById = new Map(instances.map((instance) => [instance.id, instance]))
   const bloomById = new Map(blooms.map((bloom) => [bloom.id, bloom]))
   const definitionById = new Map(definitions.map((definition) => [definition.id, definition]))
+  const photoSunshineTargets = photos
+    .filter((photo) => photo.entityType !== 'PLANT_DEFINITION')
+    .map((photo) => ({ targetType: 'PHOTO' as const, targetId: photo.id }))
+  const [photoSunshineCounts, currentUserSunshine] = await Promise.all([
+    sunshineCounts(prisma, collection.id, photoSunshineTargets),
+    sunshineStateForUser(prisma, collection.id, user?.id, photoSunshineTargets),
+  ])
 
   const galleryPhotos = photos.flatMap<GalleryPhoto>((photo) => {
+    const canSunshine = photo.entityType !== 'PLANT_DEFINITION'
+    const sunshineCount = photoSunshineCounts.get(sunshineKey('PHOTO', photo.id)) || 0
+    const sunshined = currentUserSunshine.has(sunshineKey('PHOTO', photo.id))
     if (photo.entityType === 'PLANT_INSTANCE') {
       const instance = instanceById.get(photo.entityId)
       if (!instance) return []
@@ -72,6 +85,12 @@ export default async function GalleryPage() {
         instanceHref: collectionPath(collection.slug, `/instances/${instance.id}`),
         isCover: photo.isCover,
         isType: photo.isType,
+        canSunshine,
+        sunshineCount,
+        sunshined,
+        canToggleSunshine: Boolean(user),
+        collectionSlug: collection.slug,
+        back: collectionPath(collection.slug, '/gallery'),
       }]
     }
 
@@ -96,6 +115,12 @@ export default async function GalleryPage() {
         instanceHref: collectionPath(collection.slug, `/plants/${definition.id}/edit`),
         isCover: photo.isCover,
         isType: photo.isType,
+        canSunshine,
+        sunshineCount,
+        sunshined,
+        canToggleSunshine: false,
+        collectionSlug: collection.slug,
+        back: collectionPath(collection.slug, '/gallery'),
       }]
     }
 
@@ -119,12 +144,20 @@ export default async function GalleryPage() {
       bloomDate: fmtDate(bloom.bloomStartDate),
       isCover: photo.isCover,
       isType: photo.isType,
+      canSunshine,
+      sunshineCount,
+      sunshined,
+      canToggleSunshine: Boolean(user),
+      collectionSlug: collection.slug,
+      back: collectionPath(collection.slug, '/gallery'),
     }]
   })
   const sortedPhotos = [...galleryPhotos].sort((left, right) => {
     if (sortKey === 'oldest') return timeValue(left.createdAt) - timeValue(right.createdAt)
     if (sortKey === 'plantIdAsc') return compareText(left.plantId, right.plantId) || timeValue(right.createdAt) - timeValue(left.createdAt)
     if (sortKey === 'typeAsc') return compareText(left.kind, right.kind) || timeValue(right.createdAt) - timeValue(left.createdAt)
+    if (sortKey === 'sunshineDesc') return right.sunshineCount - left.sunshineCount || timeValue(right.createdAt) - timeValue(left.createdAt)
+    if (sortKey === 'sunshineAsc') return left.sunshineCount - right.sunshineCount || timeValue(right.createdAt) - timeValue(left.createdAt)
     return timeValue(right.createdAt) - timeValue(left.createdAt)
   })
 

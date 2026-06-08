@@ -51,6 +51,7 @@ model User {
   archivedCollections Collection[] @relation("CollectionArchivedBy")
   backupRuns          BackupRun[] @relation("BackupRunRequestedBy")
   generatedCollectionBriefings CollectionBriefing[]
+  sunshine            Sunshine[]
   sentCollectionInvitations CollectionInvitation[] @relation("CollectionInvitationInviter")
   acceptedCollectionInvitations CollectionInvitation[] @relation("CollectionInvitationAcceptedUser")
   requestedTransferConnections CollectionTransferConnection[] @relation("TransferConnectionRequester")
@@ -93,6 +94,7 @@ model Collection {
   aiAccessRequests    AiAccessRequest[]
   aiUsageEvents       AiUsageEvent[]
   briefings           CollectionBriefing[]
+  sunshine            Sunshine[]
   auditLogs           AuditLog[]
   follows             Follow[]
   followNotifications FollowNotification[]
@@ -520,6 +522,7 @@ model EmailPreference {
   propagationFollowUps  Boolean  @default(true)
   followNotifications   Boolean  @default(true)
   transferNotifications Boolean  @default(true)
+  sunshineNotifications Boolean  @default(false)
   careQueueDigestEmailEnabled Boolean @default(true)
   serverHealthEmailEnabled Boolean @default(true)
   generalRemindersPushEnabled Boolean @default(false)
@@ -532,12 +535,30 @@ model EmailPreference {
   careQueueDigestSendTime String @default("08:00")
   careQueueDigestLastSentAt DateTime?
   serverHealthAlertLastSentAt DateTime?
+  sunshineNotificationLastSentAt DateTime?
   quietHoursStart       String?
   quietHoursEnd         String?
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Sunshine {
+  id           String   @id @default(cuid())
+  collectionId String
+  userId       String
+  targetType   String
+  targetId     String
+  createdAt    DateTime @default(now())
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, userId, targetType, targetId])
+  @@index([collectionId, targetType, targetId])
+  @@index([userId])
+  @@index([createdAt])
 }
 
 model PushSubscription {

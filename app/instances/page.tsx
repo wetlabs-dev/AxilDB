@@ -1,11 +1,13 @@
 import { createPlantInstance } from '@/app/actions'
 import { PlantImage } from '@/components/PlantImage'
 import { SortControl } from '@/components/SortControl'
+import { SunshineButton } from '@/components/SunshineButton'
 import { AddPanel, Button, Card, Field, HelpTooltip, SuggestionDatalist, TextArea } from '@/components/ui'
 import { getCurrentUser } from '@/lib/auth'
 import { canCreateInCollection, canEditInCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
 import { compareText, sortPreference, timeValue, type SortOption } from '@/lib/sort-preferences'
+import { sunshineCounts, sunshineKey, sunshineStateForUser } from '@/lib/sunshine'
 import { rankedSuggestions } from '@/lib/suggestions'
 import { plantName } from '@/lib/utils'
 import Link from 'next/link'
@@ -17,6 +19,8 @@ const instanceSortOptions: SortOption[] = [
   { value: 'updatedAsc', label: 'Oldest updated' },
   { value: 'acquiredDesc', label: 'Newest acquired' },
   { value: 'acquiredAsc', label: 'Oldest acquired' },
+  { value: 'sunshineDesc', label: 'Sunshine high-low' },
+  { value: 'sunshineAsc', label: 'Sunshine low-high' },
 ]
 
 export default async function Instances() {
@@ -53,12 +57,20 @@ export default async function Instances() {
     if (!acc[photo.entityId]) acc[photo.entityId] = photo
     return acc
   }, {})
+  const instanceSunshineTargets = instances.map((instance) => ({ targetType: 'PLANT_INSTANCE' as const, targetId: instance.id }))
+  const [instanceSunshineCounts, currentUserSunshine] = await Promise.all([
+    sunshineCounts(prisma, collection.id, instanceSunshineTargets),
+    sunshineStateForUser(prisma, collection.id, user?.id, instanceSunshineTargets),
+  ])
+  const sunshineCount = (instanceId: string) => instanceSunshineCounts.get(sunshineKey('PLANT_INSTANCE', instanceId)) || 0
   const sortedInstances = [...instances].sort((left, right) => {
     if (sortKey === 'plantIdDesc') return compareText(right.plantId, left.plantId)
     if (sortKey === 'updatedDesc') return timeValue(right.updatedAt) - timeValue(left.updatedAt)
     if (sortKey === 'updatedAsc') return timeValue(left.updatedAt) - timeValue(right.updatedAt)
     if (sortKey === 'acquiredDesc') return timeValue(right.acquisitionDate || right.createdAt) - timeValue(left.acquisitionDate || left.createdAt)
     if (sortKey === 'acquiredAsc') return timeValue(left.acquisitionDate || left.createdAt) - timeValue(right.acquisitionDate || right.createdAt)
+    if (sortKey === 'sunshineDesc') return sunshineCount(right.id) - sunshineCount(left.id) || compareText(left.plantId, right.plantId)
+    if (sortKey === 'sunshineAsc') return sunshineCount(left.id) - sunshineCount(right.id) || compareText(left.plantId, right.plantId)
     return compareText(left.plantId, right.plantId)
   })
 
@@ -138,6 +150,18 @@ export default async function Instances() {
             <div className="flex gap-2 border-t border-stone-200 p-3">
               {canEditInCollection(user, context) && <Link className="rounded-md border px-2 py-1 text-xs" href={collectionPath(collection.slug, `/instances/${instance.id}/edit`)}>Edit</Link>}
               <Link className="rounded-md border px-2 py-1 text-xs" href={collectionPath(collection.slug, `/labels/${instance.id}`)}>Label</Link>
+            </div>
+            <div className="border-t border-stone-200 p-3">
+              <SunshineButton
+                collectionSlug={collection.slug}
+                targetType="PLANT_INSTANCE"
+                targetId={instance.id}
+                count={sunshineCount(instance.id)}
+                active={currentUserSunshine.has(sunshineKey('PLANT_INSTANCE', instance.id))}
+                canToggle={Boolean(user)}
+                back={collectionPath(collection.slug, '/instances')}
+                compact
+              />
             </div>
           </Card>
         ))}

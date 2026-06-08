@@ -29,6 +29,7 @@ import { createDemoData } from '@/lib/demo-data'
 import { notifyFollowers } from '@/lib/follows'
 import { expectedPlantIdForInstance, generatePlantId } from '@/lib/plant-id'
 import { nextOccurrence } from '@/lib/reminders'
+import { isSunshineTargetType, notifySunshineManagers, validateSunshineTarget } from '@/lib/sunshine'
 import { addCalendarDays, formatDate, parseDateLocal, parseDateTimeLocal, timeZoneForPreference } from '@/lib/time'
 import { plantName } from '@/lib/utils'
 import { husbandryFieldNames, husbandryFormValues } from '@/lib/husbandry'
@@ -110,6 +111,20 @@ function disputeReviewStatus(fd: FormData) {
 }
 
 async function cleanupGenericEntity(collectionId: string, entityType: string, entityId: string) {
+  const photos = await prisma.photo.findMany({
+    where: { collectionId, entityType, entityId },
+    select: { id: true },
+  })
+  const photoIds = photos.map((photo) => photo.id)
+  await prisma.sunshine.deleteMany({
+    where: {
+      collectionId,
+      OR: [
+        { targetType: entityType, targetId: entityId },
+        ...(photoIds.length ? [{ targetType: 'PHOTO', targetId: { in: photoIds } }] : []),
+      ],
+    },
+  })
   await prisma.note.deleteMany({ where: { collectionId, entityType, entityId } })
   await prisma.photo.deleteMany({ where: { collectionId, entityType, entityId } })
 }
@@ -150,6 +165,20 @@ async function cleanupPlantInstanceDependents(collectionId: string, id: string) 
   const bloomIds = blooms.map((b) => b.id)
 
   if (bloomIds.length > 0) {
+    const bloomPhotos = await prisma.photo.findMany({
+      where: { collectionId, entityType: 'BLOOM_EVENT', entityId: { in: bloomIds } },
+      select: { id: true },
+    })
+    await prisma.sunshine.deleteMany({
+      where: {
+        collectionId,
+        OR: [
+          { targetType: 'BLOOM_EVENT', targetId: { in: bloomIds } },
+          ...(bloomPhotos.length ? [{ targetType: 'PHOTO', targetId: { in: bloomPhotos.map((photo) => photo.id) } }] : []),
+        ],
+      },
+    })
+
     await prisma.photo.deleteMany({
       where: { collectionId, entityType: 'BLOOM_EVENT', entityId: { in: bloomIds } },
     })
@@ -252,12 +281,57 @@ export async function unfollowEntity(fd: FormData) {
   redirect(destination)
 }
 
+export async function toggleSunshine(fd: FormData) {
+  const user = await requireUser()
+  const context = await requireCollectionViewer(await collectionSlug(fd))
+  const targetType = val(fd, 'targetType')
+  const targetId = val(fd, 'targetId')
+  const destination = back(fd)
+  if (!isSunshineTargetType(targetType) || !targetId) throw new Error('Unsupported sunshine target.')
+
+  const target = await validateSunshineTarget(prisma, context.collection.id, context.collection.slug, targetType, targetId)
+  const existing = await prisma.sunshine.findUnique({
+    where: {
+      collectionId_userId_targetType_targetId: {
+        collectionId: context.collection.id,
+        userId: user.id,
+        targetType,
+        targetId,
+      },
+    },
+  })
+
+  if (existing) {
+    await prisma.sunshine.delete({ where: { id: existing.id } })
+    await audit(null, 'DELETE', 'SUNSHINE', existing.id, `Removed sunshine from ${target.label}`, { targetType, targetId }, context.collection.id)
+  } else {
+    const sunshine = await prisma.sunshine.create({
+      data: {
+        collectionId: context.collection.id,
+        userId: user.id,
+        targetType,
+        targetId,
+      },
+    })
+    await audit(null, 'CREATE', 'SUNSHINE', sunshine.id, `Gave sunshine to ${target.label}`, { targetType, targetId }, context.collection.id)
+    await notifySunshineManagers(prisma, {
+      actorUserId: user.id,
+      collectionId: context.collection.id,
+      collectionName: context.collection.name,
+      target,
+    })
+  }
+
+  revalidateDestination(destination)
+  redirect(destination)
+}
+
 const sortPreferenceSections: Record<string, string[]> = {
-  instances: ['plantIdAsc', 'plantIdDesc', 'updatedDesc', 'updatedAsc', 'acquiredDesc', 'acquiredAsc'],
+  instances: ['plantIdAsc', 'plantIdDesc', 'updatedDesc', 'updatedAsc', 'acquiredDesc', 'acquiredAsc', 'sunshineDesc', 'sunshineAsc'],
   plants: ['nameAsc', 'nameDesc', 'updatedDesc', 'updatedAsc', 'createdDesc', 'createdAsc'],
   propagations: ['dateDesc', 'dateAsc', 'methodAsc', 'statusAsc', 'updatedDesc'],
-  blooms: ['startDesc', 'startAsc', 'updatedDesc', 'statusAsc', 'plantIdAsc'],
-  gallery: ['newest', 'oldest', 'plantIdAsc', 'typeAsc'],
+  blooms: ['startDesc', 'startAsc', 'updatedDesc', 'statusAsc', 'plantIdAsc', 'sunshineDesc', 'sunshineAsc'],
+  gallery: ['newest', 'oldest', 'plantIdAsc', 'typeAsc', 'sunshineDesc', 'sunshineAsc'],
   sports: ['updatedDesc', 'plantIdAsc', 'statusAsc'],
   archived: ['archiveDesc', 'archiveAsc', 'plantIdAsc'],
 }
@@ -1774,6 +1848,7 @@ export async function deletePhoto(fd: FormData) {
   const photo = await prisma.photo.findFirstOrThrow({ where: { id, collectionId: collection.id } })
   const samePathCount = await prisma.photo.count({ where: { path: photo.path } })
 
+  await prisma.sunshine.deleteMany({ where: { collectionId: collection.id, targetType: 'PHOTO', targetId: id } })
   await prisma.photo.delete({ where: { id } })
 
   if (samePathCount <= 1 && photo.path.startsWith('/uploads/')) {

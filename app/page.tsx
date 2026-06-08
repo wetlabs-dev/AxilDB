@@ -7,6 +7,7 @@ import { careQueueSummary, getCareQueue } from '@/lib/care-queue'
 import { collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
 import { isServerAdminRole } from '@/lib/roles'
+import { isSunshineTargetType, resolveSunshineTarget, sunshineCountLabel, sunshineCounts, sunshineKey } from '@/lib/sunshine'
 import { cn, fmtDate, plantName } from '@/lib/utils'
 import { Archive, ClipboardCheck, Flower2, GitBranch, Leaf, Sparkles, Sprout } from 'lucide-react'
 import Link from 'next/link'
@@ -281,6 +282,7 @@ export default async function Dashboard({
     acquired,
     archived,
     careItems,
+    recentSunshine,
   ] = await Promise.all([
     prisma.plantInstance.count({ where: { ...collectionWhere, status: 'ACTIVE' } }),
     prisma.propagationEvent.count({ where: collectionWhere }),
@@ -321,6 +323,12 @@ export default async function Dashboard({
       include: { plantDefinition: true },
     }),
     getCareQueue(prisma, { collectionId: collection.id, collectionSlug: collection.slug, userId: context.user?.id, timezone: preferences?.timezone }),
+    prisma.sunshine.findMany({
+      where: collectionWhere,
+      orderBy: { createdAt: 'desc' },
+      take: 8,
+      select: { id: true, targetType: true, targetId: true, createdAt: true },
+    }),
   ])
   const care = careQueueSummary(careItems, new Date(), preferences?.timezone)
 
@@ -438,6 +446,21 @@ export default async function Dashboard({
     ['Recent blooms', bloomCount, Flower2, collectionPath(collection.slug, '/blooms')],
     ['Sport candidates', sportCandidates, Sprout, collectionPath(collection.slug, '/sports')],
   ] as const
+  const recentSunshineTargets = recentSunshine
+    .filter((item) => isSunshineTargetType(item.targetType))
+    .map((item) => ({
+      targetType: item.targetType as 'PLANT_INSTANCE' | 'BLOOM_EVENT' | 'PHOTO',
+      targetId: item.targetId,
+    }))
+  const recentSunshineCounts = await sunshineCounts(
+    prisma,
+    collection.id,
+    recentSunshineTargets,
+  )
+  const recentSunshineItems = (await Promise.all(recentSunshine.map(async (item) => {
+    const target = await resolveSunshineTarget(prisma, collection.id, collection.slug, item.targetType, item.targetId)
+    return target ? { ...item, target, count: recentSunshineCounts.get(sunshineKey(item.targetType, item.targetId)) || 0 } : null
+  }))).filter(Boolean)
 
   return (
     <div className="space-y-6">
@@ -509,6 +532,33 @@ export default async function Dashboard({
           </details>
         </Card>
       )}
+
+      <Card>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h3 className="font-bold">Recently Appreciated</h3>
+            <p className="mt-1 text-sm text-stone-600">Fresh sunshine across specimens, blooms, and photos. Givers stay private.</p>
+          </div>
+          <Link className="rounded-full border border-[#e7c45a] bg-[#fff8d8] px-3 py-1 text-xs font-semibold text-[#6c5300]" href={collectionPath(collection.slug, '/instances')}>
+            Sort by Sunshine
+          </Link>
+        </div>
+        <div className="mt-4 grid gap-2">
+          {recentSunshineItems.length === 0 && <p className="text-sm text-stone-600">No sunshine yet.</p>}
+          {recentSunshineItems.map((item) => item && (
+            <Link
+              key={item.id}
+              href={item.target.href}
+              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] px-3 py-2 text-sm transition hover:bg-[var(--ax-primary-wash)]"
+            >
+              <span className="min-w-0 font-semibold text-[var(--ax-heading)]">{item.target.label}</span>
+              <span className="rounded-full border border-[#e7c45a] bg-[#fff8d8] px-2 py-1 text-xs font-semibold text-[#6c5300]">
+                {sunshineCountLabel(item.count)}
+              </span>
+            </Link>
+          ))}
+        </div>
+      </Card>
 
       <Card>
         <div className="flex flex-wrap items-end justify-between gap-3">

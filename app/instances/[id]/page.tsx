@@ -29,6 +29,7 @@ import { GreenThumbAssist } from '@/components/GreenThumbAssist'
 import { PlantImage } from '@/components/PlantImage'
 import { PlantHealthTimeline } from '@/components/PlantHealthTimeline'
 import { PhotoFramingEditor } from '@/components/PhotoFramingEditor'
+import { SunshineButton } from '@/components/SunshineButton'
 import { Button, Card, Field, Select, TextArea } from '@/components/ui'
 import { HusbandryBadges, HusbandryGuideView } from '@/components/Husbandry'
 import { waterCadenceDays } from '@/lib/care-queue'
@@ -39,6 +40,7 @@ import { prisma } from '@/lib/prisma'
 import { recurrenceLabel, reminderCategories, reminderCategoryLabel, reminderRecurrences } from '@/lib/reminders'
 import { hasHusbandryData, mergeHusbandryValues } from '@/lib/husbandry'
 import { isServerAdminRole } from '@/lib/roles'
+import { sunshineCounts, sunshineKey, sunshineStateForUser } from '@/lib/sunshine'
 import { addCalendarDays, formatDateTime, startOfDayInTimeZone } from '@/lib/time'
 import { collectPlantTimelineEvents, getPlantTimelineMetrics } from '@/lib/timeline/plantTimeline'
 import { dateInput, fmtDate, plantName, taxonomyLabel } from '@/lib/utils'
@@ -158,6 +160,18 @@ export default async function InstanceDetail({
     acc[photo.entityId].push(photo)
     return acc
   }, {})
+  const sunshineTargets = [
+    { targetType: 'PLANT_INSTANCE' as const, targetId: id },
+    ...i.blooms.map((bloom) => ({ targetType: 'BLOOM_EVENT' as const, targetId: bloom.id })),
+    ...photos.map((photo) => ({ targetType: 'PHOTO' as const, targetId: photo.id })),
+    ...bloomPhotos.map((photo) => ({ targetType: 'PHOTO' as const, targetId: photo.id })),
+  ]
+  const [detailSunshineCounts, currentUserSunshine] = await Promise.all([
+    sunshineCounts(prisma, collection.id, sunshineTargets),
+    sunshineStateForUser(prisma, collection.id, user?.id, sunshineTargets),
+  ])
+  const detailSunshineCount = (targetType: 'PLANT_INSTANCE' | 'BLOOM_EVENT' | 'PHOTO', targetId: string) =>
+    detailSunshineCounts.get(sunshineKey(targetType, targetId)) || 0
 
   const reminders = user
     ? await prisma.reminder.findMany({
@@ -299,7 +313,7 @@ export default async function InstanceDetail({
   ) : null
 
   const photosCard = (
-    <Card>
+    <Card id="photos">
       <h3 className="font-bold">Specimen photos</h3>
       <p className="mt-1 text-sm text-stone-600">
         Choose one cover photo for this specimen card. Admins can also mark one specimen photo as the type photo for the plant definition.
@@ -342,6 +356,16 @@ export default async function InstanceDetail({
                   {p.isCover ? 'Cover photo' : 'Not cover'} · {p.isType ? 'Type photo' : 'Not type'}
                 </p>
               </div>
+              <SunshineButton
+                collectionSlug={collection.slug}
+                targetType="PHOTO"
+                targetId={p.id}
+                count={detailSunshineCount('PHOTO', p.id)}
+                active={currentUserSunshine.has(sunshineKey('PHOTO', p.id))}
+                canToggle={Boolean(user)}
+                back={collectionPath(collection.slug, `/instances/${id}#photos`)}
+                compact
+              />
               {canEditRecords && (
                 <div className="flex flex-wrap gap-2">
                   <form action={setCoverPhoto}>
@@ -599,6 +623,17 @@ export default async function InstanceDetail({
             )}
           </div>
           <p>{plantName(i.plantDefinition)}</p>
+          <div className="mt-3">
+            <SunshineButton
+              collectionSlug={collection.slug}
+              targetType="PLANT_INSTANCE"
+              targetId={id}
+              count={detailSunshineCount('PLANT_INSTANCE', id)}
+              active={currentUserSunshine.has(sunshineKey('PLANT_INSTANCE', id))}
+              canToggle={Boolean(user)}
+              back={collectionPath(collection.slug, `/instances/${id}`)}
+            />
+          </div>
         </div>
         <img src={qr} className="h-28 w-28" alt="QR code" />
       </div>
@@ -878,6 +913,15 @@ export default async function InstanceDetail({
                       <p className="font-bold">Bloom started {fmtDate(b.bloomStartDate, timezone)}</p>
                       <p className="text-sm text-neutral-600">Status: {status}</p>
                     </div>
+                    <SunshineButton
+                      collectionSlug={collection.slug}
+                      targetType="BLOOM_EVENT"
+                      targetId={b.id}
+                      count={detailSunshineCount('BLOOM_EVENT', b.id)}
+                      active={currentUserSunshine.has(sunshineKey('BLOOM_EVENT', b.id))}
+                      canToggle={Boolean(user)}
+                      back={collectionPath(collection.slug, `/instances/${id}#bloom-${b.id}`)}
+                    />
                   </div>
 
                   <p className="text-sm">
@@ -968,6 +1012,16 @@ export default async function InstanceDetail({
                           </div>
                           <figcaption className="space-y-2 p-2 text-xs">
                             <p>{p.caption || 'Untitled bloom photo'}</p>
+                            <SunshineButton
+                              collectionSlug={collection.slug}
+                              targetType="PHOTO"
+                              targetId={p.id}
+                              count={detailSunshineCount('PHOTO', p.id)}
+                              active={currentUserSunshine.has(sunshineKey('PHOTO', p.id))}
+                              canToggle={Boolean(user)}
+                              back={collectionPath(collection.slug, `/instances/${id}#bloom-${b.id}`)}
+                              compact
+                            />
                             {canEditInCollection(user, context) && (
                               <>
                                 <details className="group rounded-lg border border-stone-200 bg-white/60">

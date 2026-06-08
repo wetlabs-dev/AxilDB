@@ -3,8 +3,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight, ExternalLink, X } from 'lucide-react'
+import { toggleSunshine } from '@/app/actions'
 import { PlantImage } from '@/components/PlantImage'
+import { Button } from '@/components/ui'
 import { cn } from '@/lib/utils'
+
+const WELL_LOVED_THRESHOLD = 5
+const sunshineCountLabel = (count: number) => `${count} sunshine`
 
 export type GalleryPhoto = {
   id: string
@@ -24,6 +29,12 @@ export type GalleryPhoto = {
   cropHeight?: number | null
   focalX?: number | null
   focalY?: number | null
+  canSunshine: boolean
+  sunshineCount: number
+  sunshined: boolean
+  canToggleSunshine: boolean
+  collectionSlug: string
+  back: string
 }
 
 export function PhotoGallery({ photos }: { photos: GalleryPhoto[] }) {
@@ -78,16 +89,16 @@ export function PhotoGallery({ photos }: { photos: GalleryPhoto[] }) {
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6">
         {photos.map((photo, index) => (
-          <button
+          <div
             key={photo.id}
-            type="button"
-            onClick={() => setActiveIndex(index)}
-            className="group min-w-0 overflow-hidden rounded-lg border border-stone-200 bg-white/75 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#8fa58f] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#8fa58f]/40"
+            className="group min-w-0 overflow-hidden rounded-lg border border-stone-200 bg-white/75 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#8fa58f] hover:shadow-md"
           >
-            <div className="aspect-square overflow-hidden bg-[#d6dfc9]/45">
-              <PlantImage src={photo} alt={photo.caption || photo.plantId} className="transition duration-300 group-hover:scale-[1.04]" />
-            </div>
-            <div className="grid gap-1 p-2.5">
+            <button type="button" onClick={() => setActiveIndex(index)} className="block w-full text-left focus:outline-none focus:ring-2 focus:ring-[#8fa58f]/40">
+              <div className="aspect-square overflow-hidden bg-[#d6dfc9]/45">
+                <PlantImage src={photo} alt={photo.caption || photo.plantId} className="transition duration-300 group-hover:scale-[1.04]" />
+              </div>
+            </button>
+            <div className="grid gap-2 p-2.5">
               <div className="flex min-w-0 items-center gap-1.5">
                 <span className={cn(
                   'rounded-full border px-2 py-0.5 text-[0.65rem] font-bold uppercase tracking-[0.12em]',
@@ -102,8 +113,40 @@ export function PhotoGallery({ photos }: { photos: GalleryPhoto[] }) {
               </div>
               <p className="truncate text-sm font-semibold text-stone-900">{photo.plantId}</p>
               <p className="line-clamp-2 text-xs text-stone-600">{photo.caption || photo.plantName}</p>
+              {photo.canSunshine && (
+                <div className="flex flex-wrap items-center gap-1.5 border-t border-stone-200 pt-2 text-xs">
+                  <span className="rounded-full border border-[#e7c45a] bg-[#fff8d8] px-2 py-1 font-semibold text-[#6c5300]">
+                    {sunshineCountLabel(photo.sunshineCount)}
+                  </span>
+                  {photo.sunshineCount >= WELL_LOVED_THRESHOLD && (
+                    <span className="rounded-full border border-[#e4a950] bg-[#fff3d1] px-2 py-1 font-bold text-[#7a4b00]">☀️ Well Loved</span>
+                  )}
+                  {photo.canToggleSunshine ? (
+                    <form action={toggleSunshine}>
+                      <input type="hidden" name="collectionSlug" value={photo.collectionSlug} />
+                      <input type="hidden" name="targetType" value="PHOTO" />
+                      <input type="hidden" name="targetId" value={photo.id} />
+                      <input type="hidden" name="back" value={photo.back} />
+                      <Button
+                        className={cn(
+                          'px-2 py-1 text-xs',
+                          photo.sunshined
+                            ? 'border border-[#d5a12e] bg-[#fff3cf] text-[#6c5300] hover:bg-[#ffe7a8]'
+                            : 'bg-[#2f6b45] text-white',
+                        )}
+                      >
+                        {photo.sunshined ? '☀️ Sunshined' : '☀️ Give Sunshine'}
+                      </Button>
+                    </form>
+                  ) : (
+                    <span className="rounded-md border border-stone-200 bg-white/55 px-2 py-1 text-xs font-medium text-stone-600">
+                      Sign in to give sunshine
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
-          </button>
+          </div>
         ))}
       </div>
 

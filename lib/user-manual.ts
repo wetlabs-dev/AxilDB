@@ -127,6 +127,7 @@ export const manualSections: ManualSection[] = [
       'Upload plant definition type images directly when the best representative image comes from a trusted reference source.',
       'Upload bloom photos from bloom records.',
       'Use Gallery to browse specimen, bloom, and definition images and open larger versions.',
+      'Give sunshine to eligible specimen and bloom photos from the Gallery or plant detail pages.',
       'Use photo framing controls to crop or set a center-bias point for card and preview layouts.',
     ],
     notes: [
@@ -250,9 +251,11 @@ export const manualSections: ManualSection[] = [
       'Open a plant instance and use Bloom tracker to open a new bloom event.',
       'Later, update the bloom record with peak date, flower count, closure date, notes, and photos.',
       'Open Bloom Tracker from the sidebar to browse bloom events as cards.',
+      'Use Sunshine sorting to find blooms with the most appreciation.',
     ],
     notes: [
       'Bloom cards use selected bloom/specimen photos when available and placeholders otherwise.',
+      'Sunshine counts are visible, but AxilDB never shows who gave sunshine.',
       'If a collection has no blooms yet, the Bloom Tracker shows an empty-state prompt instead of a blank page.',
     ],
   },

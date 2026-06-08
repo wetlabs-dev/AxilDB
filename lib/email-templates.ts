@@ -137,6 +137,16 @@ export function followNotificationEmail(title: string, recordUrl: string, lines:
   })
 }
 
+export function sunshineNotificationEmail(title: string, recordUrl: string, lines: string[]) {
+  return renderBrandedEmail({
+    title,
+    preview: 'Someone appreciated a record in your AxilDB collection.',
+    body: lines,
+    actionLabel: 'Open record',
+    actionUrl: recordUrl,
+  })
+}
+
 export function transferWorkflowEmail(title: string, actionUrl: string, lines: string[]) {
   return renderBrandedEmail({
     title,

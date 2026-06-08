@@ -25,6 +25,7 @@ It is designed for real collection work: messy taxonomy, acquisition names, alia
 - Weekly greenhouse checklist generation from the care queue, grouped by location and covering overdue, due-today, and upcoming care tasks.
 - Plant sitter mode with expiring/revocable token links that expose only selected plants and tasks, allow limited checklist completion, and log sitter actions back into AxilDB.
 - Plant instances with generated plant IDs, acquisition/propagation dates, source/distributor metadata, location, archive status, notes, and photos.
+- Sunshine appreciation for specimens, blooms, and photos, with private giver identity, public counts on public records, Well Loved badges at five sunshine, account history, dashboard activity, and opt-in email alerts for collection managers.
 - Plant Health Timeline on specimen pages, combining existing accession, propagation, care, condition, bloom, photo, note, reminder, archive, and sport records into a compact horizontal history with deterministic insights and a Life Story list.
 - Automatic plant ID generation based on plant definition, date, context, and sequence number.
 - Propagation events with parent/child links, method, date, success status, and generated child plant IDs.
@@ -359,6 +360,7 @@ Core models:
 - `ParentageLink` and `PropagationChild`: graph edges for lineage.
 - `BloomEvent`: bloom lifecycle records.
 - `Photo`: photos attached to definitions, instances, and bloom events.
+- `Sunshine`: collection-scoped appreciation rows for plant instances, bloom events, and eligible photos; unique per user and target, with giver identity kept private in the UI.
 - `Note`: freeform notes attached to entities.
 - `SportStabilityRecord`: evidence for sport-line stability.
 - `User`, `Session`, and `AuditLog`: local auth, sessions, and mutation history.
@@ -374,7 +376,7 @@ Core models:
 
 Validated Plant Definitions are site-level `PlantDefinition` records with `collectionId = null` and `isValidated = true`. They are not owned by the collection that nominated them, so deleting or archiving a collection does not delete approved validated definitions or break plant instances linked to them. Collection managers can nominate a local definition for validation, server admins review nominations under Server Management, and approval creates a site-level validated definition with copied taxonomy, aliases, husbandry, type-image metadata, and governing body metadata. Managers can dispute validated definitions or create a local copy for selected specimens when they need to detach from future validated updates. Specimen-level husbandry overrides remain available, so collections do not need to detach solely for local care differences.
 
-Most domain records carry `collectionId`, including local plant definitions, aliases, plant instances, propagations, blooms, notes, photos, reminders, follows, governing bodies, and audit logs. Suggestions/autocomplete, search, gallery, lineage graphs, labels, dashboard activity, and follow counts are scoped per collection. Validated plant definitions, their aliases, husbandry guides, and type-image metadata intentionally remain site-level.
+Most domain records carry `collectionId`, including local plant definitions, aliases, plant instances, propagations, blooms, notes, photos, reminders, follows, sunshine, governing bodies, and audit logs. Suggestions/autocomplete, search, gallery, lineage graphs, labels, dashboard activity, follow counts, and sunshine counts are scoped per collection. Validated plant definitions, their aliases, husbandry guides, and type-image metadata intentionally remain site-level.
 
 The schema intentionally uses string fields rather than Prisma enums for many domain states. This keeps taxonomy, sport states, propagation methods, and future horticultural vocabulary easier to evolve.
 
