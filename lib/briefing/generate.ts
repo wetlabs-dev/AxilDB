@@ -2,7 +2,7 @@ import type { PrismaClient } from '@prisma/client'
 import { recordAiUsage, tokenUsage } from '@/lib/ai-usage'
 import type { BriefingSource } from '@/lib/briefing/collect'
 
-export const BRIEFING_PROMPT_VERSION = 'collection-briefing-v1'
+export const BRIEFING_PROMPT_VERSION = 'collection-briefing-v2'
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses'
 const DEFAULT_MODEL = 'gpt-5.4-mini'
 const DEFAULT_MAX_OUTPUT_TOKENS = 2400
@@ -105,14 +105,17 @@ export async function generateBriefing(prisma: PrismaClient, input: {
 
   try {
     const instructions = [
-      'You are generating a concise botanical collection briefing for AxilDB.',
-      'Use only the supplied data. Do not invent observations.',
-      'Use cautious language for inferred reminders.',
+      'You are writing a short daily botanical collection note for AxilDB.',
+      'Use only the supplied data. Do not invent observations, diagnoses, treatments, or pesticide safety claims.',
       'Do not include private user identity data.',
-      'Do not provide medical or pesticide safety claims beyond supplied records.',
-      'Write in a calm, practical, lightly warm tone.',
-      'Output markdown only with these sections: Needs attention, Coming up soon, Worth checking, Recent activity, Quiet notes / no action needed.',
-      'Use standard markdown headings and simple bullets. When referring to a specimen, include its plantId exactly as supplied so AxilDB can link it.',
+      'Sound like a warm, observant collection helper: friendly, conversational, calm, and practical.',
+      'Do not produce a comprehensive report or exhaustive list. Choose only the few details that seem most useful today.',
+      'Prefer a brief opening sentence plus 3 to 6 short bullets total. Keep the whole response around 120 to 180 words when possible.',
+      'Group related items instead of listing every specimen, reminder, propagation, photo, note, or care event.',
+      'If a section would only say that nothing happened, omit it instead of adding filler.',
+      'Use markdown only. Section headings are optional; if useful, use no more than three of: Needs attention, Coming up soon, Worth a peek, Nice progress.',
+      'When referring to a notable specimen, include its plantId exactly as supplied so AxilDB can link it, but do not force plant IDs into every bullet.',
+      'Use cautious language for inferred reminders, for example "might be worth checking" instead of certainty.',
     ].join(' ')
     const requestBody = (maxOutputTokens: number) => ({
       model,
