@@ -1924,6 +1924,108 @@ export async function deletePhoto(fd: FormData) {
   redirect(destination)
 }
 
+export async function resolveImageModerationReview(fd: FormData) {
+  const user = await requireUser()
+  const reviewId = val(fd, 'reviewId')!
+  const action = val(fd, 'action')!
+  const destination = back(fd)
+  const review = await prisma.imageModerationReview.findUniqueOrThrow({
+    where: { id: reviewId },
+    include: { photo: true },
+  })
+
+  if (review.reviewType === 'NSFW') {
+    const admin = await requireServerAdmin()
+
+    if (action === 'OVERRIDE_FALSE_ALARM') {
+      await prisma.$transaction([
+        prisma.photo.update({
+          where: { id: review.photoId },
+          data: {
+            moderationStatus: 'APPROVED',
+            nsfwFlagged: false,
+            moderationReason: 'Server admin marked moderation as a false alarm.',
+          },
+        }),
+        prisma.imageModerationReview.update({
+          where: { id: review.id },
+          data: { status: 'OVERRIDDEN_FALSE_ALARM', resolvedAt: new Date(), resolvedByUserId: admin.id },
+        }),
+      ])
+      await audit(admin, 'OVERRIDE_FALSE_ALARM', 'IMAGE_MODERATION_REVIEW', review.id, `Marked photo ${review.photoId} moderation as a false alarm`, undefined, review.collectionId)
+    } else if (action === 'REMOVE' || action === 'REMOVE_AND_BLOCK_USER') {
+      await prisma.$transaction([
+        prisma.photo.update({
+          where: { id: review.photoId },
+          data: {
+            moderationStatus: 'REMOVED',
+            nsfwFlagged: true,
+            moderationReason: action === 'REMOVE_AND_BLOCK_USER' ? 'Removed by server admin and uploader disabled.' : 'Removed by server admin.',
+          },
+        }),
+        prisma.imageModerationReview.update({
+          where: { id: review.id },
+          data: { status: 'REMOVED', resolvedAt: new Date(), resolvedByUserId: admin.id },
+        }),
+        ...(action === 'REMOVE_AND_BLOCK_USER' && review.uploaderUserId
+          ? [prisma.user.update({
+              where: { id: review.uploaderUserId },
+              data: { disabledAt: new Date(), disabledReason: `Blocked after image moderation review ${review.id}` },
+            })]
+          : []),
+      ])
+      await audit(
+        admin,
+        action,
+        'IMAGE_MODERATION_REVIEW',
+        review.id,
+        `${action === 'REMOVE_AND_BLOCK_USER' ? 'Removed image and blocked uploader' : 'Removed image'} ${review.photoId}`,
+        { uploaderUserId: review.uploaderUserId },
+        review.collectionId,
+      )
+    } else {
+      throw new Error('Unsupported moderation action.')
+    }
+
+    revalidateDestination(destination)
+    redirect(destination || '/server/image-moderation')
+  }
+
+  if (review.reviewType !== 'NO_PLANT_DETECTED') throw new Error('Unsupported review type.')
+  if (review.uploaderUserId !== user.id) throw new Error('You can only resolve your own image review items.')
+
+  if (action === 'USER_CONFIRMED') {
+    await prisma.$transaction([
+      prisma.photo.update({
+        where: { id: review.photoId },
+        data: { moderationStatus: 'APPROVED', moderationReason: 'Uploader confirmed image is correct.' },
+      }),
+      prisma.imageModerationReview.update({
+        where: { id: review.id },
+        data: { status: 'USER_CONFIRMED', resolvedAt: new Date(), resolvedByUserId: user.id },
+      }),
+    ])
+    await audit(user, 'USER_CONFIRMED', 'IMAGE_MODERATION_REVIEW', review.id, `Confirmed no-plant image review for photo ${review.photoId}`, undefined, review.collectionId)
+  } else if (action === 'REMOVE') {
+    await prisma.$transaction([
+      prisma.photo.update({
+        where: { id: review.photoId },
+        data: { moderationStatus: 'REMOVED', moderationReason: 'Removed by uploader after no-plant review.' },
+      }),
+      prisma.imageModerationReview.update({
+        where: { id: review.id },
+        data: { status: 'REMOVED', resolvedAt: new Date(), resolvedByUserId: user.id },
+      }),
+    ])
+    await audit(user, 'REMOVE', 'IMAGE_MODERATION_REVIEW', review.id, `Removed photo ${review.photoId} after no-plant review`, undefined, review.collectionId)
+  } else {
+    throw new Error('Unsupported moderation action.')
+  }
+
+  revalidateDestination(destination)
+  redirect(destination || '/account')
+}
+
 export async function updatePhotoFraming(fd: FormData) {
   const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const id = val(fd, 'id')!

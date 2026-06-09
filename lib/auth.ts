@@ -119,7 +119,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     include: { user: true },
   })
 
-  if (!session || session.expiresAt < new Date()) {
+  if (!session || session.expiresAt < new Date() || session.user.disabledAt) {
     if (session) await prisma.session.delete({ where: { id: session.id } })
     return null
   }

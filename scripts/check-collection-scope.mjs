@@ -39,6 +39,18 @@ const reviewedAllowlist = [
     op: 'count',
     reason: 'Server management dashboard intentionally shows global photo count for server admins.',
   },
+  {
+    file: 'app/uploads/[filename]/route.ts',
+    model: 'photo',
+    op: 'findFirst',
+    reason: 'Upload route intentionally checks a file path globally before serving bytes so censored or removed uploads cannot be fetched directly.',
+  },
+  {
+    file: 'lib/image-moderation.ts',
+    model: 'photo',
+    op: 'findMany',
+    reason: 'Image moderation worker intentionally scans pending uploaded photos across collections, then updates only the selected photo and review rows.',
+  },
 ]
 
 function walk(dir) {

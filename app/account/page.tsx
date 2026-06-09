@@ -1,5 +1,7 @@
 import { resendOwnVerificationEmail, updateAccount, updateEmailPreferences } from '@/app/auth-actions'
+import { resolveImageModerationReview } from '@/app/actions'
 import Link from 'next/link'
+import { PlantImage } from '@/components/PlantImage'
 import { Card, Field, Button } from '@/components/ui'
 import { PushNotificationSettings } from '@/components/PushNotificationSettings'
 import { requireUser } from '@/lib/auth'
@@ -57,10 +59,57 @@ export default async function Account({
     const target = await resolveSunshineTarget(prisma, row.collectionId, row.collection.slug, row.targetType, row.targetId)
     return target ? { id: row.id, createdAt: row.createdAt, collectionName: row.collection.name, target } : null
   }))).filter(Boolean)
+  const imageReviewItems = await prisma.imageModerationReview.findMany({
+    where: { uploaderUserId: user.id, reviewType: 'NO_PLANT_DETECTED', status: 'PENDING' },
+    include: {
+      photo: true,
+      collection: { select: { name: true, slug: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  })
 
   return (
     <div className="space-y-6">
       <h2 className="text-3xl font-bold">Account</h2>
+      {imageReviewItems.length > 0 && (
+        <Card className="border-amber-200 bg-amber-50/80">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="font-bold text-amber-950">Image review needed</h3>
+              <p className="mt-1 text-sm text-amber-900">No plant detected. Are you sure this is the image you wanted to upload?</p>
+            </div>
+            <span className="rounded-full border border-amber-300 bg-white/70 px-3 py-1 text-sm font-semibold text-amber-950">{imageReviewItems.length} pending</span>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {imageReviewItems.map((item) => (
+              <div key={item.id} className="grid gap-3 rounded-lg border border-amber-200 bg-white/70 p-3 sm:grid-cols-[6rem_minmax(0,1fr)]">
+                <div className="aspect-square overflow-hidden rounded-md border border-amber-200 bg-[#d6dfc9]/45">
+                  <PlantImage src={item.photo} alt={item.photo.caption || 'Uploaded image'} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-amber-950">{item.collection?.name || 'Collection image'}</p>
+                  {item.photo.caption && <p className="mt-1 line-clamp-2 text-sm text-amber-900">{item.photo.caption}</p>}
+                  {item.reason && <p className="mt-1 text-xs text-amber-800">Review note: {item.reason}</p>}
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <form action={resolveImageModerationReview}>
+                      <input type="hidden" name="reviewId" value={item.id} />
+                      <input type="hidden" name="action" value="USER_CONFIRMED" />
+                      <input type="hidden" name="back" value="/account" />
+                      <Button className="px-3 py-1.5 text-xs">Yes, keep it</Button>
+                    </form>
+                    <form action={resolveImageModerationReview}>
+                      <input type="hidden" name="reviewId" value={item.id} />
+                      <input type="hidden" name="action" value="REMOVE" />
+                      <input type="hidden" name="back" value="/account" />
+                      <Button className="bg-[#9a3f35] px-3 py-1.5 text-xs hover:bg-[#7d3028]">Remove image</Button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
       <Card>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-stone-200 bg-white/50 p-3 text-sm text-stone-700">
           <span>Two-factor authentication: {account?.twoFactor?.enabledAt ? 'enabled' : 'not enabled'}</span>

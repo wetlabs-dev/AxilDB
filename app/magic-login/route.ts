@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     ? await prisma.user.findUnique({ where: { id: record.userId }, include: { twoFactor: true } })
     : await prisma.user.findUnique({ where: { email: record.email }, include: { twoFactor: true } })
 
-  if (!user) return NextResponse.redirect(appUrl(pathWithNext('/login?magic=expired', next)))
+  if (!user || user.disabledAt) return NextResponse.redirect(appUrl(pathWithNext('/login?magic=expired', next)))
 
   if (user.twoFactor?.enabledAt) {
     await createTwoFactorChallenge(user.id)

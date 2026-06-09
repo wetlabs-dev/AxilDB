@@ -11,6 +11,7 @@ const requiredCollectionModels = [
   ['BloomEvent', 'bloomEvent'],
   ['Note', 'note'],
   ['Photo', 'photo'],
+  ['ImageModerationReview', 'imageModerationReview'],
   ['Reminder', 'reminder'],
   ['ReminderDelivery', 'reminderDelivery'],
   ['Follow', 'follow'],

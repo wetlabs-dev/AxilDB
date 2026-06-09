@@ -15,6 +15,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:bootstrap": "tsx prisma/bootstrap.ts",
     "email:send-reminders": "tsx scripts/send-reminders.ts",
+    "images:moderate": "tsx scripts/process-image-moderation.ts",
     "metrics:collect": "tsx scripts/collect-server-metrics.ts",
     "backup": "sh scripts/backup.sh",
     "backup:worker": "tsx scripts/run-backup-worker.ts",

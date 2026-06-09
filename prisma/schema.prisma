@@ -26,6 +26,8 @@ model User {
   emailVerifiedAt     DateTime?
   passwordHash        String
   role                String               @default("USER")
+  disabledAt          DateTime?
+  disabledReason      String?
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   sessions            Session[]
@@ -67,11 +69,15 @@ model User {
   reviewedPlantDefinitionDisputes PlantDefinitionDispute[] @relation("PlantDefinitionDisputeReviewer")
   validatedDefinitionChanges ValidatedDefinitionChange[] @relation("ValidatedDefinitionChangeActor")
   collectionUpdateDigestDeliveries CollectionUpdateDigestDelivery[]
+  uploadedImageModerationReviews ImageModerationReview[] @relation("ImageModerationReviewUploader")
+  resolvedImageModerationReviews ImageModerationReview[] @relation("ImageModerationReviewResolver")
+  uploadedPhotos Photo[] @relation("PhotoUploader")
   careSheets          CareSheet[]
   completedCareSheetTasks CareSheetTask[] @relation("CareSheetTaskCompletedBy")
 
   @@index([role])
   @@index([emailVerifiedAt])
+  @@index([disabledAt])
 }
 
 model Collection {
@@ -109,6 +115,7 @@ model Collection {
   propagationEvents   PropagationEvent[]
   notes               Note[]
   photos              Photo[]
+  imageModerationReviews ImageModerationReview[]
   bloomEvents         BloomEvent[]
   reminders           Reminder[]
   reminderDeliveries  ReminderDelivery[]
@@ -1282,6 +1289,7 @@ model Note {
 model Photo {
   id         String   @id @default(cuid())
   collectionId String?
+  uploadedByUserId String?
   entityType String
   entityId   String
   filename   String
@@ -1297,14 +1305,55 @@ model Photo {
   focalY     Float?
   isCover    Boolean  @default(false)
   isType     Boolean  @default(false)
+  moderationStatus String @default("PENDING")
+  nsfwFlagged Boolean @default(false)
+  plantDetected Boolean?
+  plantConfidence Float?
+  moderationCheckedAt DateTime?
+  moderationReason String?
+  moderationModel String?
+  moderationFailureCount Int @default(0)
+  moderationLastError String?
   createdAt  DateTime @default(now())
 
   collection Collection? @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  uploadedByUser User? @relation("PhotoUploader", fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+  moderationReviews ImageModerationReview[]
 
   @@index([collectionId])
+  @@index([uploadedByUserId])
   @@index([entityType, entityId])
   @@index([isCover])
   @@index([isType])
+  @@index([moderationStatus])
+  @@index([nsfwFlagged])
+}
+
+model ImageModerationReview {
+  id               String   @id @default(cuid())
+  photoId          String
+  collectionId     String?
+  uploaderUserId   String?
+  reviewType       String
+  status           String   @default("PENDING")
+  reason           String?
+  model            String?
+  createdAt        DateTime @default(now())
+  resolvedAt       DateTime?
+  resolvedByUserId String?
+
+  photo          Photo       @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  collection     Collection? @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  uploaderUser   User?       @relation("ImageModerationReviewUploader", fields: [uploaderUserId], references: [id], onDelete: SetNull)
+  resolvedByUser User?       @relation("ImageModerationReviewResolver", fields: [resolvedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([photoId, reviewType, status])
+  @@index([photoId])
+  @@index([collectionId])
+  @@index([uploaderUserId])
+  @@index([resolvedByUserId])
+  @@index([reviewType])
+  @@index([status])
 }
 
 model BloomEvent {

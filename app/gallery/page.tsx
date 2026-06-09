@@ -71,6 +71,8 @@ export default async function GalleryPage() {
       return [{
         id: photo.id,
         path: photo.path,
+        moderationStatus: photo.moderationStatus,
+        nsfwFlagged: photo.nsfwFlagged,
         caption: photo.caption || '',
         cropX: photo.cropX,
         cropY: photo.cropY,
@@ -101,6 +103,8 @@ export default async function GalleryPage() {
       return [{
         id: photo.id,
         path: photo.path,
+        moderationStatus: photo.moderationStatus,
+        nsfwFlagged: photo.nsfwFlagged,
         caption: photo.caption || 'Plant definition type image',
         cropX: photo.cropX,
         cropY: photo.cropY,
@@ -129,6 +133,8 @@ export default async function GalleryPage() {
     return [{
       id: photo.id,
       path: photo.path,
+      moderationStatus: photo.moderationStatus,
+      nsfwFlagged: photo.nsfwFlagged,
       caption: photo.caption || `Bloom photo from ${fmtDate(bloom.bloomStartDate)}`,
       cropX: photo.cropX,
       cropY: photo.cropY,

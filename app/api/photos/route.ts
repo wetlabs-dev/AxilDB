@@ -82,6 +82,7 @@ export async function POST(req: Request) {
     await writeFile(path.join(process.cwd(), 'public', 'uploads', filename), bytes)
     const data = {
       collectionId: collection.id,
+      uploadedByUserId: user.id,
       entityType,
       entityId,
       filename,

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight, ExternalLink, X } from 'lucide-react'
 import { toggleSunshine } from '@/app/actions'
-import { PlantImage } from '@/components/PlantImage'
+import { isImageHiddenByModeration, ModeratedImagePlaceholder, PlantImage } from '@/components/PlantImage'
 import { Button } from '@/components/ui'
 import { cn } from '@/lib/utils'
 
@@ -16,6 +16,8 @@ const backToSunshine = (back: string, id: string) => `${back.split('#')[0] || '/
 export type GalleryPhoto = {
   id: string
   path: string
+  moderationStatus?: string | null
+  nsfwFlagged?: boolean | null
   caption: string
   createdAt: string
   kind: 'Specimen' | 'Bloom' | 'Type image'
@@ -182,7 +184,11 @@ export function PhotoGallery({ photos }: { photos: GalleryPhoto[] }) {
 
           <div className="grid h-full grid-rows-[1fr_auto]">
             <div className="flex min-h-0 items-center justify-center p-4 sm:p-8">
-              <img src={activePhoto.path} alt={activePhoto.caption || activePhoto.plantId} className="max-h-full max-w-full object-contain shadow-2xl" />
+              {isImageHiddenByModeration(activePhoto) ? (
+                <ModeratedImagePlaceholder status={activePhoto.moderationStatus} className="max-h-full max-w-full rounded-lg border border-white/15 p-10 shadow-2xl" />
+              ) : (
+                <img src={activePhoto.path} alt={activePhoto.caption || activePhoto.plantId} className="max-h-full max-w-full object-contain shadow-2xl" />
+              )}
             </div>
             <div className="border-t border-white/10 bg-black/35 p-4 backdrop-blur">
               <div className="mx-auto flex max-w-5xl flex-wrap items-end justify-between gap-3">

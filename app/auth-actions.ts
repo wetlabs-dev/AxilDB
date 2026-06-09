@@ -135,6 +135,11 @@ export async function login(fd: FormData) {
     redirect(pathWithNext('/login?error=1', next))
   }
 
+  if (user.disabledAt) {
+    await audit({ id: user.id, email: user.email, role: user.role }, 'LOGIN_BLOCKED', 'USER', user.id, `Blocked login for disabled user ${user.email}`)
+    redirect(pathWithNext('/login?error=1', next))
+  }
+
   if (user.twoFactor?.enabledAt) {
     await createTwoFactorChallenge(user.id)
     await audit({ id: user.id, email: user.email, role: user.role }, '2FA_CHALLENGE', 'USER', user.id, `${user.email} started two-factor sign in`)

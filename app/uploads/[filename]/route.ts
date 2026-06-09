@@ -1,6 +1,7 @@
 import { readFile } from 'fs/promises'
 import path from 'path'
 import { NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
 
 const contentTypes: Record<string, string> = {
   '.jpg': 'image/jpeg',
@@ -19,6 +20,19 @@ export async function GET(_request: Request, { params }: { params: Promise<{ fil
   if (!safeName || safeName !== filename) return new NextResponse('Not found', { status: 404 })
 
   try {
+    const uploadPath = `/uploads/${safeName}`
+    const hiddenPhoto = await prisma.photo.findFirst({
+      where: {
+        path: uploadPath,
+        OR: [
+          { nsfwFlagged: true },
+          { moderationStatus: { in: ['CENSORED', 'REMOVED'] } },
+        ],
+      },
+      select: { id: true },
+    })
+    if (hiddenPhoto) return new NextResponse('Not found', { status: 404 })
+
     const filePath = path.join(process.cwd(), 'public', 'uploads', safeName)
     const bytes = await readFile(filePath)
     const extension = path.extname(safeName).toLowerCase()
