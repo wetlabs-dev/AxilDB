@@ -530,6 +530,7 @@ model EmailPreference {
   bloomCycleRemindersPushEnabled Boolean @default(false)
   propagationFollowUpsPushEnabled Boolean @default(false)
   followNotificationsPushEnabled Boolean @default(false)
+  sunshineNotificationsPushEnabled Boolean @default(false)
   careQueueDigestPushEnabled Boolean @default(false)
   serverHealthPushEnabled Boolean @default(false)
   careQueueDigestSendTime String @default("08:00")

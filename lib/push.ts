@@ -10,6 +10,7 @@ export type PushPreferenceKey =
   | 'bloomCycleRemindersPushEnabled'
   | 'propagationFollowUpsPushEnabled'
   | 'followNotificationsPushEnabled'
+  | 'sunshineNotificationsPushEnabled'
   | 'careQueueDigestPushEnabled'
   | 'serverHealthPushEnabled'
 

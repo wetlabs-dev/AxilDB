@@ -41,7 +41,7 @@ export default async function Account({
     ['bloomCycleReminders', 'bloomCycleRemindersPushEnabled', 'Bloom-cycle reminders', preferences?.bloomCycleReminders ?? true, preferences?.bloomCycleRemindersPushEnabled ?? false],
     ['propagationFollowUps', 'propagationFollowUpsPushEnabled', 'Propagation follow-up reminders', preferences?.propagationFollowUps ?? true, preferences?.propagationFollowUpsPushEnabled ?? false],
     ['followNotifications', 'followNotificationsPushEnabled', 'Followed plant updates', preferences?.followNotifications ?? true, preferences?.followNotificationsPushEnabled ?? false],
-    ['sunshineNotifications', null, 'Email me when one of my plants, blooms, or photos receives sunshine', preferences?.sunshineNotifications ?? false, false],
+    ['sunshineNotifications', 'sunshineNotificationsPushEnabled', 'Sunshine received', preferences?.sunshineNotifications ?? false, preferences?.sunshineNotificationsPushEnabled ?? false],
     ['careQueueDigestEmailEnabled', 'careQueueDigestPushEnabled', 'Care queue digest', preferences?.careQueueDigestEmailEnabled ?? true, preferences?.careQueueDigestPushEnabled ?? false],
     ['serverHealthEmailEnabled', 'serverHealthPushEnabled', 'Server health alerts', preferences?.serverHealthEmailEnabled ?? true, preferences?.serverHealthPushEnabled ?? false],
   ] as const
