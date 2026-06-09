@@ -409,6 +409,8 @@ Photo uploads are processed with Sharp:
 - Uploaded images are stored under `public/uploads`.
 - Uploaded files are served through `/uploads/[filename]`.
 
+Server admins can open **Server Management → Orphaned Images** to run a dry-run scan of uploaded image storage. The tool recursively scans supported image files in the upload directory, compares them with database upload references, shows suspected orphaned files with size, modified date, and preview, and deletes only selected files after the admin types the confirmation phrase. Deletion re-checks database references immediately before unlinking each file to avoid races with concurrent uploads, logs cleanup activity in the audit log, and never deletes database records. Back up before bulk deletion. The cleanup tool does not touch generated labels, manuals, backups, PDFs, or other non-upload directories.
+
 For long-term production hardening, object storage such as AWS S3 or Lightsail Object Storage would be a good next step.
 
 ## Audit Log

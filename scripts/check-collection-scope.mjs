@@ -53,6 +53,18 @@ const reviewedAllowlist = [
     reason: 'Image moderation worker intentionally scans pending uploaded photos across collections, then updates only the selected photo and review rows.',
   },
   {
+    file: 'lib/admin/orphanedImages.ts',
+    model: 'photo',
+    op: 'findMany',
+    reason: 'Server-admin orphaned image cleanup intentionally gathers sitewide upload references before comparing them with files in upload storage.',
+  },
+  {
+    file: 'lib/admin/orphanedImages.ts',
+    model: 'plantIdentificationLog',
+    op: 'findMany',
+    reason: 'Server-admin orphaned image cleanup intentionally gathers sitewide ID My Plant upload references before comparing them with files in upload storage.',
+  },
+  {
     file: 'app/account/page.tsx',
     model: 'plantIdentificationLog',
     op: 'findMany',

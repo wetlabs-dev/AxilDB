@@ -368,13 +368,16 @@ export const manualSections: ManualSection[] = [
       'Use Site Users to manage global roles and collection memberships.',
       'Use Server Collections to create, archive, restore, or permanently delete collections.',
       'Use backup controls to initiate sitewide backups.',
+      'Use Orphaned Image Cleanup to scan uploaded image storage for files no longer referenced by database records, review the dry-run list, select files, and delete only after confirmation.',
     ],
     notes: [
       'Collection managers do not see the full site user list.',
       'AI availability can be toggled per collection by server admins, and collection managers can request AI access.',
+      'Orphaned Image Cleanup only scans the upload image directory and re-checks database references immediately before deleting selected files.',
     ],
     warnings: [
       'Permanent collection deletion cascades collection-owned records. Archive first and verify backups before deleting.',
+      'Back up before bulk orphaned-image deletion. Cleanup does not delete database records and does not touch labels, manuals, backups, or generated PDFs.',
     ],
   },
 ]
