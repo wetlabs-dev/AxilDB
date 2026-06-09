@@ -1,4 +1,4 @@
-import { toggleSunshine } from '@/app/actions'
+import { SunshineForm } from '@/components/SunshineForm'
 import { Button } from '@/components/ui'
 import { sunshineCountLabel, WELL_LOVED_THRESHOLD, type SunshineTargetType } from '@/lib/sunshine'
 import { cn } from '@/lib/utils'
@@ -41,7 +41,7 @@ export function SunshineButton({
         <span className="rounded-full border border-[#e4a950] bg-[#fff3d1] px-2 py-1 font-bold text-[#7a4b00]">☀️ Well Loved</span>
       )}
       {canToggle ? (
-        <form id={anchor} action={toggleSunshine}>
+        <SunshineForm id={anchor}>
           <input type="hidden" name="collectionSlug" value={collectionSlug} />
           <input type="hidden" name="targetType" value={targetType} />
           <input type="hidden" name="targetId" value={targetId} />
@@ -54,7 +54,7 @@ export function SunshineButton({
           >
             {buttonLabel}
           </Button>
-        </form>
+        </SunshineForm>
       ) : (
         <span className="sunshine-action-button rounded-md px-2.5 py-1.5 text-xs font-medium">
           ☀️ {sunshineCountLabel(count)}

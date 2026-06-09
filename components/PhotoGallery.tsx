@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight, ExternalLink, X } from 'lucide-react'
-import { toggleSunshine } from '@/app/actions'
 import { isImageHiddenByModeration, ModeratedImagePlaceholder, PlantImage } from '@/components/PlantImage'
+import { SunshineForm } from '@/components/SunshineForm'
 import { Button } from '@/components/ui'
 import { cn } from '@/lib/utils'
 
@@ -123,7 +123,7 @@ export function PhotoGallery({ photos }: { photos: GalleryPhoto[] }) {
                     <span className="rounded-full border border-[#e4a950] bg-[#fff3d1] px-2 py-1 font-bold text-[#7a4b00]">☀️ Well Loved</span>
                   )}
                   {photo.canToggleSunshine ? (
-                    <form id={sunshineAnchor(photo.id)} action={toggleSunshine}>
+                    <SunshineForm id={sunshineAnchor(photo.id)}>
                       <input type="hidden" name="collectionSlug" value={photo.collectionSlug} />
                       <input type="hidden" name="targetType" value="PHOTO" />
                       <input type="hidden" name="targetId" value={photo.id} />
@@ -136,7 +136,7 @@ export function PhotoGallery({ photos }: { photos: GalleryPhoto[] }) {
                       >
                         {photo.sunshined ? '☀️ Sunshined' : '☀️ Give Sunshine'} · {sunshineCountLabel(photo.sunshineCount)}
                       </Button>
-                    </form>
+                    </SunshineForm>
                   ) : (
                     <span className="sunshine-action-button rounded-md px-2 py-1 text-xs font-medium">
                       ☀️ {sunshineCountLabel(photo.sunshineCount)}
