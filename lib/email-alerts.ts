@@ -319,9 +319,20 @@ export async function sendCareQueueDigestAlerts(prisma: PrismaClient, now = new 
 
     try {
       if (emailEnabled && user.emailVerifiedAt) {
-        await sendCareQueueDigestEmail(user, digest)
-        delivered = true
-        sent += 1
+        const currentPreference = await prisma.emailPreference.findUnique({
+          where: { userId: user.id },
+          select: {
+            careQueueDigestEmailEnabled: true,
+            careQueueDigestSendTime: true,
+            careQueueDigestLastSentAt: true,
+            timezone: true,
+          },
+        })
+        if (currentPreference?.careQueueDigestEmailEnabled === true && shouldSendCareQueueDigest(currentPreference, now)) {
+          await sendCareQueueDigestEmail(user, digest)
+          delivered = true
+          sent += 1
+        }
       }
       if (delivered) {
         await prisma.emailPreference.upsert({
