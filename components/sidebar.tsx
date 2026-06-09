@@ -26,6 +26,7 @@ async function buildSidebarBadges(collection: { id: string; slug: string }, user
     pendingConnections,
     pendingPlantTransfers,
     pendingDefinitionShares,
+    accountReviews,
   ] = await Promise.all([
     getCareQueue(prisma, { collectionId, collectionSlug: collection.slug, userId: user?.id }),
     prisma.plantDefinition.count({ where: { collectionId } }),
@@ -67,6 +68,11 @@ async function buildSidebarBadges(collection: { id: string; slug: string }, user
         OR: [{ sourceCollectionId: collectionId }, { targetCollectionId: collectionId }],
       },
     }),
+    user
+      ? prisma.imageModerationReview.count({
+          where: { uploaderUserId: user.id, reviewType: 'NO_PLANT_DETECTED', status: 'PENDING' },
+        })
+      : Promise.resolve(0),
   ])
 
   const serverBadge = user && isServerAdminRole(user.role)
@@ -88,6 +94,7 @@ async function buildSidebarBadges(collection: { id: string; slug: string }, user
     '/members': pendingMembers,
     '/transfers': pendingConnections + pendingPlantTransfers + pendingDefinitionShares,
     '/archived': archivedPlants,
+    account: accountReviews,
     server: serverBadge,
   }
 }

@@ -23,15 +23,21 @@ const instanceSortOptions: SortOption[] = [
   { value: 'sunshineAsc', label: 'Sunshine low-high' },
 ]
 
-export default async function Instances() {
+export default async function Instances({
+  searchParams,
+}: {
+  searchParams: Promise<{ definition?: string }>
+}) {
   const user = await getCurrentUser()
+  const sp = await searchParams
   const context = await requireCollectionViewer()
   const { collection } = context
   const collectionWhere = { collectionId: collection.id }
+  const definitionFilter = sp.definition || ''
   const sortKey = await sortPreference(user?.id, 'instances', 'plantIdAsc', instanceSortOptions.map((option) => option.value))
   const [instances, defs, instanceSuggestionRows] = await Promise.all([
     prisma.plantInstance.findMany({
-      where: { ...collectionWhere, status: 'ACTIVE' },
+      where: { ...collectionWhere, status: 'ACTIVE', ...(definitionFilter ? { plantDefinitionId: definitionFilter } : {}) },
       include: { plantDefinition: true },
       orderBy: { plantId: 'asc' },
     }),
@@ -48,6 +54,9 @@ export default async function Instances() {
   const sourceSuggestions = rankedSuggestions(instanceSuggestionRows.map((instance) => instance.source))
   const distributorSuggestions = rankedSuggestions(instanceSuggestionRows.map((instance) => instance.distributor))
   const stockNumberSuggestions = rankedSuggestions(instanceSuggestionRows.map((instance) => instance.stockNumber))
+  const filteredDefinition = definitionFilter
+    ? defs.find((definition) => definition.id === definitionFilter)
+    : null
 
   const photos = await prisma.photo.findMany({
     where: { ...collectionWhere, entityType: 'PLANT_INSTANCE', entityId: { in: instances.map((item) => item.id) } },
@@ -77,12 +86,21 @@ export default async function Instances() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-3xl font-bold">Plant Instances</h2>
+        <div>
+          <h2 className="text-3xl font-bold">Plant Instances</h2>
+          {filteredDefinition && (
+            <p className="mt-1 text-sm text-stone-600">
+              Showing {plantName(filteredDefinition)}.
+              {' '}
+              <Link className="font-medium text-[#2f6b45] underline" href={collectionPath(collection.slug, '/instances')}>Show all instances</Link>
+            </p>
+          )}
+        </div>
         <SortControl
           section="instances"
           value={sortKey}
           options={instanceSortOptions}
-          back={collectionPath(collection.slug, '/instances')}
+          back={collectionPath(collection.slug, definitionFilter ? `/instances?definition=${encodeURIComponent(definitionFilter)}` : '/instances')}
           disabled={!user}
         />
       </div>
@@ -159,7 +177,7 @@ export default async function Instances() {
                 count={sunshineCount(instance.id)}
                 active={currentUserSunshine.has(sunshineKey('PLANT_INSTANCE', instance.id))}
                 canToggle={Boolean(user)}
-                back={collectionPath(collection.slug, '/instances')}
+                back={collectionPath(collection.slug, definitionFilter ? `/instances?definition=${encodeURIComponent(definitionFilter)}` : '/instances')}
                 compact
               />
             </div>

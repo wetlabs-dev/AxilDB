@@ -297,6 +297,31 @@ section {
   box-shadow: 0 0 0 2px rgba(143, 165, 143, .3);
 }
 
+.sunshine-action-button {
+  border: 1px solid #d7a631 !important;
+  background: #fff4ce !important;
+  color: #5f4300 !important;
+  box-shadow: 0 4px 12px rgba(106, 74, 0, .12);
+}
+
+.sunshine-action-button:hover {
+  background: #ffe59a !important;
+  color: #3d2a00 !important;
+}
+
+.sunshine-action-button-active {
+  border-color: #f5c13b !important;
+  background: #d78300 !important;
+  color: #fff9e8 !important;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, .28);
+  box-shadow: 0 0 0 1px rgba(255, 248, 216, .58), 0 8px 18px rgba(0, 0, 0, .2);
+}
+
+.sunshine-action-button-active:hover {
+  background: #ef9b0f !important;
+  color: #fffdf4 !important;
+}
+
 @media (max-width: 640px) {
   h2 {
     font-size: 1.65rem !important;
@@ -380,6 +405,30 @@ section {
 :root[data-theme='dark'] .plant-card-action:focus-visible {
   border-color: rgba(155, 195, 138, .82) !important;
   box-shadow: 0 0 0 2px rgba(155, 195, 138, .28) !important;
+}
+
+:root[data-theme='dark'] .sunshine-action-button {
+  border-color: rgba(247, 201, 72, .82) !important;
+  background: rgba(80, 57, 8, .88) !important;
+  color: #ffe9a8 !important;
+  box-shadow: 0 0 0 1px rgba(255, 248, 216, .18), 0 8px 20px rgba(0, 0, 0, .28);
+}
+
+:root[data-theme='dark'] .sunshine-action-button:hover {
+  background: rgba(107, 77, 12, .96) !important;
+  color: #fff4cf !important;
+}
+
+:root[data-theme='dark'] .sunshine-action-button-active {
+  border-color: #ffd56b !important;
+  background: #d88400 !important;
+  color: #fffdf4 !important;
+  box-shadow: 0 0 0 1px rgba(255, 248, 216, .5), 0 8px 22px rgba(0, 0, 0, .42);
+}
+
+:root[data-theme='dark'] .sunshine-action-button-active:hover {
+  background: #f0a018 !important;
+  color: #fffdf4 !important;
 }
 
 :root[data-theme='dark'] .text-stone-900,

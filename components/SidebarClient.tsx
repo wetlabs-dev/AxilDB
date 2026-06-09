@@ -234,6 +234,7 @@ export function SidebarClient({
           <GhostLink href={globalPath('/account')}>
             <BookOpen className="h-4 w-4 shrink-0" />
             <span className="min-w-0 flex-1 truncate">Account</span>
+            <CountBadge value={badgeFor('account')} attention />
           </GhostLink>
           <GhostLink href={globalPath('/privacy')}>
             <ShieldCheck className="h-4 w-4 shrink-0" />

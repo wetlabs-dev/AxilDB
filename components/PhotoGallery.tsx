@@ -91,7 +91,7 @@ export function PhotoGallery({ photos }: { photos: GalleryPhoto[] }) {
         <span className="rounded-full border border-stone-200 bg-white/70 px-3 py-1">{Object.keys(byPlant).length} records</span>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-6">
         {photos.map((photo, index) => (
           <div
             key={photo.id}
@@ -118,10 +118,7 @@ export function PhotoGallery({ photos }: { photos: GalleryPhoto[] }) {
               <p className="truncate text-sm font-semibold text-stone-900">{photo.plantId}</p>
               <p className="line-clamp-2 text-xs text-stone-600">{photo.caption || photo.plantName}</p>
               {photo.canSunshine && (
-                <div className="flex flex-wrap items-center gap-1.5 border-t border-stone-200 pt-2 text-xs">
-                  <span className="rounded-full border border-[#e7c45a] bg-[#fff8d8] px-2 py-1 font-semibold text-[#6c5300]">
-                    {sunshineCountLabel(photo.sunshineCount)}
-                  </span>
+                <div className="flex flex-wrap items-center justify-end gap-1.5 border-t border-stone-200 pt-2 text-xs">
                   {photo.sunshineCount >= WELL_LOVED_THRESHOLD && (
                     <span className="rounded-full border border-[#e4a950] bg-[#fff3d1] px-2 py-1 font-bold text-[#7a4b00]">☀️ Well Loved</span>
                   )}
@@ -133,18 +130,16 @@ export function PhotoGallery({ photos }: { photos: GalleryPhoto[] }) {
                       <input type="hidden" name="back" value={backToSunshine(photo.back, photo.id)} />
                       <Button
                         className={cn(
-                          'px-2 py-1 text-xs',
-                          photo.sunshined
-                            ? 'border border-[#f7c948] bg-[#f9b934] text-[#1f1600] shadow-[0_0_0_1px_rgba(255,248,216,0.55),0_6px_14px_rgba(0,0,0,0.18)] hover:bg-[#ffd15a]'
-                            : 'bg-[#2f6b45] text-white',
+                          'sunshine-action-button px-2 py-1 text-xs',
+                          photo.sunshined ? 'sunshine-action-button-active' : '',
                         )}
                       >
-                        {photo.sunshined ? '☀️ Sunshined' : '☀️ Give Sunshine'}
+                        {photo.sunshined ? '☀️ Sunshined' : '☀️ Give Sunshine'} · {sunshineCountLabel(photo.sunshineCount)}
                       </Button>
                     </form>
                   ) : (
-                    <span className="rounded-md border border-stone-200 bg-white/55 px-2 py-1 text-xs font-medium text-stone-600">
-                      Sign in to give sunshine
+                    <span className="sunshine-action-button rounded-md px-2 py-1 text-xs font-medium">
+                      ☀️ {sunshineCountLabel(photo.sunshineCount)}
                     </span>
                   )}
                 </div>

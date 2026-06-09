@@ -1917,6 +1917,7 @@ export async function setCoverPhoto(fd: FormData) {
   ])
 
   await audit(user, 'UPDATE', 'PHOTO', id, `Selected cover photo for plant instance ${photo.entityId}`, undefined, collection.id)
+  revalidateDestination(back(fd))
   redirect(back(fd))
 }
 
@@ -1952,11 +1953,12 @@ export async function setTypePhoto(fd: FormData) {
   ])
 
   await audit(user, 'UPDATE', 'PHOTO', id, `Selected type photo for plant definition ${instance.plantDefinitionId}`, undefined, collection.id)
+  revalidateDestination(back(fd))
   redirect(back(fd))
 }
 
 export async function deletePhoto(fd: FormData) {
-  const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
+  const { user, collection } = await requireCollectionManager(await collectionSlug(fd))
   const id = val(fd, 'id')!
   const destination = back(fd)
   const photo = await prisma.photo.findFirstOrThrow({ where: { id, collectionId: collection.id } })
@@ -1975,7 +1977,7 @@ export async function deletePhoto(fd: FormData) {
   }
 
   await audit(user, 'DELETE', 'PHOTO', id, `Deleted photo for ${photo.entityType} ${photo.entityId}`, photo, collection.id)
-  revalidatePath(destination)
+  revalidateDestination(destination)
   redirect(destination)
 }
 

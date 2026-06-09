@@ -34,7 +34,7 @@ import { Button, Card, Field, Select, TextArea } from '@/components/ui'
 import { HusbandryBadges, HusbandryGuideView } from '@/components/Husbandry'
 import { waterCadenceDays } from '@/lib/care-queue'
 import { getCurrentUser } from '@/lib/auth'
-import { canCreateInCollection, canEditInCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
+import { canCreateInCollection, canEditInCollection, canManageCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { expectedPlantIdForInstance } from '@/lib/plant-id'
 import { prisma } from '@/lib/prisma'
 import { recurrenceLabel, reminderCategories, reminderCategoryLabel, reminderRecurrences } from '@/lib/reminders'
@@ -87,6 +87,7 @@ export default async function InstanceDetail({
   const collectionWhere = { collectionId: collection.id }
   const canCreateRecords = canCreateInCollection(user, context)
   const canEditRecords = canEditInCollection(user, context)
+  const canManageRecords = canManageCollection(user, context)
   const preferences = user
     ? await prisma.emailPreference.findUnique({ where: { userId: user.id } })
     : null
@@ -345,7 +346,7 @@ export default async function InstanceDetail({
       <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
         {photos.length === 0 && <p className="text-sm text-stone-600">No specimen photos yet.</p>}
         {photos.map((p) => (
-          <figure key={p.id} className="overflow-hidden rounded-lg border border-stone-200 bg-white/70">
+          <figure key={p.id} id={`photo-${p.id}`} className="scroll-mt-24 overflow-hidden rounded-lg border border-stone-200 bg-white/70">
             <div className="aspect-[4/3] overflow-hidden">
               <PlantImage src={p} alt={p.caption || 'Plant photo'} />
             </div>
@@ -370,14 +371,31 @@ export default async function InstanceDetail({
                 <div className="flex flex-wrap gap-2">
                   <form action={setCoverPhoto}>
                     <input type="hidden" name="id" value={p.id} />
-                    <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}`)} />
+                    <input type="hidden" name="collectionSlug" value={collection.slug} />
+                    <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}#photo-${p.id}`)} />
                     <Button className="px-3 py-1.5 text-xs" disabled={p.isCover}>Set cover</Button>
                   </form>
                   <form action={setTypePhoto}>
                     <input type="hidden" name="id" value={p.id} />
-                    <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}`)} />
+                    <input type="hidden" name="collectionSlug" value={collection.slug} />
+                    <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}#photo-${p.id}`)} />
                     <Button className="px-3 py-1.5 text-xs" disabled={p.isType}>Set type</Button>
                   </form>
+                  {canManageRecords && (
+                    <form action={deletePhoto}>
+                      <input type="hidden" name="id" value={p.id} />
+                      <input type="hidden" name="collectionSlug" value={collection.slug} />
+                      <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}#photos`)} />
+                      <ConfirmDeleteButton
+                        className="bg-[#9a3f35] px-3 py-1.5 text-xs hover:bg-[#7d3028]"
+                        title="Delete specimen photo?"
+                        message="This will permanently delete this specimen photo and any related sunshine or moderation review records."
+                        confirmLabel="Delete photo"
+                      >
+                        Delete
+                      </ConfirmDeleteButton>
+                    </form>
+                  )}
                 </div>
               )}
               {canEditRecords && (
@@ -1004,7 +1022,7 @@ export default async function InstanceDetail({
                   )}
 
                   {(photosByBloomId[b.id] || []).length > 0 && (
-                    <div className="mt-4 grid grid-cols-2 gap-3">
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
                       {(photosByBloomId[b.id] || []).map((p) => (
                         <figure key={p.id} className="overflow-hidden rounded-xl border border-stone-200 bg-white/70">
                           <div className="aspect-[4/3] overflow-hidden">
@@ -1038,18 +1056,21 @@ export default async function InstanceDetail({
                                     <Button className="px-2 py-1 text-xs">Save framing</Button>
                                   </form>
                                 </details>
-                                <form action={deletePhoto}>
-                                  <input type="hidden" name="id" value={p.id} />
-                                  <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}`)} />
-                                  <ConfirmDeleteButton
-                                    className="px-2 py-1 text-xs"
-                                    title="Delete bloom photo?"
-                                    message="This will permanently delete this bloom photo from the bloom event."
-                                    confirmLabel="Delete photo"
-                                  >
-                                    Delete photo
-                                  </ConfirmDeleteButton>
-                                </form>
+                                {canManageRecords && (
+                                  <form action={deletePhoto}>
+                                    <input type="hidden" name="id" value={p.id} />
+                                    <input type="hidden" name="collectionSlug" value={collection.slug} />
+                                    <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}#bloom-${b.id}`)} />
+                                    <ConfirmDeleteButton
+                                      className="bg-[#9a3f35] px-2 py-1 text-xs hover:bg-[#7d3028]"
+                                      title="Delete bloom photo?"
+                                      message="This will permanently delete this bloom photo and any related sunshine or moderation review records."
+                                      confirmLabel="Delete photo"
+                                    >
+                                      Delete photo
+                                    </ConfirmDeleteButton>
+                                  </form>
+                                )}
                               </>
                             )}
                           </figcaption>

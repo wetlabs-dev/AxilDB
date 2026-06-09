@@ -308,8 +308,21 @@ export default async function Plants({
                     </div>
                   )}
                 </div>
-                {user && (
-                  <div className="mt-auto pt-3">
+                <div className="mt-auto grid gap-2 pt-3">
+                  {plant._count.instances > 0 ? (
+                    <Link
+                      className="plant-card-action rounded-md border px-3 py-1.5 text-center text-xs"
+                      href={collectionPath(collection.slug, `/instances?definition=${encodeURIComponent(plant.id)}`)}
+                    >
+                      View instances · {plant._count.instances}
+                    </Link>
+                  ) : (
+                    <span className="rounded-md border border-stone-200 bg-white/45 px-3 py-1.5 text-center text-xs text-stone-500">
+                      No instances
+                    </span>
+                  )}
+                  {user && (
+                    <>
                     {followsByDefinitionId.get(plant.id) ? (
                       <form action={unfollowEntity}>
                         <input type="hidden" name="id" value={followsByDefinitionId.get(plant.id)!.id} />
@@ -328,8 +341,9 @@ export default async function Plants({
                         <Button className="w-full px-3 py-1.5 text-xs">Follow type · {followCountByDefinitionId.get(plant.id) || 0}</Button>
                       </form>
                     )}
-                  </div>
-                )}
+                    </>
+                  )}
+                </div>
               </div>
             </Card>
           )

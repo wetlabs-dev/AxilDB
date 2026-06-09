@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import { deletePlantDefinition, deletePlantHusbandryGuide, forkPlantHusbandryGuide, linkPlantHusbandryGuide, mergePlantDefinition, nominatePlantDefinitionForValidation, savePlantHusbandryGuide, savePlantHusbandryGuideField, updatePhotoFraming, updatePlantDefinition } from '@/app/actions'
+import { deletePhoto, deletePlantDefinition, deletePlantHusbandryGuide, forkPlantHusbandryGuide, linkPlantHusbandryGuide, mergePlantDefinition, nominatePlantDefinitionForValidation, savePlantHusbandryGuide, savePlantHusbandryGuideField, updatePhotoFraming, updatePlantDefinition } from '@/app/actions'
 import { Button, Card, Field, HelpTooltip, SuggestionDatalist, TextArea } from '@/components/ui'
 import { ConfidenceSelect, PlantAliasFields } from '@/components/PlantAliasFields'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
@@ -14,6 +14,7 @@ import { HusbandryMagicFillButton } from '@/components/HusbandryMagicFillButton'
 import { husbandryFieldNames } from '@/lib/husbandry'
 import { findMatchingValidatedDefinition } from '@/lib/validated-definitions'
 import { plantName } from '@/lib/utils'
+import { collectionRoleAtLeast, isServerAdminRole } from '@/lib/roles'
 
 const selectClass = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
 
@@ -31,7 +32,8 @@ export default async function EditPlant({
   params: Promise<{ id: string }>
   searchParams: Promise<{ uploadError?: string }>
 }) {
-  const { collection } = await requireCollectionAdmin()
+  const { collection, role, user } = await requireCollectionAdmin()
+  const canManageImages = isServerAdminRole(user.role) || collectionRoleAtLeast(role, 'MANAGER')
   const { id } = await params
   const { uploadError } = await searchParams
   const [plant, bodies, typePhotos, definitionSuggestionRows, guideSourceOptions, mergeTargetOptions] = await Promise.all([
@@ -334,6 +336,21 @@ export default async function EditPlant({
                       <Button className="px-3 py-1.5 text-xs">Save framing</Button>
                     </form>
                   </details>
+                  {canManageImages && (
+                    <form action={deletePhoto}>
+                      <input type="hidden" name="id" value={currentTypePhoto.id} />
+                      <input type="hidden" name="collectionSlug" value={collection.slug} />
+                      <input type="hidden" name="back" value={collectionPath(collection.slug, `/plants/${id}/edit`)} />
+                      <ConfirmDeleteButton
+                        className="bg-[#9a3f35] px-3 py-1.5 text-xs hover:bg-[#7d3028]"
+                        title="Delete type image?"
+                        message="This will permanently delete this type image and any related moderation review records."
+                        confirmLabel="Delete image"
+                      >
+                        Delete type image
+                      </ConfirmDeleteButton>
+                    </form>
+                  )}
                 </>
               ) : (
                 <p className="text-stone-600">No definition-level type image yet.</p>

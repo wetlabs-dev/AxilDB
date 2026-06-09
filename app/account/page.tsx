@@ -99,24 +99,24 @@ export default async function Account({
     <div className="space-y-6">
       <h2 className="text-3xl font-bold">Account</h2>
       {imageReviewItems.length > 0 && (
-        <Card className="border-amber-200 bg-amber-50/80">
+        <Card className="border-[color:var(--ax-border-strong)] bg-[var(--ax-surface-solid)]">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h3 className="font-bold text-amber-950">Image review needed</h3>
-              <p className="mt-1 text-sm text-amber-900">No plant detected. Are you sure this is the image you wanted to upload?</p>
+              <h3 className="font-bold text-[var(--ax-heading)]">Image review needed</h3>
+              <p className="mt-1 text-sm text-[var(--ax-muted-strong)]">No plant detected. Are you sure this is the image you wanted to upload?</p>
             </div>
-            <span className="rounded-full border border-amber-300 bg-white/70 px-3 py-1 text-sm font-semibold text-amber-950">{imageReviewItems.length} pending</span>
+            <span className="rounded-full border border-[color:var(--ax-border-strong)] bg-[var(--ax-warning-soft)] px-3 py-1 text-sm font-semibold text-[var(--ax-warning)]">{imageReviewItems.length} pending</span>
           </div>
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <div className="mt-4 grid gap-3 lg:grid-cols-2">
             {imageReviewItems.map((item) => (
-              <div key={item.id} className="grid gap-3 rounded-lg border border-amber-200 bg-white/70 p-3 sm:grid-cols-[6rem_minmax(0,1fr)]">
-                <div className="aspect-square overflow-hidden rounded-md border border-amber-200 bg-[#d6dfc9]/45">
+              <div key={item.id} className="grid gap-3 rounded-lg border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] p-3 sm:grid-cols-[6rem_minmax(0,1fr)]">
+                <div className="aspect-square overflow-hidden rounded-md border border-[color:var(--ax-border)] bg-[var(--ax-primary-wash)]">
                   <PlantImage src={item.photo} alt={item.photo.caption || 'Uploaded image'} />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-amber-950">{item.collection?.name || 'Collection image'}</p>
-                  {item.photo.caption && <p className="mt-1 line-clamp-2 text-sm text-amber-900">{item.photo.caption}</p>}
-                  {item.reason && <p className="mt-1 text-xs text-amber-800">Review note: {item.reason}</p>}
+                  <p className="text-sm font-semibold text-[var(--ax-heading)]">{item.collection?.name || 'Collection image'}</p>
+                  {item.photo.caption && <p className="mt-1 line-clamp-2 text-sm text-[var(--ax-text)]">{item.photo.caption}</p>}
+                  {item.reason && <p className="mt-1 text-xs text-[var(--ax-warning)]">Review note: {item.reason}</p>}
                   <div className="mt-3 flex flex-wrap gap-2">
                     <form action={resolveImageModerationReview}>
                       <input type="hidden" name="reviewId" value={item.id} />
