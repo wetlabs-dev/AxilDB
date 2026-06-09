@@ -2048,33 +2048,34 @@ export async function resolveImageModerationReview(fd: FormData) {
     redirect(destination || '/server/image-moderation')
   }
 
-  if (review.reviewType !== 'NO_PLANT_DETECTED') throw new Error('Unsupported review type.')
+  if (!['NO_PLANT_DETECTED', 'UNCERTAIN_PLANT_CONTENT'].includes(review.reviewType)) throw new Error('Unsupported review type.')
   if (review.uploaderUserId !== user.id) throw new Error('You can only resolve your own image review items.')
+  const uncertainPlantContent = review.reviewType === 'UNCERTAIN_PLANT_CONTENT'
 
   if (action === 'USER_CONFIRMED') {
     await prisma.$transaction([
       prisma.photo.update({
         where: { id: review.photoId },
-        data: { moderationStatus: 'APPROVED', moderationReason: 'Uploader confirmed image is correct.' },
+        data: { moderationStatus: 'APPROVED', moderationReason: uncertainPlantContent ? 'Uploader confirmed uncertain plant-content image is correct.' : 'Uploader confirmed image is correct.' },
       }),
       prisma.imageModerationReview.update({
         where: { id: review.id },
         data: { status: 'USER_CONFIRMED', resolvedAt: new Date(), resolvedByUserId: user.id },
       }),
     ])
-    await audit(user, 'USER_CONFIRMED', 'IMAGE_MODERATION_REVIEW', review.id, `Confirmed no-plant image review for photo ${review.photoId}`, undefined, review.collectionId)
+    await audit(user, 'USER_CONFIRMED', 'IMAGE_MODERATION_REVIEW', review.id, `Confirmed ${uncertainPlantContent ? 'uncertain plant-content' : 'no-plant'} image review for photo ${review.photoId}`, undefined, review.collectionId)
   } else if (action === 'REMOVE') {
     await prisma.$transaction([
       prisma.photo.update({
         where: { id: review.photoId },
-        data: { moderationStatus: 'REMOVED', moderationReason: 'Removed by uploader after no-plant review.' },
+        data: { moderationStatus: 'REMOVED', moderationReason: uncertainPlantContent ? 'Removed by uploader after uncertain plant-content review.' : 'Removed by uploader after no-plant review.' },
       }),
       prisma.imageModerationReview.update({
         where: { id: review.id },
         data: { status: 'REMOVED', resolvedAt: new Date(), resolvedByUserId: user.id },
       }),
     ])
-    await audit(user, 'REMOVE', 'IMAGE_MODERATION_REVIEW', review.id, `Removed photo ${review.photoId} after no-plant review`, undefined, review.collectionId)
+    await audit(user, 'REMOVE', 'IMAGE_MODERATION_REVIEW', review.id, `Removed photo ${review.photoId} after ${uncertainPlantContent ? 'uncertain plant-content' : 'no-plant'} review`, undefined, review.collectionId)
   } else {
     throw new Error('Unsupported moderation action.')
   }

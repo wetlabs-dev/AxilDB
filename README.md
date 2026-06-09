@@ -125,7 +125,7 @@ Production is managed with Docker Compose:
 - `migrate`: one-shot setup container that deploys Prisma migrations and bootstraps the initial admin user.
 - `app`: Next.js production server exposed internally on port 3000.
 - `reminders`: scheduled worker that checks for due reminders, sends opt-out-aware care queue digest emails, and sends email through the configured SMTP provider.
-- `image-moderation`: scheduled worker that checks newly uploaded images with the configured OpenAI model, hides inappropriate images pending server-admin review, and asks uploaders to confirm images where no plant content is detected.
+- `image-moderation`: scheduled worker that checks newly uploaded images with OpenAI Moderation first, hides unsafe images pending server-admin review, and runs a separate plant-content vision check only for images that pass the safety layer.
 - `metrics`: scheduled worker that samples best-effort server metrics and collection storage estimates for the server dashboard, and sends rate-limited server health emails to verified server admins when health is degraded.
 - `backups`: scheduled worker that processes server-admin sitewide backup requests into timestamped backup folders.
 
@@ -477,7 +477,7 @@ OPENAI_BRIEFING_MODEL=gpt-5.4-mini
 OPENAI_BRIEFING_MAX_OUTPUT_TOKENS=2400
 OPENAI_BRIEFING_DAILY_COLLECTION_LIMIT=1
 AXILDB_IMAGE_MODERATION_ENABLED=false
-OPENAI_IMAGE_MODERATION_MODEL=gpt-5.4-mini
+OPENAI_IMAGE_MODERATION_MODEL=omni-moderation-latest
 OPENAI_PLANT_IMAGE_CHECK_MODEL=gpt-5.4-mini
 ```
 
@@ -594,7 +594,7 @@ OPENAI_BRIEFING_MODEL=gpt-5.4-mini
 OPENAI_BRIEFING_MAX_OUTPUT_TOKENS=2400
 OPENAI_BRIEFING_DAILY_COLLECTION_LIMIT=1
 AXILDB_IMAGE_MODERATION_ENABLED=true
-OPENAI_IMAGE_MODERATION_MODEL=gpt-5.4-mini
+OPENAI_IMAGE_MODERATION_MODEL=omni-moderation-latest
 OPENAI_PLANT_IMAGE_CHECK_MODEL=gpt-5.4-mini
 ```
 
@@ -604,7 +604,13 @@ Then redeploy/recreate the app container so the environment changes are loaded:
 docker compose up -d --build
 ```
 
-`OPENAI_DESCRIPTION_HOURLY_LIMIT`, `OPENAI_MAGIC_FILL_HOURLY_LIMIT`, `OPENAI_PLANT_ID_HOURLY_LIMIT`, `OPENAI_HUSBANDRY_FILL_HOURLY_LIMIT`, and `OPENAI_GREEN_THUMB_HOURLY_LIMIT` are lightweight per-user in-process limits for the OpenAI buttons. ID My Plant falls back to `OPENAI_MAGIC_FILL_MODEL` and `OPENAI_MAGIC_FILL_HOURLY_LIMIT` when its specific settings are not configured. Each successful ID My Plant run creates a collection-scoped history item with the submitted description, known names, optional image, suggested result, alternatives, confidence explanation, and any matching local or validated definition. Users can review their own history from Account → My Plant IDs; collection managers can review collection-wide history from Plant Definitions → ID History and start a new plant definition prefilled from any result. `OPENAI_GREEN_THUMB_DAILY_COLLECTION_LIMIT` is a persisted per-collection daily cap for Green Thumb requests and defaults to 5 when unset. `OPENAI_BRIEFING_DAILY_COLLECTION_LIMIT` limits AI-generated Collection Briefings per UTC day and defaults to 1; manager-triggered regeneration bypasses that limit but still requires server-level AI access, the collection briefing toggle, and `AXILDB_AI_BRIEFING_ENABLED=true`. `OPENAI_BRIEFING_MAX_OUTPUT_TOKENS` defaults to 2400, and AxilDB retries once with a larger output budget if OpenAI reports the briefing was truncated. Green Thumb also has a once-per-specimen-per-day cooldown. When `AXILDB_IMAGE_MODERATION_ENABLED=true`, the image moderation worker sends newly uploaded local image bytes to OpenAI for safety and plant-content checks. NSFW images are hidden from normal users and public visitors until a server admin reviews them at Server Management → Image Moderation; images with no detected plant content remain visible but create an Account review item for the uploader to keep or remove. ID My Plant sends only the description, known names, and selected image to OpenAI; image moderation sends only the uploaded image and a minimal moderation prompt; neither flow sends user emails, membership data, unrelated collection records, or saved specimen history. Collection Briefing sends compact care, note, bloom, propagation, condition, and metadata summaries to the model; uploaded image content, user emails, and private membership data are not sent. ID My Plant history is not public: normal users see only their own entries, and collection managers see entries for their collection. For stricter cost control, also set project usage limits in the OpenAI Platform billing settings.
+`OPENAI_DESCRIPTION_HOURLY_LIMIT`, `OPENAI_MAGIC_FILL_HOURLY_LIMIT`, `OPENAI_PLANT_ID_HOURLY_LIMIT`, `OPENAI_HUSBANDRY_FILL_HOURLY_LIMIT`, and `OPENAI_GREEN_THUMB_HOURLY_LIMIT` are lightweight per-user in-process limits for the OpenAI buttons. ID My Plant falls back to `OPENAI_MAGIC_FILL_MODEL` and `OPENAI_MAGIC_FILL_HOURLY_LIMIT` when its specific settings are not configured. Each successful ID My Plant run creates a collection-scoped history item with the submitted description, known names, optional image, suggested result, alternatives, confidence explanation, and any matching local or validated definition. Users can review their own history from Account → My Plant IDs; collection managers can review collection-wide history from Plant Definitions → ID History and start a new plant definition prefilled from any result. `OPENAI_GREEN_THUMB_DAILY_COLLECTION_LIMIT` is a persisted per-collection daily cap for Green Thumb requests and defaults to 5 when unset. `OPENAI_BRIEFING_DAILY_COLLECTION_LIMIT` limits AI-generated Collection Briefings per UTC day and defaults to 1; manager-triggered regeneration bypasses that limit but still requires server-level AI access, the collection briefing toggle, and `AXILDB_AI_BRIEFING_ENABLED=true`. `OPENAI_BRIEFING_MAX_OUTPUT_TOKENS` defaults to 2400, and AxilDB retries once with a larger output budget if OpenAI reports the briefing was truncated. Green Thumb also has a once-per-specimen-per-day cooldown.
+
+When `AXILDB_IMAGE_MODERATION_ENABLED=true`, uploads still complete immediately and the image moderation worker processes pending local uploads in the background. The first layer sends only the uploaded image and a short safety classification string to the OpenAI Moderation API using `OPENAI_IMAGE_MODERATION_MODEL` (default `omni-moderation-latest`). If OpenAI Moderation flags unsafe content, AxilDB marks the photo `CENSORED`, creates a server-admin review item, and does not run the plant-content vision check. Censored images are hidden from normal users and public visitors until a server admin reviews them at Server Management → Image Moderation, where existing false-alarm, remove-image, and remove-and-block-uploader actions remain available.
+
+Only images that pass the safety layer are sent to the plant-content vision check using `OPENAI_PLANT_IMAGE_CHECK_MODEL`. That second layer stores structured plant analysis (`containsPlant`, `confidence`, `primarySubject`, `imageType`, `usableForIdentification`, and `reason`) and sets the photo to `APPROVED`, `NO_PLANT_DETECTED`, or `UNCERTAIN_PLANT_CONTENT`. No-plant images remain visible but create an Account review item for the uploader to keep or remove. Uncertain plant-content images create a softer Account review item that asks, “We’re not sure this image contains a plant. Continue anyway?” Moderation API failures are recorded as `MODERATION_FAILED` after retry attempts and do not crash the worker.
+
+ID My Plant sends only the description, known names, and selected image to OpenAI; image moderation sends only the uploaded image plus minimal moderation/check prompts; neither flow sends user emails, membership data, unrelated collection records, or saved specimen history. Collection Briefing sends compact care, note, bloom, propagation, condition, and metadata summaries to the model; uploaded image content, user emails, and private membership data are not sent. ID My Plant history is not public: normal users see only their own entries, and collection managers see entries for their collection. For stricter cost control, also set project usage limits in the OpenAI Platform billing settings.
 
 To process pending image moderation checks once outside Docker, run:
 

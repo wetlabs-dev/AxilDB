@@ -177,10 +177,13 @@ App route: `/gallery`
 - Uploads are resized to a maximum dimension to reduce storage use while preserving useful detail.
 - Framing metadata is used by cards and previews so important plant details stay centered.
 - Source and source URL fields help document reference images used for plant definition type images.
+- When image moderation is enabled, uploads complete immediately and a background worker checks them in two layers: OpenAI Moderation for unsafe content first, then a plant-content vision check only if the safety layer passes.
+- Unsafe images are censored from normal users and public visitors until a server admin reviews them. Images with no detected plant content create an Account review item; uncertain plant-content images ask the uploader, “We’re not sure this image contains a plant. Continue anyway?”
 
 ### Warnings
 
 - Only use images you have rights to use. Record image source details when importing reference images.
+- Image moderation sends the uploaded image and minimal classification/check prompts to OpenAI. It does not send user emails, membership data, unrelated collection records, or saved specimen history.
 
 ## Plant Husbandry
 

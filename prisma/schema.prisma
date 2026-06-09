@@ -1317,6 +1317,8 @@ model Photo {
   moderationCheckedAt DateTime?
   moderationReason String?
   moderationModel String?
+  moderationResultJson Json?
+  plantAnalysisJson Json?
   moderationFailureCount Int @default(0)
   moderationLastError String?
   createdAt  DateTime @default(now())

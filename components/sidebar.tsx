@@ -70,7 +70,11 @@ async function buildSidebarBadges(collection: { id: string; slug: string }, user
     }),
     user
       ? prisma.imageModerationReview.count({
-          where: { uploaderUserId: user.id, reviewType: 'NO_PLANT_DETECTED', status: 'PENDING' },
+          where: {
+            uploaderUserId: user.id,
+            reviewType: { in: ['NO_PLANT_DETECTED', 'UNCERTAIN_PLANT_CONTENT'] },
+            status: 'PENDING',
+          },
         })
       : Promise.resolve(0),
   ])

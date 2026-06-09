@@ -1,19 +1,44 @@
-import type { PrismaClient } from '@prisma/client'
+import { Prisma, type PrismaClient } from '@prisma/client'
 import { readFile } from 'fs/promises'
 import path from 'path'
 
+const OPENAI_MODERATIONS_URL = 'https://api.openai.com/v1/moderations'
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses'
-const DEFAULT_MODEL = 'gpt-5.4-mini'
+const DEFAULT_PLANT_CHECK_MODEL = 'gpt-5.4-mini'
+const DEFAULT_IMAGE_MODERATION_MODEL = 'omni-moderation-latest'
+const MAX_MODERATION_FAILURES = 3
 
-export type ImageModerationResult = {
-  nsfwFlagged: boolean
-  nsfwReason?: string | null
-  plantDetected: boolean
-  plantConfidence?: number | null
-  plantReason?: string | null
+type PlantContentState = 'yes' | 'no' | 'uncertain'
+
+export type ImageSafetyModerationResult = {
+  flagged: boolean
+  categories?: Record<string, boolean>
+  categoryScores?: Record<string, number>
+  appliedInputTypes?: Record<string, string[]>
+  reason: string
   model: string
   checkedAt: Date
 }
+
+export type PlantImageAnalysisResult = {
+  containsPlant: PlantContentState
+  confidence: number
+  primarySubject: string | null
+  imageType: string | null
+  usableForIdentification: boolean
+  reason: string
+  model: string
+  checkedAt: Date
+}
+
+type PhotoModerationStatus =
+  | 'PENDING'
+  | 'APPROVED'
+  | 'CENSORED'
+  | 'NO_PLANT_DETECTED'
+  | 'UNCERTAIN_PLANT_CONTENT'
+  | 'MODERATION_FAILED'
+  | 'REMOVED'
 
 export function imageModerationEnabled() {
   return process.env.AXILDB_IMAGE_MODERATION_ENABLED === 'true' && Boolean(process.env.OPENAI_API_KEY)
@@ -39,8 +64,14 @@ function parseJsonObject(text: string) {
   const body = fenced?.[1] || trimmed
   const start = body.indexOf('{')
   const end = body.lastIndexOf('}')
-  if (start < 0 || end < start) throw new Error('Moderation response did not contain JSON.')
+  if (start < 0 || end < start) throw new Error('Plant image check response did not contain JSON.')
   return JSON.parse(body.slice(start, end + 1))
+}
+
+function boundedConfidence(value: unknown) {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return 0
+  return Math.max(0, Math.min(1, parsed))
 }
 
 function tokenUsage(payload: any) {
@@ -49,6 +80,20 @@ function tokenUsage(payload: any) {
   const outputTokens = Number(usage.output_tokens ?? usage.completion_tokens ?? 0) || null
   const totalTokens = Number(usage.total_tokens ?? ((inputTokens || 0) + (outputTokens || 0))) || null
   return { inputTokens, outputTokens, totalTokens }
+}
+
+function flaggedCategorySummary(result: any) {
+  const categories = result?.categories || {}
+  const flagged = Object.entries(categories)
+    .filter(([, value]) => value === true)
+    .map(([key]) => key)
+  return flagged.length ? `Flagged by OpenAI Moderation: ${flagged.join(', ')}.` : 'Flagged by OpenAI Moderation.'
+}
+
+function plantAnalysisStatus(analysis: PlantImageAnalysisResult): PhotoModerationStatus {
+  if (analysis.containsPlant === 'yes') return 'APPROVED'
+  if (analysis.containsPlant === 'uncertain') return 'UNCERTAIN_PLANT_CONTENT'
+  return 'NO_PLANT_DETECTED'
 }
 
 async function auditModeration(prisma: PrismaClient, input: {
@@ -73,6 +118,7 @@ async function auditModeration(prisma: PrismaClient, input: {
 async function recordModerationUsage(prisma: PrismaClient, input: {
   collectionId?: string | null
   userId?: string | null
+  feature: 'AI_IMAGE_MODERATION' | 'AI_IMAGE_PLANT_CHECK'
   model?: string | null
   usagePayload: any
 }) {
@@ -82,7 +128,7 @@ async function recordModerationUsage(prisma: PrismaClient, input: {
     data: {
       collectionId: input.collectionId,
       userId: input.userId || null,
-      feature: 'AI_IMAGE_MODERATION',
+      feature: input.feature,
       model: input.model || null,
       inputTokens: usage.inputTokens,
       outputTokens: usage.outputTokens,
@@ -91,13 +137,51 @@ async function recordModerationUsage(prisma: PrismaClient, input: {
   })
 }
 
-async function analyzeImage(photoPath: string, collectionId?: string | null): Promise<{ result: ImageModerationResult; usagePayload: any }> {
-  const model = process.env.OPENAI_IMAGE_MODERATION_MODEL
-    || process.env.OPENAI_PLANT_IMAGE_CHECK_MODEL
-    || process.env.OPENAI_PLANT_ID_MODEL
-    || DEFAULT_MODEL
+async function imageDataUrl(photoPath: string) {
   const image = await readFile(localUploadPath(photoPath))
-  const dataUrl = `data:image/jpeg;base64,${image.toString('base64')}`
+  return `data:image/jpeg;base64,${image.toString('base64')}`
+}
+
+async function runOpenAiModeration(photoPath: string): Promise<{ result: ImageSafetyModerationResult; usagePayload: any }> {
+  const model = process.env.OPENAI_IMAGE_MODERATION_MODEL || DEFAULT_IMAGE_MODERATION_MODEL
+  const dataUrl = await imageDataUrl(photoPath)
+  const response = await fetch(OPENAI_MODERATIONS_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model,
+      input: [
+        { type: 'text', text: 'Classify this uploaded AxilDB image for unsafe, NSFW, graphic, self-harm, sexual, hateful, harassing, violent, or illicit content.' },
+        { type: 'image_url', image_url: { url: dataUrl } },
+      ],
+    }),
+  })
+  const payload = await response.json().catch(() => ({}))
+  if (!response.ok) throw new Error(payload.error?.message || 'OpenAI Moderation API failed.')
+  const first = payload.results?.[0]
+  if (!first || typeof first.flagged !== 'boolean') throw new Error('OpenAI Moderation API returned an unreadable result.')
+  return {
+    usagePayload: payload,
+    result: {
+      flagged: first.flagged,
+      categories: first.categories || undefined,
+      categoryScores: first.category_scores || undefined,
+      appliedInputTypes: first.category_applied_input_types || undefined,
+      reason: first.flagged ? flaggedCategorySummary(first) : 'OpenAI Moderation did not flag unsafe content.',
+      model: payload.model || model,
+      checkedAt: new Date(),
+    },
+  }
+}
+
+async function runPlantImageCheck(photoPath: string): Promise<{ result: PlantImageAnalysisResult; usagePayload: any }> {
+  const model = process.env.OPENAI_PLANT_IMAGE_CHECK_MODEL
+    || process.env.OPENAI_PLANT_ID_MODEL
+    || DEFAULT_PLANT_CHECK_MODEL
+  const dataUrl = await imageDataUrl(photoPath)
   const response = await fetch(OPENAI_RESPONSES_URL, {
     method: 'POST',
     headers: {
@@ -107,38 +191,65 @@ async function analyzeImage(photoPath: string, collectionId?: string | null): Pr
     body: JSON.stringify({
       model,
       instructions: [
-        'Review this uploaded AxilDB image for safety and plant relevance.',
-        'Return strict JSON only with keys nsfwFlagged, nsfwReason, plantDetected, plantConfidence, plantReason.',
-        'nsfwFlagged should be true for explicit sexual content, nudity, graphic sexual content, or clearly inappropriate adult imagery.',
-        'plantDetected should be true when a live plant, plant part, bloom, cutting, propagation, botanical specimen, or plant label/photo context is visible.',
-        'Do not identify the plant species. Do not include unrelated details.',
+        'Check whether this already-safety-moderated AxilDB upload contains plant-related visual content.',
+        'Do not make NSFW, safety, or policy decisions. That has already been handled by OpenAI Moderation.',
+        'Return strict JSON only with keys containsPlant, confidence, primarySubject, imageType, usableForIdentification, reason.',
+        'containsPlant must be exactly "yes", "no", or "uncertain".',
+        'Use "yes" for a live plant, plant part, bloom, cutting, propagation, botanical specimen, plant label, or clear plant-photo context.',
+        'Use "uncertain" when the image might contain plant content but is cropped, blurred, obstructed, abstract, or too ambiguous to tell.',
+        'Use "no" for clearly non-plant images.',
+        'Do not identify the species unless it is obvious from visible text. Keep reason short.',
       ].join(' '),
       input: [{
         role: 'user',
         content: [
-          { type: 'input_text', text: 'Moderate this image and check whether it appears to contain plant-related visual content.' },
+          { type: 'input_text', text: 'Return the plant-content JSON for this uploaded image.' },
           { type: 'input_image', image_url: dataUrl },
         ],
       }],
-      max_output_tokens: 350,
+      max_output_tokens: 450,
       store: false,
     }),
   })
   const payload = await response.json().catch(() => ({}))
-  if (!response.ok) throw new Error(payload.error?.message || 'OpenAI image moderation failed.')
+  if (!response.ok) throw new Error(payload.error?.message || 'OpenAI plant image check failed.')
   const parsed = parseJsonObject(outputText(payload))
+  const containsPlant = parsed.containsPlant === 'yes' || parsed.containsPlant === 'uncertain' ? parsed.containsPlant : 'no'
   return {
     usagePayload: payload,
     result: {
-      nsfwFlagged: Boolean(parsed.nsfwFlagged),
-      nsfwReason: typeof parsed.nsfwReason === 'string' ? parsed.nsfwReason : null,
-      plantDetected: Boolean(parsed.plantDetected),
-      plantConfidence: typeof parsed.plantConfidence === 'number' ? Math.max(0, Math.min(1, parsed.plantConfidence)) : null,
-      plantReason: typeof parsed.plantReason === 'string' ? parsed.plantReason : null,
+      containsPlant,
+      confidence: boundedConfidence(parsed.confidence),
+      primarySubject: typeof parsed.primarySubject === 'string' && parsed.primarySubject.trim() ? parsed.primarySubject.trim().slice(0, 140) : null,
+      imageType: typeof parsed.imageType === 'string' && parsed.imageType.trim() ? parsed.imageType.trim().slice(0, 80) : null,
+      usableForIdentification: Boolean(parsed.usableForIdentification),
+      reason: typeof parsed.reason === 'string' && parsed.reason.trim() ? parsed.reason.trim().slice(0, 500) : 'Plant-content check completed.',
       model,
       checkedAt: new Date(),
     },
   }
+}
+
+async function upsertReview(prisma: PrismaClient, input: {
+  photoId: string
+  collectionId?: string | null
+  uploaderUserId?: string | null
+  reviewType: 'NSFW' | 'NO_PLANT_DETECTED' | 'UNCERTAIN_PLANT_CONTENT'
+  reason: string
+  model: string
+}) {
+  await prisma.imageModerationReview.upsert({
+    where: { photoId_reviewType_status: { photoId: input.photoId, reviewType: input.reviewType, status: 'PENDING' } },
+    update: { reason: input.reason, model: input.model },
+    create: {
+      photoId: input.photoId,
+      collectionId: input.collectionId,
+      uploaderUserId: input.uploaderUserId,
+      reviewType: input.reviewType,
+      reason: input.reason,
+      model: input.model,
+    },
+  })
 }
 
 export async function processPendingImageModeration(prisma: PrismaClient, limit = 10) {
@@ -146,7 +257,7 @@ export async function processPendingImageModeration(prisma: PrismaClient, limit 
   const photos = await prisma.photo.findMany({
     where: {
       moderationStatus: 'PENDING',
-      moderationFailureCount: { lt: 3 },
+      moderationFailureCount: { lt: MAX_MODERATION_FAILURES },
       path: { startsWith: '/uploads/' },
     },
     orderBy: { createdAt: 'asc' },
@@ -156,84 +267,134 @@ export async function processPendingImageModeration(prisma: PrismaClient, limit 
   let processed = 0
   for (const photo of photos) {
     try {
-      const { result, usagePayload } = await analyzeImage(photo.path, photo.collectionId)
-      const status = result.nsfwFlagged
-        ? 'CENSORED'
-        : result.plantDetected
-          ? 'APPROVED'
-          : 'NEEDS_UPLOADER_CONFIRMATION'
-      const reason = result.nsfwFlagged
-        ? result.nsfwReason || 'Image was flagged as inappropriate.'
-        : result.plantDetected
-          ? result.plantReason || 'Plant content detected.'
-          : result.plantReason || 'No plant detected.'
-
-      await prisma.photo.update({
-        where: { id: photo.id },
-        data: {
-          moderationStatus: status,
-          nsfwFlagged: result.nsfwFlagged,
-          plantDetected: result.plantDetected,
-          plantConfidence: result.plantConfidence,
-          moderationCheckedAt: result.checkedAt,
-          moderationReason: reason,
-          moderationModel: result.model,
-          moderationLastError: null,
-        },
+      const { result: moderation, usagePayload: moderationPayload } = await runOpenAiModeration(photo.path)
+      await recordModerationUsage(prisma, {
+        collectionId: photo.collectionId,
+        userId: photo.uploadedByUserId,
+        feature: 'AI_IMAGE_MODERATION',
+        model: moderation.model,
+        usagePayload: moderationPayload,
       })
 
-      if (status === 'CENSORED') {
-        await prisma.imageModerationReview.upsert({
-          where: { photoId_reviewType_status: { photoId: photo.id, reviewType: 'NSFW', status: 'PENDING' } },
-          update: { reason, model: result.model },
-          create: {
-            photoId: photo.id,
-            collectionId: photo.collectionId,
-            uploaderUserId: photo.uploadedByUserId,
-            reviewType: 'NSFW',
-            reason,
-            model: result.model,
+      if (moderation.flagged) {
+        await prisma.photo.update({
+          where: { id: photo.id },
+          data: {
+            moderationStatus: 'CENSORED',
+            nsfwFlagged: true,
+            plantDetected: null,
+            plantConfidence: null,
+            moderationCheckedAt: moderation.checkedAt,
+            moderationReason: moderation.reason,
+            moderationModel: moderation.model,
+            moderationResultJson: {
+              flagged: moderation.flagged,
+              categories: moderation.categories || {},
+              categoryScores: moderation.categoryScores || {},
+              appliedInputTypes: moderation.appliedInputTypes || {},
+            },
+            plantAnalysisJson: Prisma.JsonNull,
+            moderationFailureCount: 0,
+            moderationLastError: null,
           },
+        })
+        await upsertReview(prisma, {
+          photoId: photo.id,
+          collectionId: photo.collectionId,
+          uploaderUserId: photo.uploadedByUserId,
+          reviewType: 'NSFW',
+          reason: moderation.reason,
+          model: moderation.model,
         })
         await auditModeration(prisma, {
           collectionId: photo.collectionId,
           action: 'FLAG_NSFW',
           entityId: photo.id,
-          summary: 'Image moderation flagged photo as inappropriate.',
-          metadata: { reason, model: result.model },
+          summary: 'OpenAI Moderation flagged photo as unsafe.',
+          metadata: { reason: moderation.reason, model: moderation.model, categories: moderation.categories },
         })
-      } else if (status === 'NEEDS_UPLOADER_CONFIRMATION') {
-        await prisma.imageModerationReview.upsert({
-          where: { photoId_reviewType_status: { photoId: photo.id, reviewType: 'NO_PLANT_DETECTED', status: 'PENDING' } },
-          update: { reason, model: result.model },
-          create: {
-            photoId: photo.id,
-            collectionId: photo.collectionId,
-            uploaderUserId: photo.uploadedByUserId,
-            reviewType: 'NO_PLANT_DETECTED',
-            reason,
-            model: result.model,
-          },
-        })
-        await auditModeration(prisma, {
-          collectionId: photo.collectionId,
-          action: 'NO_PLANT_DETECTED',
-          entityId: photo.id,
-          summary: 'Image moderation did not detect plant content.',
-          metadata: { reason, model: result.model },
-        })
+        processed += 1
+        continue
       }
-      await recordModerationUsage(prisma, { collectionId: photo.collectionId, userId: photo.uploadedByUserId, model: result.model, usagePayload })
-      processed += 1
-    } catch (error) {
+
+      const { result: plantAnalysis, usagePayload: plantPayload } = await runPlantImageCheck(photo.path)
+      await recordModerationUsage(prisma, {
+        collectionId: photo.collectionId,
+        userId: photo.uploadedByUserId,
+        feature: 'AI_IMAGE_PLANT_CHECK',
+        model: plantAnalysis.model,
+        usagePayload: plantPayload,
+      })
+
+      const status = plantAnalysisStatus(plantAnalysis)
+      const plantDetected = plantAnalysis.containsPlant === 'yes'
+        ? true
+        : plantAnalysis.containsPlant === 'no'
+          ? false
+          : null
       await prisma.photo.update({
         where: { id: photo.id },
         data: {
-          moderationFailureCount: { increment: 1 },
-          moderationLastError: error instanceof Error ? error.message : String(error),
+          moderationStatus: status,
+          nsfwFlagged: false,
+          plantDetected,
+          plantConfidence: plantAnalysis.confidence,
+          moderationCheckedAt: plantAnalysis.checkedAt,
+          moderationReason: plantAnalysis.reason,
+          moderationModel: `${moderation.model} + ${plantAnalysis.model}`,
+          moderationResultJson: {
+            flagged: moderation.flagged,
+            categories: moderation.categories || {},
+            categoryScores: moderation.categoryScores || {},
+            appliedInputTypes: moderation.appliedInputTypes || {},
+          },
+          plantAnalysisJson: {
+            containsPlant: plantAnalysis.containsPlant,
+            confidence: plantAnalysis.confidence,
+            primarySubject: plantAnalysis.primarySubject,
+            imageType: plantAnalysis.imageType,
+            usableForIdentification: plantAnalysis.usableForIdentification,
+            reason: plantAnalysis.reason,
+            model: plantAnalysis.model,
+          },
+          moderationFailureCount: 0,
+          moderationLastError: null,
         },
       })
-      console.error('Image moderation failed', { photoId: photo.id, error: error instanceof Error ? error.message : String(error) })
+
+      if (status === 'NO_PLANT_DETECTED' || status === 'UNCERTAIN_PLANT_CONTENT') {
+        const reviewType = status
+        await upsertReview(prisma, {
+          photoId: photo.id,
+          collectionId: photo.collectionId,
+          uploaderUserId: photo.uploadedByUserId,
+          reviewType,
+          reason: plantAnalysis.reason,
+          model: plantAnalysis.model,
+        })
+        await auditModeration(prisma, {
+          collectionId: photo.collectionId,
+          action: reviewType,
+          entityId: photo.id,
+          summary: status === 'NO_PLANT_DETECTED'
+            ? 'Plant image check did not detect plant content.'
+            : 'Plant image check was uncertain about plant content.',
+          metadata: { reason: plantAnalysis.reason, model: plantAnalysis.model, confidence: plantAnalysis.confidence },
+        })
+      }
+      processed += 1
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      const nextFailureCount = photo.moderationFailureCount + 1
+      await prisma.photo.update({
+        where: { id: photo.id },
+        data: {
+          moderationStatus: nextFailureCount >= MAX_MODERATION_FAILURES ? 'MODERATION_FAILED' : 'PENDING',
+          moderationFailureCount: { increment: 1 },
+          moderationLastError: message,
+        },
+      })
+      console.error('Image moderation failed', { photoId: photo.id, error: message })
     }
   }
 

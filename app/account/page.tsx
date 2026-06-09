@@ -62,7 +62,11 @@ export default async function Account({
     return target ? { id: row.id, createdAt: row.createdAt, collectionName: row.collection.name, target } : null
   }))).filter(Boolean)
   const imageReviewItems = await prisma.imageModerationReview.findMany({
-    where: { uploaderUserId: user.id, reviewType: 'NO_PLANT_DETECTED', status: 'PENDING' },
+    where: {
+      uploaderUserId: user.id,
+      reviewType: { in: ['NO_PLANT_DETECTED', 'UNCERTAIN_PLANT_CONTENT'] },
+      status: 'PENDING',
+    },
     include: {
       photo: true,
       collection: { select: { name: true, slug: true } },
@@ -103,37 +107,45 @@ export default async function Account({
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h3 className="font-bold text-[var(--ax-heading)]">Image review needed</h3>
-              <p className="mt-1 text-sm text-[var(--ax-muted-strong)]">No plant detected. Are you sure this is the image you wanted to upload?</p>
+              <p className="mt-1 text-sm text-[var(--ax-muted-strong)]">Review uploaded images where AxilDB did not clearly detect plant content.</p>
             </div>
             <span className="rounded-full border border-[color:var(--ax-border-strong)] bg-[var(--ax-warning-soft)] px-3 py-1 text-sm font-semibold text-[var(--ax-warning)]">{imageReviewItems.length} pending</span>
           </div>
           <div className="mt-4 grid gap-3 lg:grid-cols-2">
-            {imageReviewItems.map((item) => (
-              <div key={item.id} className="grid gap-3 rounded-lg border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] p-3 sm:grid-cols-[6rem_minmax(0,1fr)]">
-                <div className="aspect-square overflow-hidden rounded-md border border-[color:var(--ax-border)] bg-[var(--ax-primary-wash)]">
-                  <PlantImage src={item.photo} alt={item.photo.caption || 'Uploaded image'} />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-[var(--ax-heading)]">{item.collection?.name || 'Collection image'}</p>
-                  {item.photo.caption && <p className="mt-1 line-clamp-2 text-sm text-[var(--ax-text)]">{item.photo.caption}</p>}
-                  {item.reason && <p className="mt-1 text-xs text-[var(--ax-warning)]">Review note: {item.reason}</p>}
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <form action={resolveImageModerationReview}>
-                      <input type="hidden" name="reviewId" value={item.id} />
-                      <input type="hidden" name="action" value="USER_CONFIRMED" />
-                      <input type="hidden" name="back" value="/account" />
-                      <Button className="px-3 py-1.5 text-xs">Yes, keep it</Button>
-                    </form>
-                    <form action={resolveImageModerationReview}>
-                      <input type="hidden" name="reviewId" value={item.id} />
-                      <input type="hidden" name="action" value="REMOVE" />
-                      <input type="hidden" name="back" value="/account" />
-                      <Button className="bg-[#9a3f35] px-3 py-1.5 text-xs hover:bg-[#7d3028]">Remove image</Button>
-                    </form>
+            {imageReviewItems.map((item) => {
+              const uncertain = item.reviewType === 'UNCERTAIN_PLANT_CONTENT'
+              return (
+                <div key={item.id} className="grid gap-3 rounded-lg border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] p-3 sm:grid-cols-[6rem_minmax(0,1fr)]">
+                  <div className="aspect-square overflow-hidden rounded-md border border-[color:var(--ax-border)] bg-[var(--ax-primary-wash)]">
+                    <PlantImage src={item.photo} alt={item.photo.caption || 'Uploaded image'} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[var(--ax-heading)]">{item.collection?.name || 'Collection image'}</p>
+                    <p className="mt-1 text-sm text-[var(--ax-text)]">
+                      {uncertain
+                        ? "We're not sure this image contains a plant. Continue anyway?"
+                        : 'No plant detected. Are you sure this is the image you wanted to upload?'}
+                    </p>
+                    {item.photo.caption && <p className="mt-1 line-clamp-2 text-sm text-[var(--ax-text)]">{item.photo.caption}</p>}
+                    {item.reason && <p className="mt-1 text-xs text-[var(--ax-warning)]">Review note: {item.reason}</p>}
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <form action={resolveImageModerationReview}>
+                        <input type="hidden" name="reviewId" value={item.id} />
+                        <input type="hidden" name="action" value="USER_CONFIRMED" />
+                        <input type="hidden" name="back" value="/account" />
+                        <Button className="px-3 py-1.5 text-xs">Yes, keep it</Button>
+                      </form>
+                      <form action={resolveImageModerationReview}>
+                        <input type="hidden" name="reviewId" value={item.id} />
+                        <input type="hidden" name="action" value="REMOVE" />
+                        <input type="hidden" name="back" value="/account" />
+                        <Button className="bg-[#9a3f35] px-3 py-1.5 text-xs hover:bg-[#7d3028]">Remove image</Button>
+                      </form>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </Card>
       )}
