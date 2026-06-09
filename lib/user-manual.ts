@@ -76,6 +76,7 @@ export const manualSections: ManualSection[] = [
       'Open Validated from the Plant Definitions header to browse reviewed site-level definitions that can be used by any collection.',
       'Managers can nominate a local definition for validation from the edit page. Server admins review nominations from Server Management.',
       'Managers can dispute a validated definition or create a local copy for selected specimens when the collection needs an independent definition.',
+      'Managers and gardeners can review Recent Collection Updates on the dashboard when validated definition edits affect specimens in the collection.',
       'Upload a plant definition type image when the representative image comes from a reference source rather than your collection.',
       'Use Copy on an existing definition to start a similar definition without copying cultivar-specific fields or images.',
       'Use Share Definition when you have an active collection connection and want another collection to review and copy the definition.',
@@ -85,6 +86,7 @@ export const manualSections: ManualSection[] = [
       'Author Citation records the formal botanical author citation, such as “(L.f.) R.Br.”',
       'Aliases are useful for old taxonomy, trade names, common names, shorthand, and misapplied labels.',
       'Validated definitions are site-level records, not collection-owned records, so collection deletion does not remove approved validated definitions.',
+      'Collection Update Digest is separate from care reminders. It covers validated definition reference changes for definitions currently used by the collection.',
       'Use specimen-level husbandry overrides for local care differences before detaching from a validated definition.',
     ],
     warnings: [

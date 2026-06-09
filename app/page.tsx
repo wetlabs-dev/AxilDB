@@ -4,7 +4,8 @@ import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { Card } from '@/components/ui'
 import { getOrCreateTodaysCollectionBriefing } from '@/lib/briefing'
 import { careQueueSummary, getCareQueue } from '@/lib/care-queue'
-import { collectionPath, requireCollectionViewer } from '@/lib/collections'
+import { canEditInCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
+import { recentCollectionUpdates } from '@/lib/collection-updates'
 import { prisma } from '@/lib/prisma'
 import { isServerAdminRole } from '@/lib/roles'
 import { isSunshineTargetType, resolveSunshineTarget, sunshineCountLabel, sunshineCounts, sunshineKey } from '@/lib/sunshine'
@@ -262,6 +263,7 @@ export default async function Dashboard({
       && context.user
       && isServerAdminRole(context.user.role),
   )
+  const canViewCollectionUpdates = canEditInCollection(context.user, context)
   const briefing = canGenerateBriefing
     ? await getOrCreateTodaysCollectionBriefing(prisma, {
         collectionId: collection.id,
@@ -461,6 +463,9 @@ export default async function Dashboard({
     const target = await resolveSunshineTarget(prisma, collection.id, collection.slug, item.targetType, item.targetId)
     return target ? { ...item, target, count: recentSunshineCounts.get(sunshineKey(item.targetType, item.targetId)) || 0 } : null
   }))).filter(Boolean)
+  const collectionUpdates = canViewCollectionUpdates
+    ? await recentCollectionUpdates(prisma, collection.id, collection.slug, 5)
+    : []
 
   return (
     <div className="space-y-6">
@@ -559,6 +564,53 @@ export default async function Dashboard({
           ))}
         </div>
       </Card>
+
+      {canViewCollectionUpdates && (
+        <Card>
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h3 className="font-bold">Recent Collection Updates</h3>
+              <p className="mt-1 text-sm text-stone-600">Validated definition changes affecting plants in this collection.</p>
+            </div>
+            <Link className="rounded-full border border-stone-300 bg-white/70 px-3 py-1 text-xs font-semibold text-stone-700" href={collectionPath(collection.slug, '/validated-definitions')}>
+              View validated definitions
+            </Link>
+          </div>
+          <div className="mt-4 overflow-x-auto">
+            {collectionUpdates.length === 0 ? (
+              <p className="text-sm text-stone-600">No recent validated definition updates affect this collection.</p>
+            ) : (
+              <table className="w-full min-w-[44rem] border-collapse text-sm">
+                <thead>
+                  <tr className="text-left text-xs uppercase tracking-[0.12em] text-stone-500">
+                    <th className="border-b border-stone-200 px-3 py-2">Definition</th>
+                    <th className="border-b border-stone-200 px-3 py-2">Field / Section</th>
+                    <th className="border-b border-stone-200 px-3 py-2">Previous</th>
+                    <th className="border-b border-stone-200 px-3 py-2">Updated</th>
+                    <th className="border-b border-stone-200 px-3 py-2 text-right">Plants</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {collectionUpdates.flatMap((update) => update.rows.map((row, index) => (
+                    <tr key={`${update.id}-${row.field}-${index}`} className="align-top">
+                      <td className="border-b border-stone-200 px-3 py-2">
+                        <Link href={update.definitionUrl} className="font-semibold text-[var(--ax-primary)] underline underline-offset-2">
+                          {update.definitionName}
+                        </Link>
+                        <p className="text-xs text-stone-500">{fmtDate(update.changedAt, preferences?.timezone)}</p>
+                      </td>
+                      <td className="border-b border-stone-200 px-3 py-2">{row.field}</td>
+                      <td className="border-b border-stone-200 px-3 py-2 text-stone-600">{row.previous}</td>
+                      <td className="border-b border-stone-200 px-3 py-2">{row.updated}</td>
+                      <td className="border-b border-stone-200 px-3 py-2 text-right">{update.affectedCount}</td>
+                    </tr>
+                  )))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </Card>
+      )}
 
       <Card>
         <div className="flex flex-wrap items-end justify-between gap-3">

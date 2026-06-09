@@ -11,6 +11,7 @@ export type PushPreferenceKey =
   | 'propagationFollowUpsPushEnabled'
   | 'followNotificationsPushEnabled'
   | 'sunshineNotificationsPushEnabled'
+  | 'collectionUpdateDigestPushEnabled'
   | 'careQueueDigestPushEnabled'
   | 'serverHealthPushEnabled'
 

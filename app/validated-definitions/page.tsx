@@ -55,7 +55,7 @@ export default async function ValidatedDefinitions() {
         {definitions.map((definition) => {
           const linked = linkedByDefinition.get(definition.id) || []
           return (
-            <Card key={definition.id}>
+              <Card key={definition.id} id={`definition-${definition.id}`}>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h3 className="font-serif text-2xl font-semibold">{plantName(definition)}</h3>

@@ -34,6 +34,7 @@ import { addCalendarDays, formatDate, parseDateLocal, parseDateTimeLocal, timeZo
 import { plantName } from '@/lib/utils'
 import { husbandryFieldNames, husbandryFormValues } from '@/lib/husbandry'
 import { definitionData, findMatchingValidatedDefinition, globalGoverningBodyId, husbandryData } from '@/lib/validated-definitions'
+import { recordValidatedDefinitionChange, snapshotValidatedDefinition, validatedDefinitionInclude } from '@/lib/collection-updates'
 
 const val = (fd: FormData, k: string) =>
   String(fd.get(k) || '').trim() || undefined
@@ -649,6 +650,64 @@ export async function reviewPlantDefinitionDispute(fd: FormData) {
     reason: dispute.reason,
   }, dispute.collectionId)
   redirect('/server/validated-definitions')
+}
+
+export async function updateValidatedPlantDefinition(fd: FormData) {
+  const user = await requireServerAdmin()
+  const id = val(fd, 'id')!
+
+  const beforeDefinition = await prisma.plantDefinition.findFirstOrThrow({
+    where: { id, collectionId: null, isValidated: true },
+    include: validatedDefinitionInclude(),
+  })
+  const beforePhotos = await prisma.photo.findMany({
+    where: { collectionId: null, entityType: 'PLANT_DEFINITION', entityId: id },
+    orderBy: [{ isType: 'desc' }, { createdAt: 'desc' }],
+  })
+  const before = snapshotValidatedDefinition({ ...beforeDefinition, photos: beforePhotos })
+
+  await prisma.plantDefinition.update({
+    where: { id },
+    data: {
+      genus: val(fd, 'genus')!,
+      species: speciesVal(fd)!,
+      hybridNotation: clearableVal(fd, 'hybridNotation'),
+      cultivarName: clearableVal(fd, 'cultivarName'),
+      authority: clearableVal(fd, 'authority'),
+      cultivarRegistrationNumber: clearableVal(fd, 'cultivarRegistrationNumber'),
+      confidence: val(fd, 'confidence') || 'VERIFIED',
+      acquisitionLabel: clearableVal(fd, 'acquisitionLabel'),
+      provisionalTaxon: clearableVal(fd, 'provisionalTaxon'),
+      wikipediaUrl: clearableVal(fd, 'wikipediaUrl'),
+      inaturalistUrl: clearableVal(fd, 'inaturalistUrl'),
+      powoUrl: clearableVal(fd, 'powoUrl'),
+      gbifUrl: clearableVal(fd, 'gbifUrl'),
+      description: clearableVal(fd, 'description'),
+      notes: clearableVal(fd, 'notes'),
+      validationNotes: clearableVal(fd, 'validationNotes'),
+    },
+  })
+
+  const afterDefinition = await prisma.plantDefinition.findFirstOrThrow({
+    where: { id, collectionId: null, isValidated: true },
+    include: validatedDefinitionInclude(),
+  })
+  const afterPhotos = await prisma.photo.findMany({
+    where: { collectionId: null, entityType: 'PLANT_DEFINITION', entityId: id },
+    orderBy: [{ isType: 'desc' }, { createdAt: 'desc' }],
+  })
+  const after = snapshotValidatedDefinition({ ...afterDefinition, photos: afterPhotos })
+  const change = await recordValidatedDefinitionChange(prisma, {
+    validatedDefinitionId: id,
+    changedByUserId: user.id,
+    previous: before,
+    next: after,
+  })
+
+  await audit(user, 'UPDATE', 'PLANT_DEFINITION', id, `Updated validated definition ${plantName(afterDefinition)}`, {
+    validatedDefinitionChangeId: change?.id,
+  }, null)
+  redirect(`/server/validated-definitions/${id}`)
 }
 
 export async function createLocalCopyFromValidatedDefinition(fd: FormData) {

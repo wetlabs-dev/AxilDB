@@ -18,6 +18,7 @@ It is designed for real collection work: messy taxonomy, acquisition names, alia
 - AI Magic Fill for complete husbandry guide drafts, stored as editable draft content with model/review metadata.
 - ID My Plant assistant for cautious AI-assisted plant definition identification from user-provided descriptions, known names, and optional images.
 - Daily Collection Briefing on the dashboard, with collection-manager opt-in, one cached briefing per local day, concise conversational AI notes when enabled, and deterministic fallback summaries when AI is unavailable.
+- Collection Update Digest for managers and gardeners, summarizing site-wide validated plant definition edits that affect specimens in their collection, separate from the Care Queue Digest.
 - Smart Care Queue that combines husbandry cadence, watering history, propagation stage, open health conditions, bloom follow-ups, pest checks, and manual reminders into a prioritized collection worklist.
 - Care event history for watering, fertilizing, repotting, pest checks, health checks, propagation checks, bloom checks, and other care tasks.
 - Plant condition tracking for issues like wilting, yellowing leaves, crispy leaves, pests, disease, root issues, sunburn, nutrient issues, and mechanical damage, with severity/status follow-up.
@@ -361,12 +362,14 @@ Core models:
 - `BloomEvent`: bloom lifecycle records.
 - `Photo`: photos attached to definitions, instances, and bloom events.
 - `Sunshine`: collection-scoped appreciation rows for plant instances, bloom events, and eligible photos; unique per user and target, with giver identity kept private in the UI.
+- `ValidatedDefinitionChange`: old/new change summaries for site-wide validated plant definition edits.
+- `CollectionUpdateDigestDelivery`: per-collection, per-user, per-channel delivery guard for daily collection update digests.
 - `Note`: freeform notes attached to entities.
 - `SportStabilityRecord`: evidence for sport-line stability.
 - `User`, `Session`, and `AuditLog`: local auth, sessions, and mutation history.
 - `UserTwoFactor`, `TwoFactorChallenge`, and `TwoFactorRecoveryCode`: encrypted authenticator secrets, short-lived login challenges, and one-time recovery-code hashes.
 - `EmailToken`: hashed single-use tokens for email verification, password resets, and magic links.
-- `EmailPreference`: user-configurable email categories, daily care digest time, timezone, and quiet-hours settings.
+- `EmailPreference`: user-configurable email/push categories, daily care digest time, timezone, and quiet-hours settings.
 - `Reminder` and `ReminderDelivery`: reminder scheduling metadata and delivery history.
 - `Follow` and `FollowNotification`: event-based subscriptions and delivery history for followed specimens, plant types, and lineages.
 - `CareSheet`, `CareSheetPlant`, `CareSheetTask`, and `CareSheetAccessLog`: generated care sheets, weekly checklists, limited sitter sessions, token access logs, and interactive checklist task state.
@@ -377,6 +380,8 @@ Core models:
 Validated Plant Definitions are site-level `PlantDefinition` records with `collectionId = null` and `isValidated = true`. They are not owned by the collection that nominated them, so deleting or archiving a collection does not delete approved validated definitions or break plant instances linked to them. Collection managers can nominate a local definition for validation, server admins review nominations under Server Management, and approval creates a site-level validated definition with copied taxonomy, aliases, husbandry, type-image metadata, and governing body metadata. Managers can dispute validated definitions or create a local copy for selected specimens when they need to detach from future validated updates. Specimen-level husbandry overrides remain available, so collections do not need to detach solely for local care differences.
 
 Most domain records carry `collectionId`, including local plant definitions, aliases, plant instances, propagations, blooms, notes, photos, reminders, follows, sunshine, governing bodies, and audit logs. Suggestions/autocomplete, search, gallery, lineage graphs, labels, dashboard activity, follow counts, and sunshine counts are scoped per collection. Validated plant definitions, their aliases, husbandry guides, and type-image metadata intentionally remain site-level.
+
+Collection Update Digest is intentionally separate from the Care Queue Digest. It covers reference/governance/library changes, currently site-wide validated plant definition edits only. A validated definition is considered "in use" by a collection when that collection has at least one plant instance linked to it. Managers and gardeners can receive one daily email and/or push digest for the previous local day; loggers, viewers, and public visitors do not receive or view the v1 digest. The digest includes a concise old/new table, changed date/time, links to changed validated definitions, and affected instance counts without member emails or unrelated private notes.
 
 The schema intentionally uses string fields rather than Prisma enums for many domain states. This keeps taxonomy, sport states, propagation methods, and future horticultural vocabulary easier to evolve.
 
@@ -611,7 +616,7 @@ Current email foundation:
 - Follow/unfollow controls on plant definitions and specimen detail pages.
 - Event-based follow notifications with a delivery history on the Following page.
 - Server health alert emails for verified `SERVER_ADMIN` users when the metrics worker sees degraded disk or memory health. These alerts default to a 6-hour per-admin cooldown.
-- Account-page opt-out toggles for care queue digest and server health alert emails.
+- Account-page opt-out toggles for collection update digest, care queue digest, and server health alert emails/push alerts.
 - Quiet botanical branded HTML and plain-text templates.
 - SMTP/log delivery abstraction.
 

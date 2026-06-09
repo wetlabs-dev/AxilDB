@@ -42,6 +42,7 @@ export default async function Account({
     ['propagationFollowUps', 'propagationFollowUpsPushEnabled', 'Propagation follow-up reminders', preferences?.propagationFollowUps ?? true, preferences?.propagationFollowUpsPushEnabled ?? false],
     ['followNotifications', 'followNotificationsPushEnabled', 'Followed plant updates', preferences?.followNotifications ?? true, preferences?.followNotificationsPushEnabled ?? false],
     ['sunshineNotifications', 'sunshineNotificationsPushEnabled', 'Sunshine received', preferences?.sunshineNotifications ?? false, preferences?.sunshineNotificationsPushEnabled ?? false],
+    ['collectionUpdateDigestEmailEnabled', 'collectionUpdateDigestPushEnabled', 'Collection update digest', preferences?.collectionUpdateDigestEmailEnabled ?? true, preferences?.collectionUpdateDigestPushEnabled ?? false],
     ['careQueueDigestEmailEnabled', 'careQueueDigestPushEnabled', 'Care queue digest', preferences?.careQueueDigestEmailEnabled ?? true, preferences?.careQueueDigestPushEnabled ?? false],
     ['serverHealthEmailEnabled', 'serverHealthPushEnabled', 'Server health alerts', preferences?.serverHealthEmailEnabled ?? true, preferences?.serverHealthPushEnabled ?? false],
   ] as const

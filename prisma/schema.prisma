@@ -65,6 +65,8 @@ model User {
   reviewedPlantDefinitionValidationCandidates PlantDefinitionValidationCandidate[] @relation("PlantDefinitionValidationCandidateReviewer")
   submittedPlantDefinitionDisputes PlantDefinitionDispute[] @relation("PlantDefinitionDisputeSubmitter")
   reviewedPlantDefinitionDisputes PlantDefinitionDispute[] @relation("PlantDefinitionDisputeReviewer")
+  validatedDefinitionChanges ValidatedDefinitionChange[] @relation("ValidatedDefinitionChangeActor")
+  collectionUpdateDigestDeliveries CollectionUpdateDigestDelivery[]
   careSheets          CareSheet[]
   completedCareSheetTasks CareSheetTask[] @relation("CareSheetTaskCompletedBy")
 
@@ -126,6 +128,7 @@ model Collection {
   careSheetPlants     CareSheetPlant[]
   careSheetTasks      CareSheetTask[]
   careSheetAccessLogs CareSheetAccessLog[]
+  collectionUpdateDigestDeliveries CollectionUpdateDigestDelivery[]
 
   @@index([visibility])
   @@index([status])
@@ -523,6 +526,7 @@ model EmailPreference {
   followNotifications   Boolean  @default(true)
   transferNotifications Boolean  @default(true)
   sunshineNotifications Boolean  @default(false)
+  collectionUpdateDigestEmailEnabled Boolean @default(true)
   careQueueDigestEmailEnabled Boolean @default(true)
   serverHealthEmailEnabled Boolean @default(true)
   generalRemindersPushEnabled Boolean @default(false)
@@ -531,6 +535,7 @@ model EmailPreference {
   propagationFollowUpsPushEnabled Boolean @default(false)
   followNotificationsPushEnabled Boolean @default(false)
   sunshineNotificationsPushEnabled Boolean @default(false)
+  collectionUpdateDigestPushEnabled Boolean @default(false)
   careQueueDigestPushEnabled Boolean @default(false)
   serverHealthPushEnabled Boolean @default(false)
   careQueueDigestSendTime String @default("08:00")
@@ -691,6 +696,7 @@ model PlantDefinition {
   validationCandidates PlantDefinitionValidationCandidate[] @relation("ValidationCandidateSourceDefinition")
   approvedValidationCandidates PlantDefinitionValidationCandidate[] @relation("ValidationCandidateApprovedDefinition")
   disputes PlantDefinitionDispute[] @relation("ValidatedDefinitionDisputes")
+  validatedChanges ValidatedDefinitionChange[]
 
   @@index([collectionId])
   @@index([governingBodyId])
@@ -700,6 +706,47 @@ model PlantDefinition {
   @@index([validatedSourceCollectionId])
   @@index([validatedSourceDefinitionId])
   @@index([validatedPlantDefinitionId])
+}
+
+model ValidatedDefinitionChange {
+  id                    String   @id @default(cuid())
+  validatedDefinitionId String
+  changedByUserId       String?
+  changedAt             DateTime @default(now())
+  changeSummary         String
+  changedFieldsJson     Json
+  previousValuesJson    Json?
+  nextValuesJson        Json?
+  createdAt             DateTime @default(now())
+
+  validatedDefinition PlantDefinition @relation(fields: [validatedDefinitionId], references: [id], onDelete: Cascade)
+  changedByUser       User?           @relation("ValidatedDefinitionChangeActor", fields: [changedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([validatedDefinitionId])
+  @@index([changedByUserId])
+  @@index([changedAt])
+}
+
+model CollectionUpdateDigestDelivery {
+  id            String    @id @default(cuid())
+  collectionId  String
+  userId        String
+  channel       String
+  localDate     String
+  timezone      String
+  status        String    @default("SENT")
+  error         String?
+  sentAt        DateTime?
+  createdAt     DateTime  @default(now())
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, userId, channel, localDate])
+  @@index([collectionId])
+  @@index([userId])
+  @@index([localDate])
+  @@index([status])
 }
 
 model PlantDefinitionValidationCandidate {

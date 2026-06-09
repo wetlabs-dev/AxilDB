@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client'
 import { appUrl, sendEmail } from '../lib/email'
 import { reminderEmail } from '../lib/email-templates'
 import { sendCareQueueDigestAlerts } from '../lib/email-alerts'
+import { sendCollectionUpdateDigestAlerts } from '../lib/collection-updates'
 import { sendPushNotification, pushPreferenceKeys } from '../lib/push'
 import { nextOccurrence, reminderCategoryLabel, reminderPreferenceKey } from '../lib/reminders'
 import { timeZoneForPreference } from '../lib/time'
@@ -197,7 +198,8 @@ async function main() {
   }
 
   const digestResult = await sendCareQueueDigestAlerts(prisma, now)
-  console.info(`Processed ${reminders.length} due reminder(s). Sent ${digestResult.sent} care queue digest(s); ${digestResult.failed} failed.`)
+  const updateDigestResult = await sendCollectionUpdateDigestAlerts(prisma, now)
+  console.info(`Processed ${reminders.length} due reminder(s). Sent ${digestResult.sent} care queue digest(s); ${digestResult.failed} failed. Sent ${updateDigestResult.sent} collection update digest(s); ${updateDigestResult.failed} failed.`)
 }
 
 main()

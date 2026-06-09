@@ -4,6 +4,7 @@ import { requireServerAdmin } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { formatDateTime } from '@/lib/time'
 import { plantName } from '@/lib/utils'
+import Link from 'next/link'
 
 export default async function ValidatedDefinitionsAdmin() {
   await requireServerAdmin()
@@ -109,7 +110,10 @@ export default async function ValidatedDefinitionsAdmin() {
             <div key={definition.id} className="rounded-lg border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] px-3 py-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="font-semibold">{plantName(definition)} <span className="rounded-full bg-[#edf3e6] px-2 py-0.5 text-xs text-[#2f6b45]">Validated</span></p>
-                <p className="text-xs text-stone-600">{definition._count.instances} linked instance(s) · {definition._count.disputes} dispute(s)</p>
+                <div className="flex flex-wrap items-center gap-2 text-xs text-stone-600">
+                  <span>{definition._count.instances} linked instance(s) · {definition._count.disputes} dispute(s)</span>
+                  <Link className="rounded-md border border-stone-300 bg-white/70 px-2 py-1 font-medium text-stone-800 hover:bg-white" href={`/server/validated-definitions/${definition.id}`}>Edit</Link>
+                </div>
               </div>
             </div>
           ))}

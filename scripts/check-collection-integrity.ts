@@ -16,6 +16,7 @@ const requiredCollectionModels = [
   ['Follow', 'follow'],
   ['FollowNotification', 'followNotification'],
   ['Sunshine', 'sunshine'],
+  ['CollectionUpdateDigestDelivery', 'collectionUpdateDigestDelivery'],
   ['PlantHusbandryGuide', 'plantHusbandryGuide'],
   ['PlantHusbandryOverride', 'plantHusbandryOverride'],
   ['PlantCareEvent', 'plantCareEvent'],
