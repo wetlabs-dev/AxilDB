@@ -103,7 +103,12 @@ App route: `/plants`
 - Open Plant Definitions from the sidebar.
 - Use Add plant definition to create a new definition.
 - Enter genus, species, cultivar, author citation, governing body, reference URLs, aliases, description, and notes.
-- Use AI draft for a short botanical description or Magic fill to draft taxonomy metadata and aliases when AI is enabled for the collection.
+- Use AI draft for a short botanical description, Magic fill to draft taxonomy metadata and aliases, or ID My Plant to suggest an identification from your description, known names, and optional image when AI is enabled for the collection.
+- Use ID History from the Plant Definitions header to review past ID My Plant suggestions for the collection and create a new plant definition prefilled from a saved result.
+- Open Validated from the Plant Definitions header to browse reviewed site-level definitions that can be used by any collection.
+- Managers can nominate a local definition for validation from the edit page. Server admins review nominations from Server Management.
+- Managers can dispute a validated definition or create a local copy for selected specimens when the collection needs an independent definition.
+- Managers and gardeners can review Recent Collection Updates on the dashboard when validated definition edits affect specimens in the collection.
 - Upload a plant definition type image when the representative image comes from a reference source rather than your collection.
 - Use Copy on an existing definition to start a similar definition without copying cultivar-specific fields or images.
 - Use Share Definition when you have an active collection connection and want another collection to review and copy the definition.
@@ -113,14 +118,19 @@ App route: `/plants`
 - Species values are normalized to lowercase on submission.
 - Author Citation records the formal botanical author citation, such as “(L.f.) R.Br.”
 - Aliases are useful for old taxonomy, trade names, common names, shorthand, and misapplied labels.
+- Validated definitions are site-level records, not collection-owned records, so collection deletion does not remove approved validated definitions.
+- Your own ID My Plant results also appear under Account → My Plant IDs, even if you did not create a plant definition immediately.
+- Collection Update Digest is separate from care reminders. It covers validated definition reference changes for definitions currently used by the collection.
+- Use specimen-level husbandry overrides for local care differences before detaching from a validated definition.
 
 ### Warnings
 
 - AI output is a draft. Review reference URLs, aliases, conservation notes, and toxicity before relying on them.
+- ID My Plant sends only the description, known names, and selected image to OpenAI. It does not send member emails or unrelated records, and it does not save the suggested definition automatically. The result is saved to private user and collection-manager history.
 
 ## Plant Instances
 
-Plant instances are the actual specimens in a collection. Each instance receives a generated plant ID, status, location, acquisition details, source, notes, photos, bloom records, propagation relationships, sport review, care history, reminders, and follows.
+Plant instances are the actual specimens in a collection. Each instance receives a generated plant ID, status, location, acquisition details, source, notes, photos, bloom records, propagation relationships, sport review, care history, reminders, follows, and a Plant Health Timeline.
 
 App route: `/instances`
 
@@ -130,7 +140,8 @@ App route: `/instances`
 
 - Open Plant Instances and choose Add plant instance.
 - Select a plant definition and enter specimen details such as type, acquisition date, location, source, distributor, stock label, and notes.
-- Open a specimen detail page to review identity, photos, husbandry summary, sport status, follows, children, notes, reminders, bloom tracker, and archive actions.
+- Open a specimen detail page to review identity, photos, Plant Health Timeline, husbandry summary, sport status, follows, children, notes, reminders, bloom tracker, and archive actions.
+- Use the Plant Health Timeline to scan accession, propagation, care, condition, bloom, photo, note, reminder, archive, and sport activity in a compact strip, then open the Life Story list for grouped deterministic history.
 - Use the generated QR label to open the specimen record quickly from a printed label.
 - Use the plant ID refresh action when the current ID no longer matches the generated ID format after type or date changes.
 - Use Green Thumb assist for one focused care question per specimen per day when AI is enabled for the collection.
@@ -140,6 +151,7 @@ App route: `/instances`
 - Plant IDs are generated from the plant definition and relevant date context, then made unique inside the collection.
 - Locations and similar text fields autosuggest values already used in the current collection.
 - Acquired propagation is for purchased or received cuttings, leaf props, starter plugs, and similar plants without an internal parent record.
+- Timeline v1 uses existing records. Dedicated historical location-change, label-change, restore, and sport-transition events are future data-source candidates.
 
 ## Photos and Gallery
 
@@ -157,6 +169,7 @@ App route: `/gallery`
 - Upload plant definition type images directly when the best representative image comes from a trusted reference source.
 - Upload bloom photos from bloom records.
 - Use Gallery to browse specimen, bloom, and definition images and open larger versions.
+- Give sunshine to eligible specimen and bloom photos from the Gallery or plant detail pages.
 - Use photo framing controls to crop or set a center-bias point for card and preview layouts.
 
 ### Notes
@@ -302,10 +315,12 @@ App route: `/blooms`
 - Open a plant instance and use Bloom tracker to open a new bloom event.
 - Later, update the bloom record with peak date, flower count, closure date, notes, and photos.
 - Open Bloom Tracker from the sidebar to browse bloom events as cards.
+- Use Sunshine sorting to find blooms with the most appreciation.
 
 ### Notes
 
 - Bloom cards use selected bloom/specimen photos when available and placeholders otherwise.
+- Sunshine counts are visible, but AxilDB never shows who gave sunshine.
 - If a collection has no blooms yet, the Bloom Tracker shows an empty-state prompt instead of a blank page.
 
 ## Sport Review

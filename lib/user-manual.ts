@@ -73,6 +73,7 @@ export const manualSections: ManualSection[] = [
       'Use Add plant definition to create a new definition.',
       'Enter genus, species, cultivar, author citation, governing body, reference URLs, aliases, description, and notes.',
       'Use AI draft for a short botanical description, Magic fill to draft taxonomy metadata and aliases, or ID My Plant to suggest an identification from your description, known names, and optional image when AI is enabled for the collection.',
+      'Use ID History from the Plant Definitions header to review past ID My Plant suggestions for the collection and create a new plant definition prefilled from a saved result.',
       'Open Validated from the Plant Definitions header to browse reviewed site-level definitions that can be used by any collection.',
       'Managers can nominate a local definition for validation from the edit page. Server admins review nominations from Server Management.',
       'Managers can dispute a validated definition or create a local copy for selected specimens when the collection needs an independent definition.',
@@ -86,12 +87,13 @@ export const manualSections: ManualSection[] = [
       'Author Citation records the formal botanical author citation, such as “(L.f.) R.Br.”',
       'Aliases are useful for old taxonomy, trade names, common names, shorthand, and misapplied labels.',
       'Validated definitions are site-level records, not collection-owned records, so collection deletion does not remove approved validated definitions.',
+      'Your own ID My Plant results also appear under Account → My Plant IDs, even if you did not create a plant definition immediately.',
       'Collection Update Digest is separate from care reminders. It covers validated definition reference changes for definitions currently used by the collection.',
       'Use specimen-level husbandry overrides for local care differences before detaching from a validated definition.',
     ],
     warnings: [
       'AI output is a draft. Review reference URLs, aliases, conservation notes, and toxicity before relying on them.',
-      'ID My Plant sends only the description, known names, and selected image to OpenAI. It does not send member emails, unrelated records, or save the suggested definition automatically.',
+      'ID My Plant sends only the description, known names, and selected image to OpenAI. It does not send member emails or unrelated records, and it does not save the suggested definition automatically. The result is saved to private user and collection-manager history.',
     ],
   },
   {

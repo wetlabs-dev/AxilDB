@@ -2,10 +2,12 @@ import { resendOwnVerificationEmail, updateAccount, updateEmailPreferences } fro
 import { resolveImageModerationReview } from '@/app/actions'
 import Link from 'next/link'
 import { PlantImage } from '@/components/PlantImage'
+import { PlantIdentificationHistoryList } from '@/components/PlantIdentificationHistoryList'
 import { Card, Field, Button } from '@/components/ui'
 import { PushNotificationSettings } from '@/components/PushNotificationSettings'
 import { requireUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { collectionRoleAtLeast, isServerAdminRole } from '@/lib/roles'
 import { resolveSunshineTarget } from '@/lib/sunshine'
 import { defaultTimeZone, formatDate } from '@/lib/time'
 
@@ -67,6 +69,31 @@ export default async function Account({
     },
     orderBy: { createdAt: 'desc' },
   })
+  const plantIdentificationLogs = await prisma.plantIdentificationLog.findMany({
+    where: { userId: user.id },
+    include: {
+      collection: { select: { id: true, name: true, slug: true } },
+      uploadedPhoto: true,
+      matchedPlantDefinition: true,
+      createdPlantDefinition: true,
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 30,
+  })
+  const identificationCollectionIds = Array.from(new Set(plantIdentificationLogs.map((log) => log.collectionId)))
+  const identificationMemberships = identificationCollectionIds.length
+    ? await prisma.collectionMembership.findMany({
+        where: { collectionId: { in: identificationCollectionIds }, userId: user.id, status: 'ACTIVE' },
+        select: { collectionId: true, role: true },
+      })
+    : []
+  const identificationMembershipByCollection = new Map(identificationMemberships.map((membership) => [membership.collectionId, membership]))
+  const identificationLogsByCollection = new Map<string, typeof plantIdentificationLogs>()
+  for (const log of plantIdentificationLogs) {
+    const rows = identificationLogsByCollection.get(log.collectionId) || []
+    rows.push(log)
+    identificationLogsByCollection.set(log.collectionId, rows)
+  }
 
   return (
     <div className="space-y-6">
@@ -191,6 +218,33 @@ export default async function Account({
           </div>
           <Button className="justify-self-start">Save notification preferences</Button>
         </form>
+      </Card>
+
+      <Card>
+        <h3 className="font-bold">My Plant IDs</h3>
+        <p className="mt-1 text-sm text-[var(--ax-muted)]">A private notebook of ID My Plant suggestions you have run. Collection managers can also see entries for their collection.</p>
+        <div className="mt-4 grid gap-4">
+          {plantIdentificationLogs.length === 0 && <p className="rounded-lg border border-stone-200 bg-white/50 p-3 text-sm text-stone-600">No ID My Plant history yet.</p>}
+          {Array.from(identificationLogsByCollection.entries()).map(([collectionId, logs]) => {
+            const collection = logs[0].collection
+            const membership = identificationMembershipByCollection.get(collectionId)
+            const canCreateDefinitions = isServerAdminRole(user.role) || collectionRoleAtLeast(membership?.role, 'LOGGER')
+            return (
+              <div key={collectionId} className="grid gap-3">
+                <div>
+                  <h4 className="font-serif text-lg font-semibold">{collection.name}</h4>
+                  <p className="text-xs text-[var(--ax-muted)]">/{collection.slug}</p>
+                </div>
+                <PlantIdentificationHistoryList
+                  logs={logs}
+                  collectionSlug={collection.slug}
+                  timezone={preferences?.timezone}
+                  canCreateDefinitions={canCreateDefinitions}
+                />
+              </div>
+            )
+          })}
+        </div>
       </Card>
 
       <Card>

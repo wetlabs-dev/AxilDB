@@ -72,6 +72,7 @@ model User {
   uploadedImageModerationReviews ImageModerationReview[] @relation("ImageModerationReviewUploader")
   resolvedImageModerationReviews ImageModerationReview[] @relation("ImageModerationReviewResolver")
   uploadedPhotos Photo[] @relation("PhotoUploader")
+  plantIdentificationLogs PlantIdentificationLog[]
   careSheets          CareSheet[]
   completedCareSheetTasks CareSheetTask[] @relation("CareSheetTaskCompletedBy")
 
@@ -116,6 +117,7 @@ model Collection {
   notes               Note[]
   photos              Photo[]
   imageModerationReviews ImageModerationReview[]
+  plantIdentificationLogs PlantIdentificationLog[]
   bloomEvents         BloomEvent[]
   reminders           Reminder[]
   reminderDeliveries  ReminderDelivery[]
@@ -704,6 +706,9 @@ model PlantDefinition {
   approvedValidationCandidates PlantDefinitionValidationCandidate[] @relation("ValidationCandidateApprovedDefinition")
   disputes PlantDefinitionDispute[] @relation("ValidatedDefinitionDisputes")
   validatedChanges ValidatedDefinitionChange[]
+  matchedIdentificationLogs PlantIdentificationLog[] @relation("PlantIdentificationLogMatchedDefinition")
+  appliedIdentificationLogs PlantIdentificationLog[] @relation("PlantIdentificationLogAppliedDefinition")
+  createdIdentificationLogs PlantIdentificationLog[] @relation("PlantIdentificationLogCreatedDefinition")
 
   @@index([collectionId])
   @@index([governingBodyId])
@@ -1319,6 +1324,7 @@ model Photo {
   collection Collection? @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   uploadedByUser User? @relation("PhotoUploader", fields: [uploadedByUserId], references: [id], onDelete: SetNull)
   moderationReviews ImageModerationReview[]
+  plantIdentificationLogs PlantIdentificationLog[]
 
   @@index([collectionId])
   @@index([uploadedByUserId])
@@ -1354,6 +1360,49 @@ model ImageModerationReview {
   @@index([resolvedByUserId])
   @@index([reviewType])
   @@index([status])
+}
+
+model PlantIdentificationLog {
+  id                       String   @id @default(cuid())
+  collectionId             String
+  userId                   String
+  description              String?
+  knownNames               String?
+  uploadedPhotoId          String?
+  uploadedImagePath        String?
+  resultJson               Json
+  genus                    String?
+  species                  String?
+  hybridNotation           String?
+  cultivarName             String?
+  confidenceLevel          String?
+  confidenceExplanation    String?
+  alternativesJson         Json?
+  suggestedAliasesJson     Json?
+  suggestedDescription     String?
+  warningsJson             Json?
+  matchedPlantDefinitionId String?
+  appliedPlantDefinitionId String?
+  createdPlantDefinitionId String?
+  status                   String   @default("RESULT_ONLY")
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  collection             Collection       @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  user                   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  uploadedPhoto          Photo?           @relation(fields: [uploadedPhotoId], references: [id], onDelete: SetNull)
+  matchedPlantDefinition PlantDefinition? @relation("PlantIdentificationLogMatchedDefinition", fields: [matchedPlantDefinitionId], references: [id], onDelete: SetNull)
+  appliedPlantDefinition PlantDefinition? @relation("PlantIdentificationLogAppliedDefinition", fields: [appliedPlantDefinitionId], references: [id], onDelete: SetNull)
+  createdPlantDefinition PlantDefinition? @relation("PlantIdentificationLogCreatedDefinition", fields: [createdPlantDefinitionId], references: [id], onDelete: SetNull)
+
+  @@index([collectionId])
+  @@index([userId])
+  @@index([uploadedPhotoId])
+  @@index([matchedPlantDefinitionId])
+  @@index([appliedPlantDefinitionId])
+  @@index([createdPlantDefinitionId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model BloomEvent {

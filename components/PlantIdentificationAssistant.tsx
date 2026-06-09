@@ -22,6 +22,7 @@ type PlantIdSuggestion = {
 
 type ValidatedMatch = {
   id: string
+  matchType?: 'LOCAL' | 'VALIDATED'
   genus: string
   species: string
   hybridNotation?: string | null
@@ -91,7 +92,8 @@ export function PlantIdentificationAssistant({
   const [loading, setLoading] = useState(false)
   const [status, setStatus] = useState('')
   const [suggestion, setSuggestion] = useState<PlantIdSuggestion | null>(null)
-  const [validatedMatch, setValidatedMatch] = useState<ValidatedMatch | null>(null)
+  const [matchedDefinition, setMatchedDefinition] = useState<ValidatedMatch | null>(null)
+  const [logId, setLogId] = useState<string | null>(null)
   const [saveAsTypeImage, setSaveAsTypeImage] = useState(false)
 
   async function suggestId() {
@@ -114,14 +116,16 @@ export function PlantIdentificationAssistant({
     setLoading(true)
     setStatus('Asking AxilDB to suggest a likely ID...')
     setSuggestion(null)
-    setValidatedMatch(null)
+    setMatchedDefinition(null)
+    setLogId(null)
     try {
       const response = await fetch('/api/ai/plant-identification', { method: 'POST', body })
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || 'Plant identification failed.')
       setSuggestion(result.suggestion)
-      setValidatedMatch(result.validatedMatch || null)
-      setStatus('Suggestion ready. Review before applying.')
+      setMatchedDefinition(result.matchedDefinition || result.validatedMatch || null)
+      setLogId(result.logId || null)
+      setStatus(result.logId ? 'Suggestion ready and saved to ID history. Review before applying.' : 'Suggestion ready. Review before applying.')
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Plant identification failed.')
     } finally {
@@ -161,6 +165,13 @@ export function PlantIdentificationAssistant({
     const aliases = aliasesFromSuggestion(suggestion)
     if (aliases.length) window.dispatchEvent(new CustomEvent('axildb:replace-aliases', { detail: { form, aliases } }))
     setStatus(`Suggestion applied${aliases.length ? ` with ${aliases.length} alias${aliases.length === 1 ? '' : 'es'}` : ''}. Review before saving.`)
+    if (logId) {
+      await fetch(`/api/ai/plant-identification/logs/${encodeURIComponent(logId)}/apply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ collectionSlug, plantDefinitionId }),
+      }).catch(() => null)
+    }
     await uploadTypeImage(form)
   }
 
@@ -184,7 +195,7 @@ export function PlantIdentificationAssistant({
                 Not sure what the scientific name is? Add a short description, any common names you know, and optionally a clear photo. AxilDB will suggest likely taxonomy for you to review.
               </p>
               <p className="mt-1 text-xs font-medium text-[var(--ax-muted-strong)]">
-                This sends only your description, known names, and selected image to the configured OpenAI model. It does not save a plant definition automatically.
+                This sends only your description, known names, and selected image to the configured OpenAI model. It saves the ID result to your private collection history, but does not save a plant definition automatically.
               </p>
             </div>
             {status && (
@@ -262,11 +273,16 @@ export function PlantIdentificationAssistant({
 
           {suggestion && (
             <div className="mt-4 rounded-lg border border-[color:var(--ax-border)] bg-[var(--ax-surface-solid)] p-3">
-              {validatedMatch && (
+              {matchedDefinition && (
                 <div className="mb-3 rounded-lg border border-[#b7caa9] bg-[#edf3e6] p-3 text-sm text-[#255537]">
-                  <p className="font-semibold">This plant already exists as a Validated Plant Definition.</p>
+                  <p className="font-semibold">
+                    This plant matches an existing {matchedDefinition.matchType === 'LOCAL' ? 'Plant Definition' : 'Validated Plant Definition'}.
+                  </p>
                   <p className="mt-1">
-                    {displayName(validatedMatch)} is curated site-wide. Use the validated definition when creating a plant instance, or apply this draft only if you need an independent local definition.
+                    {displayName(matchedDefinition)}
+                    {matchedDefinition.matchType === 'VALIDATED'
+                      ? ' is curated site-wide. Use the validated definition when creating a plant instance, or apply this draft only if you need an independent local definition.'
+                      : ' already exists in this collection. Use the existing definition unless you need a separate local record.'}
                   </p>
                 </div>
               )}

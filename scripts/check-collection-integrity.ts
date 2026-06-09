@@ -12,6 +12,7 @@ const requiredCollectionModels = [
   ['Note', 'note'],
   ['Photo', 'photo'],
   ['ImageModerationReview', 'imageModerationReview'],
+  ['PlantIdentificationLog', 'plantIdentificationLog'],
   ['Reminder', 'reminder'],
   ['ReminderDelivery', 'reminderDelivery'],
   ['Follow', 'follow'],

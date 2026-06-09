@@ -35,6 +35,7 @@ import { plantName } from '@/lib/utils'
 import { husbandryFieldNames, husbandryFormValues } from '@/lib/husbandry'
 import { definitionData, findMatchingValidatedDefinition, globalGoverningBodyId, husbandryData } from '@/lib/validated-definitions'
 import { recordValidatedDefinitionChange, snapshotValidatedDefinition, validatedDefinitionInclude } from '@/lib/collection-updates'
+import { collectionRoleAtLeast, isServerAdminRole } from '@/lib/roles'
 
 const val = (fd: FormData, k: string) =>
   String(fd.get(k) || '').trim() || undefined
@@ -401,28 +402,82 @@ export async function deleteGoverningBody(fd: FormData) {
 }
 
 export async function createPlantDefinition(fd: FormData) {
-  const { user, collection } = await requireCollectionLogger(await collectionSlug(fd))
-  const definition = await prisma.plantDefinition.create({
-    data: {
-      collectionId: collection.id,
-      genus: val(fd, 'genus')!,
-      species: speciesVal(fd)!,
-      hybridNotation: clearableVal(fd, 'hybridNotation'),
-      cultivarName: clearableVal(fd, 'cultivarName'),
-      authority: clearableVal(fd, 'authority'),
-      cultivarRegistrationNumber: clearableVal(fd, 'cultivarRegistrationNumber'),
-      governingBodyId: clearableVal(fd, 'governingBodyId'),
-      confidence: val(fd, 'confidence') || 'UNCERTAIN',
-      acquisitionLabel: clearableVal(fd, 'acquisitionLabel'),
-      provisionalTaxon: clearableVal(fd, 'provisionalTaxon'),
-      wikipediaUrl: clearableVal(fd, 'wikipediaUrl'),
-      inaturalistUrl: clearableVal(fd, 'inaturalistUrl'),
-      powoUrl: clearableVal(fd, 'powoUrl'),
-      gbifUrl: clearableVal(fd, 'gbifUrl'),
-      description: clearableVal(fd, 'description'),
-      notes: clearableVal(fd, 'notes'),
-      aliases: { create: aliasRows(fd).map((alias) => ({ ...alias, collectionId: collection.id })) },
-    },
+  const { user, collection, membership } = await requireCollectionLogger(await collectionSlug(fd))
+  const identificationLogId = clearableVal(fd, 'plantIdentificationLogId')
+  const identificationLog = identificationLogId
+    ? await prisma.plantIdentificationLog.findFirst({
+        where: { id: identificationLogId, collectionId: collection.id },
+        include: { uploadedPhoto: true },
+      })
+    : null
+  if (identificationLogId && !identificationLog) throw new Error('ID My Plant history item was not found in this collection.')
+  if (
+    identificationLog &&
+    identificationLog.userId !== user.id &&
+    !isServerAdminRole(user.role) &&
+    !collectionRoleAtLeast(membership?.role, 'MANAGER')
+  ) {
+    throw new Error('Only collection managers can create definitions from another user’s ID My Plant history.')
+  }
+
+  const definition = await prisma.$transaction(async (tx) => {
+    const created = await tx.plantDefinition.create({
+      data: {
+        collectionId: collection.id,
+        genus: val(fd, 'genus')!,
+        species: speciesVal(fd)!,
+        hybridNotation: clearableVal(fd, 'hybridNotation'),
+        cultivarName: clearableVal(fd, 'cultivarName'),
+        authority: clearableVal(fd, 'authority'),
+        cultivarRegistrationNumber: clearableVal(fd, 'cultivarRegistrationNumber'),
+        governingBodyId: clearableVal(fd, 'governingBodyId'),
+        confidence: val(fd, 'confidence') || 'UNCERTAIN',
+        acquisitionLabel: clearableVal(fd, 'acquisitionLabel'),
+        provisionalTaxon: clearableVal(fd, 'provisionalTaxon'),
+        wikipediaUrl: clearableVal(fd, 'wikipediaUrl'),
+        inaturalistUrl: clearableVal(fd, 'inaturalistUrl'),
+        powoUrl: clearableVal(fd, 'powoUrl'),
+        gbifUrl: clearableVal(fd, 'gbifUrl'),
+        description: clearableVal(fd, 'description'),
+        notes: clearableVal(fd, 'notes'),
+        aliases: { create: aliasRows(fd).map((alias) => ({ ...alias, collectionId: collection.id })) },
+      },
+    })
+
+    if (identificationLog) {
+      await tx.plantIdentificationLog.update({
+        where: { id: identificationLog.id },
+        data: {
+          status: 'CREATED_DEFINITION',
+          createdPlantDefinitionId: created.id,
+          appliedPlantDefinitionId: created.id,
+        },
+      })
+      if (fd.get('attachIdentificationImage') === 'on' && identificationLog.uploadedPhoto) {
+        await tx.photo.updateMany({ where: { collectionId: collection.id, entityType: 'PLANT_DEFINITION', entityId: created.id }, data: { isType: false } })
+        await tx.photo.create({
+          data: {
+            collectionId: collection.id,
+            uploadedByUserId: user.id,
+            entityType: 'PLANT_DEFINITION',
+            entityId: created.id,
+            filename: identificationLog.uploadedPhoto.filename,
+            path: identificationLog.uploadedPhoto.path,
+            caption: identificationLog.uploadedPhoto.caption || 'Reused from ID My Plant history',
+            source: identificationLog.uploadedPhoto.source || 'USER_ID_IMAGE',
+            sourceUrl: identificationLog.uploadedPhoto.sourceUrl,
+            cropX: identificationLog.uploadedPhoto.cropX,
+            cropY: identificationLog.uploadedPhoto.cropY,
+            cropWidth: identificationLog.uploadedPhoto.cropWidth,
+            cropHeight: identificationLog.uploadedPhoto.cropHeight,
+            focalX: identificationLog.uploadedPhoto.focalX,
+            focalY: identificationLog.uploadedPhoto.focalY,
+            isType: true,
+          },
+        })
+      }
+    }
+    return created
   })
   await audit(user, 'CREATE', 'PLANT_DEFINITION', definition.id, `Created plant definition ${definition.genus} ${definition.species}`, undefined, collection.id)
 

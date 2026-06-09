@@ -12,6 +12,7 @@ const collectionModels = [
   'bloomEvent',
   'note',
   'photo',
+  'plantIdentificationLog',
   'reminder',
   'reminderDelivery',
   'follow',
@@ -50,6 +51,12 @@ const reviewedAllowlist = [
     model: 'photo',
     op: 'findMany',
     reason: 'Image moderation worker intentionally scans pending uploaded photos across collections, then updates only the selected photo and review rows.',
+  },
+  {
+    file: 'app/account/page.tsx',
+    model: 'plantIdentificationLog',
+    op: 'findMany',
+    reason: 'Account page intentionally lists only the current user’s own ID My Plant history across collections.',
   },
 ]
 

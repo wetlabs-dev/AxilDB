@@ -9,7 +9,8 @@ import { AIDescriptionField, AIMagicFillButton } from '@/components/AIDescriptio
 import { PlantIdentificationAssistant } from '@/components/PlantIdentificationAssistant'
 import { HusbandryBadges } from '@/components/Husbandry'
 import { getCurrentUser } from '@/lib/auth'
-import { canCreateInCollection, canEditInCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
+import { canCreateInCollection, canEditInCollection, canManageCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
+import { suggestedAliasesForForm, type PlantIdentificationSuggestion } from '@/lib/plant-identification-history'
 import { rankedSuggestions } from '@/lib/suggestions'
 import { compareText, sortPreference, timeValue, type SortOption } from '@/lib/sort-preferences'
 import { plantName, taxonomyLabel } from '@/lib/utils'
@@ -26,12 +27,32 @@ const plantSortOptions: SortOption[] = [
   { value: 'createdAsc', label: 'Oldest created' },
 ]
 
-export default async function Plants() {
+function referencePrefill(log: { resultJson: unknown }) {
+  const references = Array.isArray((log.resultJson as any)?.suggestedReferences) ? (log.resultJson as any).suggestedReferences : []
+  const fields: Record<string, string> = {}
+  for (const rawReference of references) {
+    const reference = String(rawReference || '').trim()
+    const normalized = reference.toLowerCase()
+    if (normalized.includes('wikipedia.org') && !fields.wikipediaUrl) fields.wikipediaUrl = reference
+    if (normalized.includes('inaturalist.org') && !fields.inaturalistUrl) fields.inaturalistUrl = reference
+    if (normalized.includes('powo.science.kew.org') && !fields.powoUrl) fields.powoUrl = reference
+    if (normalized.includes('gbif.org') && !fields.gbifUrl) fields.gbifUrl = reference
+  }
+  return fields
+}
+
+export default async function Plants({
+  searchParams,
+}: {
+  searchParams: Promise<{ fromIdentification?: string }>
+}) {
   const user = await getCurrentUser()
+  const sp = await searchParams
   const context = await requireCollectionViewer()
   const { collection } = context
   const canCreate = canCreateInCollection(user, context)
   const canEdit = canEditInCollection(user, context)
+  const canManage = canManageCollection(user, context)
   const collectionWhere = { collectionId: collection.id }
   const sortKey = await sortPreference(user?.id, 'plants', 'nameAsc', plantSortOptions.map((option) => option.value))
   const [plants, bodies, follows, outgoingTransferConnections] = await Promise.all([
@@ -72,6 +93,15 @@ export default async function Plants() {
     aliasSource: rankedSuggestions(plants.flatMap((plant) => plant.aliases.map((alias) => alias.source))),
   }
   const governingBodyOptions = bodies.map((body) => ({ id: body.id, name: body.name, abbreviation: body.abbreviation }))
+  const identificationPrefill = canCreate && sp.fromIdentification
+    ? await prisma.plantIdentificationLog.findFirst({
+        where: { id: sp.fromIdentification, collectionId: collection.id },
+        include: { uploadedPhoto: true },
+      })
+    : null
+  const identificationSuggestion = identificationPrefill?.resultJson as PlantIdentificationSuggestion | undefined
+  const identificationReferences = identificationPrefill ? referencePrefill(identificationPrefill) : {}
+  const identificationAliases = identificationSuggestion ? suggestedAliasesForForm(identificationSuggestion) : []
   const instanceIds = plants.flatMap((plant) => plant.instances.map((instance) => instance.id))
   const plantIds = plants.map((plant) => plant.id)
   const [definitionPhotos, typePhotos, followCounts, allHusbandryGuides] = await Promise.all([
@@ -121,13 +151,14 @@ export default async function Plants() {
             back={collectionPath(collection.slug, '/plants')}
             disabled={!user}
           />
+          {canManage && <LinkButton href={collectionPath(collection.slug, '/id-history')}>ID History</LinkButton>}
           <LinkButton href={collectionPath(collection.slug, '/validated-definitions')}>Validated</LinkButton>
           <LinkButton href={collectionPath(collection.slug, '/search')}>Search</LinkButton>
         </div>
       </div>
 
       {canCreate && (
-        <AddPanel label="Add plant definition">
+        <AddPanel label={identificationPrefill ? 'Add plant definition from ID My Plant history' : 'Add plant definition'} defaultOpen={Boolean(identificationPrefill)}>
           <SuggestionDatalist id="definition-genus-suggestions" suggestions={definitionSuggestions.genus} />
           <SuggestionDatalist id="definition-species-suggestions" suggestions={definitionSuggestions.species} />
           <SuggestionDatalist id="definition-hybrid-notation-suggestions" suggestions={definitionSuggestions.hybridNotation} />
@@ -137,10 +168,23 @@ export default async function Plants() {
           <SuggestionDatalist id="definition-provisional-taxon-suggestions" suggestions={definitionSuggestions.provisionalTaxon} />
           <form action={createPlantDefinition} className="grid max-w-6xl gap-x-3 gap-y-2 lg:grid-cols-4">
             <input type="hidden" name="collectionSlug" value={collection.slug} />
-            <Field label="Genus" name="genus" required list="definition-genus-suggestions" />
-            <Field label="Species" name="species" required list="definition-species-suggestions" autoCapitalize="none" />
-            <Field label="Hybrid notation" help="Use for botanical hybrid markers or formula context, such as x, grex, or parentage notation that belongs with the name." name="hybridNotation" list="definition-hybrid-notation-suggestions" />
-            <Field label="Cultivar name" help="The named cultivated variety, usually written in single quotes, such as 'Morning Glow'. Leave blank for unnamed species or clones." name="cultivarName" list="definition-cultivar-name-suggestions" />
+            {identificationPrefill && <input type="hidden" name="plantIdentificationLogId" value={identificationPrefill.id} />}
+            {identificationPrefill && (
+              <div className="rounded-lg border border-[#b7caa9] bg-[#edf3e6] p-3 text-sm text-[#255537] lg:col-span-4">
+                <p className="font-semibold">Prefilled from ID My Plant history.</p>
+                <p className="mt-1">Review the AI-assisted draft before saving. Confidence is set to AI Determined.</p>
+                {identificationPrefill.uploadedPhoto && (
+                  <label className="mt-2 flex items-center gap-2">
+                    <input type="checkbox" name="attachIdentificationImage" defaultChecked />
+                    <span>Attach the uploaded ID image as this definition's type image.</span>
+                  </label>
+                )}
+              </div>
+            )}
+            <Field label="Genus" name="genus" required list="definition-genus-suggestions" defaultValue={identificationPrefill?.genus || ''} />
+            <Field label="Species" name="species" required list="definition-species-suggestions" autoCapitalize="none" defaultValue={identificationPrefill?.species || ''} />
+            <Field label="Hybrid notation" help="Use for botanical hybrid markers or formula context, such as x, grex, or parentage notation that belongs with the name." name="hybridNotation" list="definition-hybrid-notation-suggestions" defaultValue={identificationPrefill?.hybridNotation || ''} />
+            <Field label="Cultivar name" help="The named cultivated variety, usually written in single quotes, such as 'Morning Glow'. Leave blank for unnamed species or clones." name="cultivarName" list="definition-cultivar-name-suggestions" defaultValue={identificationPrefill?.cultivarName || ''} />
             <div className="min-w-0 rounded-lg border border-[#d6dfc9] bg-[#f7f4e8]/80 px-3 py-2 text-sm text-stone-700 lg:col-span-4">
               <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
                 <span className="min-w-0">Enter the core name first, then let AxilDB draft taxonomy metadata and suggested aliases.</span>
@@ -150,7 +194,7 @@ export default async function Plants() {
             </div>
             <Field label="Author citation" help="The author citation for the scientific name, such as (L.f.) R.Br. It records who validly published the name or combination." name="authority" list="definition-authority-suggestions" />
             <Field label="Cultivar registration number" help="Use when a formal cultivar registry or governing body assigns a registration number to the cultivar." name="cultivarRegistrationNumber" />
-            <ConfidenceSelect name="confidence" />
+            <ConfidenceSelect name="confidence" defaultValue={identificationPrefill ? 'AI_DETERMINED' : 'UNCERTAIN'} />
             <label className="grid gap-1 text-sm font-medium text-stone-800">
               <span className="flex items-center gap-1.5">
                 <span>Governing body</span>
@@ -167,13 +211,13 @@ export default async function Plants() {
             </label>
             <Field label="Acquisition label" help="The name or label the plant arrived with, even if you later determine a different accepted name." name="acquisitionLabel" list="definition-acquisition-label-suggestions" wrapperClassName="lg:col-span-2" />
             <Field label="Provisional taxon" help="A cautious working identification when the accepted name is not settled yet. Useful for 'probably this' or awaiting confirmation." name="provisionalTaxon" list="definition-provisional-taxon-suggestions" wrapperClassName="lg:col-span-2" />
-            <Field label="Wikipedia URL" help="Optional quick reference link for the species or genus entry." name="wikipediaUrl" type="url" />
-            <Field label="iNaturalist URL" help="Optional link to an iNaturalist taxon page for observations, common names, and community references." name="inaturalistUrl" type="url" />
-            <Field label="POWO URL" help="Optional Plants of the World Online link for accepted names, synonyms, and distribution data." name="powoUrl" type="url" />
-            <Field label="GBIF URL" help="Optional GBIF link for occurrence records, taxonomy backbone data, and biodiversity references." name="gbifUrl" type="url" />
-            <AIDescriptionField wrapperClassName="lg:col-span-2" />
-            <TextArea label="Notes" name="notes" wrapperClassName="lg:col-span-2" />
-            <PlantAliasFields submitLabel="Create plant definition" sourceSuggestions={definitionSuggestions.aliasSource} />
+            <Field label="Wikipedia URL" help="Optional quick reference link for the species or genus entry." name="wikipediaUrl" type="url" defaultValue={identificationReferences.wikipediaUrl || ''} />
+            <Field label="iNaturalist URL" help="Optional link to an iNaturalist taxon page for observations, common names, and community references." name="inaturalistUrl" type="url" defaultValue={identificationReferences.inaturalistUrl || ''} />
+            <Field label="POWO URL" help="Optional Plants of the World Online link for accepted names, synonyms, and distribution data." name="powoUrl" type="url" defaultValue={identificationReferences.powoUrl || ''} />
+            <Field label="GBIF URL" help="Optional GBIF link for occurrence records, taxonomy backbone data, and biodiversity references." name="gbifUrl" type="url" defaultValue={identificationReferences.gbifUrl || ''} />
+            <AIDescriptionField wrapperClassName="lg:col-span-2" defaultValue={identificationPrefill?.suggestedDescription || ''} />
+            <TextArea label="Notes" name="notes" wrapperClassName="lg:col-span-2" defaultValue={identificationPrefill?.confidenceExplanation || ''} />
+            <PlantAliasFields aliases={identificationAliases} submitLabel="Create plant definition" sourceSuggestions={definitionSuggestions.aliasSource} />
           </form>
         </AddPanel>
       )}

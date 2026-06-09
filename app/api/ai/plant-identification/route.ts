@@ -1,12 +1,16 @@
 import { NextResponse } from 'next/server'
+import { mkdir, writeFile } from 'fs/promises'
+import path from 'path'
+import sharp from 'sharp'
 import { audit } from '@/lib/auth'
 import { recordAiUsage, requireAiFeatureAccess, tokenUsage } from '@/lib/ai-usage'
 import { prisma } from '@/lib/prisma'
-import { findMatchingValidatedDefinition } from '@/lib/validated-definitions'
+import { findMatchingPlantDefinition } from '@/lib/plant-identification-history'
 
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses'
 const DEFAULT_MODEL = 'gpt-5.4-mini'
 const MAX_IMAGE_BYTES = 6 * 1024 * 1024
+const MAX_STORED_IMAGE_DIMENSION = 2000
 const SUPPORTED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
 const requestLog = new Map<string, number[]>()
 
@@ -88,6 +92,43 @@ function normalizeResult(raw: any) {
       ? raw.suggestedReferences.map(url).filter(Boolean).slice(0, 5)
       : [],
   }
+}
+
+async function saveIdentificationImage(input: {
+  image: File
+  collectionId: string
+  userId: string
+  logId: string
+}) {
+  const original = Buffer.from(await input.image.arrayBuffer())
+  const bytes = await sharp(original)
+    .rotate()
+    .resize({
+      width: MAX_STORED_IMAGE_DIMENSION,
+      height: MAX_STORED_IMAGE_DIMENSION,
+      fit: 'inside',
+      withoutEnlargement: true,
+    })
+    .jpeg({ quality: 84, mozjpeg: true })
+    .toBuffer()
+
+  await mkdir(path.join(process.cwd(), 'public', 'uploads'), { recursive: true })
+  const parsed = path.parse(input.image.name.replace(/[^a-zA-Z0-9._-]/g, '-'))
+  const filename = `${Date.now()}-${parsed.name || 'plant-id'}.jpg`
+  await writeFile(path.join(process.cwd(), 'public', 'uploads', filename), bytes)
+
+  return prisma.photo.create({
+    data: {
+      collectionId: input.collectionId,
+      uploadedByUserId: input.userId,
+      entityType: 'PLANT_IDENTIFICATION_LOG',
+      entityId: input.logId,
+      filename,
+      path: `/uploads/${filename}`,
+      caption: 'Uploaded for ID My Plant history',
+      source: 'USER_ID_IMAGE',
+    },
+  })
 }
 
 export async function POST(req: Request) {
@@ -184,24 +225,60 @@ export async function POST(req: Request) {
     }
 
     const suggestion = normalizeResult(extractJson(outputText(payload)))
+    const match = await findMatchingPlantDefinition(prisma, collection.id, suggestion)
+    const log = await prisma.plantIdentificationLog.create({
+      data: {
+        collectionId: collection.id,
+        userId: user.id,
+        description: description || null,
+        knownNames: knownNames || null,
+        resultJson: suggestion,
+        genus: suggestion.genus,
+        species: suggestion.species,
+        hybridNotation: suggestion.hybridNotation,
+        cultivarName: suggestion.cultivarName,
+        confidenceLevel: suggestion.confidenceLevel,
+        confidenceExplanation: suggestion.confidenceExplanation,
+        alternativesJson: suggestion.possibleAlternatives,
+        suggestedAliasesJson: suggestion.suggestedAliases,
+        suggestedDescription: suggestion.suggestedDescription,
+        warningsJson: suggestion.warnings,
+        matchedPlantDefinitionId: match?.definition.id || null,
+      },
+    })
+
+    if (hasImage && image) {
+      try {
+        const uploadedPhoto = await saveIdentificationImage({ image, collectionId: collection.id, userId: user.id, logId: log.id })
+        await prisma.plantIdentificationLog.update({
+          where: { id: log.id },
+          data: { uploadedPhotoId: uploadedPhoto.id, uploadedImagePath: uploadedPhoto.path },
+        })
+      } catch (imageError) {
+        console.error('ID My Plant history image storage failed', { logId: log.id, error: imageError })
+      }
+    }
+
     await recordAiUsage({ collectionId: collection.id, userId: user.id, feature: 'AI_PLANT_IDENTIFICATION', model, usage: tokenUsage(payload) })
-    await audit(user, 'GENERATE', 'AI_PLANT_IDENTIFICATION', null, `Generated ID My Plant suggestion for ${requestSummary.slice(0, 80)}`, {
+    await audit(user, 'GENERATE', 'AI_PLANT_IDENTIFICATION', log.id, `Generated ID My Plant suggestion for ${requestSummary.slice(0, 80)}`, {
       model,
       hasImage,
       confidenceLevel: suggestion.confidenceLevel,
       genus: suggestion.genus,
       species: suggestion.species,
+      matchedPlantDefinitionId: match?.definition.id || null,
     }, collection.id)
-    const validatedMatch = await findMatchingValidatedDefinition(prisma, suggestion)
     return NextResponse.json({
+      logId: log.id,
       suggestion,
-      validatedMatch: validatedMatch
+      matchedDefinition: match
         ? {
-            id: validatedMatch.id,
-            genus: validatedMatch.genus,
-            species: validatedMatch.species,
-            hybridNotation: validatedMatch.hybridNotation,
-            cultivarName: validatedMatch.cultivarName,
+            id: match.definition.id,
+            matchType: match.matchType,
+            genus: match.definition.genus,
+            species: match.definition.species,
+            hybridNotation: match.definition.hybridNotation,
+            cultivarName: match.definition.cultivarName,
           }
         : null,
     })
