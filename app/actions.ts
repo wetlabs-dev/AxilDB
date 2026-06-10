@@ -2152,6 +2152,24 @@ export async function updatePhotoFraming(fd: FormData) {
   redirect(destination)
 }
 
+export async function updatePhotoCaption(fd: FormData) {
+  const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
+  const id = val(fd, 'id')!
+  const destination = back(fd)
+  const rawCaption = String(fd.get('caption') || '')
+  const caption = rawCaption.trim() ? rawCaption : null
+  const photo = await prisma.photo.findFirstOrThrow({ where: { id, collectionId: collection.id } })
+
+  await prisma.photo.update({
+    where: { id },
+    data: { caption },
+  })
+
+  await audit(user, 'UPDATE', 'PHOTO', id, `Updated photo caption for ${photo.entityType} ${photo.entityId}`, { previousCaption: photo.caption, caption, captionSource: 'USER' }, collection.id)
+  revalidateDestination(destination)
+  redirect(destination)
+}
+
 export async function openBloomEvent(fd: FormData) {
   const { user, collection } = await requireCollectionLogger(await collectionSlug(fd))
   const plantInstanceId = val(fd, 'plantInstanceId')!

@@ -7,6 +7,7 @@ import {
   setCoverPhoto,
   setTypePhoto,
   deletePhoto,
+  updatePhotoCaption,
   updatePhotoFraming,
   markSportCandidate,
   markSportReverted,
@@ -381,6 +382,22 @@ export default async function InstanceDetail({
                     </form>
                   )}
                 </div>
+              )}
+              {canEditRecords && (
+                <details className="group rounded-lg border border-stone-200 bg-white/60">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-2 py-1.5 font-medium">
+                    <span>Edit caption</span>
+                    <span className="rounded-md border border-stone-300 bg-white/70 px-2 py-0.5 text-[0.68rem] group-open:hidden">Open</span>
+                    <span className="hidden rounded-md border border-stone-300 bg-white/70 px-2 py-0.5 text-[0.68rem] group-open:inline-block">Hide</span>
+                  </summary>
+                  <form action={updatePhotoCaption} className="grid gap-2 border-t border-stone-200 p-2">
+                    <input type="hidden" name="id" value={p.id} />
+                    <input type="hidden" name="collectionSlug" value={collection.slug} />
+                    <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}#photo-${p.id}`)} />
+                    <input className="rounded-md border border-stone-300 bg-[#fffdf7] px-2 py-1.5 text-xs shadow-inner shadow-stone-200/30 outline-none focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30" name="caption" defaultValue={p.caption || ''} placeholder="Photo caption" />
+                    <Button className="px-3 py-1.5 text-xs">Save caption</Button>
+                  </form>
+                </details>
               )}
               {canEditRecords && (
                 <details className="group rounded-lg border border-stone-200 bg-white/60">
@@ -1005,6 +1022,20 @@ export default async function InstanceDetail({
                             <p>{p.caption || 'Untitled bloom photo'}</p>
                             {canEditInCollection(user, context) && (
                               <>
+                                <details className="group rounded-lg border border-stone-200 bg-white/60">
+                                  <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-2 py-1.5 font-medium">
+                                    <span>Edit caption</span>
+                                    <span className="rounded-md border border-stone-300 bg-white/70 px-2 py-0.5 text-[0.68rem] group-open:hidden">Open</span>
+                                    <span className="hidden rounded-md border border-stone-300 bg-white/70 px-2 py-0.5 text-[0.68rem] group-open:inline-block">Hide</span>
+                                  </summary>
+                                  <form action={updatePhotoCaption} className="grid gap-2 border-t border-stone-200 p-2">
+                                    <input type="hidden" name="id" value={p.id} />
+                                    <input type="hidden" name="collectionSlug" value={collection.slug} />
+                                    <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}#bloom-${b.id}`)} />
+                                    <input className="rounded-md border border-stone-300 bg-[#fffdf7] px-2 py-1.5 text-xs shadow-inner shadow-stone-200/30 outline-none focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30" name="caption" defaultValue={p.caption || ''} placeholder="Photo caption" />
+                                    <Button className="px-2 py-1 text-xs">Save caption</Button>
+                                  </form>
+                                </details>
                                 <details className="group rounded-lg border border-stone-200 bg-white/60">
                                   <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-2 py-1.5 font-medium">
                                     <span>Edit framing</span>
