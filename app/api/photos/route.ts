@@ -50,7 +50,8 @@ export async function POST(req: Request) {
   const file = form.get('photo') as File | null
   const entityType = String(form.get('entityType') || '')
   const entityId = String(form.get('entityId') || '')
-  const caption = String(form.get('caption') || '') || undefined
+  const rawCaption = String(form.get('caption') || '')
+  const caption = rawCaption.trim() ? rawCaption : undefined
   const source = String(form.get('source') || '') || undefined
   const sourceUrl = String(form.get('sourceUrl') || '') || undefined
   const back = String(form.get('back') || '/')

@@ -26,6 +26,7 @@ export type PlantImageAnalysisResult = {
   primarySubject: string | null
   imageType: string | null
   usableForIdentification: boolean
+  suggestedCaption: string | null
   reason: string
   model: string
   checkedAt: Date
@@ -72,6 +73,23 @@ function boundedConfidence(value: unknown) {
   const parsed = Number(value)
   if (!Number.isFinite(parsed)) return 0
   return Math.max(0, Math.min(1, parsed))
+}
+
+function hasCaption(value?: string | null) {
+  return Boolean(value && value.trim())
+}
+
+function cleanSuggestedCaption(value: unknown) {
+  if (typeof value !== 'string') return null
+  const caption = value
+    .replace(/[\r\n*_`#]/g, ' ')
+    .replace(/[^\p{L}\p{N}\s'-]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+  if (!caption) return null
+
+  const words = caption.split(/\s+/).slice(0, 9)
+  return words.join(' ').slice(0, 80).trim() || null
 }
 
 function tokenUsage(payload: any) {
@@ -177,11 +195,22 @@ async function runOpenAiModeration(photoPath: string): Promise<{ result: ImageSa
   }
 }
 
-async function runPlantImageCheck(photoPath: string): Promise<{ result: PlantImageAnalysisResult; usagePayload: any }> {
+async function runPlantImageCheck(photoPath: string, options: { requestCaption: boolean }): Promise<{ result: PlantImageAnalysisResult; usagePayload: any }> {
   const model = process.env.OPENAI_PLANT_IMAGE_CHECK_MODEL
     || process.env.OPENAI_PLANT_ID_MODEL
     || DEFAULT_PLANT_CHECK_MODEL
   const dataUrl = await imageDataUrl(photoPath)
+  const responseKeys = options.requestCaption
+    ? 'containsPlant, confidence, primarySubject, imageType, usableForIdentification, suggestedCaption, reason'
+    : 'containsPlant, confidence, primarySubject, imageType, usableForIdentification, reason'
+  const captionInstruction = options.requestCaption
+    ? [
+        'Also include suggestedCaption because the uploader did not provide a caption.',
+        'suggestedCaption must be under 10 words, plain language, no emoji, no markdown, and no punctuation unless natural.',
+        'Describe the visible plant or plant photo only. Do not include user names, collection names, private data, or species/cultivar names unless visually obvious from provided image context.',
+        'If plant content is absent or uncertain, use a neutral caption such as "Possible plant close-up" or "Unclear plant image"; do not pretend certainty.',
+      ].join(' ')
+    : 'Do not include suggestedCaption because the uploader already provided a caption.'
   const response = await fetch(OPENAI_RESPONSES_URL, {
     method: 'POST',
     headers: {
@@ -193,12 +222,13 @@ async function runPlantImageCheck(photoPath: string): Promise<{ result: PlantIma
       instructions: [
         'Check whether this already-safety-moderated AxilDB upload contains plant-related visual content.',
         'Do not make NSFW, safety, or policy decisions. That has already been handled by OpenAI Moderation.',
-        'Return strict JSON only with keys containsPlant, confidence, primarySubject, imageType, usableForIdentification, reason.',
+        `Return strict JSON only with keys ${responseKeys}.`,
         'containsPlant must be exactly "yes", "no", or "uncertain".',
         'Use "yes" for a live plant, plant part, bloom, cutting, propagation, botanical specimen, plant label, or clear plant-photo context.',
         'Use "uncertain" when the image might contain plant content but is cropped, blurred, obstructed, abstract, or too ambiguous to tell.',
         'Use "no" for clearly non-plant images.',
         'Do not identify the species unless it is obvious from visible text. Keep reason short.',
+        captionInstruction,
       ].join(' '),
       input: [{
         role: 'user',
@@ -223,6 +253,7 @@ async function runPlantImageCheck(photoPath: string): Promise<{ result: PlantIma
       primarySubject: typeof parsed.primarySubject === 'string' && parsed.primarySubject.trim() ? parsed.primarySubject.trim().slice(0, 140) : null,
       imageType: typeof parsed.imageType === 'string' && parsed.imageType.trim() ? parsed.imageType.trim().slice(0, 80) : null,
       usableForIdentification: Boolean(parsed.usableForIdentification),
+      suggestedCaption: options.requestCaption ? cleanSuggestedCaption(parsed.suggestedCaption) : null,
       reason: typeof parsed.reason === 'string' && parsed.reason.trim() ? parsed.reason.trim().slice(0, 500) : 'Plant-content check completed.',
       model,
       checkedAt: new Date(),
@@ -317,7 +348,12 @@ export async function processPendingImageModeration(prisma: PrismaClient, limit 
         continue
       }
 
-      const { result: plantAnalysis, usagePayload: plantPayload } = await runPlantImageCheck(photo.path)
+      const currentCaption = await prisma.photo.findFirst({
+        where: { id: photo.id, collectionId: photo.collectionId },
+        select: { caption: true },
+      })
+      const requestCaption = !hasCaption(currentCaption?.caption)
+      const { result: plantAnalysis, usagePayload: plantPayload } = await runPlantImageCheck(photo.path, { requestCaption })
       await recordModerationUsage(prisma, {
         collectionId: photo.collectionId,
         userId: photo.uploadedByUserId,
@@ -354,6 +390,8 @@ export async function processPendingImageModeration(prisma: PrismaClient, limit 
             primarySubject: plantAnalysis.primarySubject,
             imageType: plantAnalysis.imageType,
             usableForIdentification: plantAnalysis.usableForIdentification,
+            suggestedCaption: plantAnalysis.suggestedCaption,
+            suggestedCaptionRequested: requestCaption,
             reason: plantAnalysis.reason,
             model: plantAnalysis.model,
           },
@@ -361,6 +399,20 @@ export async function processPendingImageModeration(prisma: PrismaClient, limit 
           moderationLastError: null,
         },
       })
+
+      if (plantAnalysis.suggestedCaption) {
+        await prisma.photo.updateMany({
+          where: {
+            id: photo.id,
+            collectionId: photo.collectionId,
+            OR: [
+              { caption: null },
+              { caption: '' },
+            ],
+          },
+          data: { caption: plantAnalysis.suggestedCaption },
+        })
+      }
 
       if (status === 'NO_PLANT_DETECTED' || status === 'UNCERTAIN_PLANT_CONTENT') {
         const reviewType = status
