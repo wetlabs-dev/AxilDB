@@ -10,13 +10,13 @@ import { prisma } from '@/lib/prisma'
 import { isServerAdminRole } from '@/lib/roles'
 import { resolveSunshineTarget, sunshineCountLabel, sunshineCounts, sunshineKey } from '@/lib/sunshine'
 import { cn, fmtDate, plantName } from '@/lib/utils'
-import { Archive, ClipboardCheck, Flower2, GitBranch, Leaf, Sparkles, Sprout } from 'lucide-react'
+import { Archive, ClipboardCheck, Flower2, GitBranch, Leaf, Sparkles, Sprout, Sun } from 'lucide-react'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 
 type PhotoLookup = Record<string, PlantImageFrame | undefined>
 type BriefingPlantLink = { plantId: string; href: string; aliases: string[] }
-type ActivityKind = 'propagation' | 'bloom' | 'sport' | 'acquired' | 'archive'
+type ActivityKind = 'propagation' | 'bloom' | 'sport' | 'acquired' | 'archive' | 'sunshine'
 type ActivityItem = {
   id: string
   kind: ActivityKind
@@ -63,16 +63,42 @@ const activityStyles: Record<ActivityKind, { label: string; className: string; i
     className: 'border-stone-300 bg-stone-100/70 opacity-80',
     imageClassName: 'bg-stone-200 text-stone-500 grayscale',
   },
+  sunshine: {
+    label: 'Sunshine',
+    icon: Sun,
+    className: 'border-[#ead486] bg-[#fff9df]',
+    imageClassName: 'bg-[#f4e7aa]/55 text-[#7a5a00]',
+  },
 }
 const activityKinds = Object.keys(activityStyles) as ActivityKind[]
 
-function activityHref(slug: string, activityTake: number, kind?: ActivityKind) {
+function activityHref(slug: string, activityTake: number, includedKinds?: ActivityKind[]) {
   const params = new URLSearchParams()
-  if (kind) params.set('type', kind)
+  const normalizedKinds = includedKinds
+    ? activityKinds.filter((kind) => includedKinds.includes(kind))
+    : activityKinds
+  if (normalizedKinds.length !== activityKinds.length) {
+    params.set('type', normalizedKinds.length ? normalizedKinds.join(',') : 'none')
+  }
   if (activityTake !== 12) params.set('activity', String(activityTake))
   const qs = params.toString()
   const path = qs ? `/?${qs}` : '/'
   return collectionPath(slug, path)
+}
+
+function parseActivityKinds(value?: string) {
+  if (!value) return activityKinds
+  if (value === 'none') return []
+  const selected = value
+    .split(',')
+    .filter((kind): kind is ActivityKind => activityKinds.includes(kind as ActivityKind))
+  return Array.from(new Set(selected))
+}
+
+function toggleActivityKind(includedKinds: ActivityKind[], kind: ActivityKind) {
+  return includedKinds.includes(kind)
+    ? includedKinds.filter((item) => item !== kind)
+    : activityKinds.filter((item) => includedKinds.includes(item) || item === kind)
 }
 
 function ActivityCard({
@@ -246,8 +272,9 @@ export default async function Dashboard({
   const { collection } = context
   const collectionWhere = { collectionId: collection.id }
   const activityTake = Math.min(Math.max(Number(sp.activity || 12) || 12, 12), 48)
-  const activeKind = activityKinds.includes(sp.type as ActivityKind) ? (sp.type as ActivityKind) : undefined
-  const queryTake = activeKind ? Math.max(activityTake * 4, 48) : activityTake
+  const includedActivityKinds = parseActivityKinds(sp.type)
+  const includesActivityKind = (kind: ActivityKind) => includedActivityKinds.includes(kind)
+  const queryTake = includedActivityKinds.length === activityKinds.length ? activityTake : Math.max(activityTake * 4, 48)
   const preferences = context.user
     ? await prisma.emailPreference.findUnique({ where: { userId: context.user.id } })
     : null
@@ -293,7 +320,7 @@ export default async function Dashboard({
     prisma.plantInstance.count({ where: { ...collectionWhere, OR: [{ isSportCandidate: true }, { sportStatus: { not: 'NONE' } }] } }),
     prisma.propagationEvent.findMany({
       where: collectionWhere,
-      take: activeKind && activeKind !== 'propagation' ? 0 : queryTake,
+      take: includesActivityKind('propagation') ? queryTake : 0,
       orderBy: { date: 'desc' },
       include: {
         parents: { include: { parentPlantInstance: { include: { plantDefinition: true } } } },
@@ -302,25 +329,25 @@ export default async function Dashboard({
     }),
     prisma.bloomEvent.findMany({
       where: collectionWhere,
-      take: activeKind && activeKind !== 'bloom' ? 0 : queryTake,
+      take: includesActivityKind('bloom') ? queryTake : 0,
       orderBy: { bloomStartDate: 'desc' },
       include: { plantInstance: { include: { plantDefinition: true } } },
     }),
     prisma.plantInstance.findMany({
       where: { ...collectionWhere, OR: [{ isSportCandidate: true }, { sportStatus: { not: 'NONE' } }] },
-      take: activeKind && activeKind !== 'sport' ? 0 : queryTake,
+      take: includesActivityKind('sport') ? queryTake : 0,
       include: { plantDefinition: true },
       orderBy: { updatedAt: 'desc' },
     }),
     prisma.plantInstance.findMany({
       where: { ...collectionWhere, instanceType: { in: ['MOTHER', 'ACQUIRED_PROPAGATION'] } },
-      take: activeKind && !['acquired', 'propagation'].includes(activeKind) ? 0 : queryTake,
+      take: includesActivityKind('acquired') || includesActivityKind('propagation') ? queryTake : 0,
       orderBy: [{ acquisitionDate: 'desc' }, { createdAt: 'desc' }],
       include: { plantDefinition: true },
     }),
     prisma.plantInstance.findMany({
       where: { ...collectionWhere, status: 'ARCHIVED' },
-      take: activeKind && activeKind !== 'archive' ? 0 : queryTake,
+      take: includesActivityKind('archive') ? queryTake : 0,
       orderBy: { archiveDate: 'desc' },
       include: { plantDefinition: true },
     }),
@@ -328,7 +355,7 @@ export default async function Dashboard({
     prisma.sunshine.findMany({
       where: { ...collectionWhere, targetType: 'PLANT_INSTANCE' },
       orderBy: { createdAt: 'desc' },
-      take: 8,
+      take: includesActivityKind('sunshine') ? queryTake : 0,
       select: { id: true, targetType: true, targetId: true, createdAt: true },
     }),
   ])
@@ -343,6 +370,7 @@ export default async function Dashboard({
     ...sports.map((sport) => sport.id),
     ...acquired.map((item) => item.id),
     ...archived.map((item) => item.id),
+    ...recentSunshine.map((item) => item.targetId),
   ]))
   const bloomIds = blooms.map((bloom) => bloom.id)
 
@@ -376,6 +404,20 @@ export default async function Dashboard({
     if (!acc[photo.entityId]) acc[photo.entityId] = photo
     return acc
   }, {})
+  const recentSunshineTargets = recentSunshine
+    .map((item) => ({
+      targetType: 'PLANT_INSTANCE' as const,
+      targetId: item.targetId,
+    }))
+  const recentSunshineCounts = await sunshineCounts(
+    prisma,
+    collection.id,
+    recentSunshineTargets,
+  )
+  const recentSunshineItems = (await Promise.all(recentSunshine.map(async (item) => {
+    const target = await resolveSunshineTarget(prisma, collection.id, collection.slug, item.targetType, item.targetId)
+    return target ? { ...item, target, count: recentSunshineCounts.get(sunshineKey(item.targetType, item.targetId)) || 0 } : null
+  }))).filter((item): item is NonNullable<typeof item> => item !== null)
 
   const activity: ActivityItem[] = [
     ...recentProps.map((event) => {
@@ -437,31 +479,27 @@ export default async function Dashboard({
       detail: item.archiveNotes,
       image: coverFor(coverPhotosByInstance, item.id),
     })),
+    ...recentSunshineItems.map((item) => ({
+      id: item.id,
+      kind: 'sunshine' as const,
+      href: item.target.href,
+      date: item.createdAt,
+      title: item.target.label,
+      subtitle: 'Received sunshine',
+      detail: `${sunshineCountLabel(item.count)} · Givers stay private`,
+      image: coverFor(coverPhotosByInstance, item.targetId),
+    })),
   ]
     .sort((a, b) => b.date.getTime() - a.date.getTime())
-    .filter((item) => !activeKind || item.kind === activeKind)
+    .filter((item) => includesActivityKind(item.kind))
     .slice(0, activityTake)
   const stats = [
     ['Care today', care.today, ClipboardCheck, collectionPath(collection.slug, '/care')],
     ['Active plants', active, Leaf, collectionPath(collection.slug, '/instances')],
-    ['Propagations', propagationEvents + acquiredPropagations, GitBranch, activityHref(collection.slug, activityTake, 'propagation')],
+    ['Propagations', propagationEvents + acquiredPropagations, GitBranch, activityHref(collection.slug, activityTake, ['propagation'])],
     ['Recent blooms', bloomCount, Flower2, collectionPath(collection.slug, '/blooms')],
     ['Sport candidates', sportCandidates, Sprout, collectionPath(collection.slug, '/sports')],
   ] as const
-  const recentSunshineTargets = recentSunshine
-    .map((item) => ({
-      targetType: 'PLANT_INSTANCE' as const,
-      targetId: item.targetId,
-    }))
-  const recentSunshineCounts = await sunshineCounts(
-    prisma,
-    collection.id,
-    recentSunshineTargets,
-  )
-  const recentSunshineItems = (await Promise.all(recentSunshine.map(async (item) => {
-    const target = await resolveSunshineTarget(prisma, collection.id, collection.slug, item.targetType, item.targetId)
-    return target ? { ...item, target, count: recentSunshineCounts.get(sunshineKey(item.targetType, item.targetId)) || 0 } : null
-  }))).filter(Boolean)
   const collectionUpdates = canViewCollectionUpdates
     ? await recentCollectionUpdates(prisma, collection.id, collection.slug, 5)
     : []
@@ -537,33 +575,6 @@ export default async function Dashboard({
         </Card>
       )}
 
-      <Card>
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h3 className="font-bold">Recently Appreciated</h3>
-            <p className="mt-1 text-sm text-stone-600">Fresh sunshine for plant instances. Givers stay private.</p>
-          </div>
-          <Link className="rounded-full border border-[#e7c45a] bg-[#fff8d8] px-3 py-1 text-xs font-semibold text-[#6c5300]" href={collectionPath(collection.slug, '/instances')}>
-            Sort by Sunshine
-          </Link>
-        </div>
-        <div className="mt-4 grid gap-2">
-          {recentSunshineItems.length === 0 && <p className="text-sm text-stone-600">No sunshine yet.</p>}
-          {recentSunshineItems.map((item) => item && (
-            <Link
-              key={item.id}
-              href={item.target.href}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] px-3 py-2 text-sm transition hover:bg-[var(--ax-primary-wash)]"
-            >
-              <span className="min-w-0 font-semibold text-[var(--ax-heading)]">{item.target.label}</span>
-              <span className="rounded-full border border-[#e7c45a] bg-[#fff8d8] px-2 py-1 text-xs font-semibold text-[#6c5300]">
-                {sunshineCountLabel(item.count)}
-              </span>
-            </Link>
-          ))}
-        </div>
-      </Card>
-
       {canViewCollectionUpdates && (
         <Card>
           <div className="flex flex-wrap items-end justify-between gap-3">
@@ -615,10 +626,10 @@ export default async function Dashboard({
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h3 className="font-bold">Recent activity</h3>
-            <p className="mt-1 text-sm text-stone-600">The latest propagations, blooms, sport notes, acquisitions, and archive actions in one stream.</p>
+            <p className="mt-1 text-sm text-stone-600">The latest propagations, blooms, sport notes, acquisitions, sunshine, and archive actions in one stream.</p>
           </div>
           <div className="flex flex-wrap gap-2 text-xs">
-            {activeKind && (
+            {includedActivityKinds.length !== activityKinds.length && (
               <Link
                 href={activityHref(collection.slug, activityTake)}
                 className="rounded-full border border-stone-300 bg-white/70 px-2 py-1 font-medium text-stone-700 transition hover:bg-white"
@@ -629,12 +640,12 @@ export default async function Dashboard({
             {Object.entries(activityStyles).map(([kind, style]) => (
               <Link
                 key={kind}
-                href={activityHref(collection.slug, activityTake, activeKind === kind ? undefined : (kind as ActivityKind))}
-                aria-pressed={activeKind === kind}
+                href={activityHref(collection.slug, activityTake, toggleActivityKind(includedActivityKinds, kind as ActivityKind))}
+                aria-pressed={includedActivityKinds.includes(kind as ActivityKind)}
                 className={cn(
                   'rounded-full border px-2 py-1 font-medium transition hover:-translate-y-0.5 hover:shadow-sm',
                   style.className,
-                  activeKind === kind ? 'ring-2 ring-[#2f6b45]/35' : 'opacity-80 hover:opacity-100',
+                  includedActivityKinds.includes(kind as ActivityKind) ? 'ring-2 ring-[#2f6b45]/35' : 'opacity-45 hover:opacity-80',
                 )}
               >
                 {style.label}
@@ -650,7 +661,7 @@ export default async function Dashboard({
         </div>
         {activity.length >= activityTake && activityTake < 48 && (
           <div className="mt-5 flex justify-center">
-            <Link className="rounded-md border border-stone-300 bg-white/60 px-4 py-2 text-sm font-medium text-stone-800 transition hover:bg-white" href={activityHref(collection.slug, activityTake + 12, activeKind)}>
+            <Link className="rounded-md border border-stone-300 bg-white/60 px-4 py-2 text-sm font-medium text-stone-800 transition hover:bg-white" href={activityHref(collection.slug, activityTake + 12, includedActivityKinds)}>
               Load 12 more
             </Link>
           </div>
