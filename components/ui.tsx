@@ -6,12 +6,12 @@ const control = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 t
 const primary = 'rounded-md bg-[#2f6b45] px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-[#255537]'
 
 export function Card({ className = '', children, ...props }: any) {
-  return <div className={cn('min-w-0 isolate overflow-hidden rounded-lg border border-stone-200/90 bg-[#fffaf0]/82 bg-clip-padding p-4 shadow-[0_8px_30px_rgba(47,38,24,0.07)] sm:p-5', className)} {...props}>{children}</div>
+  return <div className={cn('w-full max-w-full min-w-0 isolate overflow-hidden rounded-lg border border-stone-200/90 bg-[#fffaf0]/82 bg-clip-padding p-4 shadow-[0_8px_30px_rgba(47,38,24,0.07)] sm:p-5', className)} {...props}>{children}</div>
 }
 
 export function AddPanel({ label, children, className = '', defaultOpen = false }: any) {
   return (
-    <details open={defaultOpen} className={cn('group min-w-0 isolate overflow-hidden rounded-lg border border-stone-200/90 bg-[#fffaf0]/82 bg-clip-padding shadow-[0_8px_30px_rgba(47,38,24,0.07)]', className)}>
+    <details open={defaultOpen} className={cn('group w-full max-w-full min-w-0 isolate overflow-hidden rounded-lg border border-stone-200/90 bg-[#fffaf0]/82 bg-clip-padding shadow-[0_8px_30px_rgba(47,38,24,0.07)]', className)}>
       <summary className="flex min-w-0 cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-4 py-3 text-sm font-semibold text-stone-900 transition hover:bg-[#f5f0e2] group-open:rounded-b-none sm:px-5">
         <span className="min-w-0 truncate">{label}</span>
         <span className="rounded-md bg-[#2f6b45] px-3 py-1.5 text-xs font-medium text-white group-open:hidden">Open form</span>

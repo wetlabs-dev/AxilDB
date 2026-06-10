@@ -133,11 +133,16 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 body {
   overflow-x: hidden;
   min-width: 320px;
+  width: 100%;
+  max-width: 100%;
   background:
     radial-gradient(circle at top left, rgba(143, 165, 143, .18), transparent 28rem),
     linear-gradient(135deg, var(--ax-bg) 0%, var(--ax-bg-soft) 45%, var(--ax-bg-warm) 100%);
@@ -166,6 +171,8 @@ h2 {
 }
 
 main {
+  width: 100%;
+  max-width: 100%;
   overflow-x: hidden;
 }
 
@@ -398,6 +405,17 @@ section {
   main {
     width: 100%;
     max-width: 100vw;
+  }
+
+  main > *,
+  main :where(.rounded-lg, .rounded-xl, .rounded-2xl, .grid, .flex, details, form, fieldset, article, section) {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  main :where(p, li, dd, dt, h1, h2, h3, h4, h5, h6, a, span, strong, em) {
+    overflow-wrap: anywhere;
+    word-break: normal;
   }
 
   table {
