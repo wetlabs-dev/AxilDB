@@ -349,29 +349,6 @@ section {
   height: 1rem;
   width: 1rem;
   flex: none;
-  overflow: visible;
-}
-
-.sunshine-inline-rays,
-.sunshine-inline-core,
-.sunshine-inline-leaf {
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 1.8;
-}
-
-.sunshine-inline-core-active {
-  fill: rgba(231, 164, 26, .38);
-}
-
-.sunshine-inline-leaf {
-  stroke: #3d7650;
-}
-
-.sunshine-inline-leaf-active {
-  fill: rgba(93, 139, 82, .3);
 }
 
 .sunshine-inline-count {
@@ -491,10 +468,6 @@ section {
   border-color: rgba(245, 205, 94, .72);
   background: rgba(116, 83, 14, .56);
   color: #ffe6a3;
-}
-
-:root[data-theme='dark'] .sunshine-inline-leaf {
-  stroke: #9bc38a;
 }
 
 :root[data-theme='dark'] .well-loved-badge {
