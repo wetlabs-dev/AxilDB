@@ -497,6 +497,41 @@ section {
   color: #9e988a !important;
 }
 
+:root[data-theme='dark'] .activity-sunshine-card {
+  border-color: rgba(225, 183, 76, .52) !important;
+  background-color: rgba(72, 55, 19, .72) !important;
+  box-shadow: 0 0 0 1px rgba(225, 183, 76, .08), 0 10px 30px rgba(0, 0, 0, .22) !important;
+}
+
+:root[data-theme='dark'] .activity-sunshine-card:hover {
+  border-color: rgba(242, 207, 128, .66) !important;
+  background-color: rgba(84, 64, 22, .82) !important;
+}
+
+:root[data-theme='dark'] .activity-sunshine-card .bg-white\/55 {
+  border-color: rgba(242, 207, 128, .24) !important;
+  background-color: rgba(23, 27, 17, .48) !important;
+  color: #f7dda0 !important;
+}
+
+:root[data-theme='dark'] .activity-sunshine-card .text-stone-700,
+:root[data-theme='dark'] .activity-sunshine-card h4 {
+  color: #fff0c8 !important;
+}
+
+:root[data-theme='dark'] .activity-sunshine-card .text-stone-600 {
+  color: #ead7a9 !important;
+}
+
+:root[data-theme='dark'] .activity-sunshine-card .text-stone-500 {
+  color: #d6bd7e !important;
+}
+
+:root[data-theme='dark'] .activity-sunshine-image {
+  background-color: rgba(93, 73, 28, .74) !important;
+  color: #f2cf80 !important;
+}
+
 :root[data-theme='dark'] .text-\[\#1f472f\],
 :root[data-theme='dark'] .text-\[\#2f6b45\],
 :root[data-theme='dark'] .text-\[\#255537\] {

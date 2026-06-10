@@ -66,8 +66,8 @@ const activityStyles: Record<ActivityKind, { label: string; className: string; i
   sunshine: {
     label: 'Sunshine',
     icon: Sun,
-    className: 'border-[#ead486] bg-[#fff9df]',
-    imageClassName: 'bg-[#f4e7aa]/55 text-[#7a5a00]',
+    className: 'activity-sunshine-card border-[#ead486] bg-[#fff9df]',
+    imageClassName: 'activity-sunshine-image bg-[#f4e7aa]/55 text-[#7a5a00]',
   },
 }
 const activityKinds = Object.keys(activityStyles) as ActivityKind[]
