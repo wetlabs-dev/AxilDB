@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { Bell, Bug, CheckCircle2, Droplets, Flower2, HeartPulse, Sprout } from 'lucide-react'
-import { completeCareTask, snoozeCareTask } from '@/app/actions'
+import { completeCareTask, markPropagationEstablished, snoozeCareTask } from '@/app/actions'
 import { PlantImage } from '@/components/PlantImage'
 import { Button, Card, TextArea } from '@/components/ui'
 import { canCreateInCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
@@ -149,6 +149,14 @@ export default async function CareQueuePage({ searchParams }: { searchParams: Pr
                           </form>
                         ))}
                       </div>
+                    )}
+                    {item.taskType === 'PROPAGATION_CHECK' && item.plantInstanceId && (item.propagationAgeDays || 0) >= 14 && (
+                      <form action={markPropagationEstablished}>
+                        <input type="hidden" name="collectionSlug" value={context.collection.slug} />
+                        <input type="hidden" name="back" value={back} />
+                        <input type="hidden" name="plantInstanceId" value={item.plantInstanceId} />
+                        <Button className="w-full bg-[#4f7f55] hover:bg-[#426d48]">Mark established</Button>
+                      </form>
                     )}
                   </div>
                 )}

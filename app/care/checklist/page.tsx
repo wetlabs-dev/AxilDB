@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { CalendarDays, CheckCircle2, MapPin } from 'lucide-react'
-import { createCareSheet, completeCareTask, snoozeCareTask } from '@/app/actions'
+import { createCareSheet, completeCareTask, markPropagationEstablished, snoozeCareTask } from '@/app/actions'
 import { PlantImage } from '@/components/PlantImage'
 import { Button, Card, TextArea } from '@/components/ui'
 import { canCreateInCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
@@ -129,6 +129,14 @@ export default async function WeeklyChecklistPage() {
                             <input type="hidden" name="taskType" value={item.taskType} />
                             <input type="hidden" name="days" value="3" />
                             <button className="inline-flex items-center whitespace-nowrap font-medium leading-5 text-stone-600 underline">Snooze 3d</button>
+                          </form>
+                        )}
+                        {canAct && item.taskType === 'PROPAGATION_CHECK' && item.plantInstanceId && (item.propagationAgeDays || 0) >= 14 && (
+                          <form action={markPropagationEstablished} className="inline-flex">
+                            <input type="hidden" name="collectionSlug" value={context.collection.slug} />
+                            <input type="hidden" name="back" value={back} />
+                            <input type="hidden" name="plantInstanceId" value={item.plantInstanceId} />
+                            <button className="inline-flex items-center whitespace-nowrap font-medium leading-5 text-[#2f6b45] underline">Mark established</button>
                           </form>
                         )}
                       </div>

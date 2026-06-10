@@ -934,6 +934,7 @@ model PlantInstance {
   location          String?
   acquisitionDate   DateTime?
   propagationDate   DateTime?
+  propagationEstablishedAt DateTime?
   source            String?
   distributor       String?
   stockNumber       String?

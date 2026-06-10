@@ -37,6 +37,7 @@ export type CareQueueItem = {
   bloomEventId?: string
   completedAt?: Date | null
   snoozedUntil?: Date | null
+  propagationAgeDays?: number
 }
 
 function addDays(date: Date, days: number, timezone?: string) {
@@ -242,7 +243,7 @@ export async function getCareQueue(
       image,
     })
 
-    if (['PROPAGATION', 'ACQUIRED_PROPAGATION'].includes(instance.instanceType)) {
+    if (['PROPAGATION', 'ACQUIRED_PROPAGATION'].includes(instance.instanceType) && !instance.propagationEstablishedAt) {
       const start = instance.propagationDate || instance.acquisitionDate || instance.createdAt
       const ageDays = Math.max(0, daysBetween(now, start))
       const cadence = ageDays <= 30 ? 3 : ageDays <= 90 ? 7 : null
@@ -261,6 +262,7 @@ export async function getCareQueue(
           plantName: plantDisplayName,
           location: instance.location,
           image,
+          propagationAgeDays: ageDays,
         })
       }
     }

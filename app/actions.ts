@@ -30,7 +30,7 @@ import { notifyFollowers } from '@/lib/follows'
 import { expectedPlantIdForInstance, generatePlantId } from '@/lib/plant-id'
 import { nextOccurrence } from '@/lib/reminders'
 import { notifySunshineManagers, validateSunshineTarget } from '@/lib/sunshine'
-import { addCalendarDays, formatDate, parseDateLocal, parseDateTimeLocal, timeZoneForPreference } from '@/lib/time'
+import { addCalendarDays, calendarDayIndexInTimeZone, formatDate, parseDateLocal, parseDateTimeLocal, timeZoneForPreference } from '@/lib/time'
 import { plantName } from '@/lib/utils'
 import { husbandryFieldNames, husbandryFormValues } from '@/lib/husbandry'
 import { definitionData, findMatchingValidatedDefinition, globalGoverningBodyId, husbandryData } from '@/lib/validated-definitions'
@@ -1742,6 +1742,48 @@ export async function snoozeCareTask(fd: FormData) {
     update: { snoozedUntil, disabled: false, userId: context.user.id },
   })
   await audit(context.user, 'SNOOZE', 'PLANT_CARE_ADJUSTMENT', plantInstanceId, `Snoozed ${taskType.toLowerCase().replaceAll('_', ' ')} for ${days} day${days === 1 ? '' : 's'}`, undefined, context.collection.id)
+  revalidateDestination(destination)
+  redirect(destination)
+}
+
+export async function markPropagationEstablished(fd: FormData) {
+  const destination = back(fd)
+  const context = await requireCollectionLogger(await collectionSlug(fd))
+  const plantInstanceId = val(fd, 'plantInstanceId')!
+  const preferences = await prisma.emailPreference.findUnique({ where: { userId: context.user.id } })
+  const timezone = timeZoneForPreference(preferences)
+  const plant = await prisma.plantInstance.findFirstOrThrow({
+    where: {
+      id: plantInstanceId,
+      collectionId: context.collection.id,
+      status: 'ACTIVE',
+      instanceType: { in: ['PROPAGATION', 'ACQUIRED_PROPAGATION'] },
+    },
+    select: {
+      id: true,
+      plantId: true,
+      propagationDate: true,
+      acquisitionDate: true,
+      createdAt: true,
+      propagationEstablishedAt: true,
+    },
+  })
+  const start = plant.propagationDate || plant.acquisitionDate || plant.createdAt
+  const ageDays = Math.max(0, calendarDayIndexInTimeZone(new Date(), timezone) - calendarDayIndexInTimeZone(start, timezone))
+  if (ageDays < 14) throw new Error('Propagation can be marked established starting on day 14.')
+
+  if (!plant.propagationEstablishedAt) {
+    await prisma.plantInstance.update({
+      where: { id: plantInstanceId },
+      data: { propagationEstablishedAt: new Date() },
+    })
+    await prisma.plantCareAdjustment.updateMany({
+      where: { collectionId: context.collection.id, plantInstanceId, taskType: 'PROPAGATION_CHECK' },
+      data: { snoozedUntil: null, disabled: true },
+    })
+    await audit(context.user, 'UPDATE', 'PLANT_INSTANCE', plantInstanceId, `Marked propagation established for ${plant.plantId}`, { ageDays }, context.collection.id)
+  }
+
   revalidateDestination(destination)
   redirect(destination)
 }
