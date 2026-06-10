@@ -173,19 +173,19 @@ export default async function Instances({
                   <p className="truncate text-sm text-stone-600">{instance.instanceType} · {instance.location || 'No location'}</p>
                 </div>
               </Link>
-              <div className="flex gap-2 border-t border-stone-200 p-3">
+              <div className="flex items-center gap-2 border-t border-stone-200 p-3">
                 {canEditInCollection(user, context) && <Link className="rounded-md border px-2 py-1 text-xs" href={collectionPath(collection.slug, `/instances/${instance.id}/edit`)}>Edit</Link>}
                 <Link className="rounded-md border px-2 py-1 text-xs" href={collectionPath(collection.slug, `/labels/${instance.id}`)}>Label</Link>
-              </div>
-              <div className="border-t border-stone-200 p-3">
-                <SunshineButton
-                  collectionSlug={collection.slug}
-                  targetId={instance.id}
-                  count={count}
-                  active={currentUserSunshine.has(sunshineKey('PLANT_INSTANCE', instance.id))}
-                  canToggle={Boolean(user)}
-                  compact
-                />
+                <div className="ml-auto">
+                  <SunshineButton
+                    collectionSlug={collection.slug}
+                    targetId={instance.id}
+                    count={count}
+                    active={currentUserSunshine.has(sunshineKey('PLANT_INSTANCE', instance.id))}
+                    canToggle={Boolean(user)}
+                    compact
+                  />
+                </div>
               </div>
             </Card>
           )
