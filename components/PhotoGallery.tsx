@@ -4,14 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight, ExternalLink, X } from 'lucide-react'
 import { isImageHiddenByModeration, ModeratedImagePlaceholder, PlantImage } from '@/components/PlantImage'
-import { SunshineForm } from '@/components/SunshineForm'
-import { Button } from '@/components/ui'
 import { cn } from '@/lib/utils'
-
-const WELL_LOVED_THRESHOLD = 5
-const sunshineCountLabel = (count: number) => `${count} sunshine`
-const sunshineAnchor = (id: string) => `sunshine-photo-${id}`
-const backToSunshine = (back: string, id: string) => `${back.split('#')[0] || '/'}#${sunshineAnchor(id)}`
 
 export type GalleryPhoto = {
   id: string
@@ -33,12 +26,6 @@ export type GalleryPhoto = {
   cropHeight?: number | null
   focalX?: number | null
   focalY?: number | null
-  canSunshine: boolean
-  sunshineCount: number
-  sunshined: boolean
-  canToggleSunshine: boolean
-  collectionSlug: string
-  back: string
 }
 
 export function PhotoGallery({ photos }: { photos: GalleryPhoto[] }) {
@@ -117,33 +104,6 @@ export function PhotoGallery({ photos }: { photos: GalleryPhoto[] }) {
               </div>
               <p className="truncate text-sm font-semibold text-stone-900">{photo.plantId}</p>
               <p className="line-clamp-2 text-xs text-stone-600">{photo.caption || photo.plantName}</p>
-              {photo.canSunshine && (
-                <div className="flex flex-wrap items-center justify-end gap-1.5 border-t border-stone-200 pt-2 text-xs">
-                  {photo.sunshineCount >= WELL_LOVED_THRESHOLD && (
-                    <span className="rounded-full border border-[#e4a950] bg-[#fff3d1] px-2 py-1 font-bold text-[#7a4b00]">☀️ Well Loved</span>
-                  )}
-                  {photo.canToggleSunshine ? (
-                    <SunshineForm id={sunshineAnchor(photo.id)}>
-                      <input type="hidden" name="collectionSlug" value={photo.collectionSlug} />
-                      <input type="hidden" name="targetType" value="PHOTO" />
-                      <input type="hidden" name="targetId" value={photo.id} />
-                      <input type="hidden" name="back" value={backToSunshine(photo.back, photo.id)} />
-                      <Button
-                        className={cn(
-                          'sunshine-action-button px-2 py-1 text-xs',
-                          photo.sunshined ? 'sunshine-action-button-active' : '',
-                        )}
-                      >
-                        {photo.sunshined ? '☀️ Sunshined' : '☀️ Give Sunshine'} · {sunshineCountLabel(photo.sunshineCount)}
-                      </Button>
-                    </SunshineForm>
-                  ) : (
-                    <span className="sunshine-action-button rounded-md px-2 py-1 text-xs font-medium">
-                      ☀️ {sunshineCountLabel(photo.sunshineCount)}
-                    </span>
-                  )}
-                </div>
-              )}
             </div>
           </div>
         ))}

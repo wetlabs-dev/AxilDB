@@ -26,7 +26,7 @@ It is designed for real collection work: messy taxonomy, acquisition names, alia
 - Weekly greenhouse checklist generation from the care queue, grouped by location and covering overdue, due-today, and upcoming care tasks.
 - Plant sitter mode with expiring/revocable token links that expose only selected plants and tasks, allow limited checklist completion, and log sitter actions back into AxilDB.
 - Plant instances with generated plant IDs, acquisition/propagation dates, source/distributor metadata, location, archive status, notes, and photos.
-- Sunshine appreciation for specimens, blooms, and photos, with private giver identity, public counts on public records, Well Loved badges at five sunshine, account history, dashboard activity, and opt-in email alerts for collection managers.
+- Sunshine appreciation for plant instances only, as a quiet appreciation/bookmark marker with private giver identity, public counts on plant records, subtle Well Loved treatment at five sunshine, My Sunshine history, dashboard activity, and optional email/push alerts that default off.
 - Plant Health Timeline on specimen pages, combining existing accession, propagation, care, condition, bloom, photo, note, reminder, archive, and sport records into a compact horizontal history with deterministic insights and a Life Story list.
 - Automatic plant ID generation based on plant definition, date, context, and sequence number.
 - Propagation events with parent/child links, method, date, success status, and generated child plant IDs.
@@ -362,7 +362,7 @@ Core models:
 - `ParentageLink` and `PropagationChild`: graph edges for lineage.
 - `BloomEvent`: bloom lifecycle records.
 - `Photo`: photos attached to definitions, instances, and bloom events.
-- `Sunshine`: collection-scoped appreciation rows for plant instances, bloom events, and eligible photos; unique per user and target, with giver identity kept private in the UI.
+- `Sunshine`: collection-scoped appreciation rows. New Sunshine records are validated for plant instances only; legacy bloom/photo target rows may remain preserved in the table but are ignored by current UI/actions. Rows are unique per user and target, with giver identity kept private in the UI.
 - `ValidatedDefinitionChange`: old/new change summaries for site-wide validated plant definition edits.
 - `CollectionUpdateDigestDelivery`: per-collection, per-user, per-channel delivery guard for daily collection update digests.
 - `Note`: freeform notes attached to entities.

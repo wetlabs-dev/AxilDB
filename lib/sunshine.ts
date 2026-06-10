@@ -66,68 +66,21 @@ export async function validateSunshineTarget(
   targetType: SunshineTargetType,
   targetId: string,
 ): Promise<SunshineTargetSummary> {
-  if (targetType === 'PLANT_INSTANCE') {
-    const instance = await prisma.plantInstance.findFirstOrThrow({
-      where: { id: targetId, collectionId },
-      include: { plantDefinition: true },
-    })
-    return {
-      targetType,
-      targetId,
-      collectionSlug,
-      label: `${instance.plantId} · ${plantName(instance.plantDefinition)}`,
-      href: collectionPath(collectionSlug, `/instances/${instance.id}`),
-    }
+  if (targetType !== 'PLANT_INSTANCE') {
+    throw new Error('Sunshine is only available for plant instances.')
   }
 
-  if (targetType === 'BLOOM_EVENT') {
-    const bloom = await prisma.bloomEvent.findFirstOrThrow({
-      where: { id: targetId, collectionId },
-      include: { plantInstance: { include: { plantDefinition: true } } },
-    })
-    return {
-      targetType,
-      targetId,
-      collectionSlug,
-      label: `Bloom for ${bloom.plantInstance.plantId} · ${plantName(bloom.plantInstance.plantDefinition)}`,
-      href: collectionPath(collectionSlug, `/instances/${bloom.plantInstanceId}#bloom-${bloom.id}`),
-    }
-  }
-
-  const photo = await prisma.photo.findFirstOrThrow({
+  const instance = await prisma.plantInstance.findFirstOrThrow({
     where: { id: targetId, collectionId },
+    include: { plantDefinition: true },
   })
-  if (photo.entityType === 'PLANT_DEFINITION') {
-    throw new Error('Sunshine is not available for plant definition photos.')
+  return {
+    targetType,
+    targetId,
+    collectionSlug,
+    label: `${instance.plantId} · ${plantName(instance.plantDefinition)}`,
+    href: collectionPath(collectionSlug, `/instances/${instance.id}`),
   }
-  if (photo.entityType === 'PLANT_INSTANCE') {
-    const instance = await prisma.plantInstance.findFirstOrThrow({
-      where: { id: photo.entityId, collectionId },
-      include: { plantDefinition: true },
-    })
-    return {
-      targetType,
-      targetId,
-      collectionSlug,
-      label: `Photo of ${instance.plantId} · ${plantName(instance.plantDefinition)}`,
-      href: collectionPath(collectionSlug, `/instances/${instance.id}#photos`),
-    }
-  }
-  if (photo.entityType === 'BLOOM_EVENT') {
-    const bloom = await prisma.bloomEvent.findFirstOrThrow({
-      where: { id: photo.entityId, collectionId },
-      include: { plantInstance: { include: { plantDefinition: true } } },
-    })
-    return {
-      targetType,
-      targetId,
-      collectionSlug,
-      label: `Bloom photo for ${bloom.plantInstance.plantId} · ${plantName(bloom.plantInstance.plantDefinition)}`,
-      href: collectionPath(collectionSlug, `/instances/${bloom.plantInstanceId}#bloom-${bloom.id}`),
-    }
-  }
-
-  throw new Error('Sunshine is not available for this photo.')
 }
 
 export async function resolveSunshineTarget(prisma: PrismaClient, collectionId: string, collectionSlug: string, targetType: string, targetId: string) {
@@ -182,7 +135,7 @@ export async function notifySunshineManagers(
   for (const membership of memberships) {
     const recordUrl = appUrl(input.target.href)
     const subject = `Sunshine received in ${input.collectionName}`
-    const body = `${input.target.label} received sunshine in ${input.collectionName}.`
+    const body = `One of your plants received sunshine in ${input.collectionName}.`
 
     try {
       let delivered = false

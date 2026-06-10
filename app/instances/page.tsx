@@ -7,9 +7,9 @@ import { getCurrentUser } from '@/lib/auth'
 import { canCreateInCollection, canEditInCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
 import { compareText, sortPreference, timeValue, type SortOption } from '@/lib/sort-preferences'
-import { sunshineCounts, sunshineKey, sunshineStateForUser } from '@/lib/sunshine'
+import { sunshineCounts, sunshineKey, sunshineStateForUser, WELL_LOVED_THRESHOLD } from '@/lib/sunshine'
 import { rankedSuggestions } from '@/lib/suggestions'
-import { plantName } from '@/lib/utils'
+import { cn, plantName } from '@/lib/utils'
 import Link from 'next/link'
 
 const instanceSortOptions: SortOption[] = [
@@ -151,38 +151,45 @@ export default async function Instances({
       )}
 
       <div className="grid auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
-        {sortedInstances.map((instance) => (
-          <Card key={instance.id} className="flex h-full flex-col overflow-hidden p-0">
-            <Link href={collectionPath(collection.slug, `/instances/${instance.id}`)} className="block flex-1">
-              <div className="aspect-[4/3] overflow-hidden">
-                <PlantImage src={photoByInstance[instance.id]} alt={instance.plantId} />
+        {sortedInstances.map((instance) => {
+          const count = sunshineCount(instance.id)
+          return (
+            <Card
+              key={instance.id}
+              className={cn(
+                'flex h-full flex-col overflow-hidden p-0',
+                count >= WELL_LOVED_THRESHOLD ? 'well-loved-card' : '',
+              )}
+            >
+              <Link href={collectionPath(collection.slug, `/instances/${instance.id}`)} className="block flex-1">
+                <div className="aspect-[4/3] overflow-hidden">
+                  <PlantImage src={photoByInstance[instance.id]} alt={instance.plantId} />
+                </div>
+                <div className="min-h-0 overflow-hidden p-3">
+                  <p className="line-clamp-2 text-sm font-bold underline">{instance.plantId}</p>
+                  <p className="line-clamp-2 text-sm text-stone-700">
+                    {instance.plantDefinition.isValidated ? 'Validated: ' : ''}{plantName(instance.plantDefinition)}
+                  </p>
+                  <p className="truncate text-sm text-stone-600">{instance.instanceType} · {instance.location || 'No location'}</p>
+                </div>
+              </Link>
+              <div className="flex gap-2 border-t border-stone-200 p-3">
+                {canEditInCollection(user, context) && <Link className="rounded-md border px-2 py-1 text-xs" href={collectionPath(collection.slug, `/instances/${instance.id}/edit`)}>Edit</Link>}
+                <Link className="rounded-md border px-2 py-1 text-xs" href={collectionPath(collection.slug, `/labels/${instance.id}`)}>Label</Link>
               </div>
-              <div className="min-h-0 overflow-hidden p-3">
-                <p className="line-clamp-2 text-sm font-bold underline">{instance.plantId}</p>
-                <p className="line-clamp-2 text-sm text-stone-700">
-                  {instance.plantDefinition.isValidated ? 'Validated: ' : ''}{plantName(instance.plantDefinition)}
-                </p>
-                <p className="truncate text-sm text-stone-600">{instance.instanceType} · {instance.location || 'No location'}</p>
+              <div className="border-t border-stone-200 p-3">
+                <SunshineButton
+                  collectionSlug={collection.slug}
+                  targetId={instance.id}
+                  count={count}
+                  active={currentUserSunshine.has(sunshineKey('PLANT_INSTANCE', instance.id))}
+                  canToggle={Boolean(user)}
+                  compact
+                />
               </div>
-            </Link>
-            <div className="flex gap-2 border-t border-stone-200 p-3">
-              {canEditInCollection(user, context) && <Link className="rounded-md border px-2 py-1 text-xs" href={collectionPath(collection.slug, `/instances/${instance.id}/edit`)}>Edit</Link>}
-              <Link className="rounded-md border px-2 py-1 text-xs" href={collectionPath(collection.slug, `/labels/${instance.id}`)}>Label</Link>
-            </div>
-            <div className="border-t border-stone-200 p-3">
-              <SunshineButton
-                collectionSlug={collection.slug}
-                targetType="PLANT_INSTANCE"
-                targetId={instance.id}
-                count={sunshineCount(instance.id)}
-                active={currentUserSunshine.has(sunshineKey('PLANT_INSTANCE', instance.id))}
-                canToggle={Boolean(user)}
-                back={collectionPath(collection.slug, definitionFilter ? `/instances?definition=${encodeURIComponent(definitionFilter)}` : '/instances')}
-                compact
-              />
-            </div>
-          </Card>
-        ))}
+            </Card>
+          )
+        })}
       </div>
     </div>
   )

@@ -297,29 +297,102 @@ section {
   box-shadow: 0 0 0 2px rgba(143, 165, 143, .3);
 }
 
-.sunshine-action-button {
-  border: 1px solid #d7a631 !important;
-  background: #fff4ce !important;
-  color: #5f4300 !important;
-  box-shadow: 0 4px 12px rgba(106, 74, 0, .12);
+.sunshine-inline-control {
+  display: inline-flex;
+  min-height: 1.75rem;
+  min-width: 3.05rem;
+  align-items: center;
+  justify-content: center;
+  gap: .35rem;
+  border: 1px solid rgba(198, 161, 67, .5);
+  border-radius: 999px;
+  background: rgba(255, 248, 221, .62);
+  color: #6b5208;
+  font-weight: 650;
+  line-height: 1;
+  transition:
+    border-color .16s ease,
+    background-color .16s ease,
+    color .16s ease,
+    opacity .16s ease,
+    box-shadow .16s ease;
 }
 
-.sunshine-action-button:hover {
-  background: #ffe59a !important;
-  color: #3d2a00 !important;
+.sunshine-inline-control:hover {
+  border-color: rgba(193, 139, 20, .68);
+  background: rgba(255, 239, 181, .78);
+  color: #493600;
 }
 
-.sunshine-action-button-active {
-  border-color: #f5c13b !important;
-  background: #d78300 !important;
-  color: #fff9e8 !important;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, .28);
-  box-shadow: 0 0 0 1px rgba(255, 248, 216, .58), 0 8px 18px rgba(0, 0, 0, .2);
+.sunshine-inline-control:focus-visible {
+  outline: none;
+  border-color: rgba(193, 139, 20, .82);
+  box-shadow: 0 0 0 2px rgba(231, 196, 90, .28);
 }
 
-.sunshine-action-button-active:hover {
-  background: #ef9b0f !important;
-  color: #fffdf4 !important;
+.sunshine-inline-control-active {
+  border-color: rgba(214, 145, 22, .7);
+  background: rgba(245, 193, 59, .28);
+  color: #684500;
+}
+
+.sunshine-inline-control-pending {
+  cursor: wait;
+  opacity: .62;
+}
+
+.sunshine-inline-control-static {
+  cursor: default;
+}
+
+.sunshine-inline-icon {
+  height: 1rem;
+  width: 1rem;
+  flex: none;
+  overflow: visible;
+}
+
+.sunshine-inline-rays,
+.sunshine-inline-core,
+.sunshine-inline-leaf {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.sunshine-inline-core-active {
+  fill: rgba(231, 164, 26, .38);
+}
+
+.sunshine-inline-leaf {
+  stroke: #3d7650;
+}
+
+.sunshine-inline-leaf-active {
+  fill: rgba(93, 139, 82, .3);
+}
+
+.sunshine-inline-count {
+  min-width: .75rem;
+  text-align: center;
+}
+
+.well-loved-badge {
+  border: 1px solid rgba(205, 158, 47, .42);
+  border-radius: 999px;
+  background: rgba(255, 246, 211, .68);
+  padding: .25rem .5rem;
+  color: #73560c;
+  font-size: .68rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.well-loved-card {
+  border-color: rgba(205, 158, 47, .56) !important;
+  box-shadow: 0 0 0 1px rgba(238, 196, 89, .16), 0 10px 32px rgba(110, 76, 12, .10) !important;
 }
 
 @media (max-width: 640px) {
@@ -407,28 +480,32 @@ section {
   box-shadow: 0 0 0 2px rgba(155, 195, 138, .28) !important;
 }
 
-:root[data-theme='dark'] .sunshine-action-button {
-  border-color: rgba(247, 201, 72, .82) !important;
-  background: rgba(80, 57, 8, .88) !important;
-  color: #ffe9a8 !important;
-  box-shadow: 0 0 0 1px rgba(255, 248, 216, .18), 0 8px 20px rgba(0, 0, 0, .28);
+:root[data-theme='dark'] .sunshine-inline-control {
+  border-color: rgba(236, 191, 71, .5);
+  background: rgba(75, 57, 18, .44);
+  color: #f1d17a;
 }
 
-:root[data-theme='dark'] .sunshine-action-button:hover {
-  background: rgba(107, 77, 12, .96) !important;
-  color: #fff4cf !important;
+:root[data-theme='dark'] .sunshine-inline-control:hover,
+:root[data-theme='dark'] .sunshine-inline-control-active {
+  border-color: rgba(245, 205, 94, .72);
+  background: rgba(116, 83, 14, .56);
+  color: #ffe6a3;
 }
 
-:root[data-theme='dark'] .sunshine-action-button-active {
-  border-color: #ffd56b !important;
-  background: #d88400 !important;
-  color: #fffdf4 !important;
-  box-shadow: 0 0 0 1px rgba(255, 248, 216, .5), 0 8px 22px rgba(0, 0, 0, .42);
+:root[data-theme='dark'] .sunshine-inline-leaf {
+  stroke: #9bc38a;
 }
 
-:root[data-theme='dark'] .sunshine-action-button-active:hover {
-  background: #f0a018 !important;
-  color: #fffdf4 !important;
+:root[data-theme='dark'] .well-loved-badge {
+  border-color: rgba(236, 191, 71, .42);
+  background: rgba(75, 57, 18, .48);
+  color: #f7da8a;
+}
+
+:root[data-theme='dark'] .well-loved-card {
+  border-color: rgba(236, 191, 71, .44) !important;
+  box-shadow: 0 0 0 1px rgba(238, 196, 89, .14), 0 10px 32px rgba(0, 0, 0, .22) !important;
 }
 
 :root[data-theme='dark'] .text-stone-900,

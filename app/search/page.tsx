@@ -1,6 +1,9 @@
 import { prisma } from '@/lib/prisma'
+import { SunshineButton } from '@/components/SunshineButton'
 import { Card, Button } from '@/components/ui'
+import { getCurrentUser } from '@/lib/auth'
 import { collectionPath, requireCollectionViewer } from '@/lib/collections'
+import { sunshineCounts, sunshineKey, sunshineStateForUser } from '@/lib/sunshine'
 import { plantName, fmtDate, taxonomyLabel } from '@/lib/utils'
 import Link from 'next/link'
 
@@ -13,6 +16,7 @@ export default async function SearchPage({
   searchParams: Promise<{ q?: string; status?: string; type?: string; sport?: string }>
 }) {
   const sp = await searchParams
+  const user = await getCurrentUser()
   const { collection } = await requireCollectionViewer()
   const q = (sp.q || '').trim()
   const status = sp.status || ''
@@ -92,6 +96,12 @@ export default async function SearchPage({
     },
     orderBy: [{ isValidated: 'desc' }, { genus: 'asc' }, { species: 'asc' }, { cultivarName: 'asc' }],
   })
+  const instanceSunshineTargets = instances.map((instance) => ({ targetType: 'PLANT_INSTANCE' as const, targetId: instance.id }))
+  const [instanceSunshineCounts, currentUserSunshine] = await Promise.all([
+    sunshineCounts(prisma, collection.id, instanceSunshineTargets),
+    sunshineStateForUser(prisma, collection.id, user?.id, instanceSunshineTargets),
+  ])
+  const sunshineCount = (instanceId: string) => instanceSunshineCounts.get(sunshineKey('PLANT_INSTANCE', instanceId)) || 0
 
   return (
     <div className="space-y-6">
@@ -126,12 +136,22 @@ export default async function SearchPage({
         <Card>
           <h3 className="mb-3 font-bold">Plant instances</h3>
           {instances.map((instance) => (
-            <p key={instance.id} className="border-t border-stone-200 py-2 text-sm">
-              <Link className="font-bold underline" href={collectionPath(collection.slug, `/instances/${instance.id}`)}>
-                {instance.plantId}
-              </Link>{' '}
-              · {plantName(instance.plantDefinition)} · {instance.status} · {fmtDate(instance.propagationDate || instance.acquisitionDate)}
-            </p>
+            <div key={instance.id} className="flex flex-wrap items-center justify-between gap-3 border-t border-stone-200 py-2 text-sm">
+              <p className="min-w-0">
+                <Link className="font-bold underline" href={collectionPath(collection.slug, `/instances/${instance.id}`)}>
+                  {instance.plantId}
+                </Link>{' '}
+                · {plantName(instance.plantDefinition)} · {instance.status} · {fmtDate(instance.propagationDate || instance.acquisitionDate)}
+              </p>
+              <SunshineButton
+                collectionSlug={collection.slug}
+                targetId={instance.id}
+                count={sunshineCount(instance.id)}
+                active={currentUserSunshine.has(sunshineKey('PLANT_INSTANCE', instance.id))}
+                canToggle={Boolean(user)}
+                compact
+              />
+            </div>
           ))}
         </Card>
         <Card>

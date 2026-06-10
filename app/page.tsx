@@ -8,7 +8,7 @@ import { canEditInCollection, collectionPath, requireCollectionViewer } from '@/
 import { recentCollectionUpdates } from '@/lib/collection-updates'
 import { prisma } from '@/lib/prisma'
 import { isServerAdminRole } from '@/lib/roles'
-import { isSunshineTargetType, resolveSunshineTarget, sunshineCountLabel, sunshineCounts, sunshineKey } from '@/lib/sunshine'
+import { resolveSunshineTarget, sunshineCountLabel, sunshineCounts, sunshineKey } from '@/lib/sunshine'
 import { cn, fmtDate, plantName } from '@/lib/utils'
 import { Archive, ClipboardCheck, Flower2, GitBranch, Leaf, Sparkles, Sprout } from 'lucide-react'
 import Link from 'next/link'
@@ -326,7 +326,7 @@ export default async function Dashboard({
     }),
     getCareQueue(prisma, { collectionId: collection.id, collectionSlug: collection.slug, userId: context.user?.id, timezone: preferences?.timezone }),
     prisma.sunshine.findMany({
-      where: collectionWhere,
+      where: { ...collectionWhere, targetType: 'PLANT_INSTANCE' },
       orderBy: { createdAt: 'desc' },
       take: 8,
       select: { id: true, targetType: true, targetId: true, createdAt: true },
@@ -449,9 +449,8 @@ export default async function Dashboard({
     ['Sport candidates', sportCandidates, Sprout, collectionPath(collection.slug, '/sports')],
   ] as const
   const recentSunshineTargets = recentSunshine
-    .filter((item) => isSunshineTargetType(item.targetType))
     .map((item) => ({
-      targetType: item.targetType as 'PLANT_INSTANCE' | 'BLOOM_EVENT' | 'PHOTO',
+      targetType: 'PLANT_INSTANCE' as const,
       targetId: item.targetId,
     }))
   const recentSunshineCounts = await sunshineCounts(
@@ -542,7 +541,7 @@ export default async function Dashboard({
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h3 className="font-bold">Recently Appreciated</h3>
-            <p className="mt-1 text-sm text-stone-600">Fresh sunshine across specimens, blooms, and photos. Givers stay private.</p>
+            <p className="mt-1 text-sm text-stone-600">Fresh sunshine for plant instances. Givers stay private.</p>
           </div>
           <Link className="rounded-full border border-[#e7c45a] bg-[#fff8d8] px-3 py-1 text-xs font-semibold text-[#6c5300]" href={collectionPath(collection.slug, '/instances')}>
             Sort by Sunshine

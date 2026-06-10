@@ -39,6 +39,7 @@ export const manualSections: ManualSection[] = [
       'Use Resend verification when your email status is not verified.',
       'Open Account Security to set up authenticator-app verification codes and recovery codes.',
       'Use Forgot password or Magic login from the login page when needed.',
+      'Review My Sunshine for plant instances you have appreciated. Optional plant-sunshine email and push notifications default off and never reveal who gave sunshine.',
     ],
     warnings: [
       'Server admins, collection managers, and collection gardeners must complete two-factor authentication before using privileged tools.',
@@ -108,6 +109,7 @@ export const manualSections: ManualSection[] = [
       'Open a specimen detail page to review identity, photos, Plant Health Timeline, husbandry summary, sport status, follows, children, notes, reminders, bloom tracker, and archive actions.',
       'Use the Plant Health Timeline to scan accession, propagation, care, condition, bloom, photo, note, reminder, archive, and sport activity in a compact strip, then open the Life Story list for grouped deterministic history.',
       'Use the generated QR label to open the specimen record quickly from a printed label.',
+      'Give sunshine to plant instances as a quiet appreciation/bookmark marker, then use Most sunshine or Least sunshine sorting when reviewing instance lists.',
       'Use the plant ID refresh action when the current ID no longer matches the generated ID format after type or date changes.',
       'Use Green Thumb assist for one focused care question per specimen per day when AI is enabled for the collection.',
     ],
@@ -131,7 +133,6 @@ export const manualSections: ManualSection[] = [
       'Upload plant definition type images directly when the best representative image comes from a trusted reference source.',
       'Upload bloom photos from bloom records.',
       'Use Gallery to browse specimen, bloom, and definition images and open larger versions.',
-      'Give sunshine to eligible specimen and bloom photos from the Gallery or plant detail pages.',
       'Use photo framing controls to crop or set a center-bias point for card and preview layouts.',
     ],
     notes: [
@@ -258,11 +259,9 @@ export const manualSections: ManualSection[] = [
       'Open a plant instance and use Bloom tracker to open a new bloom event.',
       'Later, update the bloom record with peak date, flower count, closure date, notes, and photos.',
       'Open Bloom Tracker from the sidebar to browse bloom events as cards.',
-      'Use Sunshine sorting to find blooms with the most appreciation.',
     ],
     notes: [
       'Bloom cards use selected bloom/specimen photos when available and placeholders otherwise.',
-      'Sunshine counts are visible, but AxilDB never shows who gave sunshine.',
       'If a collection has no blooms yet, the Bloom Tracker shows an empty-state prompt instead of a blank page.',
     ],
   },

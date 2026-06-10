@@ -45,13 +45,13 @@ export default async function Account({
     ['bloomCycleReminders', 'bloomCycleRemindersPushEnabled', 'Bloom-cycle reminders', preferences?.bloomCycleReminders ?? true, preferences?.bloomCycleRemindersPushEnabled ?? false],
     ['propagationFollowUps', 'propagationFollowUpsPushEnabled', 'Propagation follow-up reminders', preferences?.propagationFollowUps ?? true, preferences?.propagationFollowUpsPushEnabled ?? false],
     ['followNotifications', 'followNotificationsPushEnabled', 'Followed plant updates', preferences?.followNotifications ?? true, preferences?.followNotificationsPushEnabled ?? false],
-    ['sunshineNotifications', 'sunshineNotificationsPushEnabled', 'Sunshine received', preferences?.sunshineNotifications ?? false, preferences?.sunshineNotificationsPushEnabled ?? false],
+    ['sunshineNotifications', 'sunshineNotificationsPushEnabled', 'Plant sunshine received', preferences?.sunshineNotifications ?? false, preferences?.sunshineNotificationsPushEnabled ?? false],
     ['collectionUpdateDigestEmailEnabled', 'collectionUpdateDigestPushEnabled', 'Collection update digest', preferences?.collectionUpdateDigestEmailEnabled ?? true, preferences?.collectionUpdateDigestPushEnabled ?? false],
     ['careQueueDigestEmailEnabled', 'careQueueDigestPushEnabled', 'Care queue digest', preferences?.careQueueDigestEmailEnabled ?? true, preferences?.careQueueDigestPushEnabled ?? false],
     ['serverHealthEmailEnabled', 'serverHealthPushEnabled', 'Server health alerts', preferences?.serverHealthEmailEnabled ?? true, preferences?.serverHealthPushEnabled ?? false],
   ] as const
   const sunshineRows = await prisma.sunshine.findMany({
-    where: { userId: user.id },
+    where: { userId: user.id, targetType: 'PLANT_INSTANCE' },
     include: { collection: { select: { id: true, slug: true, name: true, status: true } } },
     orderBy: { createdAt: 'desc' },
     take: 30,
@@ -274,8 +274,8 @@ export default async function Account({
       </Card>
 
       <Card>
-        <h3 className="font-bold">Your sunshine history</h3>
-        <p className="mt-1 text-sm text-[var(--ax-muted)]">A private list of records you have appreciated. Other users only see counts.</p>
+        <h3 className="font-bold">My Sunshine</h3>
+        <p className="mt-1 text-sm text-[var(--ax-muted)]">A private list of plant instances you have appreciated. Other users only see counts.</p>
         <div className="mt-4 grid gap-2">
           {sunshineHistory.length === 0 && <p className="text-sm text-stone-600">No sunshine given yet.</p>}
           {sunshineHistory.map((item) => item && (

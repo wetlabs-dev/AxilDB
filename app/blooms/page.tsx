@@ -1,12 +1,10 @@
 import { PlantImage } from '@/components/PlantImage'
 import { SortControl } from '@/components/SortControl'
-import { SunshineButton } from '@/components/SunshineButton'
 import { Card } from '@/components/ui'
 import { getCurrentUser } from '@/lib/auth'
 import { collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
 import { compareText, sortPreference, timeValue, type SortOption } from '@/lib/sort-preferences'
-import { sunshineCounts, sunshineKey, sunshineStateForUser } from '@/lib/sunshine'
 import { fmtDate, plantName } from '@/lib/utils'
 import { Flower2, Sprout } from 'lucide-react'
 import Link from 'next/link'
@@ -17,8 +15,6 @@ const bloomSortOptions: SortOption[] = [
   { value: 'updatedDesc', label: 'Recently updated' },
   { value: 'statusAsc', label: 'Status A-Z' },
   { value: 'plantIdAsc', label: 'Plant ID A-Z' },
-  { value: 'sunshineDesc', label: 'Sunshine high-low' },
-  { value: 'sunshineAsc', label: 'Sunshine low-high' },
 ]
 
 function bloomStatus(bloom: { bloomEndDate: Date | null; peakBloomDate: Date | null }) {
@@ -55,19 +51,11 @@ export default async function Blooms() {
     if (!acc[photo.entityId]) acc[photo.entityId] = photo
     return acc
   }, {})
-  const bloomSunshineTargets = blooms.map((bloom) => ({ targetType: 'BLOOM_EVENT' as const, targetId: bloom.id }))
-  const [bloomSunshineCounts, currentUserSunshine] = await Promise.all([
-    sunshineCounts(prisma, collection.id, bloomSunshineTargets),
-    sunshineStateForUser(prisma, collection.id, user?.id, bloomSunshineTargets),
-  ])
-  const sunshineCount = (bloomId: string) => bloomSunshineCounts.get(sunshineKey('BLOOM_EVENT', bloomId)) || 0
   const sortedBlooms = [...blooms].sort((left, right) => {
     if (sortKey === 'startAsc') return timeValue(left.bloomStartDate) - timeValue(right.bloomStartDate)
     if (sortKey === 'updatedDesc') return timeValue(right.updatedAt) - timeValue(left.updatedAt)
     if (sortKey === 'statusAsc') return compareText(bloomStatus(left), bloomStatus(right)) || timeValue(right.bloomStartDate) - timeValue(left.bloomStartDate)
     if (sortKey === 'plantIdAsc') return compareText(left.plantInstance.plantId, right.plantInstance.plantId)
-    if (sortKey === 'sunshineDesc') return sunshineCount(right.id) - sunshineCount(left.id) || timeValue(right.bloomStartDate) - timeValue(left.bloomStartDate)
-    if (sortKey === 'sunshineAsc') return sunshineCount(left.id) - sunshineCount(right.id) || timeValue(right.bloomStartDate) - timeValue(left.bloomStartDate)
     return timeValue(right.bloomStartDate) - timeValue(left.bloomStartDate)
   })
 
@@ -126,18 +114,6 @@ export default async function Blooms() {
                   {bloom.notes && <p className="mt-2 line-clamp-2 text-xs text-stone-600">{bloom.notes}</p>}
                 </div>
               </Link>
-              <div className="border-t border-stone-200 p-3">
-                <SunshineButton
-                  collectionSlug={collection.slug}
-                  targetType="BLOOM_EVENT"
-                  targetId={bloom.id}
-                  count={sunshineCount(bloom.id)}
-                  active={currentUserSunshine.has(sunshineKey('BLOOM_EVENT', bloom.id))}
-                  canToggle={Boolean(user)}
-                  back={collectionPath(collection.slug, '/blooms')}
-                  compact
-                />
-              </div>
             </Card>
           )
         })}

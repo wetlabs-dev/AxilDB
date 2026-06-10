@@ -29,7 +29,7 @@ import { createDemoData } from '@/lib/demo-data'
 import { notifyFollowers } from '@/lib/follows'
 import { expectedPlantIdForInstance, generatePlantId } from '@/lib/plant-id'
 import { nextOccurrence } from '@/lib/reminders'
-import { isSunshineTargetType, notifySunshineManagers, validateSunshineTarget } from '@/lib/sunshine'
+import { notifySunshineManagers, validateSunshineTarget } from '@/lib/sunshine'
 import { addCalendarDays, formatDate, parseDateLocal, parseDateTimeLocal, timeZoneForPreference } from '@/lib/time'
 import { plantName } from '@/lib/utils'
 import { husbandryFieldNames, husbandryFormValues } from '@/lib/husbandry'
@@ -289,7 +289,7 @@ export async function toggleSunshine(fd: FormData) {
   const targetType = val(fd, 'targetType')
   const targetId = val(fd, 'targetId')
   const destination = back(fd)
-  if (!isSunshineTargetType(targetType) || !targetId) throw new Error('Unsupported sunshine target.')
+  if (targetType !== 'PLANT_INSTANCE' || !targetId) throw new Error('Sunshine is only available for plant instances.')
 
   const target = await validateSunshineTarget(prisma, context.collection.id, context.collection.slug, targetType, targetId)
   const existing = await prisma.sunshine.findUnique({
@@ -328,12 +328,63 @@ export async function toggleSunshine(fd: FormData) {
   redirect(destination)
 }
 
+export async function toggleSunshineInline(input: { collectionSlug: string; targetId: string }) {
+  const user = await requireUser()
+  const context = await requireCollectionViewer(input.collectionSlug)
+  const target = await validateSunshineTarget(prisma, context.collection.id, context.collection.slug, 'PLANT_INSTANCE', input.targetId)
+  const existing = await prisma.sunshine.findUnique({
+    where: {
+      collectionId_userId_targetType_targetId: {
+        collectionId: context.collection.id,
+        userId: user.id,
+        targetType: 'PLANT_INSTANCE',
+        targetId: input.targetId,
+      },
+    },
+  })
+
+  let active = false
+  if (existing) {
+    await prisma.sunshine.delete({ where: { id: existing.id } })
+    await audit(null, 'DELETE', 'SUNSHINE', existing.id, `Removed sunshine from ${target.label}`, { targetType: 'PLANT_INSTANCE', targetId: input.targetId }, context.collection.id)
+  } else {
+    const sunshine = await prisma.sunshine.create({
+      data: {
+        collectionId: context.collection.id,
+        userId: user.id,
+        targetType: 'PLANT_INSTANCE',
+        targetId: input.targetId,
+      },
+    })
+    active = true
+    await audit(null, 'CREATE', 'SUNSHINE', sunshine.id, `Gave sunshine to ${target.label}`, { targetType: 'PLANT_INSTANCE', targetId: input.targetId }, context.collection.id)
+    await notifySunshineManagers(prisma, {
+      actorUserId: user.id,
+      collectionId: context.collection.id,
+      collectionName: context.collection.name,
+      target,
+    })
+  }
+
+  const count = await prisma.sunshine.count({
+    where: {
+      collectionId: context.collection.id,
+      targetType: 'PLANT_INSTANCE',
+      targetId: input.targetId,
+    },
+  })
+  revalidatePath(collectionPath(context.collection.slug, '/'))
+  revalidatePath(collectionPath(context.collection.slug, '/instances'))
+  revalidatePath(collectionPath(context.collection.slug, `/instances/${input.targetId}`))
+  return { active, count }
+}
+
 const sortPreferenceSections: Record<string, string[]> = {
   instances: ['plantIdAsc', 'plantIdDesc', 'updatedDesc', 'updatedAsc', 'acquiredDesc', 'acquiredAsc', 'sunshineDesc', 'sunshineAsc'],
   plants: ['nameAsc', 'nameDesc', 'updatedDesc', 'updatedAsc', 'createdDesc', 'createdAsc'],
   propagations: ['dateDesc', 'dateAsc', 'methodAsc', 'statusAsc', 'updatedDesc'],
-  blooms: ['startDesc', 'startAsc', 'updatedDesc', 'statusAsc', 'plantIdAsc', 'sunshineDesc', 'sunshineAsc'],
-  gallery: ['newest', 'oldest', 'plantIdAsc', 'typeAsc', 'sunshineDesc', 'sunshineAsc'],
+  blooms: ['startDesc', 'startAsc', 'updatedDesc', 'statusAsc', 'plantIdAsc'],
+  gallery: ['newest', 'oldest', 'plantIdAsc', 'typeAsc'],
   sports: ['updatedDesc', 'plantIdAsc', 'statusAsc'],
   archived: ['archiveDesc', 'archiveAsc', 'plantIdAsc'],
 }
