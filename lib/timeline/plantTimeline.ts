@@ -140,7 +140,7 @@ export async function collectPlantTimelineEvents(
   })
   const bloomIds = blooms.map((bloom) => bloom.id)
 
-  const [careEvents, conditions, photos, notes, propagationEvents, reminders, sportRecords, locationMoves] = await Promise.all([
+  const [careEvents, conditions, photos, notes, propagationEvents, reminders, sportRecords, locationMoves, quarantines] = await Promise.all([
     prisma.plantCareEvent.findMany({
       where: { collectionId: input.collectionId, plantInstanceId: input.plantInstanceId },
       orderBy: { performedAt: 'asc' },
@@ -202,6 +202,16 @@ export async function collectPlantTimelineEvents(
       where: { collectionId: input.collectionId, plantInstanceId: input.plantInstanceId },
       include: { fromLocation: true, toLocation: true, movedByUser: { select: { email: true } } },
       orderBy: { movedAt: 'asc' },
+    }),
+    prisma.plantQuarantine.findMany({
+      where: { collectionId: input.collectionId, plantInstanceId: input.plantInstanceId },
+      include: {
+        quarantineLocation: true,
+        createdByUser: { select: { email: true } },
+        releasedByUser: { select: { email: true } },
+        cancelledByUser: { select: { email: true } },
+      },
+      orderBy: { startDate: 'asc' },
     }),
   ])
 
@@ -270,6 +280,78 @@ export async function collectPlantTimelineEvents(
       sourceId: move.id,
       metadata: { fromLocationId: move.fromLocationId, toLocationId: move.toLocationId, movedBy: move.movedByUser?.email || null },
     })
+  }
+
+  for (const quarantine of quarantines) {
+    addEvent(events, {
+      id: `quarantine-started-${quarantine.id}`,
+      type: 'QUARANTINE_STARTED',
+      category: 'health',
+      date: quarantine.startDate,
+      title: 'Quarantine started',
+      summary: compactText(
+        `${quarantine.reason} · ${quarantine.riskLevel.toLowerCase()} risk${quarantine.quarantineLocation ? ` at ${quarantine.quarantineLocation.name}` : ''}`,
+        'Quarantine workflow started.',
+      ),
+      icon: '⚠️',
+      colorVariant: 'amber',
+      href: eventHref(input.collectionSlug, input.plantInstanceId, 'quarantine'),
+      sourceModel: 'PlantQuarantine',
+      sourceId: quarantine.id,
+      status: quarantine.status,
+      severity: quarantine.riskLevel,
+      metadata: { quarantineLocationId: quarantine.quarantineLocationId, createdBy: quarantine.createdByUser?.email || null },
+    })
+    if (quarantine.updatedAt > quarantine.createdAt && quarantine.status === 'ACTIVE') {
+      addEvent(events, {
+        id: `quarantine-updated-${quarantine.id}`,
+        type: 'QUARANTINE_UPDATED',
+        category: 'health',
+        date: quarantine.updatedAt,
+        title: 'Quarantine target updated',
+        summary: `Target release review: ${quarantine.targetReleaseDate.toLocaleDateString()}${quarantine.notes ? ` · ${compactText(quarantine.notes)}` : ''}`,
+        icon: '📋',
+        colorVariant: 'amber',
+        href: eventHref(input.collectionSlug, input.plantInstanceId, 'quarantine'),
+        sourceModel: 'PlantQuarantine',
+        sourceId: quarantine.id,
+        status: quarantine.status,
+      })
+    }
+    if (quarantine.releasedAt) {
+      addEvent(events, {
+        id: `quarantine-released-${quarantine.id}`,
+        type: 'QUARANTINE_RELEASED',
+        category: 'health',
+        date: quarantine.releasedAt,
+        title: 'Quarantine released',
+        summary: compactText(quarantine.notes, 'Quarantine was manually released.'),
+        icon: '✅',
+        colorVariant: 'green',
+        href: eventHref(input.collectionSlug, input.plantInstanceId, 'quarantine'),
+        sourceModel: 'PlantQuarantine',
+        sourceId: quarantine.id,
+        status: quarantine.status,
+        metadata: { releasedBy: quarantine.releasedByUser?.email || null },
+      })
+    }
+    if (quarantine.cancelledAt) {
+      addEvent(events, {
+        id: `quarantine-cancelled-${quarantine.id}`,
+        type: 'QUARANTINE_CANCELLED',
+        category: 'health',
+        date: quarantine.cancelledAt,
+        title: 'Quarantine cancelled',
+        summary: compactText(quarantine.notes, 'Quarantine was cancelled.'),
+        icon: '✕',
+        colorVariant: 'gray',
+        href: eventHref(input.collectionSlug, input.plantInstanceId, 'quarantine'),
+        sourceModel: 'PlantQuarantine',
+        sourceId: quarantine.id,
+        status: quarantine.status,
+        metadata: { cancelledBy: quarantine.cancelledByUser?.email || null },
+      })
+    }
   }
 
   if (instance.isSportCandidate || instance.sportStatus !== 'NONE') {

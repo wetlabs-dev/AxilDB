@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { archiveLocation, movePlantInstanceLocation, updateLocation } from '@/app/actions'
 import { Button, Card, Field, LinkButton, TextArea } from '@/components/ui'
 import { canEditInCollection, canManageCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
-import { descendantLocationIds, locationPath, locationPathWithCodes } from '@/lib/locations'
+import { descendantLocationIds, isQuarantineLocation, locationPath, locationPathWithCodes } from '@/lib/locations'
 import { prisma } from '@/lib/prisma'
 import { plantName } from '@/lib/utils'
 
@@ -37,7 +37,8 @@ export default async function LocationDetail({ params }: { params: Promise<{ id:
     locationType: item.locationType,
   }))
   const descendantIds = descendantLocationIds(location.id, allLocations)
-  const [directPlants, nestedPlants, childLocations] = await Promise.all([
+  const locationAndDescendantIds = [location.id, ...Array.from(descendantIds)]
+  const [directPlants, nestedPlants, childLocations, activeQuarantines] = await Promise.all([
     prisma.plantInstance.findMany({
       where: { collectionId: collection.id, currentLocationId: location.id, status: 'ACTIVE' },
       include: { plantDefinition: true },
@@ -55,8 +56,19 @@ export default async function LocationDetail({ params }: { params: Promise<{ id:
       include: { locationType: true, _count: { select: { plantInstances: true, childLocations: true } } },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     }),
+    prisma.plantQuarantine.findMany({
+      where: {
+        collectionId: collection.id,
+        status: 'ACTIVE',
+        plantInstance: { status: 'ACTIVE', currentLocationId: { in: locationAndDescendantIds } },
+      },
+      include: { plantInstance: { include: { plantDefinition: true, currentLocation: true } } },
+      orderBy: { targetReleaseDate: 'asc' },
+    }),
   ])
   const parentOptions = locationNodes.filter((item) => item.id !== location.id && !descendantIds.has(item.id))
+  const isQuarantine = isQuarantineLocation(location)
+  const overdueQuarantines = activeQuarantines.filter((quarantine) => quarantine.targetReleaseDate < new Date())
 
   return (
     <div className="space-y-6">
@@ -96,6 +108,25 @@ export default async function LocationDetail({ params }: { params: Promise<{ id:
           <p className="mt-2 text-3xl font-bold">{childLocations.length}</p>
         </Card>
       </div>
+
+      {(isQuarantine || activeQuarantines.length > 0) && (
+        <Card>
+          <h3 className="font-serif text-xl font-semibold">Quarantine review</h3>
+          <p className="mt-1 text-sm text-stone-600">
+            {isQuarantine ? 'This is a quarantine-type location.' : 'Active quarantine records for plants in this location tree.'}
+            {' '}
+            {overdueQuarantines.length} release review{overdueQuarantines.length === 1 ? '' : 's'} overdue.
+          </p>
+          <div className="mt-3 grid gap-2">
+            {activeQuarantines.length === 0 && <p className="text-sm text-stone-600">No active quarantines in this location tree.</p>}
+            {activeQuarantines.map((quarantine) => (
+              <Link key={quarantine.id} href={collectionPath(collection.slug, `/instances/${quarantine.plantInstanceId}#quarantine`)} className="rounded-lg border border-stone-200 bg-white/55 p-3 text-sm underline">
+                {quarantine.plantInstance.plantId} · {plantName(quarantine.plantInstance.plantDefinition)} · {quarantine.riskLevel.toLowerCase()} risk · release review {quarantine.targetReleaseDate.toLocaleDateString()}
+              </Link>
+            ))}
+          </div>
+        </Card>
+      )}
 
       <Card>
         <h3 className="font-serif text-xl font-semibold">Child locations</h3>

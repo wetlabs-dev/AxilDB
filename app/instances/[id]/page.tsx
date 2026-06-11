@@ -21,6 +21,10 @@ import {
   followEntity,
   regeneratePlantInstanceId,
   savePlantHusbandryOverrideField,
+  startPlantQuarantine,
+  updatePlantQuarantine,
+  releasePlantQuarantine,
+  cancelPlantQuarantine,
   updatePlantCondition,
   unfollowEntity,
 } from '@/app/actions'
@@ -36,6 +40,7 @@ import { HusbandryBadges, HusbandryGuideView } from '@/components/Husbandry'
 import { waterCadenceDays } from '@/lib/care-queue'
 import { getCurrentUser } from '@/lib/auth'
 import { canCreateInCollection, canEditInCollection, canManageCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
+import { isQuarantineLocation, quarantineChecklistItems } from '@/lib/locations'
 import { expectedPlantIdForInstance } from '@/lib/plant-id'
 import { prisma } from '@/lib/prisma'
 import { recurrenceLabel, reminderCategories, reminderCategoryLabel, reminderRecurrences } from '@/lib/reminders'
@@ -121,8 +126,29 @@ export default async function InstanceDetail({
       },
       sportRecords: { include: { propagationEvent: true }, orderBy: { generationNumber: 'desc' } },
       husbandryOverride: true,
+      currentLocation: { include: { locationType: true } },
     },
   })
+  const [activeQuarantine, quarantineHistory] = await Promise.all([
+    prisma.plantQuarantine.findFirst({
+      where: { collectionId: collection.id, plantInstanceId: id, status: 'ACTIVE' },
+      include: { quarantineLocation: { include: { locationType: true } } },
+      orderBy: { startDate: 'desc' },
+    }),
+    prisma.plantQuarantine.findMany({
+      where: { collectionId: collection.id, plantInstanceId: id, status: { not: 'ACTIVE' } },
+      include: { quarantineLocation: true },
+      orderBy: [{ updatedAt: 'desc' }],
+      take: 5,
+    }),
+  ])
+  const isInQuarantineLocation = isQuarantineLocation(i.currentLocation)
+  const quarantineChecklist = Array.isArray(activeQuarantine?.checklistJson)
+    ? activeQuarantine.checklistJson.filter((item): item is { label: string; done?: boolean } => Boolean(item && typeof item === 'object' && 'label' in item))
+    : quarantineChecklistItems.map((label) => ({ label, done: false }))
+  const quarantineDayDelta = activeQuarantine
+    ? Math.ceil((activeQuarantine.targetReleaseDate.getTime() - new Date().getTime()) / 86_400_000)
+    : null
   const sourceHusbandryGuide = i.plantDefinition.husbandryGuide?.sourcePlantDefinitionId
     ? await prisma.plantHusbandryGuide.findFirst({
         where: { collectionId: collection.id, plantDefinitionId: i.plantDefinition.husbandryGuide.sourcePlantDefinitionId },
@@ -599,6 +625,130 @@ export default async function InstanceDetail({
     </Card>
   ) : null
 
+  const quarantineCard = (
+    <Card id="quarantine">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="font-bold">Quarantine</h3>
+          <p className="text-sm text-stone-600">Quarantine records are manual workflow records; moving a plant does not start or release quarantine by itself.</p>
+        </div>
+        {activeQuarantine && (
+          <span className="rounded-full border border-[#c9a15b] bg-[#fff2cf] px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-[#6f4b12]">
+            Active quarantine
+          </span>
+        )}
+      </div>
+
+      {activeQuarantine ? (
+        <div className="mt-4 grid gap-3 lg:grid-cols-2">
+          <div className="rounded-lg border border-stone-200 bg-white/60 p-3 text-sm">
+            <p><span className="font-semibold">Reason:</span> {activeQuarantine.reason}</p>
+            <p><span className="font-semibold">Risk:</span> {activeQuarantine.riskLevel}</p>
+            <p><span className="font-semibold">Started:</span> {fmtDate(activeQuarantine.startDate, timezone)}</p>
+            <p>
+              <span className="font-semibold">Target release:</span> {fmtDate(activeQuarantine.targetReleaseDate, timezone)}
+              {quarantineDayDelta != null && (
+                <span className={quarantineDayDelta < 0 ? 'ml-2 font-semibold text-[#9a3f35]' : 'ml-2 text-stone-600'}>
+                  {quarantineDayDelta < 0 ? `${Math.abs(quarantineDayDelta)} day${Math.abs(quarantineDayDelta) === 1 ? '' : 's'} overdue` : `${quarantineDayDelta} day${quarantineDayDelta === 1 ? '' : 's'} remaining`}
+                </span>
+              )}
+            </p>
+            <p><span className="font-semibold">Location:</span> {activeQuarantine.quarantineLocation ? `${activeQuarantine.quarantineLocation.code} · ${activeQuarantine.quarantineLocation.name}` : i.currentLocation ? `${i.currentLocation.code} · ${i.currentLocation.name}` : 'Not set'}</p>
+            {activeQuarantine.notes && <p className="mt-2 whitespace-pre-wrap text-stone-700">{activeQuarantine.notes}</p>}
+          </div>
+
+          {canEditRecords && (
+            <form action={updatePlantQuarantine} className="grid gap-2 rounded-lg border border-stone-200 bg-white/60 p-3">
+              <input type="hidden" name="id" value={activeQuarantine.id} />
+              <input type="hidden" name="collectionSlug" value={collection.slug} />
+              <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}#quarantine`)} />
+              <Field label="Reason" name="reason" defaultValue={activeQuarantine.reason} required />
+              <Select label="Risk level" name="riskLevel" defaultValue={activeQuarantine.riskLevel}>
+                {['UNKNOWN', 'LOW', 'MEDIUM', 'HIGH'].map((level) => <option key={level} value={level}>{level}</option>)}
+              </Select>
+              <Field label="Target release date" name="targetReleaseDate" type="date" defaultValue={dateInput(activeQuarantine.targetReleaseDate, timezone)} required />
+              <TextArea label="Notes" name="notes" defaultValue={activeQuarantine.notes} className="min-h-16" />
+              <div className="grid gap-1 text-sm">
+                <p className="font-medium">Checklist</p>
+                {quarantineChecklistItems.map((label) => (
+                  <label key={label} className="flex items-center gap-2">
+                    <input type="checkbox" name="checklistItem" value={label} defaultChecked={quarantineChecklist.some((item) => item.label === label && item.done)} />
+                    {label}
+                  </label>
+                ))}
+              </div>
+              <Button>Save quarantine</Button>
+            </form>
+          )}
+
+          {canEditRecords && (
+            <div className="grid gap-3 lg:col-span-2 md:grid-cols-2">
+              <form action={releasePlantQuarantine} className="grid gap-2 rounded-lg border border-stone-200 bg-white/60 p-3">
+                <input type="hidden" name="id" value={activeQuarantine.id} />
+                <input type="hidden" name="collectionSlug" value={collection.slug} />
+                <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}#quarantine`)} />
+                {quarantineChecklistItems.map((label) => (
+                  <input key={label} type="hidden" name="checklistItem" value={quarantineChecklist.some((item) => item.label === label && item.done) ? label : ''} />
+                ))}
+                <TextArea label="Release note" name="notes" className="min-h-16" />
+                <Button>Mark released</Button>
+              </form>
+              <form action={cancelPlantQuarantine} className="grid gap-2 rounded-lg border border-stone-200 bg-white/60 p-3">
+                <input type="hidden" name="id" value={activeQuarantine.id} />
+                <input type="hidden" name="collectionSlug" value={collection.slug} />
+                <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}#quarantine`)} />
+                {quarantineChecklistItems.map((label) => (
+                  <input key={label} type="hidden" name="checklistItem" value={quarantineChecklist.some((item) => item.label === label && item.done) ? label : ''} />
+                ))}
+                <TextArea label="Cancel note" name="notes" className="min-h-16" />
+                <Button className="bg-[#9a3f35] hover:bg-[#7d3028]">Cancel quarantine</Button>
+              </form>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="mt-4">
+          {isInQuarantineLocation && (
+            <p className="mb-3 rounded-lg border border-[#c9a15b] bg-[#fff8e4] p-3 text-sm text-[#6f4b12]">
+              This plant is in a quarantine-type location. Start a quarantine workflow record when you are ready.
+            </p>
+          )}
+          {canEditRecords ? (
+            <form action={startPlantQuarantine} className="grid gap-2 rounded-lg border border-stone-200 bg-white/60 p-3 md:grid-cols-2">
+              <input type="hidden" name="plantInstanceId" value={id} />
+              <input type="hidden" name="collectionSlug" value={collection.slug} />
+              <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}#quarantine`)} />
+              <input type="hidden" name="quarantineLocationId" value={i.currentLocationId || ''} />
+              <Field label="Reason" name="reason" required placeholder="New arrival isolation, pest concern, treatment follow-up..." />
+              <Select label="Risk level" name="riskLevel" defaultValue="UNKNOWN">
+                {['UNKNOWN', 'LOW', 'MEDIUM', 'HIGH'].map((level) => <option key={level} value={level}>{level}</option>)}
+              </Select>
+              <Field label="Start date" name="startDate" type="date" defaultValue={dateInput(new Date(), timezone)} />
+              <Field label="Target release date" name="targetReleaseDate" type="date" defaultValue={dateInput(addCalendarDays(new Date(), 14, timezone || undefined), timezone)} required />
+              <TextArea label="Notes" name="notes" wrapperClassName="md:col-span-2" className="min-h-16" />
+              <Button className="justify-self-start md:col-span-2">Start quarantine</Button>
+            </form>
+          ) : (
+            <p className="text-sm text-stone-600">No active quarantine record.</p>
+          )}
+        </div>
+      )}
+
+      {quarantineHistory.length > 0 && (
+        <div className="mt-4 border-t border-stone-200 pt-3 text-sm">
+          <p className="font-semibold">Recent quarantine history</p>
+          <div className="mt-2 grid gap-2">
+            {quarantineHistory.map((entry) => (
+              <p key={entry.id} className="rounded-md border border-stone-200 bg-white/60 p-2">
+                {entry.status.toLowerCase()} · {fmtDate(entry.updatedAt, timezone)} · {entry.reason}
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
+    </Card>
+  )
+
   const archiveCard = (canEditRecords || i.status !== 'ACTIVE') ? (
     <Card>
       <h3 className="font-bold">Archive</h3>
@@ -623,6 +773,11 @@ export default async function InstanceDetail({
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-3xl font-bold">{i.plantId}</h2>
+            {activeQuarantine && (
+              <span className="rounded-full border border-[#c9a15b] bg-[#fff2cf] px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-[#6f4b12]">
+                Quarantine
+              </span>
+            )}
             {canRegeneratePlantId && (
               <form action={regeneratePlantInstanceId}>
                 <input type="hidden" name="collectionSlug" value={collection.slug} />
@@ -673,7 +828,7 @@ export default async function InstanceDetail({
           )}
           <p>Status: {i.status}</p>
           <p>Type: {i.instanceType}</p>
-          <p>Location: {i.location || '—'}</p>
+          <p>Location: {i.currentLocation ? `${i.currentLocation.code} · ${i.currentLocation.name}` : i.location || '—'}</p>
           <p>Acquired: {fmtDate(i.acquisitionDate, timezone)}</p>
           <p>Propagated: {fmtDate(i.propagationDate, timezone)}</p>
           <p>Source: {i.source || '—'}</p>
@@ -698,6 +853,8 @@ export default async function InstanceDetail({
         <div className="xl:col-span-2">
           <PlantHealthTimeline events={timelineEvents} metrics={timelineMetrics} timezone={timezone} />
         </div>
+
+        <div className="xl:col-span-2">{quarantineCard}</div>
 
         <div className="xl:col-span-2">{careCard}</div>
 

@@ -10,6 +10,15 @@ export type LocationNode = {
   locationType: { name: string; abbreviation: string }
 }
 
+export const quarantineChecklistItems = [
+  'Inspect leaves',
+  'Inspect soil/media',
+  'Pest check',
+  'Isolate from collection',
+  'Treatment applied',
+  'Final review before release',
+] as const
+
 function normalizeAbbreviation(value?: string | null) {
   const text = String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '')
   return text.slice(0, 8) || 'LOC'
@@ -32,6 +41,22 @@ export async function nextLocationCode(prisma: PrismaClient, collectionId: strin
 export function locationLabel(location?: { name: string; code: string; locationType?: { name: string } | null } | null) {
   if (!location) return 'No location'
   return `${location.code} · ${location.name}${location.locationType?.name ? ` (${location.locationType.name})` : ''}`
+}
+
+export function isQuarantineLocation(location?: { name?: string | null; locationType?: { name?: string | null; abbreviation?: string | null } | null } | null) {
+  if (!location) return false
+  const text = `${location.name || ''} ${location.locationType?.name || ''} ${location.locationType?.abbreviation || ''}`.toLowerCase()
+  return text.includes('quarantine') || /\bqt\b/.test(text) || /\bquar\b/.test(text)
+}
+
+export function normalizeQuarantineRiskLevel(value?: string | null) {
+  const risk = String(value || '').toUpperCase()
+  return ['LOW', 'MEDIUM', 'HIGH', 'UNKNOWN'].includes(risk) ? risk : 'UNKNOWN'
+}
+
+export function normalizeQuarantineStatus(value?: string | null) {
+  const status = String(value || '').toUpperCase()
+  return ['ACTIVE', 'RELEASED', 'CANCELLED'].includes(status) ? status : 'ACTIVE'
 }
 
 export function locationPath(locationId: string | null | undefined, locations: LocationNode[]) {

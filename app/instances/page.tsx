@@ -77,7 +77,7 @@ export default async function Instances({
       ...(definitionFilter ? { plantDefinitionId: definitionFilter } : {}),
       ...(filteredLocationIds.length ? { currentLocationId: { in: filteredLocationIds } } : {}),
     },
-    include: { plantDefinition: true, currentLocation: { include: { locationType: true } } },
+    include: { plantDefinition: true, currentLocation: { include: { locationType: true } }, quarantines: { where: { status: 'ACTIVE' }, take: 1 } },
     orderBy: { plantId: 'asc' },
   })
   const locationSuggestions = rankedSuggestions(instanceSuggestionRows.map((instance) => instance.location))
@@ -275,6 +275,11 @@ export default async function Instances({
                   <p className="truncate text-sm text-stone-600">
                     {instance.instanceType} · {instance.currentLocation ? `${instance.currentLocation.code} · ${locationPath(instance.currentLocation.id, locationNodes)}` : instance.location || 'No location'}
                   </p>
+                  {instance.quarantines.length > 0 && (
+                    <p className="mt-2 inline-flex rounded-full border border-[#c9a15b] bg-[#fff2cf] px-2 py-0.5 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-[#6f4b12]">
+                      Quarantine
+                    </p>
+                  )}
                 </div>
               </Link>
               <div className="flex items-center gap-2 border-t border-stone-200 p-3">

@@ -1,8 +1,8 @@
 import Link from 'next/link'
-import { createLocation, createLocationType, movePlantInstanceLocation, updateLocationType } from '@/app/actions'
+import { batchMovePlantLocations, createLocation, createLocationType, movePlantInstanceLocation, updateLocationType } from '@/app/actions'
 import { AddPanel, Button, Card, Field, LinkButton, TextArea } from '@/components/ui'
 import { canEditInCollection, canManageCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
-import { locationPath } from '@/lib/locations'
+import { descendantLocationIds, locationPath, locationPathWithCodes } from '@/lib/locations'
 import { prisma } from '@/lib/prisma'
 import { plantName } from '@/lib/utils'
 
@@ -15,8 +15,13 @@ function locationRows(locations: any[], parentId: string | null = null, depth = 
     .flatMap((location) => [{ ...location, depth }, ...locationRows(locations, location.id, depth + 1)])
 }
 
-export default async function LocationsPage() {
+export default async function LocationsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ batchSource?: string; batchDestination?: string; batchScope?: string }>
+}) {
   const context = await requireCollectionViewer()
+  const sp = await searchParams
   const { collection, user } = context
   const canManage = canManageCollection(user, context)
   const canMovePlants = canEditInCollection(user, context)
@@ -45,6 +50,17 @@ export default async function LocationsPage() {
     sortOrder: location.sortOrder,
     locationType: location.locationType,
   }))
+  const batchSource = sp.batchSource || ''
+  const batchDestination = sp.batchDestination || ''
+  const batchScope = sp.batchScope === 'nested' ? 'nested' : 'direct'
+  const batchSourceLocation = batchSource ? locationNodes.find((location) => location.id === batchSource) : null
+  const batchDestinationLocation = batchDestination ? locationNodes.find((location) => location.id === batchDestination) : null
+  const batchSourceIds = batchSourceLocation
+    ? [batchSourceLocation.id, ...(batchScope === 'nested' ? Array.from(descendantLocationIds(batchSourceLocation.id, locationNodes)) : [])]
+    : []
+  const batchPreviewPlants = batchSourceLocation && batchDestinationLocation
+    ? plants.filter((plant) => plant.currentLocationId && batchSourceIds.includes(plant.currentLocationId) && plant.currentLocationId !== batchDestinationLocation.id)
+    : []
 
   return (
     <div className="space-y-6">
@@ -120,6 +136,71 @@ export default async function LocationsPage() {
           ))}
         </div>
       </Card>
+
+      {canMovePlants && (
+        <Card>
+          <h3 className="font-serif text-xl font-semibold">Batch move plants</h3>
+          <p className="mt-1 text-sm text-stone-600">Preview direct-only or nested moves, then confirm the exact active plants to move.</p>
+          <form action={collectionPath(collection.slug, '/locations')} className="mt-4 grid gap-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_12rem_auto] md:items-end">
+            <label className="grid gap-1 text-sm font-medium text-stone-800">
+              Source location
+              <select className={selectClass} name="batchSource" defaultValue={batchSource}>
+                <option value="">Choose source</option>
+                {locationNodes.map((location) => <option key={location.id} value={location.id}>{locationPathWithCodes(location.id, locationNodes)}</option>)}
+              </select>
+            </label>
+            <label className="grid gap-1 text-sm font-medium text-stone-800">
+              Destination
+              <select className={selectClass} name="batchDestination" defaultValue={batchDestination}>
+                <option value="">Choose destination</option>
+                {locationNodes.map((location) => <option key={location.id} value={location.id}>{locationPathWithCodes(location.id, locationNodes)}</option>)}
+              </select>
+            </label>
+            <label className="grid gap-1 text-sm font-medium text-stone-800">
+              Scope
+              <select className={selectClass} name="batchScope" defaultValue={batchScope}>
+                <option value="direct">Direct plants only</option>
+                <option value="nested">Direct + nested plants</option>
+              </select>
+            </label>
+            <Button className="px-3 py-2">Preview</Button>
+          </form>
+          {batchSourceLocation && batchDestinationLocation && (
+            <form action={batchMovePlantLocations} className="mt-4 rounded-lg border border-stone-200 bg-white/55 p-3">
+              <input type="hidden" name="collectionSlug" value={collection.slug} />
+              <input type="hidden" name="sourceLocationId" value={batchSourceLocation.id} />
+              <input type="hidden" name="toLocationId" value={batchDestinationLocation.id} />
+              <input type="hidden" name="scope" value={batchScope} />
+              <input type="hidden" name="back" value={collectionPath(collection.slug, '/locations')} />
+              <div className="grid gap-2 text-sm md:grid-cols-3">
+                <p><span className="font-semibold">Source:</span> {locationPathWithCodes(batchSourceLocation.id, locationNodes)}</p>
+                <p><span className="font-semibold">Destination:</span> {locationPathWithCodes(batchDestinationLocation.id, locationNodes)}</p>
+                <p><span className="font-semibold">Preview:</span> {batchPreviewPlants.length} plant{batchPreviewPlants.length === 1 ? '' : 's'}</p>
+              </div>
+              <div className="mt-3 grid gap-2">
+                {batchPreviewPlants.length === 0 && <p className="text-sm text-stone-600">No eligible active plants for this move.</p>}
+                {batchPreviewPlants.map((plant) => (
+                  <label key={plant.id} className="flex items-start gap-2 rounded-md border border-stone-200 bg-white/60 p-2 text-sm">
+                    <input type="checkbox" name="plantInstanceId" value={plant.id} defaultChecked />
+                    <span>
+                      <span className="font-semibold">{plant.plantId}</span> · {plantName(plant.plantDefinition)}
+                      <span className="block text-xs text-stone-500">{plant.currentLocation ? `${plant.currentLocation.code} ${plant.currentLocation.name}` : 'No location'}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <div className="mt-3 grid gap-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+                <TextArea label="Batch note" name="notes" className="min-h-16" />
+                <label className="flex items-center gap-2 rounded-md border border-stone-200 bg-white/60 px-3 py-2 text-sm font-medium">
+                  <input type="checkbox" name="confirm" value="yes" required />
+                  Confirm move
+                </label>
+              </div>
+              <Button className="mt-3 px-3 py-2" disabled={batchPreviewPlants.length === 0}>Move selected plants</Button>
+            </form>
+          )}
+        </Card>
+      )}
 
       {canMovePlants && (
         <Card>

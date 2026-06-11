@@ -9,6 +9,7 @@ const requiredCollectionModels = [
   ['LocationType', 'locationType'],
   ['Location', 'location'],
   ['PlantLocationMove', 'plantLocationMove'],
+  ['PlantQuarantine', 'plantQuarantine'],
   ['PlantInstance', 'plantInstance'],
   ['PropagationEvent', 'propagationEvent'],
   ['BloomEvent', 'bloomEvent'],

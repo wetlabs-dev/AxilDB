@@ -10,6 +10,7 @@ const collectionModels = [
   'locationType',
   'location',
   'plantLocationMove',
+  'plantQuarantine',
   'plantInstance',
   'propagationEvent',
   'bloomEvent',

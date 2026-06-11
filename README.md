@@ -26,7 +26,7 @@ It is designed for real collection work: messy taxonomy, acquisition names, alia
 - Weekly greenhouse checklist generation from the care queue, grouped by location and covering overdue, due-today, and upcoming care tasks.
 - Plant sitter mode with expiring/revocable token links that expose only selected plants and tasks, allow limited checklist completion, and log sitter actions back into AxilDB.
 - Plant instances with generated plant IDs, acquisition/propagation dates, source/distributor metadata, hierarchical locations, archive status, notes, and photos.
-- Collection-scoped Location mapping with customizable location types, stable generated codes, direct/nested plant views, move history, and QR labels.
+- Collection-scoped Location mapping with customizable location types, stable generated codes, direct/nested plant views, batch moves, move history, quarantine workflow records, and QR labels.
 - Sunshine appreciation for plant instances only, as a quiet appreciation/bookmark marker with private giver identity, public counts on plant records, subtle Well Loved treatment at five sunshine, My Sunshine history, dashboard activity, and optional email/push alerts that default off.
 - Plant Health Timeline on specimen pages, combining existing accession, propagation, care, condition, bloom, photo, note, reminder, archive, and sport records into a compact horizontal history with deterministic insights and a Life Story list.
 - Automatic plant ID generation based on plant definition, date, context, and sequence number.
@@ -368,6 +368,7 @@ Core models:
 - `LocationType`: collection-defined location categories such as Room, Cabinet, Shelf, or Greenhouse, with stable abbreviations used for location codes.
 - `Location`: collection-scoped hierarchical locations with stable generated codes such as `LOC-SH-01`; locations can contain other locations and direct plant assignments.
 - `PlantLocationMove`: move history for plants reassigned between structured locations.
+- `PlantQuarantine`: plant-level quarantine workflow records with risk level, checklist, target release review date, release/cancel status, and optional quarantine location.
 - `PropagationEvent`: a propagation action with parent and child links.
 - `ParentageLink` and `PropagationChild`: graph edges for lineage.
 - `BloomEvent`: bloom lifecycle records.
@@ -394,7 +395,7 @@ Most domain records carry `collectionId`, including local plant definitions, ali
 
 ## Location Mapping
 
-Open **Locations** from the collection sidebar to manage structured plant locations. Managers can create location types, create/edit/archive locations, quick-create locations from plant forms, and move locations under other locations. Gardeners can move active plants between existing active locations. Viewers and loggers can view the location hierarchy, but cannot restructure it.
+Open **Locations** from the collection sidebar to manage structured plant locations. Managers can create location types, create/edit/archive locations, quick-create locations from plant forms, and move locations under other locations. Gardeners can move active plants between existing active locations individually or with a previewed batch move. Viewers and loggers can view the location hierarchy, but cannot restructure it.
 
 Location types are collection-defined labels such as Room, Cabinet, Shelf, or Greenhouse. Each type has an abbreviation used when AxilDB creates a stable code, for example `LOC-RM-01`, `LOC-CAB-01`, or `LOC-SH-01`. Codes are unique inside the collection and do not change automatically if the type abbreviation changes later.
 
@@ -403,6 +404,10 @@ Locations can be nested under any other location; AxilDB does not hard-code allo
 The migration/backfill creates one top-level “Legacy Location” record for each distinct non-empty legacy plant instance location string and assigns matching plants to it. The original text is preserved as legacy location text. AxilDB does not attempt to parse old freeform values into rooms, cabinets, or shelves automatically.
 
 Location QR labels are generated through the existing bulk label PDF endpoint and include the collection name, location name, code, type, and breadcrumb when space allows. A location QR opens the location detail page and shows the plants currently assigned directly or through child locations. The Plant Instances page can filter by a location with optional child-location inclusion. Drag/drop restructuring is intentionally deferred; v1 uses accessible select-and-save controls for moves and hierarchy edits.
+
+Batch location moves support direct-only or direct-plus-nested scope. The Location Manager previews affected active plants before commit, lets gardeners/managers deselect individual plants, requires confirmation, and writes one `PlantLocationMove` record per moved plant. The commit path re-checks collection, active status, source location, destination location, and no-op moves before applying changes.
+
+Quarantine is modeled as a plant-level workflow record and can optionally reference a quarantine location. Moving into a quarantine-type location does not silently start quarantine; the specimen page shows a prompt to start a record. Active quarantine records include reason, risk level, checklist, start date, target release review date, notes, release/cancel controls, and a care queue review item when the target date is due or overdue. Plant cards, specimen pages, location detail pages, care queue, and Plant Health Timeline surface active quarantine state.
 
 Collection Update Digest is intentionally separate from the Care Queue Digest. It covers reference/governance/library changes, currently site-wide validated plant definition edits only. A validated definition is considered "in use" by a collection when that collection has at least one plant instance linked to it. Managers and gardeners can receive one daily email and/or push digest for the previous local day; loggers, viewers, and public visitors do not receive or view the v1 digest. The digest includes a concise old/new table, changed date/time, links to changed validated definitions, and affected instance counts without member emails or unrelated private notes.
 

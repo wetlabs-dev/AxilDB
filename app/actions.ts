@@ -36,7 +36,7 @@ import { husbandryFieldNames, husbandryFormValues } from '@/lib/husbandry'
 import { definitionData, findMatchingValidatedDefinition, globalGoverningBodyId, husbandryData } from '@/lib/validated-definitions'
 import { recordValidatedDefinitionChange, snapshotValidatedDefinition, validatedDefinitionInclude } from '@/lib/collection-updates'
 import { collectionRoleAtLeast, isServerAdminRole } from '@/lib/roles'
-import { assertLocationParentAllowed, nextLocationCode } from '@/lib/locations'
+import { assertLocationParentAllowed, descendantLocationIds, nextLocationCode, normalizeQuarantineRiskLevel, quarantineChecklistItems } from '@/lib/locations'
 
 const val = (fd: FormData, k: string) =>
   String(fd.get(k) || '').trim() || undefined
@@ -595,6 +595,155 @@ export async function movePlantInstanceLocation(fd: FormData) {
   ])
   await audit(user, 'MOVE', 'PLANT_INSTANCE_LOCATION', plantInstanceId, `Moved ${instance.plantId} to ${target?.code || 'no location'}`, { fromLocationId, toLocationId: target?.id || null, notes }, collection.id)
   redirect(back(fd) || collectionPath(collection.slug, `/instances/${plantInstanceId}`))
+}
+
+export async function batchMovePlantLocations(fd: FormData) {
+  const { user, collection } = await requireCollectionGardener(await collectionSlug(fd))
+  const sourceLocationId = val(fd, 'sourceLocationId')!
+  const toLocationId = val(fd, 'toLocationId')!
+  const scope = val(fd, 'scope') === 'nested' ? 'nested' : 'direct'
+  const selectedPlantIds = fd.getAll('plantInstanceId').map((value) => String(value)).filter(Boolean)
+  const notes = clearableVal(fd, 'notes')
+  if (val(fd, 'confirm') !== 'yes') throw new Error('Confirm the batch move before applying it.')
+  if (!selectedPlantIds.length) throw new Error('Select at least one plant to move.')
+  const [source, target, locations] = await Promise.all([
+    prisma.location.findFirstOrThrow({ where: { id: sourceLocationId, collectionId: collection.id, status: 'ACTIVE' } }),
+    prisma.location.findFirstOrThrow({ where: { id: toLocationId, collectionId: collection.id, status: 'ACTIVE' } }),
+    prisma.location.findMany({ where: { collectionId: collection.id }, select: { id: true, parentLocationId: true } }),
+  ])
+  if (source.id === target.id) throw new Error('Choose a different destination location.')
+  const sourceIds = scope === 'nested'
+    ? [source.id, ...Array.from(descendantLocationIds(source.id, locations))]
+    : [source.id]
+  const plants = await prisma.plantInstance.findMany({
+    where: {
+      collectionId: collection.id,
+      status: 'ACTIVE',
+      id: { in: selectedPlantIds },
+      currentLocationId: { in: sourceIds },
+      NOT: { currentLocationId: target.id },
+    },
+    select: { id: true, plantId: true, currentLocationId: true, legacyLocationText: true, location: true },
+    orderBy: { plantId: 'asc' },
+  })
+  if (!plants.length) throw new Error('No eligible active plants remain for this batch move.')
+  await prisma.$transaction([
+    ...plants.map((plant) => prisma.plantInstance.update({
+      where: { id: plant.id },
+      data: {
+        currentLocationId: target.id,
+        location: target.name,
+        legacyLocationText: plant.legacyLocationText || plant.location,
+      },
+    })),
+    ...plants.map((plant) => prisma.plantLocationMove.create({
+      data: {
+        collectionId: collection.id,
+        plantInstanceId: plant.id,
+        fromLocationId: plant.currentLocationId,
+        toLocationId: target.id,
+        movedByUserId: user.id,
+        notes: notes ? `Batch move: ${notes}` : `Batch move from ${source.name} to ${target.name}.`,
+      },
+    })),
+  ])
+  await audit(
+    user,
+    'MOVE',
+    'PLANT_INSTANCE_LOCATION_BATCH',
+    source.id,
+    `Batch moved ${plants.length} plant${plants.length === 1 ? '' : 's'} from ${source.code} to ${target.code}`,
+    { sourceLocationId: source.id, toLocationId: target.id, scope, plantInstanceIds: plants.map((plant) => plant.id), notes },
+    collection.id,
+  )
+  redirect(back(fd) || collectionPath(collection.slug, '/locations'))
+}
+
+function quarantineChecklistFromForm(fd: FormData) {
+  const completed = new Set(fd.getAll('checklistItem').map((value) => String(value)))
+  return quarantineChecklistItems.map((label) => ({ label, done: completed.has(label) }))
+}
+
+export async function startPlantQuarantine(fd: FormData) {
+  const { user, collection } = await requireCollectionGardener(await collectionSlug(fd))
+  const plantInstanceId = val(fd, 'plantInstanceId')!
+  const quarantineLocationId = clearableVal(fd, 'quarantineLocationId')
+  const [plant, location, existing] = await Promise.all([
+    prisma.plantInstance.findFirstOrThrow({ where: { id: plantInstanceId, collectionId: collection.id, status: 'ACTIVE' } }),
+    quarantineLocationId ? prisma.location.findFirstOrThrow({ where: { id: quarantineLocationId, collectionId: collection.id } }) : null,
+    prisma.plantQuarantine.findFirst({ where: { collectionId: collection.id, plantInstanceId, status: 'ACTIVE' } }),
+  ])
+  if (existing) throw new Error('This plant already has an active quarantine record.')
+  const quarantine = await prisma.plantQuarantine.create({
+    data: {
+      collectionId: collection.id,
+      plantInstanceId,
+      quarantineLocationId: location?.id || null,
+      reason: val(fd, 'reason') || 'Quarantine review',
+      riskLevel: normalizeQuarantineRiskLevel(val(fd, 'riskLevel')),
+      startDate: date(val(fd, 'startDate')) || new Date(),
+      targetReleaseDate: date(val(fd, 'targetReleaseDate')) || addCalendarDays(new Date(), 14),
+      notes: clearableVal(fd, 'notes'),
+      checklistJson: quarantineChecklistFromForm(fd) as any,
+      createdByUserId: user.id,
+    },
+  })
+  await audit(user, 'CREATE', 'PLANT_QUARANTINE', quarantine.id, `Started quarantine for ${plant.plantId}`, undefined, collection.id)
+  redirect(back(fd) || collectionPath(collection.slug, `/instances/${plantInstanceId}`))
+}
+
+export async function updatePlantQuarantine(fd: FormData) {
+  const { user, collection } = await requireCollectionGardener(await collectionSlug(fd))
+  const id = val(fd, 'id')!
+  const quarantine = await prisma.plantQuarantine.findFirstOrThrow({ where: { id, collectionId: collection.id, status: 'ACTIVE' } })
+  const updated = await prisma.plantQuarantine.update({
+    where: { id },
+    data: {
+      reason: val(fd, 'reason') || quarantine.reason,
+      riskLevel: normalizeQuarantineRiskLevel(val(fd, 'riskLevel') || quarantine.riskLevel),
+      targetReleaseDate: date(val(fd, 'targetReleaseDate')) || quarantine.targetReleaseDate,
+      notes: clearableVal(fd, 'notes'),
+      checklistJson: quarantineChecklistFromForm(fd) as any,
+    },
+  })
+  await audit(user, 'UPDATE', 'PLANT_QUARANTINE', id, `Updated quarantine target for ${quarantine.plantInstanceId}`, { targetReleaseDate: updated.targetReleaseDate }, collection.id)
+  redirect(back(fd) || collectionPath(collection.slug, `/instances/${quarantine.plantInstanceId}`))
+}
+
+export async function releasePlantQuarantine(fd: FormData) {
+  const { user, collection } = await requireCollectionGardener(await collectionSlug(fd))
+  const id = val(fd, 'id')!
+  const quarantine = await prisma.plantQuarantine.findFirstOrThrow({ where: { id, collectionId: collection.id, status: 'ACTIVE' } })
+  await prisma.plantQuarantine.update({
+    where: { id },
+    data: {
+      status: 'RELEASED',
+      releasedAt: new Date(),
+      releasedByUserId: user.id,
+      notes: clearableVal(fd, 'notes') || quarantine.notes,
+      checklistJson: quarantineChecklistFromForm(fd) as any,
+    },
+  })
+  await audit(user, 'UPDATE', 'PLANT_QUARANTINE', id, `Released quarantine for ${quarantine.plantInstanceId}`, undefined, collection.id)
+  redirect(back(fd) || collectionPath(collection.slug, `/instances/${quarantine.plantInstanceId}`))
+}
+
+export async function cancelPlantQuarantine(fd: FormData) {
+  const { user, collection } = await requireCollectionGardener(await collectionSlug(fd))
+  const id = val(fd, 'id')!
+  const quarantine = await prisma.plantQuarantine.findFirstOrThrow({ where: { id, collectionId: collection.id, status: 'ACTIVE' } })
+  await prisma.plantQuarantine.update({
+    where: { id },
+    data: {
+      status: 'CANCELLED',
+      cancelledAt: new Date(),
+      cancelledByUserId: user.id,
+      notes: clearableVal(fd, 'notes') || quarantine.notes,
+      checklistJson: quarantineChecklistFromForm(fd) as any,
+    },
+  })
+  await audit(user, 'UPDATE', 'PLANT_QUARANTINE', id, `Cancelled quarantine for ${quarantine.plantInstanceId}`, undefined, collection.id)
+  redirect(back(fd) || collectionPath(collection.slug, `/instances/${quarantine.plantInstanceId}`))
 }
 
 export async function createPlantDefinition(fd: FormData) {

@@ -74,6 +74,9 @@ model User {
   uploadedPhotos Photo[] @relation("PhotoUploader")
   plantIdentificationLogs PlantIdentificationLog[]
   plantLocationMoves PlantLocationMove[]
+  createdPlantQuarantines PlantQuarantine[] @relation("PlantQuarantineCreatedBy")
+  releasedPlantQuarantines PlantQuarantine[] @relation("PlantQuarantineReleasedBy")
+  cancelledPlantQuarantines PlantQuarantine[] @relation("PlantQuarantineCancelledBy")
   careSheets          CareSheet[]
   completedCareSheetTasks CareSheetTask[] @relation("CareSheetTaskCompletedBy")
 
@@ -117,6 +120,7 @@ model Collection {
   locationTypes       LocationType[]
   locations           Location[]
   plantLocationMoves  PlantLocationMove[]
+  plantQuarantines    PlantQuarantine[]
   propagationEvents   PropagationEvent[]
   notes               Note[]
   photos              Photo[]
@@ -962,6 +966,7 @@ model PlantInstance {
   plantDefinition PlantDefinition        @relation(fields: [plantDefinitionId], references: [id], onDelete: Cascade)
   currentLocation Location?              @relation("CurrentPlantLocation", fields: [currentLocationId], references: [id], onDelete: SetNull)
   locationMoves   PlantLocationMove[]
+  quarantines     PlantQuarantine[]
   parentLinks     ParentageLink[]
   childLinks      PropagationChild[]
   blooms          BloomEvent[]
@@ -1027,6 +1032,7 @@ model Location {
   plantInstances PlantInstance[] @relation("CurrentPlantLocation")
   movesFrom      PlantLocationMove[] @relation("PlantLocationMoveFrom")
   movesTo        PlantLocationMove[] @relation("PlantLocationMoveTo")
+  quarantineRecords PlantQuarantine[]
 
   @@unique([collectionId, code])
   @@index([collectionId])
@@ -1058,6 +1064,44 @@ model PlantLocationMove {
   @@index([toLocationId])
   @@index([movedByUserId])
   @@index([movedAt])
+}
+
+model PlantQuarantine {
+  id                   String   @id @default(cuid())
+  collectionId         String
+  plantInstanceId      String
+  quarantineLocationId String?
+  status               String   @default("ACTIVE")
+  reason               String
+  riskLevel            String   @default("UNKNOWN")
+  startDate            DateTime @default(now())
+  targetReleaseDate    DateTime
+  releasedAt           DateTime?
+  releasedByUserId     String?
+  cancelledAt          DateTime?
+  cancelledByUserId    String?
+  notes                String?
+  checklistJson        Json?
+  createdByUserId      String
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  collection         Collection    @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  plantInstance      PlantInstance @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
+  quarantineLocation Location?     @relation(fields: [quarantineLocationId], references: [id], onDelete: SetNull)
+  createdByUser      User          @relation("PlantQuarantineCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  releasedByUser     User?         @relation("PlantQuarantineReleasedBy", fields: [releasedByUserId], references: [id], onDelete: SetNull)
+  cancelledByUser    User?         @relation("PlantQuarantineCancelledBy", fields: [cancelledByUserId], references: [id], onDelete: SetNull)
+
+  @@index([collectionId])
+  @@index([plantInstanceId])
+  @@index([quarantineLocationId])
+  @@index([status])
+  @@index([riskLevel])
+  @@index([targetReleaseDate])
+  @@index([createdByUserId])
+  @@index([releasedByUserId])
+  @@index([cancelledByUserId])
 }
 
 model PlantHusbandryOverride {

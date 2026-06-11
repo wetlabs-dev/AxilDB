@@ -11,6 +11,7 @@ export const careTaskTypes = [
   'PEST_CHECK',
   'HEALTH_CHECK',
   'BLOOM_CHECK',
+  'QUARANTINE_REVIEW',
   'REMINDER',
 ] as const
 
@@ -89,6 +90,7 @@ export function careTaskLabel(type: CareTaskType) {
   if (type === 'PEST_CHECK') return 'Pest check'
   if (type === 'HEALTH_CHECK') return 'Health check'
   if (type === 'BLOOM_CHECK') return 'Bloom check'
+  if (type === 'QUARANTINE_REVIEW') return 'Quarantine review'
   return 'Reminder'
 }
 
@@ -139,7 +141,7 @@ export async function getCareQueue(
     timezone?: string
   },
 ) {
-  const [instances, careEvents, conditions, adjustments, photos, openBlooms, reminders] = await Promise.all([
+  const [instances, careEvents, conditions, adjustments, photos, openBlooms, activeQuarantines, reminders] = await Promise.all([
     prisma.plantInstance.findMany({
       where: { collectionId, status: 'ACTIVE' },
       include: {
@@ -174,6 +176,11 @@ export async function getCareQueue(
       where: { collectionId, bloomEndDate: null, plantInstance: { status: 'ACTIVE' } },
       include: { plantInstance: { include: { plantDefinition: true } } },
       orderBy: { bloomStartDate: 'desc' },
+    }),
+    prisma.plantQuarantine.findMany({
+      where: { collectionId, status: 'ACTIVE', plantInstance: { status: 'ACTIVE' } },
+      include: { plantInstance: { include: { plantDefinition: true } } },
+      orderBy: { targetReleaseDate: 'asc' },
     }),
     userId
       ? prisma.reminder.findMany({
@@ -325,6 +332,23 @@ export async function getCareQueue(
     })
   }
 
+  for (const quarantine of activeQuarantines) {
+    const overdueDays = Math.max(0, daysBetween(now, quarantine.targetReleaseDate, timezone))
+    pushDerived({
+      key: `QUARANTINE_REVIEW:${quarantine.id}`,
+      taskType: 'QUARANTINE_REVIEW',
+      title: `Review quarantine ${quarantine.plantInstance.plantId}`,
+      reason: `${quarantine.riskLevel.toLowerCase()} risk quarantine target release date${overdueDays > 0 ? ` is ${overdueDays} day${overdueDays === 1 ? '' : 's'} overdue` : ' is due soon'}.`,
+      dueAt: quarantine.targetReleaseDate,
+      basePriority: 160,
+      plantInstanceId: quarantine.plantInstanceId,
+      plantId: quarantine.plantInstance.plantId,
+      plantName: plantName(quarantine.plantInstance.plantDefinition),
+      location: quarantine.plantInstance.location,
+      image: photosByInstance[quarantine.plantInstanceId],
+    })
+  }
+
   for (const reminder of reminders) {
     const dueAt = reminder.nextSendAt || reminder.dueAt
     const overdueDays = Math.max(0, daysBetween(now, dueAt, timezone))
@@ -372,7 +396,7 @@ export function filterCareQueue(items: CareQueueItem[], filter?: string | null, 
   if (filter === 'completed') return items.filter((item) => item.completedAt)
   if (filter === 'water') return items.filter((item) => !item.completedAt && item.taskType === 'WATER')
   if (filter === 'propagation') return items.filter((item) => !item.completedAt && item.taskType === 'PROPAGATION_CHECK')
-  if (filter === 'health') return items.filter((item) => !item.completedAt && item.taskType === 'HEALTH_CHECK')
+  if (filter === 'health') return items.filter((item) => !item.completedAt && ['HEALTH_CHECK', 'QUARANTINE_REVIEW'].includes(item.taskType))
   if (filter === 'pest') return items.filter((item) => !item.completedAt && item.taskType === 'PEST_CHECK')
   if (filter === 'bloom') return items.filter((item) => !item.completedAt && item.taskType === 'BLOOM_CHECK')
   if (filter === 'custom') return items.filter((item) => !item.completedAt && item.taskType === 'REMINDER')
@@ -384,7 +408,7 @@ export function careQueueSummary(items: CareQueueItem[], now = new Date(), timez
   return {
     today: active.filter((item) => item.dueAt <= endOfDayInTimeZone(now, timezone)).length,
     overdue: active.filter((item) => item.dueAt < startOfDayInTimeZone(now, timezone)).length,
-    health: active.filter((item) => item.taskType === 'HEALTH_CHECK').length,
+    health: active.filter((item) => ['HEALTH_CHECK', 'QUARANTINE_REVIEW'].includes(item.taskType)).length,
     propagation: active.filter((item) => item.taskType === 'PROPAGATION_CHECK').length,
   }
 }
