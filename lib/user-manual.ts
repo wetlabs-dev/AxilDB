@@ -103,10 +103,10 @@ export const manualSections: ManualSection[] = [
     title: 'Plant Instances',
     route: '/instances',
     screenshot: 'plant-instances.png',
-    purpose: 'Plant instances are the actual specimens in a collection. Each instance receives a generated plant ID, status, location, acquisition details, source, notes, photos, bloom records, propagation relationships, sport review, care history, reminders, follows, and a Plant Health Timeline.',
+    purpose: 'Plant instances are the actual specimens in a collection. Each instance receives a generated plant ID, status, structured location, acquisition details, source, notes, photos, bloom records, propagation relationships, sport review, care history, reminders, follows, and a Plant Health Timeline.',
     howTo: [
       'Open Plant Instances and choose Add plant instance.',
-      'Select a plant definition and enter specimen details such as type, acquisition date, location, source, distributor, stock label, and notes.',
+      'Select a plant definition and enter specimen details such as type, acquisition date, structured location, legacy location text, source, distributor, stock label, and notes.',
       'Open a specimen detail page to review identity, photos, Plant Health Timeline, husbandry summary, sport status, follows, children, notes, reminders, bloom tracker, and archive actions.',
       'Use the Plant Health Timeline to scan accession, propagation, care, condition, bloom, photo, note, reminder, archive, and sport activity in a compact strip, then open the Life Story list for grouped deterministic history.',
       'Use the generated QR label to open the specimen record quickly from a printed label.',
@@ -116,9 +116,33 @@ export const manualSections: ManualSection[] = [
     ],
     notes: [
       'Plant IDs are generated from the plant definition and relevant date context, then made unique inside the collection.',
-      'Locations and similar text fields autosuggest values already used in the current collection.',
+      'Structured locations show stable codes and breadcrumb paths. Legacy freeform location text is preserved for audit and migration context.',
       'Acquired propagation is for purchased or received cuttings, leaf props, starter plugs, and similar plants without an internal parent record.',
-      'Timeline v1 uses existing records. Dedicated historical location-change, label-change, restore, and sport-transition events are future data-source candidates.',
+      'Timeline v1 uses existing records and includes plant location moves. Dedicated label-change, restore, and sport-transition events are future data-source candidates.',
+    ],
+  },
+  {
+    id: 'locations',
+    title: 'Locations',
+    route: '/locations',
+    screenshot: 'locations.png',
+    purpose: 'Locations map rooms, cabinets, shelves, greenhouses, benches, and other spaces as a collection-scoped hierarchy.',
+    howTo: [
+      'Open Locations from the sidebar.',
+      'Managers can create location types such as Room, Cabinet, Shelf, or Greenhouse.',
+      'Managers can create locations, choose a parent location, edit the hierarchy, and archive empty locations.',
+      'Gardeners can move plants between existing active locations.',
+      'Open a location detail page to see breadcrumbs, child locations, direct plants, and nested plants separately.',
+      'Use QR label actions to print location labels through the existing bulk label PDF workflow.',
+    ],
+    notes: [
+      'Location codes are generated from the location type abbreviation and remain stable after creation.',
+      'The migration creates top-level Legacy Location records from distinct old freeform location strings.',
+      'Drag-and-drop hierarchy editing is deferred; this version uses accessible select-and-save controls.',
+    ],
+    warnings: [
+      'Archived locations cannot be selected for new plant moves.',
+      'Move plants and child locations before archiving a location.',
     ],
   },
   {

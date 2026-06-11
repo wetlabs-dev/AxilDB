@@ -29,6 +29,7 @@ const SHEET_GUTTER_X = 18
 const SHEET_GUTTER_Y = 0
 
 type LabelItem = Awaited<ReturnType<typeof getLabelItems>>[number]
+type LabelTarget = 'plants' | 'locations'
 
 function oneLineFontSize(doc: PDFKit.PDFDocument, text: string, font: string, max: number, min: number, width: number) {
   for (let size = max; size >= min; size -= 0.5) {
@@ -48,7 +49,14 @@ function multiLineFontSize(doc: PDFKit.PDFDocument, lines: string[], font: strin
   return min
 }
 
-async function getLabelItems(collectionId: string, all: boolean, ids: string[]) {
+async function getLabelItems(collectionId: string, all: boolean, ids: string[], target: LabelTarget) {
+  if (target === 'locations') {
+    return prisma.location.findMany({
+      where: all ? { collectionId, status: 'ACTIVE' } : { collectionId, id: { in: ids } },
+      include: { locationType: true },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+    })
+  }
   return prisma.plantInstance.findMany({
     where: all ? { collectionId, status: 'ACTIVE' } : { collectionId, id: { in: ids } },
     include: { plantDefinition: true },
@@ -56,8 +64,23 @@ async function getLabelItems(collectionId: string, all: boolean, ids: string[]) 
   })
 }
 
-function labelLink(collectionSlug: string, instanceId: string) {
-  return `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.axildb.com'}${collectionPath(collectionSlug, `/instances/${instanceId}`)}`
+function isLocationItem(item: LabelItem): item is Extract<LabelItem, { code: string; name: string }> {
+  return 'code' in item && 'name' in item
+}
+
+function labelNameLines(item: LabelItem) {
+  return isLocationItem(item)
+    ? [item.name, item.locationType.name]
+    : plantLabelNameLines(item.plantDefinition)
+}
+
+function labelCode(item: LabelItem) {
+  return isLocationItem(item) ? item.code : item.plantId
+}
+
+function labelLink(collectionSlug: string, item: LabelItem) {
+  const path = isLocationItem(item) ? `/locations/${item.id}` : `/instances/${item.id}`
+  return `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.axildb.com'}${collectionPath(collectionSlug, path)}`
 }
 
 async function qrBufferFor(link: string) {
@@ -83,7 +106,7 @@ function drawFixedLabel(
   const nameY = y + 23
   const nameWidth = qrX - nameX - 7
   const nameHeight = Math.max(28, height - 47)
-  const nameLines = plantLabelNameLines(item.plantDefinition)
+  const nameLines = labelNameLines(item)
   const collectionSize = oneLineFontSize(doc, collectionName, 'Times-Bold', 13, 6.5, width - 12)
   doc.font('Times-Bold').fontSize(collectionSize).text(collectionName, x + 6, y + 4, {
     width: width - 12,
@@ -99,8 +122,9 @@ function drawFixedLabel(
     doc.text(line, nameX, currentY, { width: nameWidth, lineBreak: false })
     currentY += lineHeight
   }
-  const idSize = oneLineFontSize(doc, item.plantId, LABEL_ID_FONT, 12, 6, width - 12)
-  doc.font(LABEL_ID_FONT).fontSize(idSize).text(item.plantId, x + 6, y + height - 16, {
+  const idText = labelCode(item)
+  const idSize = oneLineFontSize(doc, idText, LABEL_ID_FONT, 12, 6, width - 12)
+  doc.font(LABEL_ID_FONT).fontSize(idSize).text(idText, x + 6, y + height - 16, {
     width: width - 12,
     align: 'center',
     lineBreak: false,
@@ -120,10 +144,11 @@ function drawPortraitLabel(
   const margin = 5
   const textWidth = width - margin * 2
   const qrSize = Math.min(width - 18, 58)
-  const nameLines = plantLabelNameLines(item.plantDefinition)
+  const nameLines = labelNameLines(item)
   const collectionSize = oneLineFontSize(doc, collectionName, 'Times-Bold', 9, 5, textWidth)
   const nameSize = multiLineFontSize(doc, nameLines, 'Times-Italic', 14, 6, textWidth, 48)
-  const idSize = oneLineFontSize(doc, item.plantId, LABEL_ID_FONT, 8, 4.5, textWidth)
+  const idText = labelCode(item)
+  const idSize = oneLineFontSize(doc, idText, LABEL_ID_FONT, 8, 4.5, textWidth)
 
   let currentY = y + margin
   doc.font('Times-Bold').fontSize(collectionSize).text(collectionName, x + margin, currentY, {
@@ -139,7 +164,7 @@ function drawPortraitLabel(
     doc.text(line, x + margin, currentY, { width: textWidth, align: 'center', lineBreak: false })
     currentY += nameSize * 1.05
   }
-  doc.font(LABEL_ID_FONT).fontSize(idSize).text(item.plantId, x + margin, y + height - margin - idSize * 1.2, {
+  doc.font(LABEL_ID_FONT).fontSize(idSize).text(idText, x + margin, y + height - margin - idSize * 1.2, {
     width: textWidth,
     align: 'center',
     lineBreak: false,
@@ -150,10 +175,10 @@ function brotherLabelHeight(doc: PDFKit.PDFDocument, item: LabelItem, collection
   const margin = 4.5
   const textWidth = BROTHER_DK_2210_WIDTH_PT - margin * 2
   const qrSize = textWidth
-  const nameLines = plantLabelNameLines(item.plantDefinition)
+  const nameLines = labelNameLines(item)
   const collectionSize = oneLineFontSize(doc, collectionName, 'Times-Bold', 7.5, 4, textWidth)
   const nameSize = multiLineFontSize(doc, nameLines, 'Times-Italic', 13, 6, textWidth, 60)
-  const idSize = oneLineFontSize(doc, item.plantId, LABEL_ID_FONT, 6.5, 3.8, textWidth)
+  const idSize = oneLineFontSize(doc, labelCode(item), LABEL_ID_FONT, 6.5, 3.8, textWidth)
   const collectionHeight = collectionSize * 1.2
   const nameHeight = nameSize * 1.05 * nameLines.length
   const idHeight = idSize * 1.25
@@ -170,10 +195,11 @@ function drawBrotherLabel(
   const margin = 4.5
   const textWidth = BROTHER_DK_2210_WIDTH_PT - margin * 2
   const qrSize = textWidth
-  const nameLines = plantLabelNameLines(item.plantDefinition)
+  const nameLines = labelNameLines(item)
   const collectionSize = oneLineFontSize(doc, collectionName, 'Times-Bold', 7.5, 4, textWidth)
   const nameSize = multiLineFontSize(doc, nameLines, 'Times-Italic', 13, 6, textWidth, 60)
-  const idSize = oneLineFontSize(doc, item.plantId, LABEL_ID_FONT, 6.5, 3.8, textWidth)
+  const idText = labelCode(item)
+  const idSize = oneLineFontSize(doc, idText, LABEL_ID_FONT, 6.5, 3.8, textWidth)
 
   let y = margin
   doc.image(qrBuffer, margin, y, { width: qrSize, height: qrSize })
@@ -189,7 +215,7 @@ function drawBrotherLabel(
     doc.text(line, margin, y, { width: textWidth, align: 'center', lineBreak: false })
     y += nameSize * 1.05
   }
-  doc.font(LABEL_ID_FONT).fontSize(idSize).text(item.plantId, margin, height - margin - idSize * 1.25, {
+  doc.font(LABEL_ID_FONT).fontSize(idSize).text(idText, margin, height - margin - idSize * 1.25, {
     width: textWidth,
     align: 'center',
     lineBreak: false,
@@ -199,12 +225,12 @@ function drawBrotherLabel(
 function brotherLandscapeWidth(doc: PDFKit.PDFDocument, item: LabelItem, collectionName: string) {
   const margin = 5
   const qrSize = BROTHER_DK_2210_WIDTH_PT - margin * 2
-  const nameLines = plantLabelNameLines(item.plantDefinition)
+  const nameLines = labelNameLines(item)
   const textWidth = Math.max(
     132,
     doc.font('Times-Bold').fontSize(8).widthOfString(collectionName) + 8,
     ...nameLines.map((line) => doc.font('Times-Italic').fontSize(13).widthOfString(line) + 8),
-    doc.font(LABEL_ID_FONT).fontSize(7).widthOfString(item.plantId) + 8,
+    doc.font(LABEL_ID_FONT).fontSize(7).widthOfString(labelCode(item)) + 8,
   )
   return Math.max(210, margin + qrSize + 7 + textWidth + margin)
 }
@@ -221,10 +247,11 @@ function drawBrotherLandscapeLabel(
   const qrSize = height - margin * 2
   const textX = margin + qrSize + 7
   const textWidth = width - textX - margin
-  const nameLines = plantLabelNameLines(item.plantDefinition)
+  const nameLines = labelNameLines(item)
   const collectionSize = oneLineFontSize(doc, collectionName, 'Times-Bold', 8, 4.5, textWidth)
   const nameSize = multiLineFontSize(doc, nameLines, 'Times-Italic', 13, 6, textWidth, 38)
-  const idSize = oneLineFontSize(doc, item.plantId, LABEL_ID_FONT, 7, 4, textWidth)
+  const idText = labelCode(item)
+  const idSize = oneLineFontSize(doc, idText, LABEL_ID_FONT, 7, 4, textWidth)
 
   doc.image(qrBuffer, margin, margin, { width: qrSize, height: qrSize })
   doc.font('Times-Bold').fontSize(collectionSize).text(collectionName, textX, margin + 1, {
@@ -241,7 +268,7 @@ function drawBrotherLandscapeLabel(
     currentY += lineHeight
   }
 
-  doc.font(LABEL_ID_FONT).fontSize(idSize).text(item.plantId, textX, height - margin - idSize * 1.2, {
+  doc.font(LABEL_ID_FONT).fontSize(idSize).text(idText, textX, height - margin - idSize * 1.2, {
     width: textWidth,
     align: 'center',
     lineBreak: false,
@@ -289,6 +316,7 @@ export async function GET(req: Request) {
   const url=new URL(req.url)
   const ids=url.searchParams.getAll('id')
   const all=url.searchParams.get('all')==='1'
+  const target: LabelTarget = url.searchParams.get('target') === 'locations' ? 'locations' : 'plants'
   const slug=url.searchParams.get('collectionSlug')
   const format = parseFormat(url)
   const orientation = labelOrientationFromValue(url.searchParams.get('orientation'), format)
@@ -307,7 +335,7 @@ export async function GET(req: Request) {
     const membership=await prisma.collectionMembership.findUnique({where:{collectionId_userId:{collectionId:collection.id,userId:user.id}},select:{status:true}})
     if (membership?.status !== 'ACTIVE') return NextResponse.json({error:'Forbidden'}, {status:403})
   }
-  const items=await getLabelItems(collection.id, all, ids)
+  const items=await getLabelItems(collection.id, all, ids, target)
   const sizingDoc = new PDFDocument({ size: [BROTHER_DK_2210_WIDTH_PT, 170], margin: 0 })
   sizingDoc.registerFont(LABEL_ID_FONT, LABEL_ID_FONT_PATH)
   const firstBrotherLength = items[0]
@@ -336,7 +364,7 @@ export async function GET(req: Request) {
       const row = Math.floor(position / grid.columns)
       const x = grid.offsetX + column * (LABEL_WIDTH_PT + SHEET_GUTTER_X)
       const y = grid.offsetY + row * (LABEL_HEIGHT_PT + SHEET_GUTTER_Y)
-      const qrBuffer = await qrBufferFor(labelLink(collection.slug, item.id))
+      const qrBuffer = await qrBufferFor(labelLink(collection.slug, item))
       drawFixedLabel(doc, item, collection.name, qrBuffer, x, y)
     }
   } else if (format === 'brother-dk-2210') {
@@ -346,7 +374,7 @@ export async function GET(req: Request) {
         ? brotherLandscapeWidth(doc, item, collection.name)
         : brotherLabelHeight(doc, item, collection.name)
       if (index > 0) doc.addPage({ size: labelPageSize(format, orientation, length), margin: 0 })
-      const qrBuffer = await qrBufferFor(labelLink(collection.slug, item.id))
+      const qrBuffer = await qrBufferFor(labelLink(collection.slug, item))
       if (orientation === 'landscape') {
         drawBrotherLandscapeLabel(doc, item, collection.name, qrBuffer, length)
       } else {
@@ -358,7 +386,7 @@ export async function GET(req: Request) {
     for (let index = 0; index < items.length; index += 1) {
       if (index > 0) doc.addPage({ size: [pageWidth, pageHeight], margin: 0 })
       const item = items[index]
-      const qrBuffer = await qrBufferFor(labelLink(collection.slug, item.id))
+      const qrBuffer = await qrBufferFor(labelLink(collection.slug, item))
       if (orientation === 'portrait') {
         drawPortraitLabel(doc, item, collection.name, qrBuffer, pageWidth, pageHeight)
       } else {

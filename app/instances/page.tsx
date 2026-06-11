@@ -5,6 +5,7 @@ import { SunshineButton } from '@/components/SunshineButton'
 import { AddPanel, Button, Card, Field, HelpTooltip, SuggestionDatalist, TextArea } from '@/components/ui'
 import { getCurrentUser } from '@/lib/auth'
 import { canCreateInCollection, canEditInCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
+import { locationPath } from '@/lib/locations'
 import { prisma } from '@/lib/prisma'
 import { compareText, sortPreference, timeValue, type SortOption } from '@/lib/sort-preferences'
 import { sunshineCounts, sunshineKey, sunshineStateForUser, WELL_LOVED_THRESHOLD } from '@/lib/sunshine'
@@ -35,10 +36,10 @@ export default async function Instances({
   const collectionWhere = { collectionId: collection.id }
   const definitionFilter = sp.definition || ''
   const sortKey = await sortPreference(user?.id, 'instances', 'plantIdAsc', instanceSortOptions.map((option) => option.value))
-  const [instances, defs, instanceSuggestionRows] = await Promise.all([
+  const [instances, defs, instanceSuggestionRows, locations] = await Promise.all([
     prisma.plantInstance.findMany({
       where: { ...collectionWhere, status: 'ACTIVE', ...(definitionFilter ? { plantDefinitionId: definitionFilter } : {}) },
-      include: { plantDefinition: true },
+      include: { plantDefinition: true, currentLocation: { include: { locationType: true } } },
       orderBy: { plantId: 'asc' },
     }),
     prisma.plantDefinition.findMany({
@@ -49,7 +50,21 @@ export default async function Instances({
       where: collectionWhere,
       select: { location: true, source: true, distributor: true, stockNumber: true },
     }),
+    prisma.location.findMany({
+      where: { collectionId: collection.id, status: 'ACTIVE' },
+      include: { locationType: true },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+    }),
   ])
+  const locationNodes = locations.map((location) => ({
+    id: location.id,
+    parentLocationId: location.parentLocationId,
+    name: location.name,
+    code: location.code,
+    status: location.status,
+    sortOrder: location.sortOrder,
+    locationType: location.locationType,
+  }))
   const locationSuggestions = rankedSuggestions(instanceSuggestionRows.map((instance) => instance.location))
   const sourceSuggestions = rankedSuggestions(instanceSuggestionRows.map((instance) => instance.source))
   const distributorSuggestions = rankedSuggestions(instanceSuggestionRows.map((instance) => instance.distributor))
@@ -138,6 +153,15 @@ export default async function Instances({
               Plant ID will be generated automatically from the plant definition, relevant date, and record type.
             </p>
             <Field label="Location" name="location" list="instance-location-suggestions" />
+            <label className="grid gap-1 text-sm font-medium">
+              Structured location
+              <select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="currentLocationId" defaultValue="">
+                <option value="">No structured location</option>
+                {locationNodes.map((location) => (
+                  <option key={location.id} value={location.id}>{location.code} · {locationPath(location.id, locationNodes)}</option>
+                ))}
+              </select>
+            </label>
             <Field label="Acquisition date" help="When this physical plant entered your collection." name="acquisitionDate" type="date" />
             <Field label="Propagation date" help="When this plant was propagated, if it was created from another plant." name="propagationDate" type="date" />
             <Field label="Source/propagator" help="Who produced or propagated the plant, or the immediate source of the plant material." name="source" list="instance-source-suggestions" />
@@ -170,7 +194,9 @@ export default async function Instances({
                   <p className="line-clamp-2 text-sm text-stone-700">
                     {instance.plantDefinition.isValidated ? 'Validated: ' : ''}{plantName(instance.plantDefinition)}
                   </p>
-                  <p className="truncate text-sm text-stone-600">{instance.instanceType} · {instance.location || 'No location'}</p>
+                  <p className="truncate text-sm text-stone-600">
+                    {instance.instanceType} · {instance.currentLocation ? `${instance.currentLocation.code} · ${locationPath(instance.currentLocation.id, locationNodes)}` : instance.location || 'No location'}
+                  </p>
                 </div>
               </Link>
               <div className="flex items-center gap-2 border-t border-stone-200 p-3">

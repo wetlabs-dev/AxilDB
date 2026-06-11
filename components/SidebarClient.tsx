@@ -23,6 +23,7 @@ import {
   Images,
   Leaf,
   FlaskConical,
+  MapPinned,
   Menu,
   Search,
   Settings,
@@ -66,6 +67,7 @@ const navSections = [
     items: [
       ['/plants', 'Plant Definitions', Leaf],
       ['/instances', 'Plant Instances', Sprout],
+      ['/locations', 'Locations', MapPinned],
       ['/propagations', 'Propagations', GitBranch],
       ['/blooms', 'Bloom Tracker', Flower2],
     ],

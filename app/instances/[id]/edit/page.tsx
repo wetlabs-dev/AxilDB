@@ -2,6 +2,7 @@ import { deletePlantInstance, restorePlantInstance, updatePlantInstance } from '
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { Button, Card, Field, SuggestionDatalist, TextArea } from '@/components/ui'
 import { requireCollectionAdmin } from '@/lib/collections'
+import { locationPath } from '@/lib/locations'
 import { prisma } from '@/lib/prisma'
 import { rankedSuggestions } from '@/lib/suggestions'
 import { dateInput, plantName } from '@/lib/utils'
@@ -11,7 +12,7 @@ const selectClass = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1
 export default async function EditInstance({ params }: { params: Promise<{ id: string }> }) {
   const { collection } = await requireCollectionAdmin()
   const { id } = await params
-  const [instance, definitions, instanceSuggestionRows] = await Promise.all([
+  const [instance, definitions, instanceSuggestionRows, locations] = await Promise.all([
     prisma.plantInstance.findFirstOrThrow({ where: { id, collectionId: collection.id } }),
     prisma.plantDefinition.findMany({
       where: { OR: [{ collectionId: collection.id }, { collectionId: null, isValidated: true }] },
@@ -21,7 +22,21 @@ export default async function EditInstance({ params }: { params: Promise<{ id: s
       where: { collectionId: collection.id },
       select: { location: true, source: true, distributor: true, stockNumber: true },
     }),
+    prisma.location.findMany({
+      where: { collectionId: collection.id, status: 'ACTIVE' },
+      include: { locationType: true },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+    }),
   ])
+  const locationNodes = locations.map((location) => ({
+    id: location.id,
+    parentLocationId: location.parentLocationId,
+    name: location.name,
+    code: location.code,
+    status: location.status,
+    sortOrder: location.sortOrder,
+    locationType: location.locationType,
+  }))
   const locationSuggestions = rankedSuggestions(instanceSuggestionRows.map((item) => item.location))
   const sourceSuggestions = rankedSuggestions(instanceSuggestionRows.map((item) => item.source))
   const distributorSuggestions = rankedSuggestions(instanceSuggestionRows.map((item) => item.distributor))
@@ -68,6 +83,15 @@ export default async function EditInstance({ params }: { params: Promise<{ id: s
             </select>
           </label>
           <Field label="Location" name="location" defaultValue={instance.location} list="instance-location-suggestions" />
+          <label className="grid gap-1 text-sm font-medium text-stone-800">
+            Structured location
+            <select className={selectClass} name="currentLocationId" defaultValue={instance.currentLocationId || ''}>
+              <option value="">No structured location</option>
+              {locationNodes.map((location) => (
+                <option key={location.id} value={location.id}>{location.code} · {locationPath(location.id, locationNodes)}</option>
+              ))}
+            </select>
+          </label>
           <Field label="Acquisition date" name="acquisitionDate" type="date" defaultValue={dateInput(instance.acquisitionDate)} />
           <Field label="Propagation date" name="propagationDate" type="date" defaultValue={dateInput(instance.propagationDate)} />
           <Field label="Source/propagator" name="source" defaultValue={instance.source} list="instance-source-suggestions" />

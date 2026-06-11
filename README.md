@@ -25,7 +25,8 @@ It is designed for real collection work: messy taxonomy, acquisition names, alia
 - Care sheets that combine selected specimens, photos, quick care badges, selected husbandry sections, and local care adjustments into a shareable web view or printable PDF.
 - Weekly greenhouse checklist generation from the care queue, grouped by location and covering overdue, due-today, and upcoming care tasks.
 - Plant sitter mode with expiring/revocable token links that expose only selected plants and tasks, allow limited checklist completion, and log sitter actions back into AxilDB.
-- Plant instances with generated plant IDs, acquisition/propagation dates, source/distributor metadata, location, archive status, notes, and photos.
+- Plant instances with generated plant IDs, acquisition/propagation dates, source/distributor metadata, hierarchical locations, archive status, notes, and photos.
+- Collection-scoped Location mapping with customizable location types, stable generated codes, direct/nested plant views, move history, and QR labels.
 - Sunshine appreciation for plant instances only, as a quiet appreciation/bookmark marker with private giver identity, public counts on plant records, subtle Well Loved treatment at five sunshine, My Sunshine history, dashboard activity, and optional email/push alerts that default off.
 - Plant Health Timeline on specimen pages, combining existing accession, propagation, care, condition, bloom, photo, note, reminder, archive, and sport records into a compact horizontal history with deterministic insights and a Life Story list.
 - Automatic plant ID generation based on plant definition, date, context, and sequence number.
@@ -63,7 +64,7 @@ It is designed for real collection work: messy taxonomy, acquisition names, alia
 - Demo data generator for populating realistic test records.
 - Web-based Help page and generated Markdown user manual, with repeatable Playwright screenshot capture for documentation.
 
-Plant Health Timeline v1 derives history from records AxilDB already stores. Explicit historical location-change events, label-change events, restore events, and fine-grained sport status transitions remain future enhancements unless they are represented by existing notes, audit records, or current instance state.
+Plant Health Timeline v1 derives history from records AxilDB already stores, including plant location moves recorded through the structured location workflow. Explicit label-change events, restore events, and fine-grained sport status transitions remain future enhancements unless they are represented by existing notes, audit records, or current instance state.
 
 ## Collections And Roles
 
@@ -364,6 +365,9 @@ Core models:
 - `PlantDefinition`: taxonomic/cultivar definition and reference metadata.
 - `PlantAlias`: alternate names with type, source, confidence, and notes.
 - `PlantInstance`: an individual plant/specimen in the collection.
+- `LocationType`: collection-defined location categories such as Room, Cabinet, Shelf, or Greenhouse, with stable abbreviations used for location codes.
+- `Location`: collection-scoped hierarchical locations with stable generated codes such as `LOC-SH-01`; locations can contain other locations and direct plant assignments.
+- `PlantLocationMove`: move history for plants reassigned between structured locations.
 - `PropagationEvent`: a propagation action with parent and child links.
 - `ParentageLink` and `PropagationChild`: graph edges for lineage.
 - `BloomEvent`: bloom lifecycle records.
@@ -386,7 +390,19 @@ Core models:
 
 Validated Plant Definitions are site-level `PlantDefinition` records with `collectionId = null` and `isValidated = true`. They are not owned by the collection that nominated them, so deleting or archiving a collection does not delete approved validated definitions or break plant instances linked to them. Collection managers can nominate a local definition for validation, server admins review nominations under Server Management, and approval creates a site-level validated definition with copied taxonomy, aliases, husbandry, type-image metadata, and governing body metadata. Managers can dispute validated definitions or create a local copy for selected specimens when they need to detach from future validated updates. Specimen-level husbandry overrides remain available, so collections do not need to detach solely for local care differences.
 
-Most domain records carry `collectionId`, including local plant definitions, aliases, plant instances, propagations, blooms, notes, photos, reminders, follows, sunshine, governing bodies, and audit logs. Suggestions/autocomplete, search, gallery, lineage graphs, labels, dashboard activity, follow counts, and sunshine counts are scoped per collection. Validated plant definitions, their aliases, husbandry guides, and type-image metadata intentionally remain site-level.
+Most domain records carry `collectionId`, including local plant definitions, aliases, plant instances, locations, location types, plant location moves, propagations, blooms, notes, photos, reminders, follows, sunshine, governing bodies, and audit logs. Suggestions/autocomplete, search, gallery, lineage graphs, labels, dashboard activity, follow counts, and sunshine counts are scoped per collection. Validated plant definitions, their aliases, husbandry guides, and type-image metadata intentionally remain site-level.
+
+## Location Mapping
+
+Open **Locations** from the collection sidebar to manage structured plant locations. Managers can create location types, create/edit/archive locations, and move locations under other locations. Gardeners can move plants between existing active locations. Viewers and loggers can view the location hierarchy, but cannot restructure it.
+
+Location types are collection-defined labels such as Room, Cabinet, Shelf, or Greenhouse. Each type has an abbreviation used when AxilDB creates a stable code, for example `LOC-RM-01`, `LOC-CAB-01`, or `LOC-SH-01`. Codes are unique inside the collection and do not change automatically if the type abbreviation changes later.
+
+Locations can be nested under any other location; AxilDB does not hard-code allowed parent/child combinations. Circular parent relationships are blocked. Location detail pages show the breadcrumb path, child locations, plants directly assigned to the location, and plants nested inside child locations in separate sections.
+
+The migration/backfill creates one top-level “Legacy Location” record for each distinct non-empty legacy plant instance location string and assigns matching plants to it. The original text is preserved as legacy location text. AxilDB does not attempt to parse old freeform values into rooms, cabinets, or shelves automatically.
+
+Location QR labels are generated through the existing bulk label PDF endpoint. A location QR opens the location detail page and shows the plants currently assigned directly or through child locations. Drag/drop restructuring is intentionally deferred; v1 uses accessible select-and-save controls for moves and hierarchy edits.
 
 Collection Update Digest is intentionally separate from the Care Queue Digest. It covers reference/governance/library changes, currently site-wide validated plant definition edits only. A validated definition is considered "in use" by a collection when that collection has at least one plant instance linked to it. Managers and gardeners can receive one daily email and/or push digest for the previous local day; loggers, viewers, and public visitors do not receive or view the v1 digest. The digest includes a concise old/new table, changed date/time, links to changed validated definitions, and affected instance counts without member emails or unrelated private notes.
 

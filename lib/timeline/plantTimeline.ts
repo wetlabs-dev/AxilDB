@@ -140,7 +140,7 @@ export async function collectPlantTimelineEvents(
   })
   const bloomIds = blooms.map((bloom) => bloom.id)
 
-  const [careEvents, conditions, photos, notes, propagationEvents, reminders, sportRecords] = await Promise.all([
+  const [careEvents, conditions, photos, notes, propagationEvents, reminders, sportRecords, locationMoves] = await Promise.all([
     prisma.plantCareEvent.findMany({
       where: { collectionId: input.collectionId, plantInstanceId: input.plantInstanceId },
       orderBy: { performedAt: 'asc' },
@@ -198,6 +198,11 @@ export async function collectPlantTimelineEvents(
       include: { propagationEvent: true },
       orderBy: { createdAt: 'asc' },
     }),
+    prisma.plantLocationMove.findMany({
+      where: { collectionId: input.collectionId, plantInstanceId: input.plantInstanceId },
+      include: { fromLocation: true, toLocation: true, movedByUser: { select: { email: true } } },
+      orderBy: { movedAt: 'asc' },
+    }),
   ])
 
   const events: PlantTimelineEvent[] = []
@@ -247,6 +252,23 @@ export async function collectPlantTimelineEvents(
       href: baseHref,
       sourceModel: 'PlantInstance',
       sourceId: instance.id,
+    })
+  }
+
+  for (const move of locationMoves) {
+    addEvent(events, {
+      id: `location-move-${move.id}`,
+      type: 'LOCATION_MOVE',
+      category: 'care',
+      date: move.movedAt,
+      title: 'Location moved',
+      summary: `Moved from ${move.fromLocation?.name || 'no location'} to ${move.toLocation?.name || 'no location'}${move.notes ? `: ${move.notes}` : ''}`,
+      icon: '📍',
+      colorVariant: 'sage',
+      href: baseHref,
+      sourceModel: 'PlantLocationMove',
+      sourceId: move.id,
+      metadata: { fromLocationId: move.fromLocationId, toLocationId: move.toLocationId, movedBy: move.movedByUser?.email || null },
     })
   }
 

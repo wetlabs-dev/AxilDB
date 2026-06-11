@@ -73,6 +73,7 @@ model User {
   resolvedImageModerationReviews ImageModerationReview[] @relation("ImageModerationReviewResolver")
   uploadedPhotos Photo[] @relation("PhotoUploader")
   plantIdentificationLogs PlantIdentificationLog[]
+  plantLocationMoves PlantLocationMove[]
   careSheets          CareSheet[]
   completedCareSheetTasks CareSheetTask[] @relation("CareSheetTaskCompletedBy")
 
@@ -113,6 +114,9 @@ model Collection {
   plantDefinitionDisputes PlantDefinitionDispute[]
   plantAliases        PlantAlias[]
   plantInstances      PlantInstance[]
+  locationTypes       LocationType[]
+  locations           Location[]
+  plantLocationMoves  PlantLocationMove[]
   propagationEvents   PropagationEvent[]
   notes               Note[]
   photos              Photo[]
@@ -932,6 +936,8 @@ model PlantInstance {
   instanceType      String
   status            String    @default("ACTIVE")
   location          String?
+  legacyLocationText String?
+  currentLocationId String?
   acquisitionDate   DateTime?
   propagationDate   DateTime?
   propagationEstablishedAt DateTime?
@@ -954,6 +960,8 @@ model PlantInstance {
 
   collection      Collection?              @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   plantDefinition PlantDefinition        @relation(fields: [plantDefinitionId], references: [id], onDelete: Cascade)
+  currentLocation Location?              @relation("CurrentPlantLocation", fields: [currentLocationId], references: [id], onDelete: SetNull)
+  locationMoves   PlantLocationMove[]
   parentLinks     ParentageLink[]
   childLinks      PropagationChild[]
   blooms          BloomEvent[]
@@ -970,11 +978,86 @@ model PlantInstance {
   @@index([collectionId])
   @@unique([collectionId, plantId])
   @@index([plantDefinitionId])
+  @@index([currentLocationId])
   @@index([status])
   @@index([instanceType])
   @@index([sportStatus])
   @@index([originCollectionSlug, originPlantId])
   @@index([transferredFromCollectionSlug, transferredFromPlantId])
+}
+
+model LocationType {
+  id           String   @id @default(cuid())
+  collectionId String
+  name         String
+  abbreviation String
+  description  String?
+  sortOrder    Int      @default(0)
+  status       String   @default("ACTIVE")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  locations  Location[]
+
+  @@unique([collectionId, name])
+  @@index([collectionId])
+  @@index([status])
+  @@index([sortOrder])
+}
+
+model Location {
+  id                 String   @id @default(cuid())
+  collectionId       String
+  parentLocationId   String?
+  locationTypeId     String
+  name               String
+  code               String
+  description        String?
+  sortOrder          Int      @default(0)
+  status             String   @default("ACTIVE")
+  legacyLocationText String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  collection     Collection      @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  parentLocation Location?       @relation("LocationHierarchy", fields: [parentLocationId], references: [id], onDelete: SetNull)
+  childLocations Location[]      @relation("LocationHierarchy")
+  locationType   LocationType    @relation(fields: [locationTypeId], references: [id], onDelete: Restrict)
+  plantInstances PlantInstance[] @relation("CurrentPlantLocation")
+  movesFrom      PlantLocationMove[] @relation("PlantLocationMoveFrom")
+  movesTo        PlantLocationMove[] @relation("PlantLocationMoveTo")
+
+  @@unique([collectionId, code])
+  @@index([collectionId])
+  @@index([parentLocationId])
+  @@index([locationTypeId])
+  @@index([status])
+  @@index([sortOrder])
+}
+
+model PlantLocationMove {
+  id              String   @id @default(cuid())
+  collectionId    String
+  plantInstanceId String
+  fromLocationId  String?
+  toLocationId    String?
+  movedByUserId   String?
+  movedAt         DateTime @default(now())
+  notes           String?
+
+  collection    Collection    @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  plantInstance PlantInstance @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
+  fromLocation  Location?     @relation("PlantLocationMoveFrom", fields: [fromLocationId], references: [id], onDelete: SetNull)
+  toLocation    Location?     @relation("PlantLocationMoveTo", fields: [toLocationId], references: [id], onDelete: SetNull)
+  movedByUser   User?         @relation(fields: [movedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([collectionId])
+  @@index([plantInstanceId])
+  @@index([fromLocationId])
+  @@index([toLocationId])
+  @@index([movedByUserId])
+  @@index([movedAt])
 }
 
 model PlantHusbandryOverride {

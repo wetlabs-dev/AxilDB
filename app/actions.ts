@@ -36,6 +36,7 @@ import { husbandryFieldNames, husbandryFormValues } from '@/lib/husbandry'
 import { definitionData, findMatchingValidatedDefinition, globalGoverningBodyId, husbandryData } from '@/lib/validated-definitions'
 import { recordValidatedDefinitionChange, snapshotValidatedDefinition, validatedDefinitionInclude } from '@/lib/collection-updates'
 import { collectionRoleAtLeast, isServerAdminRole } from '@/lib/roles'
+import { assertLocationParentAllowed, nextLocationCode } from '@/lib/locations'
 
 const val = (fd: FormData, k: string) =>
   String(fd.get(k) || '').trim() || undefined
@@ -450,6 +451,145 @@ export async function deleteGoverningBody(fd: FormData) {
   await prisma.governingBody.delete({ where: { id } })
   await audit(user, 'DELETE', 'GOVERNING_BODY', id, `Deleted governing body ${body?.name || id}`, undefined, collection.id)
   redirect(collectionPath(collection.slug, '/settings'))
+}
+
+export async function createLocationType(fd: FormData) {
+  const { user, collection } = await requireCollectionManager(await collectionSlug(fd))
+  const type = await prisma.locationType.create({
+    data: {
+      collectionId: collection.id,
+      name: val(fd, 'name')!,
+      abbreviation: val(fd, 'abbreviation')!,
+      description: clearableVal(fd, 'description'),
+      sortOrder: boundedInt(val(fd, 'sortOrder'), 0, 0, 9999),
+    },
+  })
+  await audit(user, 'CREATE', 'LOCATION_TYPE', type.id, `Created location type ${type.name}`, undefined, collection.id)
+  redirect(collectionPath(collection.slug, '/locations'))
+}
+
+export async function updateLocationType(fd: FormData) {
+  const { user, collection } = await requireCollectionManager(await collectionSlug(fd))
+  const id = val(fd, 'id')!
+  const type = await prisma.locationType.findFirstOrThrow({ where: { id, collectionId: collection.id } })
+  const updated = await prisma.locationType.update({
+    where: { id },
+    data: {
+      name: val(fd, 'name')!,
+      abbreviation: val(fd, 'abbreviation')!,
+      description: clearableVal(fd, 'description'),
+      sortOrder: boundedInt(val(fd, 'sortOrder'), type.sortOrder, 0, 9999),
+      status: val(fd, 'status') || 'ACTIVE',
+    },
+  })
+  await audit(user, 'UPDATE', 'LOCATION_TYPE', id, `Updated location type ${updated.name}`, undefined, collection.id)
+  redirect(back(fd) || collectionPath(collection.slug, '/locations'))
+}
+
+export async function createLocation(fd: FormData) {
+  const { user, collection } = await requireCollectionManager(await collectionSlug(fd))
+  const locationTypeId = val(fd, 'locationTypeId')!
+  const parentLocationId = clearableVal(fd, 'parentLocationId')
+  const [type, parent] = await Promise.all([
+    prisma.locationType.findFirstOrThrow({ where: { id: locationTypeId, collectionId: collection.id, status: 'ACTIVE' } }),
+    parentLocationId ? prisma.location.findFirstOrThrow({ where: { id: parentLocationId, collectionId: collection.id, status: 'ACTIVE' } }) : null,
+  ])
+  const location = await prisma.location.create({
+    data: {
+      collectionId: collection.id,
+      locationTypeId: type.id,
+      parentLocationId: parent?.id || null,
+      name: val(fd, 'name')!,
+      code: await nextLocationCode(prisma, collection.id, type.abbreviation),
+      description: clearableVal(fd, 'description'),
+      sortOrder: boundedInt(val(fd, 'sortOrder'), 0, 0, 9999),
+    },
+  })
+  await audit(user, 'CREATE', 'LOCATION', location.id, `Created location ${location.code} ${location.name}`, undefined, collection.id)
+  redirect(collectionPath(collection.slug, `/locations/${location.id}`))
+}
+
+export async function updateLocation(fd: FormData) {
+  const { user, collection } = await requireCollectionManager(await collectionSlug(fd))
+  const id = val(fd, 'id')!
+  const parentLocationId = clearableVal(fd, 'parentLocationId')
+  const location = await prisma.location.findFirstOrThrow({ where: { id, collectionId: collection.id } })
+  const locationTypeId = val(fd, 'locationTypeId')!
+  const status = val(fd, 'status') || 'ACTIVE'
+  await Promise.all([
+    prisma.locationType.findFirstOrThrow({ where: { id: locationTypeId, collectionId: collection.id } }),
+    parentLocationId ? prisma.location.findFirstOrThrow({ where: { id: parentLocationId, collectionId: collection.id, status: 'ACTIVE' } }) : null,
+  ])
+  await assertLocationParentAllowed(prisma, collection.id, id, parentLocationId)
+  if (status === 'ARCHIVED') {
+    const [plantCount, childCount] = await Promise.all([
+      prisma.plantInstance.count({ where: { collectionId: collection.id, currentLocationId: id, status: 'ACTIVE' } }),
+      prisma.location.count({ where: { collectionId: collection.id, parentLocationId: id, status: 'ACTIVE' } }),
+    ])
+    if (plantCount > 0 || childCount > 0) throw new Error('Move plants and child locations before archiving this location.')
+  }
+  const updated = await prisma.location.update({
+    where: { id },
+    data: {
+      locationTypeId,
+      parentLocationId,
+      name: val(fd, 'name')!,
+      description: clearableVal(fd, 'description'),
+      sortOrder: boundedInt(val(fd, 'sortOrder'), location.sortOrder, 0, 9999),
+      status,
+    },
+  })
+  await audit(user, 'UPDATE', 'LOCATION', id, `Updated location ${updated.code} ${updated.name}`, undefined, collection.id)
+  redirect(back(fd) || collectionPath(collection.slug, `/locations/${id}`))
+}
+
+export async function archiveLocation(fd: FormData) {
+  const { user, collection } = await requireCollectionManager(await collectionSlug(fd))
+  const id = val(fd, 'id')!
+  const [location, plantCount, childCount] = await Promise.all([
+    prisma.location.findFirstOrThrow({ where: { id, collectionId: collection.id } }),
+    prisma.plantInstance.count({ where: { collectionId: collection.id, currentLocationId: id, status: 'ACTIVE' } }),
+    prisma.location.count({ where: { collectionId: collection.id, parentLocationId: id, status: 'ACTIVE' } }),
+  ])
+  if (plantCount > 0 || childCount > 0) throw new Error('Move plants and child locations before archiving this location.')
+  await prisma.location.update({ where: { id }, data: { status: 'ARCHIVED' } })
+  await audit(user, 'ARCHIVE', 'LOCATION', id, `Archived location ${location.code} ${location.name}`, undefined, collection.id)
+  redirect(collectionPath(collection.slug, '/locations'))
+}
+
+export async function movePlantInstanceLocation(fd: FormData) {
+  const { user, collection } = await requireCollectionGardener(await collectionSlug(fd))
+  const plantInstanceId = val(fd, 'plantInstanceId')!
+  const toLocationId = clearableVal(fd, 'toLocationId')
+  const notes = clearableVal(fd, 'notes')
+  const [instance, target] = await Promise.all([
+    prisma.plantInstance.findFirstOrThrow({ where: { id: plantInstanceId, collectionId: collection.id } }),
+    toLocationId ? prisma.location.findFirstOrThrow({ where: { id: toLocationId, collectionId: collection.id, status: 'ACTIVE' } }) : null,
+  ])
+  const fromLocationId = instance.currentLocationId
+  if (fromLocationId === (target?.id || null)) redirect(back(fd))
+  await prisma.$transaction([
+    prisma.plantInstance.update({
+      where: { id: plantInstanceId },
+      data: {
+        currentLocationId: target?.id || null,
+        location: target?.name || null,
+        legacyLocationText: instance.legacyLocationText || instance.location,
+      },
+    }),
+    prisma.plantLocationMove.create({
+      data: {
+        collectionId: collection.id,
+        plantInstanceId,
+        fromLocationId,
+        toLocationId: target?.id || null,
+        movedByUserId: user.id,
+        notes,
+      },
+    }),
+  ])
+  await audit(user, 'MOVE', 'PLANT_INSTANCE_LOCATION', plantInstanceId, `Moved ${instance.plantId} to ${target?.code || 'no location'}`, { fromLocationId, toLocationId: target?.id || null, notes }, collection.id)
+  redirect(back(fd) || collectionPath(collection.slug, `/instances/${plantInstanceId}`))
 }
 
 export async function createPlantDefinition(fd: FormData) {
@@ -1176,6 +1316,10 @@ export async function createPlantInstance(fd: FormData) {
   const instanceType = val(fd, 'instanceType')!
   const acquisitionDate = date(val(fd, 'acquisitionDate'))
   const propagationDate = date(val(fd, 'propagationDate'))
+  const currentLocationId = clearableVal(fd, 'currentLocationId')
+  const currentLocation = currentLocationId
+    ? await prisma.location.findFirstOrThrow({ where: { id: currentLocationId, collectionId: collection.id, status: 'ACTIVE' } })
+    : null
   const plantId = await generatePlantId(prisma, {
     collectionId: collection.id,
     plantDefinitionId,
@@ -1189,7 +1333,9 @@ export async function createPlantInstance(fd: FormData) {
       plantDefinitionId,
       plantId,
       instanceType,
-      location: val(fd, 'location'),
+      location: currentLocation?.name || val(fd, 'location'),
+      legacyLocationText: val(fd, 'location'),
+      currentLocationId: currentLocation?.id || null,
       acquisitionDate,
       propagationDate,
       source: val(fd, 'source'),
@@ -1224,7 +1370,7 @@ export async function createPlantInstance(fd: FormData) {
 export async function updatePlantInstance(fd: FormData) {
   const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const id = val(fd, 'id')!
-  await prisma.plantInstance.findFirstOrThrow({ where: { id, collectionId: collection.id }, select: { id: true } })
+  const before = await prisma.plantInstance.findFirstOrThrow({ where: { id, collectionId: collection.id }, select: { id: true, currentLocationId: true } })
   const plantDefinitionId = val(fd, 'plantDefinitionId')!
   await prisma.plantDefinition.findFirstOrThrow({
     where: {
@@ -1234,13 +1380,19 @@ export async function updatePlantInstance(fd: FormData) {
     select: { id: true },
   })
 
+  const currentLocationId = clearableVal(fd, 'currentLocationId')
+  const currentLocation = currentLocationId
+    ? await prisma.location.findFirstOrThrow({ where: { id: currentLocationId, collectionId: collection.id, status: 'ACTIVE' } })
+    : null
   const instance = await prisma.plantInstance.update({
     where: { id },
     data: {
       plantDefinitionId,
       instanceType: val(fd, 'instanceType')!,
       status: val(fd, 'status') || 'ACTIVE',
-      location: clearableVal(fd, 'location'),
+      location: currentLocation?.name || clearableVal(fd, 'location'),
+      legacyLocationText: clearableVal(fd, 'location'),
+      currentLocationId: currentLocation?.id || null,
       acquisitionDate: clearableDate(fd, 'acquisitionDate'),
       propagationDate: clearableDate(fd, 'propagationDate'),
       source: clearableVal(fd, 'source'),
@@ -1251,6 +1403,18 @@ export async function updatePlantInstance(fd: FormData) {
       archiveNotes: clearableVal(fd, 'archiveNotes'),
     },
   })
+  if (before.currentLocationId !== (currentLocation?.id || null)) {
+    await prisma.plantLocationMove.create({
+      data: {
+        collectionId: collection.id,
+        plantInstanceId: id,
+        fromLocationId: before.currentLocationId,
+        toLocationId: currentLocation?.id || null,
+        movedByUserId: user.id,
+        notes: 'Updated from plant edit form.',
+      },
+    })
+  }
   await audit(user, 'UPDATE', 'PLANT_INSTANCE', id, `Updated plant instance ${instance.plantId}`, undefined, collection.id)
 
   redirect(collectionPath(collection.slug, `/instances/${id}`))
