@@ -144,6 +144,14 @@ async function maybeLogin(page: Page) {
   console.log(`Documentation account signed in; current page is ${page.url()}`)
 }
 
+async function openManualScreenshotPage(page: Page, url: string) {
+  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45_000 })
+  await page.waitForLoadState('load', { timeout: 15_000 }).catch(() => null)
+  await page.locator('main, body').first().waitFor({ state: 'visible', timeout: 15_000 })
+  await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => null)
+  await page.waitForTimeout(500)
+}
+
 async function main() {
   await mkdir(outputDir, { recursive: true })
 
@@ -164,7 +172,7 @@ async function main() {
   for (const target of manualScreenshotTargets) {
     const url = manualUrl(target.route)
     console.log(`Capturing ${target.title}: ${url}`)
-    await page.goto(url, { waitUntil: 'networkidle', timeout: 45_000 })
+    await openManualScreenshotPage(page, url)
     await completeTwoFactorIfNeeded(page)
     if (page.url().includes('/login')) {
       throw new Error(`Documentation capture was redirected to login while opening ${target.title}. Check the docs account membership and role for ${collectionSlug}.`)
