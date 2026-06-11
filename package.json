@@ -25,6 +25,7 @@
     "check:collection-defaults": "node scripts/check-collection-defaults.mjs",
     "check:collection-scope": "node scripts/check-collection-scope.mjs",
     "check:collection-integrity": "prisma generate && tsx scripts/check-collection-integrity.ts",
+    "check:mobile-overflow": "node scripts/check-mobile-overflow.mjs",
     "check:production": "sh scripts/check-production.sh",
     "check:timezone": "tsx scripts/check-timezone.ts"
   },

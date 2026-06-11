@@ -17,6 +17,8 @@ export const metadata = {
 }
 
 export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
   themeColor: '#3f6212',
 }
 
@@ -51,7 +53,7 @@ export default async function RootLayout({children}:{children:React.ReactNode}) 
         {isMarketingHost || isMarketingRoute ? (
           children
         ) : (
-          <div className="min-h-screen md:flex">
+          <div className="min-h-screen min-w-0 md:flex">
             <ScrollPreserver />
             <Sidebar />
             <main className="min-w-0 flex-1 px-4 py-5 sm:px-6 lg:px-8 lg:py-8">{children}</main>
