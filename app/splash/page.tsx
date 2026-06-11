@@ -20,18 +20,18 @@ const donateUrl = process.env.NEXT_PUBLIC_DONATE_URL || 'https://ko-fi.com/wetla
 
 const features = [
   ['Multi-collection workspaces', 'Keep accession records separated by collection, with public or private visibility and collection-scoped membership.', Users],
-  ['Accession and taxonomy records', 'Trace living specimens, generated plant IDs, accepted names, author citations, aliases, source details, and confidence levels without losing the story.', BadgeCheck],
+  ['Accession and taxonomy records', 'Trace living specimens, generated plant IDs, accepted names, author citations, aliases, source details, sitewide validated definitions, and confidence levels without losing the story.', BadgeCheck],
   ['Structured husbandry guides', 'Keep water, light, toxicity, soil, pest, propagation, bloom, and conservation guidance close to each definition and specimen.', Sprout],
-  ['AI-assisted records', 'Draft concise descriptions, taxonomy metadata, aliases, reference links, and structured husbandry guides with review-first AI tools.', Sparkles],
+  ['AI-assisted records', 'Draft concise descriptions, taxonomy metadata, aliases, reference links, structured husbandry guides, and ID suggestions with review-first AI tools.', Sparkles],
   ['Care sheets and sitter plans', 'Generate printable care sheets, weekly greenhouse checklists, and limited plant-sitter links from husbandry and care queue data.', ClipboardCheck],
   ['Transfers and shared definitions', 'Connect collections, share plant definitions, and queue specimen transfers while keeping private data behind review gates.', GitBranch],
-  ['Secure roles and server tools', 'Use viewer, logger, gardener, manager, and server-admin boundaries with 2FA, backups, audit history, and health checks.', ShieldCheck],
-  ['Useful odds and ends', 'Search, follows, reminder emails, activity timelines, gallery browsing, AI access controls, documentation, and QR labels all stay close at hand.', Search],
+  ['Secure roles and server tools', 'Use viewer, logger, gardener, manager, and server-admin boundaries with 2FA, backups, audit history, image moderation, and health checks.', ShieldCheck],
+  ['Useful odds and ends', 'Search, follows, reminder emails, push alerts, activity timelines, gallery browsing, AI access controls, documentation, and QR labels all stay close at hand.', Search],
 ] as const
 
 const workflow = [
   ['Create a collection', 'Start with a private workspace, invite members when ready, or make a public collection browseable without exposing other data.'],
-  ['Define the plant', 'Capture the accepted identity, aliases, reference links, registration context, and confidence level, with optional AI assistance.'],
+  ['Define the plant', 'Capture the accepted identity, aliases, reference links, registration context, confidence level, and reusable validated-definition links, with optional AI assistance.'],
   ['Grow the accession', 'Track specimens, locations, acquisition history, generated plant IDs, photos, husbandry, and propagation batches.'],
   ['Care and observe', 'Use the Care Queue, notes, blooms, conditions, reminders, Green Thumb notes, and weekly checklists to keep attention where it matters.'],
   ['Resolve and share', 'Confirm sport traits, promote stable lines, share definitions, transfer specimens, generate care sheets, or create a sitter plan.'],
@@ -135,7 +135,7 @@ export default function SplashPage() {
               <div className="flex flex-col justify-center p-5">
                 <Camera className="mb-4 h-6 w-6 text-[#2f6b45]" />
                 <h3 className="font-serif text-xl">Photo-backed records</h3>
-                <p className="mt-2 text-sm leading-6 text-stone-700">Choose specimen cover photos, type images for definitions, and browse the collection gallery in a full-screen viewer.</p>
+                <p className="mt-2 text-sm leading-6 text-stone-700">Choose specimen cover photos, type images for definitions, browse the collection gallery, and let background moderation separate unsafe, no-plant, and uncertain uploads for review.</p>
               </div>
             </div>
           </article>

@@ -31,7 +31,7 @@ AXILDB_DOCS_BASE_URL=https://app.axildb.com AXILDB_DOCS_COLLECTION_SLUG=axildb n
 
 ## Getting Started
 
-AxilDB organizes botanical accession records into collections. Each collection keeps its own plant definitions, plant specimens, photos, propagation history, bloom records, husbandry, care queue, follows, reminders, transfers, and administrative history.
+AxilDB organizes botanical accession records into collections. Each collection keeps its own plant definitions, plant specimens, photos, propagation history, bloom records, husbandry, care queue, follows, reminders, transfers, and administrative history, while site-level validated definitions provide reviewed reference records that collections can reuse.
 
 App route: `/`
 
@@ -65,6 +65,7 @@ App route: `/account`
 - Open Account Security to set up authenticator-app verification codes and recovery codes.
 - Use Forgot password or Magic login from the login page when needed.
 - Review My Sunshine for plant instances you have appreciated. Optional plant-sunshine email and push notifications default off and never reveal who gave sunshine.
+- Review image upload prompts when AxilDB asks you to keep, remove, or continue with a no-plant or uncertain-plant image.
 
 ### Warnings
 
@@ -157,7 +158,7 @@ App route: `/instances`
 
 ## Photos and Gallery
 
-Photos provide visual evidence for specimens, blooms, and plant definitions. The gallery provides a collection-wide browser with full-screen viewing.
+Photos provide visual evidence for specimens, blooms, and plant definitions. The gallery provides a collection-wide browser with full-screen viewing, while background moderation keeps unsafe uploads away from public and normal member views.
 
 App route: `/gallery`
 
@@ -181,6 +182,7 @@ App route: `/gallery`
 - When image moderation is enabled, uploads complete immediately and a background worker checks them in two layers: OpenAI Moderation for unsafe content first, then a plant-content vision check only if the safety layer passes.
 - If you leave a photo caption blank, the plant-content vision check may add a short AI caption from the same analysis response. Captions you enter yourself are preserved exactly.
 - Unsafe images are censored from normal users and public visitors until a server admin reviews them. Images with no detected plant content create an Account review item; uncertain plant-content images ask the uploader, “We’re not sure this image contains a plant. Continue anyway?”
+- Server admins review censored images from Server Management. Uploader-facing review items remain collection-scoped and do not expose unrelated users or collections.
 
 ### Warnings
 
@@ -434,7 +436,7 @@ App route: `/admin-tools`
 
 ## Server Management
 
-Server Management is restricted to server admins and covers sitewide users, collection creation and archival, AI availability, AI access requests, collection requests, backups, health metrics, and usage statistics.
+Server Management is restricted to server admins and covers sitewide users, collection creation and archival, validated definition review, image moderation, AI availability, AI access requests, collection requests, backups, health metrics, and usage statistics.
 
 App route: `/server`
 
@@ -446,17 +448,22 @@ App route: `/server`
 - Review server health, collection usage, AI usage, pending collection and AI access requests, backup status, and storage estimates.
 - Use Site Users to manage global roles and collection memberships.
 - Use Server Collections to create, archive, restore, or permanently delete collections.
+- Use Validated Definitions to review nominations and disputes, edit approved site-level reference definitions, and preserve reusable taxonomy outside any one collection.
+- Use Image Moderation to review censored uploads, override false alarms, remove images, or remove an image and block the uploader.
 - Use backup controls to initiate sitewide backups.
 - Use Orphaned Image Cleanup to scan uploaded image storage for files no longer referenced by database records, review the dry-run list, select files, and delete only after confirmation.
 
 ### Notes
 
 - Collection managers do not see the full site user list.
+- Validated definitions are site-level records; they can be linked by collection specimens without making them collection-owned.
+- Image moderation is two-layered when enabled: unsafe-content moderation runs before plant-content vision analysis.
 - AI availability can be toggled per collection by server admins, and collection managers can request AI access.
 - Orphaned Image Cleanup only scans the upload image directory and re-checks database references immediately before deleting selected files.
 
 ### Warnings
 
 - Permanent collection deletion cascades collection-owned records. Archive first and verify backups before deleting.
+- Do not treat image moderation as a substitute for human review when a censored upload is disputed or unclear.
 - Back up before bulk orphaned-image deletion. Cleanup does not delete database records and does not touch labels, manuals, backups, or generated PDFs.
 

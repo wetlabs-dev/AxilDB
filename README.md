@@ -34,6 +34,7 @@ It is designed for real collection work: messy taxonomy, acquisition names, alia
 - Specimen cover photos for plant cards.
 - Type photos for plant definitions, including direct upload of reference-sourced images with source/source URL metadata.
 - Photo upload resizing through Sharp to keep files space-conscious.
+- Two-layer image moderation for uploaded images: OpenAI Moderation screens unsafe content first, then a separate plant-content vision check handles no-plant and uncertain-plant review states.
 - Dashboard activity timeline combining propagations, blooms, sport notes, acquisitions, and archive actions.
 - Lineage graph with searchable sidebar, ancestor/descendant tree view, selected-plant highlighting, and propagation-method line styles.
 - Sport review workflow for suspected, candidate, stable, registered, unstable, and reverted sport lines.
@@ -45,6 +46,8 @@ It is designed for real collection work: messy taxonomy, acquisition names, alia
 - Collection roles for managers, gardeners, loggers, and viewers, with member approval, invitations, and role-management tools.
 - Registered users can request new collections; server admins approve requests, create the collection, and promote the requester to collection manager.
 - Server-admin management area for collection lifecycle, global users, server health checks, storage estimates, and sitewide backup initiation.
+- Server-admin image moderation queue for censored uploads, no-plant/uncertain review oversight, false-alarm overrides, removal, and uploader blocking.
+- Server-admin orphaned image cleanup that scans uploaded image storage, shows dry-run results, re-checks references before deletion, and logs cleanup actions.
 - QR-code two-factor authentication with one-time recovery codes, compatible with Apple Passwords and standard authenticator apps.
 - SMTP-ready email foundation with welcome/verification emails, secure single-use tokens, branded HTML/plain-text templates, and user email preferences.
 - User reminders for general tasks, plant check-ins, bloom follow-ups, and propagation follow-ups, with one-time or recurring schedules.
@@ -185,6 +188,7 @@ npm run backup:worker -- --once
 npm run check:collection-defaults
 npm run check:collection-scope
 npm run check:collection-integrity
+npm run check:mobile-overflow
 npm run check:production
 ```
 
@@ -193,6 +197,8 @@ npm run check:production
 `check:collection-scope` is a static guardrail for the multi-collection model. It flags collection-owned Prisma reads that are missing an explicit collection boundary, including ID-based lookups that could otherwise accidentally cross collection lines.
 
 `check:collection-integrity` is a database guardrail. Run it on the server after schema changes or data repairs to confirm collection-owned records have `collectionId` values, exactly one default collection exists, every active collection has an active manager, the initial server admin exists, legacy roles are migrated, and linked records, photos, notes, follows, reminders, audit logs, and propagation graph edges do not cross collection boundaries.
+
+`check:mobile-overflow` is a Playwright guardrail for mobile layout containment. Run it against a live app with `AXILDB_OVERFLOW_BASE_URL`, optional comma-separated `AXILDB_OVERFLOW_PATHS`, and optional `AXILDB_OVERFLOW_WIDTHS` to confirm `document.documentElement.scrollWidth` does not exceed the mobile viewport and to print offending elements when it does.
 
 `check:production` runs the repeatable pre-deploy safety pass: TypeScript, collection static scans, the database integrity scan when `DATABASE_URL` is available, and a production build.
 
@@ -678,8 +684,8 @@ If the Ko-fi handle changes, update `NEXT_PUBLIC_DONATE_URL` in `.env` or `docke
 
 ## Future Hardening Ideas
 
-- Add browser/API privacy tests for collection boundaries and public/private behavior.
-- Add sitewide verified/reference plant definitions that collections can link to or fork.
-- Move uploads to durable object storage.
-- Add automated tests for auth, permissions, plant ID generation, uploads, destructive actions, sport logic, and lineage graph construction.
-- Add CSV import tools.
+- Expand browser and API regression coverage for collection boundaries, public/private visibility, role permissions, and cross-collection validated-definition behavior.
+- Add automated scenario tests for auth, two-factor flows, plant ID generation, uploads, image moderation decisions, destructive actions, sport logic, lineage graph construction, and transfer review.
+- Move uploaded images from local disk to durable object storage with lifecycle policies, signed URLs, and backup/restore coverage.
+- Add CSV import tools with dry-run validation, duplicate detection, and collection-scoped rollback notes.
+- Add richer observability for background workers, including moderation, backups, reminders, digests, health alerts, and failed push/email delivery.
