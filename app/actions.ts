@@ -548,6 +548,31 @@ export async function updateLocation(fd: FormData) {
   redirect(back(fd) || collectionPath(collection.slug, `/locations/${id}`))
 }
 
+export async function regenerateLocationCode(fd: FormData) {
+  const { user, collection } = await requireCollectionManager(await collectionSlug(fd))
+  const id = val(fd, 'id')!
+  const proposedCode = val(fd, 'proposedCode')!
+  const location = await prisma.location.findFirstOrThrow({
+    where: { id, collectionId: collection.id },
+    include: { locationType: true },
+  })
+  const expectedPrefix = `LOC-${location.locationType.abbreviation.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) || 'LOC'}-`
+  if (location.code.startsWith(expectedPrefix)) redirect(collectionPath(collection.slug, `/locations/${id}`))
+  const nextCode = await nextLocationCode(prisma, collection.id, location.locationType.abbreviation)
+  if (nextCode !== proposedCode) throw new Error('The proposed location code is no longer current. Refresh and try again.')
+  await prisma.location.update({ where: { id }, data: { code: nextCode } })
+  await audit(
+    user,
+    'UPDATE',
+    'LOCATION',
+    id,
+    `Regenerated location code from ${location.code} to ${nextCode}`,
+    { previousCode: location.code, code: nextCode },
+    collection.id,
+  )
+  redirect(collectionPath(collection.slug, `/locations/${id}`))
+}
+
 export async function archiveLocation(fd: FormData) {
   const { user, collection } = await requireCollectionManager(await collectionSlug(fd))
   const id = val(fd, 'id')!

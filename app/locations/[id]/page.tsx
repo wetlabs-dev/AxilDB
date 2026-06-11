@@ -1,8 +1,9 @@
 import Link from 'next/link'
-import { archiveLocation, movePlantInstanceLocation, updateLocation } from '@/app/actions'
+import { archiveLocation, movePlantInstanceLocation, regenerateLocationCode, updateLocation } from '@/app/actions'
+import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { Button, Card, Field, LinkButton, TextArea } from '@/components/ui'
 import { canEditInCollection, canManageCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
-import { descendantLocationIds, isQuarantineLocation, locationPath, locationPathWithCodes } from '@/lib/locations'
+import { descendantLocationIds, isQuarantineLocation, locationPath, locationPathWithCodes, nextLocationCode } from '@/lib/locations'
 import { prisma } from '@/lib/prisma'
 import { plantName } from '@/lib/utils'
 
@@ -69,12 +70,36 @@ export default async function LocationDetail({ params }: { params: Promise<{ id:
   const parentOptions = locationNodes.filter((item) => item.id !== location.id && !descendantIds.has(item.id))
   const isQuarantine = isQuarantineLocation(location)
   const overdueQuarantines = activeQuarantines.filter((quarantine) => quarantine.targetReleaseDate < new Date())
+  const expectedCodePrefix = `LOC-${location.locationType.abbreviation.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) || 'LOC'}-`
+  const canRegenerateLocationCode = canManage && !location.code.startsWith(expectedCodePrefix)
+  const proposedLocationCode = canRegenerateLocationCode
+    ? await nextLocationCode(prisma, collection.id, location.locationType.abbreviation)
+    : location.code
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-3xl font-bold">{location.name}</h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-3xl font-bold">{location.name}</h2>
+            {canRegenerateLocationCode && (
+              <form action={regenerateLocationCode}>
+                <input type="hidden" name="collectionSlug" value={collection.slug} />
+                <input type="hidden" name="id" value={location.id} />
+                <input type="hidden" name="proposedCode" value={proposedLocationCode} />
+                <ConfirmDeleteButton
+                  title="Regenerate location code?"
+                  message={`Change this location code from ${location.code} to ${proposedLocationCode}? Existing QR links point to this same location record, but printed labels using the old code should be replaced.`}
+                  confirmLabel="Regenerate code"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#c7d8bd] bg-[#f5fbf0] p-0 text-[#2f6b45] shadow-sm hover:bg-[#e6f0db]"
+                  confirmClassName="bg-[#2f6b45] hover:bg-[#245737]"
+                >
+                  R
+                  <span className="sr-only">Regenerate location code</span>
+                </ConfirmDeleteButton>
+              </form>
+            )}
+          </div>
           <p className="mt-1 text-sm text-stone-600">{location.code} · {location.locationType.name}</p>
           <p className="mt-1 text-sm text-stone-600">Path: {locationPathWithCodes(location.id, locationNodes)}</p>
           <p className="mt-1 text-sm text-stone-600">

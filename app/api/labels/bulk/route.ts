@@ -30,7 +30,7 @@ const SHEET_GUTTER_X = 18
 const SHEET_GUTTER_Y = 0
 
 type LabelItem = Awaited<ReturnType<typeof getLabelItems>>[number]
-type LabelTarget = 'plants' | 'locations'
+type LabelTarget = 'plants' | 'locations' | 'both'
 
 function oneLineFontSize(doc: PDFKit.PDFDocument, text: string, font: string, max: number, min: number, width: number) {
   for (let size = max; size >= min; size -= 0.5) {
@@ -51,10 +51,20 @@ function multiLineFontSize(doc: PDFKit.PDFDocument, lines: string[], font: strin
 }
 
 async function getLabelItems(collectionId: string, all: boolean, ids: string[], target: LabelTarget) {
-  if (target === 'locations') {
+  const parsedPlantIds = ids
+    .filter((id) => id.startsWith('plant:'))
+    .map((id) => id.slice('plant:'.length))
+  const parsedLocationIds = ids
+    .filter((id) => id.startsWith('location:'))
+    .map((id) => id.slice('location:'.length))
+  const bareIds = ids.filter((id) => !id.includes(':'))
+  const plantIds = target === 'plants' ? [...bareIds, ...parsedPlantIds] : parsedPlantIds
+  const locationIds = target === 'locations' ? [...bareIds, ...parsedLocationIds] : parsedLocationIds
+
+  const locationItems = async () => {
     const [items, allLocations] = await Promise.all([
       prisma.location.findMany({
-        where: all ? { collectionId, status: 'ACTIVE' } : { collectionId, id: { in: ids } },
+        where: all ? { collectionId, status: 'ACTIVE' } : { collectionId, id: { in: locationIds } },
         include: { locationType: true },
         orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
       }),
@@ -75,11 +85,17 @@ async function getLabelItems(collectionId: string, all: boolean, ids: string[], 
     }))
     return items.map((item) => ({ ...item, labelPath: locationPath(item.id, locationNodes) }))
   }
-  return prisma.plantInstance.findMany({
-    where: all ? { collectionId, status: 'ACTIVE' } : { collectionId, id: { in: ids } },
+
+  const plantItems = () => prisma.plantInstance.findMany({
+    where: all ? { collectionId, status: 'ACTIVE' } : { collectionId, id: { in: plantIds } },
     include: { plantDefinition: true },
     orderBy: { plantId: 'asc' },
   })
+
+  if (target === 'locations') return locationItems()
+  if (target === 'plants') return plantItems()
+  const [plants, locations] = await Promise.all([plantItems(), locationItems()])
+  return [...plants, ...locations]
 }
 
 function isLocationItem(item: LabelItem): item is Extract<LabelItem, { code: string; name: string }> {
@@ -334,7 +350,8 @@ export async function GET(req: Request) {
   const url=new URL(req.url)
   const ids=url.searchParams.getAll('id')
   const all=url.searchParams.get('all')==='1'
-  const target: LabelTarget = url.searchParams.get('target') === 'locations' ? 'locations' : 'plants'
+  const rawTarget = url.searchParams.get('target')
+  const target: LabelTarget = rawTarget === 'locations' ? 'locations' : rawTarget === 'both' ? 'both' : 'plants'
   const slug=url.searchParams.get('collectionSlug')
   const format = parseFormat(url)
   const orientation = labelOrientationFromValue(url.searchParams.get('orientation'), format)
