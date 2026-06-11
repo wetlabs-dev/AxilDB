@@ -36,7 +36,7 @@ import { husbandryFieldNames, husbandryFormValues } from '@/lib/husbandry'
 import { definitionData, findMatchingValidatedDefinition, globalGoverningBodyId, husbandryData } from '@/lib/validated-definitions'
 import { recordValidatedDefinitionChange, snapshotValidatedDefinition, validatedDefinitionInclude } from '@/lib/collection-updates'
 import { collectionRoleAtLeast, isServerAdminRole } from '@/lib/roles'
-import { assertLocationParentAllowed, descendantLocationIds, nextLocationCode, normalizeQuarantineRiskLevel, quarantineChecklistItems } from '@/lib/locations'
+import { assertLocationParentAllowed, descendantLocationIds, isQuarantineLocation, nextLocationCode, normalizeQuarantineRiskLevel, quarantineChecklistItems } from '@/lib/locations'
 
 const val = (fd: FormData, k: string) =>
   String(fd.get(k) || '').trim() || undefined
@@ -657,6 +657,186 @@ export async function batchMovePlantLocations(fd: FormData) {
     collection.id,
   )
   redirect(back(fd) || collectionPath(collection.slug, '/locations'))
+}
+
+async function normalizeLocationSiblingSort(collectionId: string, parentLocationId: string | null) {
+  const siblings = await prisma.location.findMany({
+    where: { collectionId, parentLocationId, status: 'ACTIVE' },
+    orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+    select: { id: true },
+  })
+  await prisma.$transaction(siblings.map((sibling, index) => prisma.location.update({
+    where: { id: sibling.id },
+    data: { sortOrder: (index + 1) * 10 },
+  })))
+}
+
+export async function moveLocation(input: {
+  collectionSlug: string
+  locationId: string
+  newParentLocationId?: string | null
+  newSortOrder?: number
+  confirmContained?: boolean
+}) {
+  const { user, collection } = await requireCollectionManager(input.collectionSlug)
+  const newParentLocationId = input.newParentLocationId || null
+  const location = await prisma.location.findFirstOrThrow({ where: { id: input.locationId, collectionId: collection.id } })
+  const [parent, plantCount, childCount] = await Promise.all([
+    newParentLocationId ? prisma.location.findFirstOrThrow({ where: { id: newParentLocationId, collectionId: collection.id, status: 'ACTIVE' } }) : null,
+    prisma.plantInstance.count({ where: { collectionId: collection.id, currentLocationId: location.id, status: 'ACTIVE' } }),
+    prisma.location.count({ where: { collectionId: collection.id, parentLocationId: location.id, status: 'ACTIVE' } }),
+  ])
+  await assertLocationParentAllowed(prisma, collection.id, location.id, parent?.id || null)
+  if ((plantCount > 0 || childCount > 0) && !input.confirmContained) {
+    throw new Error('Confirm moving this location because it contains plants or child locations.')
+  }
+  await prisma.location.update({
+    where: { id: location.id },
+    data: {
+      parentLocationId: parent?.id || null,
+      sortOrder: Number.isFinite(input.newSortOrder) ? Math.max(0, Math.floor(input.newSortOrder || 0)) : location.sortOrder,
+    },
+  })
+  await Promise.all([
+    normalizeLocationSiblingSort(collection.id, location.parentLocationId),
+    normalizeLocationSiblingSort(collection.id, parent?.id || null),
+  ])
+  await audit(user, 'MOVE', 'LOCATION', location.id, `Moved location ${location.code} ${location.name}`, { fromParentLocationId: location.parentLocationId, toParentLocationId: parent?.id || null }, collection.id)
+  revalidatePath(collectionPath(collection.slug, '/locations'))
+  revalidatePath(collectionPath(collection.slug, `/locations/${location.id}`))
+  return { ok: true }
+}
+
+export async function reorderLocations(input: {
+  collectionSlug: string
+  parentLocationId?: string | null
+  orderedLocationIds: string[]
+}) {
+  const { user, collection } = await requireCollectionManager(input.collectionSlug)
+  const parentLocationId = input.parentLocationId || null
+  const orderedIds = Array.from(new Set(input.orderedLocationIds.filter(Boolean)))
+  if (!orderedIds.length) throw new Error('No locations were provided for reordering.')
+  if (parentLocationId) await prisma.location.findFirstOrThrow({ where: { id: parentLocationId, collectionId: collection.id, status: 'ACTIVE' } })
+  const siblings = await prisma.location.findMany({
+    where: { collectionId: collection.id, parentLocationId, status: 'ACTIVE' },
+    select: { id: true },
+  })
+  const siblingIds = new Set(siblings.map((sibling) => sibling.id))
+  if (orderedIds.some((id) => !siblingIds.has(id))) throw new Error('Locations must be active siblings in this collection.')
+  await prisma.$transaction(orderedIds.map((id, index) => prisma.location.update({
+    where: { id },
+    data: { sortOrder: (index + 1) * 10 },
+  })))
+  await audit(user, 'UPDATE', 'LOCATION_ORDER', parentLocationId || collection.id, `Reordered ${orderedIds.length} location${orderedIds.length === 1 ? '' : 's'}`, { parentLocationId, orderedLocationIds: orderedIds }, collection.id)
+  revalidatePath(collectionPath(collection.slug, '/locations'))
+  return { ok: true }
+}
+
+export async function movePlantToLocation(input: {
+  collectionSlug: string
+  plantInstanceId: string
+  destinationLocationId?: string | null
+  note?: string | null
+}) {
+  return batchMovePlantsToLocation({
+    collectionSlug: input.collectionSlug,
+    plantInstanceIds: [input.plantInstanceId],
+    destinationLocationId: input.destinationLocationId || null,
+    note: input.note || null,
+  })
+}
+
+export async function batchMovePlantsToLocation(input: {
+  collectionSlug: string
+  plantInstanceIds: string[]
+  destinationLocationId?: string | null
+  note?: string | null
+  startQuarantine?: boolean
+  quarantineReason?: string | null
+  quarantineRiskLevel?: string | null
+  quarantineTargetReleaseDate?: string | null
+}) {
+  const { user, collection } = await requireCollectionGardener(input.collectionSlug)
+  const plantIds = Array.from(new Set(input.plantInstanceIds.filter(Boolean)))
+  if (!plantIds.length) throw new Error('Select at least one plant to move.')
+  const target = input.destinationLocationId
+    ? await prisma.location.findFirstOrThrow({
+        where: { id: input.destinationLocationId, collectionId: collection.id, status: 'ACTIVE' },
+        include: { locationType: true },
+      })
+    : null
+  if (input.startQuarantine && !isQuarantineLocation(target)) {
+    throw new Error('Quarantine records can only be started from a quarantine-type destination.')
+  }
+  const plants = await prisma.plantInstance.findMany({
+    where: {
+      collectionId: collection.id,
+      status: 'ACTIVE',
+      id: { in: plantIds },
+      NOT: { currentLocationId: target?.id || null },
+    },
+    select: { id: true, plantId: true, currentLocationId: true, legacyLocationText: true, location: true },
+    orderBy: { plantId: 'asc' },
+  })
+  if (!plants.length) throw new Error('No eligible active plants remain for this move.')
+  const existingQuarantines = input.startQuarantine
+    ? await prisma.plantQuarantine.findMany({
+        where: { collectionId: collection.id, plantInstanceId: { in: plants.map((plant) => plant.id) }, status: 'ACTIVE' },
+        select: { plantInstanceId: true },
+      })
+    : []
+  const alreadyQuarantined = new Set(existingQuarantines.map((entry) => entry.plantInstanceId))
+  const targetReleaseDate = date(input.quarantineTargetReleaseDate || undefined) || addCalendarDays(new Date(), 14)
+  await prisma.$transaction([
+    ...plants.map((plant) => prisma.plantInstance.update({
+      where: { id: plant.id },
+      data: {
+        currentLocationId: target?.id || null,
+        location: target?.name || null,
+        legacyLocationText: plant.legacyLocationText || plant.location,
+      },
+    })),
+    ...plants.map((plant) => prisma.plantLocationMove.create({
+      data: {
+        collectionId: collection.id,
+        plantInstanceId: plant.id,
+        fromLocationId: plant.currentLocationId,
+        toLocationId: target?.id || null,
+        movedByUserId: user.id,
+        notes: input.note || null,
+      },
+    })),
+    ...(input.startQuarantine && target
+      ? plants
+          .filter((plant) => !alreadyQuarantined.has(plant.id))
+          .map((plant) => prisma.plantQuarantine.create({
+            data: {
+              collectionId: collection.id,
+              plantInstanceId: plant.id,
+              quarantineLocationId: target.id,
+              reason: input.quarantineReason || 'Quarantine after location move',
+              riskLevel: normalizeQuarantineRiskLevel(input.quarantineRiskLevel),
+              startDate: new Date(),
+              targetReleaseDate,
+              notes: input.note || null,
+              checklistJson: quarantineChecklistItems.map((label) => ({ label, done: false })) as any,
+              createdByUserId: user.id,
+            },
+          }))
+      : []),
+  ])
+  await audit(
+    user,
+    'MOVE',
+    plants.length === 1 ? 'PLANT_INSTANCE_LOCATION' : 'PLANT_INSTANCE_LOCATION_BATCH',
+    plants.length === 1 ? plants[0].id : target?.id || collection.id,
+    `Moved ${plants.length} plant${plants.length === 1 ? '' : 's'} to ${target?.code || 'no location'}`,
+    { plantInstanceIds: plants.map((plant) => plant.id), toLocationId: target?.id || null, startQuarantine: Boolean(input.startQuarantine), note: input.note || null },
+    collection.id,
+  )
+  revalidatePath(collectionPath(collection.slug, '/locations'))
+  for (const plant of plants) revalidatePath(collectionPath(collection.slug, `/instances/${plant.id}`))
+  return { ok: true, movedCount: plants.length, quarantineStartedCount: input.startQuarantine ? plants.filter((plant) => !alreadyQuarantined.has(plant.id)).length : 0 }
 }
 
 function quarantineChecklistFromForm(fd: FormData) {

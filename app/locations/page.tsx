@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { batchMovePlantLocations, createLocation, createLocationType, movePlantInstanceLocation, updateLocationType } from '@/app/actions'
 import { AddPanel, Button, Card, Field, LinkButton, TextArea } from '@/components/ui'
+import { LocationDragDropManager } from '@/components/LocationDragDropManager'
 import { canEditInCollection, canManageCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { descendantLocationIds, locationPath, locationPathWithCodes } from '@/lib/locations'
 import { prisma } from '@/lib/prisma'
@@ -61,6 +62,28 @@ export default async function LocationsPage({
   const batchPreviewPlants = batchSourceLocation && batchDestinationLocation
     ? plants.filter((plant) => plant.currentLocationId && batchSourceIds.includes(plant.currentLocationId) && plant.currentLocationId !== batchDestinationLocation.id)
     : []
+  const dragDropLocations = activeLocations.map((location) => {
+    const descendantIds = descendantLocationIds(location.id, activeLocations)
+    const nestedPlantCount = plants.filter((plant) => plant.currentLocationId && descendantIds.has(plant.currentLocationId)).length
+    return {
+      id: location.id,
+      parentLocationId: location.parentLocationId,
+      name: location.name,
+      code: location.code,
+      sortOrder: location.sortOrder,
+      status: location.status,
+      locationType: location.locationType,
+      directPlantCount: location._count.plantInstances,
+      childLocationCount: location._count.childLocations,
+      nestedPlantCount,
+    }
+  })
+  const dragDropPlants = plants.map((plant) => ({
+    id: plant.id,
+    plantId: plant.plantId,
+    name: plantName(plant.plantDefinition),
+    currentLocationId: plant.currentLocationId,
+  }))
 
   return (
     <div className="space-y-6">
@@ -116,24 +139,33 @@ export default async function LocationsPage({
       )}
 
       <Card>
-        <h3 className="font-serif text-xl font-semibold">Location tree</h3>
-        <div className="mt-4 grid gap-2">
-          {rows.length === 0 && <p className="rounded-lg border border-stone-200 bg-white/50 p-3 text-sm text-stone-600">No locations yet.</p>}
-          {rows.map((location) => (
-            <div key={location.id} className="rounded-lg border border-stone-200 bg-white/55 p-3" style={{ marginLeft: `${Math.min(location.depth, 5) * 1.25}rem` }}>
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <Link href={collectionPath(collection.slug, `/locations/${location.id}`)} className="font-serif text-lg font-semibold underline">
-                    {location.name}
+        <LocationDragDropManager
+          collectionSlug={collection.slug}
+          locations={dragDropLocations}
+          plants={dragDropPlants}
+          canManage={canManage}
+          canMovePlants={canMovePlants}
+        />
+        <div className="mt-4 border-t border-stone-200 pt-3">
+          <h3 className="font-serif text-xl font-semibold">Location links and labels</h3>
+          <div className="mt-3 grid gap-2">
+            {rows.length === 0 && <p className="rounded-lg border border-stone-200 bg-white/50 p-3 text-sm text-stone-600">No locations yet.</p>}
+            {rows.map((location) => (
+              <div key={location.id} className="rounded-lg border border-stone-200 bg-white/55 p-3" style={{ marginLeft: `${Math.min(location.depth, 5) * 1.25}rem` }}>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <Link href={collectionPath(collection.slug, `/locations/${location.id}`)} className="font-serif text-lg font-semibold underline">
+                      {location.name}
+                    </Link>
+                    <p className="text-sm text-stone-600">{location.code} · {location.locationType.name} · {location._count.plantInstances} direct plant(s) · {location._count.childLocations} child location(s)</p>
+                  </div>
+                  <Link className="rounded-md border border-stone-300 bg-white/70 px-3 py-1.5 text-xs font-semibold" href={`/api/labels/bulk?collectionSlug=${encodeURIComponent(collection.slug)}&target=locations&id=${encodeURIComponent(location.id)}`}>
+                    QR label
                   </Link>
-                  <p className="text-sm text-stone-600">{location.code} · {location.locationType.name} · {location._count.plantInstances} direct plant(s) · {location._count.childLocations} child location(s)</p>
                 </div>
-                <Link className="rounded-md border border-stone-300 bg-white/70 px-3 py-1.5 text-xs font-semibold" href={`/api/labels/bulk?collectionSlug=${encodeURIComponent(collection.slug)}&target=locations&id=${encodeURIComponent(location.id)}`}>
-                  QR label
-                </Link>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </Card>
 
