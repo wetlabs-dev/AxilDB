@@ -48,6 +48,20 @@ export function locationPath(locationId: string | null | undefined, locations: L
   return path.map((location) => location.name).join(' / ')
 }
 
+export function locationPathWithCodes(locationId: string | null | undefined, locations: LocationNode[]) {
+  if (!locationId) return ''
+  const byId = new Map(locations.map((location) => [location.id, location]))
+  const path: LocationNode[] = []
+  const seen = new Set<string>()
+  let current = byId.get(locationId)
+  while (current && !seen.has(current.id)) {
+    path.unshift(current)
+    seen.add(current.id)
+    current = current.parentLocationId ? byId.get(current.parentLocationId) : undefined
+  }
+  return path.map((location) => `${location.code} ${location.name}`).join(' / ')
+}
+
 export function locationOptions(locations: LocationNode[], excludeId?: string) {
   return locations
     .filter((location) => location.status === 'ACTIVE' && location.id !== excludeId)

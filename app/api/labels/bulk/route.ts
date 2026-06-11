@@ -8,6 +8,7 @@ import QRCode from 'qrcode'
 import { prisma } from '@/lib/prisma'
 import { collectionPath, ensureDefaultCollection } from '@/lib/collections'
 import { getCurrentUser } from '@/lib/auth'
+import { locationPath, type LocationNode } from '@/lib/locations'
 import {
   BROTHER_DK_2210_WIDTH_PT,
   LABEL_HEIGHT_PT,
@@ -51,11 +52,28 @@ function multiLineFontSize(doc: PDFKit.PDFDocument, lines: string[], font: strin
 
 async function getLabelItems(collectionId: string, all: boolean, ids: string[], target: LabelTarget) {
   if (target === 'locations') {
-    return prisma.location.findMany({
-      where: all ? { collectionId, status: 'ACTIVE' } : { collectionId, id: { in: ids } },
-      include: { locationType: true },
-      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
-    })
+    const [items, allLocations] = await Promise.all([
+      prisma.location.findMany({
+        where: all ? { collectionId, status: 'ACTIVE' } : { collectionId, id: { in: ids } },
+        include: { locationType: true },
+        orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+      }),
+      prisma.location.findMany({
+        where: { collectionId },
+        include: { locationType: true },
+        orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+      }),
+    ])
+    const locationNodes: LocationNode[] = allLocations.map((location) => ({
+      id: location.id,
+      parentLocationId: location.parentLocationId,
+      name: location.name,
+      code: location.code,
+      status: location.status,
+      sortOrder: location.sortOrder,
+      locationType: location.locationType,
+    }))
+    return items.map((item) => ({ ...item, labelPath: locationPath(item.id, locationNodes) }))
   }
   return prisma.plantInstance.findMany({
     where: all ? { collectionId, status: 'ACTIVE' } : { collectionId, id: { in: ids } },
@@ -69,9 +87,9 @@ function isLocationItem(item: LabelItem): item is Extract<LabelItem, { code: str
 }
 
 function labelNameLines(item: LabelItem) {
-  return isLocationItem(item)
-    ? [item.name, item.locationType.name]
-    : plantLabelNameLines(item.plantDefinition)
+  if (!isLocationItem(item)) return plantLabelNameLines(item.plantDefinition)
+  const labelPath = 'labelPath' in item ? String(item.labelPath || '') : ''
+  return [item.name, item.locationType.name, ...(labelPath && labelPath !== item.name ? [labelPath] : [])]
 }
 
 function labelCode(item: LabelItem) {

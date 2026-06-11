@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { archiveLocation, movePlantInstanceLocation, updateLocation } from '@/app/actions'
 import { Button, Card, Field, LinkButton, TextArea } from '@/components/ui'
 import { canEditInCollection, canManageCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
-import { descendantLocationIds, locationPath } from '@/lib/locations'
+import { descendantLocationIds, locationPath, locationPathWithCodes } from '@/lib/locations'
 import { prisma } from '@/lib/prisma'
 import { plantName } from '@/lib/utils'
 
@@ -63,7 +63,18 @@ export default async function LocationDetail({ params }: { params: Promise<{ id:
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-3xl font-bold">{location.name}</h2>
-          <p className="mt-1 text-sm text-stone-600">{location.code} · {location.locationType.name} · {locationPath(location.id, locationNodes)}</p>
+          <p className="mt-1 text-sm text-stone-600">{location.code} · {location.locationType.name}</p>
+          <p className="mt-1 text-sm text-stone-600">Path: {locationPathWithCodes(location.id, locationNodes)}</p>
+          <p className="mt-1 text-sm text-stone-600">
+            Parent:{' '}
+            {location.parentLocation ? (
+              <Link className="font-medium text-[#2f6b45] underline" href={collectionPath(collection.slug, `/locations/${location.parentLocation.id}`)}>
+                {location.parentLocation.code} · {location.parentLocation.name}
+              </Link>
+            ) : (
+              'Top level'
+            )}
+          </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <LinkButton href={collectionPath(collection.slug, '/locations')}>All Locations</LinkButton>

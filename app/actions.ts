@@ -472,6 +472,11 @@ export async function updateLocationType(fd: FormData) {
   const { user, collection } = await requireCollectionManager(await collectionSlug(fd))
   const id = val(fd, 'id')!
   const type = await prisma.locationType.findFirstOrThrow({ where: { id, collectionId: collection.id } })
+  const status = val(fd, 'status') || 'ACTIVE'
+  if (status === 'ARCHIVED') {
+    const activeLocationCount = await prisma.location.count({ where: { collectionId: collection.id, locationTypeId: id, status: 'ACTIVE' } })
+    if (activeLocationCount > 0) throw new Error('Archive or move active locations before archiving this location type.')
+  }
   const updated = await prisma.locationType.update({
     where: { id },
     data: {
@@ -479,7 +484,7 @@ export async function updateLocationType(fd: FormData) {
       abbreviation: val(fd, 'abbreviation')!,
       description: clearableVal(fd, 'description'),
       sortOrder: boundedInt(val(fd, 'sortOrder'), type.sortOrder, 0, 9999),
-      status: val(fd, 'status') || 'ACTIVE',
+      status,
     },
   })
   await audit(user, 'UPDATE', 'LOCATION_TYPE', id, `Updated location type ${updated.name}`, undefined, collection.id)
@@ -506,7 +511,7 @@ export async function createLocation(fd: FormData) {
     },
   })
   await audit(user, 'CREATE', 'LOCATION', location.id, `Created location ${location.code} ${location.name}`, undefined, collection.id)
-  redirect(collectionPath(collection.slug, `/locations/${location.id}`))
+  redirect(back(fd) || collectionPath(collection.slug, `/locations/${location.id}`))
 }
 
 export async function updateLocation(fd: FormData) {
@@ -563,7 +568,7 @@ export async function movePlantInstanceLocation(fd: FormData) {
   const toLocationId = clearableVal(fd, 'toLocationId')
   const notes = clearableVal(fd, 'notes')
   const [instance, target] = await Promise.all([
-    prisma.plantInstance.findFirstOrThrow({ where: { id: plantInstanceId, collectionId: collection.id } }),
+    prisma.plantInstance.findFirstOrThrow({ where: { id: plantInstanceId, collectionId: collection.id, status: 'ACTIVE' } }),
     toLocationId ? prisma.location.findFirstOrThrow({ where: { id: toLocationId, collectionId: collection.id, status: 'ACTIVE' } }) : null,
   ])
   const fromLocationId = instance.currentLocationId

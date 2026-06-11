@@ -1,11 +1,11 @@
-import { createPlantInstance } from '@/app/actions'
+import { createLocation, createPlantInstance } from '@/app/actions'
 import { PlantImage } from '@/components/PlantImage'
 import { SortControl } from '@/components/SortControl'
 import { SunshineButton } from '@/components/SunshineButton'
 import { AddPanel, Button, Card, Field, HelpTooltip, SuggestionDatalist, TextArea } from '@/components/ui'
 import { getCurrentUser } from '@/lib/auth'
-import { canCreateInCollection, canEditInCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
-import { locationPath } from '@/lib/locations'
+import { canCreateInCollection, canEditInCollection, canManageCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
+import { descendantLocationIds, locationPath, locationPathWithCodes } from '@/lib/locations'
 import { prisma } from '@/lib/prisma'
 import { compareText, sortPreference, timeValue, type SortOption } from '@/lib/sort-preferences'
 import { sunshineCounts, sunshineKey, sunshineStateForUser, WELL_LOVED_THRESHOLD } from '@/lib/sunshine'
@@ -27,7 +27,7 @@ const instanceSortOptions: SortOption[] = [
 export default async function Instances({
   searchParams,
 }: {
-  searchParams: Promise<{ definition?: string }>
+  searchParams: Promise<{ definition?: string; location?: string; includeNested?: string }>
 }) {
   const user = await getCurrentUser()
   const sp = await searchParams
@@ -35,13 +35,10 @@ export default async function Instances({
   const { collection } = context
   const collectionWhere = { collectionId: collection.id }
   const definitionFilter = sp.definition || ''
+  const locationFilter = sp.location || ''
+  const includeNestedLocations = sp.includeNested !== '0'
   const sortKey = await sortPreference(user?.id, 'instances', 'plantIdAsc', instanceSortOptions.map((option) => option.value))
-  const [instances, defs, instanceSuggestionRows, locations] = await Promise.all([
-    prisma.plantInstance.findMany({
-      where: { ...collectionWhere, status: 'ACTIVE', ...(definitionFilter ? { plantDefinitionId: definitionFilter } : {}) },
-      include: { plantDefinition: true, currentLocation: { include: { locationType: true } } },
-      orderBy: { plantId: 'asc' },
-    }),
+  const [defs, instanceSuggestionRows, locations, locationTypes] = await Promise.all([
     prisma.plantDefinition.findMany({
       where: { OR: [collectionWhere, { collectionId: null, isValidated: true }] },
       orderBy: [{ isValidated: 'desc' }, { genus: 'asc' }, { species: 'asc' }, { cultivarName: 'asc' }],
@@ -55,6 +52,10 @@ export default async function Instances({
       include: { locationType: true },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     }),
+    prisma.locationType.findMany({
+      where: { collectionId: collection.id, status: 'ACTIVE' },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+    }),
   ])
   const locationNodes = locations.map((location) => ({
     id: location.id,
@@ -65,6 +66,20 @@ export default async function Instances({
     sortOrder: location.sortOrder,
     locationType: location.locationType,
   }))
+  const selectedLocation = locationFilter ? locationNodes.find((location) => location.id === locationFilter) : null
+  const filteredLocationIds = selectedLocation
+    ? [selectedLocation.id, ...(includeNestedLocations ? Array.from(descendantLocationIds(selectedLocation.id, locationNodes)) : [])]
+    : []
+  const instances = await prisma.plantInstance.findMany({
+    where: {
+      ...collectionWhere,
+      status: 'ACTIVE',
+      ...(definitionFilter ? { plantDefinitionId: definitionFilter } : {}),
+      ...(filteredLocationIds.length ? { currentLocationId: { in: filteredLocationIds } } : {}),
+    },
+    include: { plantDefinition: true, currentLocation: { include: { locationType: true } } },
+    orderBy: { plantId: 'asc' },
+  })
   const locationSuggestions = rankedSuggestions(instanceSuggestionRows.map((instance) => instance.location))
   const sourceSuggestions = rankedSuggestions(instanceSuggestionRows.map((instance) => instance.source))
   const distributorSuggestions = rankedSuggestions(instanceSuggestionRows.map((instance) => instance.distributor))
@@ -72,6 +87,11 @@ export default async function Instances({
   const filteredDefinition = definitionFilter
     ? defs.find((definition) => definition.id === definitionFilter)
     : null
+  const filterParams = new URLSearchParams()
+  if (definitionFilter) filterParams.set('definition', definitionFilter)
+  if (locationFilter) filterParams.set('location', locationFilter)
+  filterParams.set('includeNested', includeNestedLocations ? '1' : '0')
+  const instancesBackPath = collectionPath(collection.slug, `/instances${filterParams.toString() ? `?${filterParams}` : ''}`)
 
   const photos = await prisma.photo.findMany({
     where: { ...collectionWhere, entityType: 'PLANT_INSTANCE', entityId: { in: instances.map((item) => item.id) } },
@@ -110,15 +130,45 @@ export default async function Instances({
               <Link className="font-medium text-[#2f6b45] underline" href={collectionPath(collection.slug, '/instances')}>Show all instances</Link>
             </p>
           )}
+          {selectedLocation && (
+            <p className="mt-1 text-sm text-stone-600">
+              Filtered to {locationPathWithCodes(selectedLocation.id, locationNodes)}
+              {includeNestedLocations ? ' including child locations' : ' only'}.
+            </p>
+          )}
         </div>
         <SortControl
           section="instances"
           value={sortKey}
           options={instanceSortOptions}
-          back={collectionPath(collection.slug, definitionFilter ? `/instances?definition=${encodeURIComponent(definitionFilter)}` : '/instances')}
+          back={instancesBackPath}
           disabled={!user}
         />
       </div>
+
+      <Card>
+        <form action={collectionPath(collection.slug, '/instances')} className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-end">
+          {definitionFilter && <input type="hidden" name="definition" value={definitionFilter} />}
+          <label className="grid gap-1 text-sm font-medium text-stone-800">
+            Filter by location
+            <select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="location" defaultValue={locationFilter}>
+              <option value="">All locations</option>
+              {locationNodes.map((location) => (
+                <option key={location.id} value={location.id}>{locationPathWithCodes(location.id, locationNodes)}</option>
+              ))}
+            </select>
+          </label>
+          <label className="flex items-center gap-2 rounded-md border border-stone-200 bg-white/50 px-3 py-2 text-sm font-medium text-stone-800">
+            <input type="hidden" name="includeNested" value="0" />
+            <input type="checkbox" name="includeNested" value="1" defaultChecked={includeNestedLocations} />
+            Include child locations
+          </label>
+          <div className="flex gap-2">
+            <Button className="px-3 py-2">Apply</Button>
+            {(definitionFilter || locationFilter) && <Link className="rounded-md border border-stone-300 bg-white/70 px-3 py-2 text-sm font-semibold" href={collectionPath(collection.slug, '/instances')}>Clear</Link>}
+          </div>
+        </form>
+      </Card>
 
       {canCreateInCollection(user, context) && (
         <AddPanel label="Add plant instance">
@@ -171,6 +221,34 @@ export default async function Instances({
             <TextArea label="Notes" help="Initial observation or context to add to the plant's note history at creation." name="note" wrapperClassName="lg:col-span-2" />
             <Button className="justify-self-start lg:col-span-4">Create instance</Button>
           </form>
+          {canManageCollection(user, context) && (
+            <form action={createLocation} className="mt-4 grid max-w-5xl gap-x-3 gap-y-2 border-t border-stone-200 pt-4 lg:grid-cols-4">
+              <input type="hidden" name="collectionSlug" value={collection.slug} />
+              <input type="hidden" name="back" value={instancesBackPath} />
+              <p className="text-sm font-semibold text-stone-700 lg:col-span-4">Quick-create a structured location</p>
+              <Field label="Location name" name="name" required />
+              <label className="grid gap-1 text-sm font-medium">
+                Type
+                <select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="locationTypeId" required>
+                  {locationTypes.length === 0 && <option value="">Create a type on Locations first</option>}
+                  {locationTypes.map((type) => (
+                    <option key={type.id} value={type.id}>{type.name} ({type.abbreviation})</option>
+                  ))}
+                </select>
+              </label>
+              <label className="grid gap-1 text-sm font-medium">
+                Parent location
+                <select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="parentLocationId" defaultValue="">
+                  <option value="">Top level</option>
+                  {locationNodes.map((location) => (
+                    <option key={location.id} value={location.id}>{locationPathWithCodes(location.id, locationNodes)}</option>
+                  ))}
+                </select>
+              </label>
+              <Field label="Sort order" name="sortOrder" type="number" defaultValue="0" />
+              <Button className="justify-self-start lg:col-span-4">Create location</Button>
+            </form>
+          )}
         </AddPanel>
       )}
 

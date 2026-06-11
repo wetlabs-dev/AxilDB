@@ -149,6 +149,7 @@ App route: `/instances`
 - Give sunshine to plant instances as a quiet appreciation/bookmark marker, then use Most sunshine or Least sunshine sorting when reviewing instance lists.
 - Use the plant ID refresh action when the current ID no longer matches the generated ID format after type or date changes.
 - Use Green Thumb assist for one focused care question per specimen per day when AI is enabled for the collection.
+- Filter the instance list by structured location, with optional inclusion of child locations.
 
 ### Notes
 
@@ -169,14 +170,15 @@ App route: `/locations`
 
 - Open Locations from the sidebar.
 - Managers can create location types such as Room, Cabinet, Shelf, or Greenhouse.
-- Managers can create locations, choose a parent location, edit the hierarchy, and archive empty locations.
+- Managers can create locations from Locations or plant forms, choose a parent location, edit the hierarchy, and archive empty locations.
 - Gardeners can move plants between existing active locations.
-- Open a location detail page to see breadcrumbs, child locations, direct plants, and nested plants separately.
+- Open a location detail page to see parent location, breadcrumbs, child locations, direct plants, and nested plants separately.
 - Use QR label actions to print location labels through the existing bulk label PDF workflow.
 
 ### Notes
 
 - Location codes are generated from the location type abbreviation and remain stable after creation.
+- Location QR labels include the collection name, location name, code, type, and breadcrumb when space allows.
 - The migration creates top-level Legacy Location records from distinct old freeform location strings.
 - Drag-and-drop hierarchy editing is deferred; this version uses accessible select-and-save controls.
 

@@ -394,15 +394,15 @@ Most domain records carry `collectionId`, including local plant definitions, ali
 
 ## Location Mapping
 
-Open **Locations** from the collection sidebar to manage structured plant locations. Managers can create location types, create/edit/archive locations, and move locations under other locations. Gardeners can move plants between existing active locations. Viewers and loggers can view the location hierarchy, but cannot restructure it.
+Open **Locations** from the collection sidebar to manage structured plant locations. Managers can create location types, create/edit/archive locations, quick-create locations from plant forms, and move locations under other locations. Gardeners can move active plants between existing active locations. Viewers and loggers can view the location hierarchy, but cannot restructure it.
 
 Location types are collection-defined labels such as Room, Cabinet, Shelf, or Greenhouse. Each type has an abbreviation used when AxilDB creates a stable code, for example `LOC-RM-01`, `LOC-CAB-01`, or `LOC-SH-01`. Codes are unique inside the collection and do not change automatically if the type abbreviation changes later.
 
-Locations can be nested under any other location; AxilDB does not hard-code allowed parent/child combinations. Circular parent relationships are blocked. Location detail pages show the breadcrumb path, child locations, plants directly assigned to the location, and plants nested inside child locations in separate sections.
+Locations can be nested under any other location; AxilDB does not hard-code allowed parent/child combinations. Circular parent relationships are blocked. Location detail pages show the parent, breadcrumb path, child locations, plants directly assigned to the location, and plants nested inside child locations in separate sections.
 
 The migration/backfill creates one top-level “Legacy Location” record for each distinct non-empty legacy plant instance location string and assigns matching plants to it. The original text is preserved as legacy location text. AxilDB does not attempt to parse old freeform values into rooms, cabinets, or shelves automatically.
 
-Location QR labels are generated through the existing bulk label PDF endpoint. A location QR opens the location detail page and shows the plants currently assigned directly or through child locations. Drag/drop restructuring is intentionally deferred; v1 uses accessible select-and-save controls for moves and hierarchy edits.
+Location QR labels are generated through the existing bulk label PDF endpoint and include the collection name, location name, code, type, and breadcrumb when space allows. A location QR opens the location detail page and shows the plants currently assigned directly or through child locations. The Plant Instances page can filter by a location with optional child-location inclusion. Drag/drop restructuring is intentionally deferred; v1 uses accessible select-and-save controls for moves and hierarchy edits.
 
 Collection Update Digest is intentionally separate from the Care Queue Digest. It covers reference/governance/library changes, currently site-wide validated plant definition edits only. A validated definition is considered "in use" by a collection when that collection has at least one plant instance linked to it. Managers and gardeners can receive one daily email and/or push digest for the previous local day; loggers, viewers, and public visitors do not receive or view the v1 digest. The digest includes a concise old/new table, changed date/time, links to changed validated definitions, and affected instance counts without member emails or unrelated private notes.
 

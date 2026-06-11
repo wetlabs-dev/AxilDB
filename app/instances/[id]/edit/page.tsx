@@ -1,8 +1,8 @@
-import { deletePlantInstance, restorePlantInstance, updatePlantInstance } from '@/app/actions'
+import { createLocation, deletePlantInstance, restorePlantInstance, updatePlantInstance } from '@/app/actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { Button, Card, Field, SuggestionDatalist, TextArea } from '@/components/ui'
-import { requireCollectionAdmin } from '@/lib/collections'
-import { locationPath } from '@/lib/locations'
+import { canManageCollection, collectionPath, requireCollectionAdmin } from '@/lib/collections'
+import { locationPath, locationPathWithCodes } from '@/lib/locations'
 import { prisma } from '@/lib/prisma'
 import { rankedSuggestions } from '@/lib/suggestions'
 import { dateInput, plantName } from '@/lib/utils'
@@ -10,9 +10,10 @@ import { dateInput, plantName } from '@/lib/utils'
 const selectClass = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
 
 export default async function EditInstance({ params }: { params: Promise<{ id: string }> }) {
-  const { collection } = await requireCollectionAdmin()
+  const context = await requireCollectionAdmin()
+  const { collection, user } = context
   const { id } = await params
-  const [instance, definitions, instanceSuggestionRows, locations] = await Promise.all([
+  const [instance, definitions, instanceSuggestionRows, locations, locationTypes] = await Promise.all([
     prisma.plantInstance.findFirstOrThrow({ where: { id, collectionId: collection.id } }),
     prisma.plantDefinition.findMany({
       where: { OR: [{ collectionId: collection.id }, { collectionId: null, isValidated: true }] },
@@ -27,7 +28,12 @@ export default async function EditInstance({ params }: { params: Promise<{ id: s
       include: { locationType: true },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     }),
+    prisma.locationType.findMany({
+      where: { collectionId: collection.id, status: 'ACTIVE' },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+    }),
   ])
+  const canManage = canManageCollection(user, context)
   const locationNodes = locations.map((location) => ({
     id: location.id,
     parentLocationId: location.parentLocationId,
@@ -103,6 +109,36 @@ export default async function EditInstance({ params }: { params: Promise<{ id: s
           <Button className="justify-self-start lg:col-span-4">Save changes</Button>
         </form>
       </Card>
+      {canManage && (
+        <Card>
+          <h3 className="font-bold">Quick-create structured location</h3>
+          <form action={createLocation} className="mt-3 grid max-w-5xl gap-x-3 gap-y-2 lg:grid-cols-4">
+            <input type="hidden" name="collectionSlug" value={collection.slug} />
+            <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}/edit`)} />
+            <Field label="Location name" name="name" required />
+            <label className="grid gap-1 text-sm font-medium text-stone-800">
+              Type
+              <select className={selectClass} name="locationTypeId" required>
+                {locationTypes.length === 0 && <option value="">Create a type on Locations first</option>}
+                {locationTypes.map((type) => (
+                  <option key={type.id} value={type.id}>{type.name} ({type.abbreviation})</option>
+                ))}
+              </select>
+            </label>
+            <label className="grid gap-1 text-sm font-medium text-stone-800">
+              Parent location
+              <select className={selectClass} name="parentLocationId" defaultValue="">
+                <option value="">Top level</option>
+                {locationNodes.map((location) => (
+                  <option key={location.id} value={location.id}>{locationPathWithCodes(location.id, locationNodes)}</option>
+                ))}
+              </select>
+            </label>
+            <Field label="Sort order" name="sortOrder" type="number" defaultValue="0" />
+            <Button className="justify-self-start lg:col-span-4">Create location</Button>
+          </form>
+        </Card>
+      )}
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <h3 className="font-bold">Restore</h3>
