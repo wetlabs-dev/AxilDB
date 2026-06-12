@@ -474,7 +474,7 @@ App route: `/admin-tools`
 
 ## Server Management
 
-Server Management is restricted to server admins and covers sitewide users, collection creation and archival, validated definition review, image moderation, AI availability, AI access requests, collection requests, backups, health metrics, and usage statistics.
+Server Management is restricted to server admins and covers sitewide users, collection creation and archival, validated definition review, image moderation, AI availability, AI access requests, collection requests, backups, health metrics, incident history, and usage statistics.
 
 App route: `/server`
 
@@ -483,11 +483,12 @@ App route: `/server`
 ### How It Is Used
 
 - Open Server Management from the admin nav when signed in as a server admin.
-- Review server health, collection usage, AI usage, pending collection and AI access requests, backup status, and storage estimates.
+- Review server health, open incidents, collection usage, AI usage, pending collection and AI access requests, backup status, and storage estimates.
 - Use Site Users to manage global roles and collection memberships.
 - Use Server Collections to create, archive, restore, or permanently delete collections.
 - Use Validated Definitions to review nominations and disputes, edit approved site-level reference definitions, and preserve reusable taxonomy outside any one collection.
 - Use Image Moderation to review censored uploads, override false alarms, remove images, or remove an image and block the uploader.
+- Use Incident History to filter open or resolved incidents, inspect memory/disk graph markers, create manual incidents, and attach notes or postmortem details.
 - Use backup controls to initiate sitewide backups.
 - Use Orphaned Image Cleanup to scan uploaded image storage for files no longer referenced by database records, review the dry-run list, select files, and delete only after confirmation.
 
@@ -497,6 +498,7 @@ App route: `/server`
 - Validated definitions are site-level records; they can be linked by collection specimens without making them collection-owned.
 - Image moderation is two-layered when enabled: unsafe-content moderation runs before plant-content vision analysis.
 - AI availability can be toggled per collection by server admins, and collection managers can request AI access.
+- Incidents are durable operational records. Memory incidents open after three consecutive samples above warning or critical thresholds; metric incidents resolve automatically after three clear samples. Manual incidents remain until a server admin resolves them.
 - Orphaned Image Cleanup only scans the upload image directory and re-checks database references immediately before deleting selected files.
 
 ### Warnings

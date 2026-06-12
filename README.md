@@ -130,7 +130,7 @@ Production is managed with Docker Compose:
 - `app`: Next.js production server exposed internally on port 3000.
 - `reminders`: scheduled worker that checks for due reminders, sends opt-out-aware care queue digest emails, and sends email through the configured SMTP provider.
 - `image-moderation`: scheduled worker that checks newly uploaded images with OpenAI Moderation first, hides unsafe images pending server-admin review, and runs a separate plant-content vision check only for images that pass the safety layer.
-- `metrics`: scheduled worker that samples best-effort server metrics and collection storage estimates for the server dashboard, and sends rate-limited server health emails to verified server admins when health is degraded.
+- `metrics`: scheduled worker that samples best-effort server metrics and collection storage estimates for the server dashboard, opens/resolves lightweight server incidents when thresholds are crossed, and sends rate-limited server health emails to verified server admins when health is degraded.
 - `backups`: scheduled worker that processes server-admin sitewide backup requests into timestamped backup folders.
 
 Persistent production data lives in Docker volumes and bind mounts:
@@ -386,6 +386,7 @@ Core models:
 - `Follow` and `FollowNotification`: event-based subscriptions and delivery history for followed specimens, plant types, and lineages.
 - `CareSheet`, `CareSheetPlant`, `CareSheetTask`, and `CareSheetAccessLog`: generated care sheets, weekly checklists, limited sitter sessions, token access logs, and interactive checklist task state.
 - `ServerMetricSnapshot`: rolling 36-hour best-effort server metrics and storage estimates.
+- `ServerIncident`, `ServerIncidentNote`, and `ServerIncidentNotification`: durable server incident history, notes/postmortems, graph markers, resolution state, and server-health alert traceability.
 - `BackupRun`: sitewide backup request, worker status, output path, logs, and manifest metadata.
 - `GoverningBody`: registration or standards organizations.
 
@@ -666,7 +667,8 @@ Current email foundation:
 - Scheduled Docker worker for due reminder delivery and daily care queue digest emails/push alerts. The digest summarizes broad due/overdue care categories by collection, omits private notes/freeform detail, respects active collection memberships, and sends once per local day at the user's selected account preference time.
 - Follow/unfollow controls on plant definitions and specimen detail pages.
 - Event-based follow notifications with a delivery history on the Following page.
-- Server health alert emails for verified `SERVER_ADMIN` users when the metrics worker sees degraded disk or memory health. These alerts default to a 6-hour per-admin cooldown.
+- Server health incidents for memory, disk, backup worker, AI, and image moderation failures. Memory incidents open after three consecutive samples above 75% warning or 90% critical; disk opens above 80% warning or 90% critical; metric incidents resolve after three clear samples. Server admins can also create manual incidents for operational events such as migrations, outages, reboots, and storage work.
+- Server health alert emails for verified `SERVER_ADMIN` users when the metrics worker sees degraded disk or memory health. These alerts default to a 6-hour per-admin cooldown and attach notification records to open incidents.
 - Account-page opt-out toggles for collection update digest, care queue digest, and server health alert emails/push alerts.
 - Quiet botanical branded HTML and plain-text templates.
 - SMTP/log delivery abstraction.

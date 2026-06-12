@@ -2,6 +2,7 @@ import fs from 'fs/promises'
 import os from 'os'
 import path from 'path'
 import { prisma } from '@/lib/prisma'
+import { evaluateServerIncidents } from '@/lib/server-incidents'
 
 const HISTORY_HOURS = 36
 const SNAPSHOT_INTERVAL_MS = 5 * 60 * 1000
@@ -234,6 +235,7 @@ export async function ensureRecentServerMetricSnapshot() {
   const snapshot = await prisma.serverMetricSnapshot.create({ data: { metrics: metrics as any } })
   const cutoff = new Date(Date.now() - (HISTORY_HOURS + 6) * 60 * 60 * 1000)
   await prisma.serverMetricSnapshot.deleteMany({ where: { capturedAt: { lt: cutoff } } })
+  await evaluateServerIncidents(prisma, snapshot as ServerMetricSnapshot)
   return snapshot as ServerMetricSnapshot
 }
 

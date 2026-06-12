@@ -74,6 +74,9 @@ model User {
   uploadedPhotos Photo[] @relation("PhotoUploader")
   plantIdentificationLogs PlantIdentificationLog[]
   plantLocationMoves PlantLocationMove[]
+  createdServerIncidents ServerIncident[] @relation("ServerIncidentCreator")
+  serverIncidentNotes ServerIncidentNote[] @relation("ServerIncidentNoteAuthor")
+  serverIncidentNotifications ServerIncidentNotification[]
   createdPlantQuarantines PlantQuarantine[] @relation("PlantQuarantineCreatedBy")
   releasedPlantQuarantines PlantQuarantine[] @relation("PlantQuarantineReleasedBy")
   cancelledPlantQuarantines PlantQuarantine[] @relation("PlantQuarantineCancelledBy")
@@ -404,6 +407,75 @@ model ServerMetricSnapshot {
   metrics   Json
 
   @@index([capturedAt])
+}
+
+model ServerIncident {
+  id              String    @id @default(cuid())
+  type            String
+  category        String
+  severity        String
+  status          String    @default("OPEN")
+  title           String
+  description     String?
+  detectedAt      DateTime
+  resolvedAt      DateTime?
+  durationSeconds Int?
+  metricType      String?
+  thresholdValue  Float?
+  observedValue   Float?
+  peakValue       Float?
+  createdByUserId String?
+  metadata        Json?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  createdBy     User? @relation("ServerIncidentCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  notes         ServerIncidentNote[]
+  notifications ServerIncidentNotification[]
+
+  @@index([type])
+  @@index([category])
+  @@index([severity])
+  @@index([status])
+  @@index([metricType])
+  @@index([detectedAt])
+  @@index([resolvedAt])
+  @@index([createdByUserId])
+}
+
+model ServerIncidentNote {
+  id          String   @id @default(cuid())
+  incidentId  String
+  authorUserId String?
+  body        String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  incident ServerIncident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  author   User? @relation("ServerIncidentNoteAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
+
+  @@index([incidentId])
+  @@index([authorUserId])
+  @@index([createdAt])
+}
+
+model ServerIncidentNotification {
+  id          String   @id @default(cuid())
+  incidentId  String
+  userId      String?
+  channel     String
+  status      String
+  recipient   String?
+  sentAt      DateTime @default(now())
+  metadata    Json?
+
+  incident ServerIncident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  user     User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([incidentId])
+  @@index([userId])
+  @@index([sentAt])
+  @@index([status])
 }
 
 model BackupRun {

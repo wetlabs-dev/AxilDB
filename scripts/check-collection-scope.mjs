@@ -57,6 +57,12 @@ const reviewedAllowlist = [
     reason: 'Image moderation worker intentionally scans pending uploaded photos across collections, then updates only the selected photo and review rows.',
   },
   {
+    file: 'lib/server-incidents.ts',
+    model: 'photo',
+    op: 'count',
+    reason: 'Server incident detection intentionally counts sitewide image moderation failures for server-admin operational history.',
+  },
+  {
     file: 'lib/admin/orphanedImages.ts',
     model: 'photo',
     op: 'findMany',

@@ -10,6 +10,13 @@ type MetricChartProps = {
   value: string
   subtitle?: string
   points: MetricPoint[]
+  markers?: Array<{
+    at: Date
+    label: string
+    severity: string
+    status: string
+    tooltip: string
+  }>
   className?: string
 }
 
@@ -30,12 +37,21 @@ function pathFor(points: MetricPoint[], width: number, height: number, padding: 
     .join(' ')
 }
 
-export function MetricChart({ title, value, subtitle, points, className = '' }: MetricChartProps) {
+export function MetricChart({ title, value, subtitle, points, markers = [], className = '' }: MetricChartProps) {
   const width = 520
   const height = 150
   const padding = 14
   const linePath = pathFor(points, width, height, padding)
   const areaPath = linePath ? `${linePath} L ${width - padding} ${height - padding} L ${padding} ${height - padding} Z` : ''
+  const minTime = points[0]?.at.getTime() || 0
+  const maxTime = points[points.length - 1]?.at.getTime() || minTime
+  const timeSpan = Math.max(1, maxTime - minTime)
+  const markerPosition = (at: Date) => padding + Math.max(0, Math.min(1, (at.getTime() - minTime) / timeSpan)) * (width - padding * 2)
+  const markerStyle = (severity: string, status: string) => {
+    if (status === 'RESOLVED') return { fill: '#4f8f5b', text: '✓' }
+    if (severity === 'CRITICAL') return { fill: '#b64235', text: '!' }
+    return { fill: '#d6a533', text: '!' }
+  }
 
   return (
     <div className={cn('min-w-0 overflow-hidden rounded-lg border border-stone-200 bg-[#10170f] p-4 text-[#f8f2e4] shadow-[0_8px_30px_rgba(47,38,24,0.12)]', className)}>
@@ -66,6 +82,18 @@ export function MetricChart({ title, value, subtitle, points, className = '' }: 
         ))}
         {areaPath && <path d={areaPath} fill={`url(#metric-fill-${title.replace(/\W+/g, '-')})`} />}
         {linePath && <path d={linePath} fill="none" stroke="#a8d08d" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />}
+        {markers.map((marker, index) => {
+          const x = markerPosition(marker.at)
+          const style = markerStyle(marker.severity, marker.status)
+          return (
+            <g key={`${marker.label}-${marker.at.toISOString()}-${index}`} transform={`translate(${x.toFixed(1)} ${padding + 10 + (index % 3) * 18})`}>
+              <circle r="7" fill={style.fill} stroke="#f8f2e4" strokeWidth="1.5">
+                <title>{marker.tooltip}</title>
+              </circle>
+              <text x="0" y="3" textAnchor="middle" fill="#fffdf7" fontSize="10" fontWeight="700">{style.text}</text>
+            </g>
+          )
+        })}
         {points.length === 0 && <text x="50%" y="50%" textAnchor="middle" fill="#bfc7b2" fontSize="18">No history yet</text>}
       </svg>
     </div>

@@ -5,6 +5,7 @@ import { MetricChart } from '@/components/MetricChart'
 import { Button, Card, LinkButton, TextArea } from '@/components/ui'
 import { requireServerAdmin } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { formatIncidentDuration, incidentSummary } from '@/lib/server-incidents'
 import { ensureRecentServerMetricSnapshot, formatBytes, serverMetricHistory } from '@/lib/server-metrics'
 import { formatDateTime } from '@/lib/time'
 
@@ -32,6 +33,23 @@ function featureLabel(feature: string) {
   return feature.replace(/^AI_/, '').toLowerCase().replaceAll('_', ' ')
 }
 
+function markerTooltip(incident: {
+  title: string
+  severity: string
+  detectedAt: Date
+  resolvedAt?: Date | null
+  durationSeconds?: number | null
+  peakValue?: number | null
+}, timezone?: string | null) {
+  return [
+    `${incident.title} (${incident.severity.toLowerCase()})`,
+    `Opened: ${formatDateTime(incident.detectedAt, timezone || undefined)}`,
+    incident.peakValue != null ? `Peak: ${incident.peakValue.toFixed(1)}%` : null,
+    incident.resolvedAt ? `Resolved: ${formatDateTime(incident.resolvedAt, timezone || undefined)}` : 'Resolved: open',
+    `Duration: ${formatIncidentDuration(incident.durationSeconds)}`,
+  ].filter(Boolean).join('\n')
+}
+
 export default async function ServerDashboard({
   searchParams,
 }: {
@@ -39,7 +57,7 @@ export default async function ServerDashboard({
 }) {
   const admin = await requireServerAdmin()
   const sp = await searchParams
-  const [preferences, users, collections, archived, memberships, photos, latestSnapshot, backupRuns, collectionRequests, aiAccessRequests, aiUsageByCollection, aiUsageByFeature] = await Promise.all([
+  const [preferences, users, collections, archived, memberships, photos, latestSnapshot, backupRuns, collectionRequests, aiAccessRequests, aiUsageByCollection, aiUsageByFeature, incidentStats, recentIncidents] = await Promise.all([
     prisma.emailPreference.findUnique({ where: { userId: admin.id } }),
     prisma.user.count(),
     prisma.collection.count({ where: { status: 'ACTIVE' } }),
@@ -79,6 +97,11 @@ export default async function ServerDashboard({
       _count: { _all: true },
       _sum: { totalTokens: true },
     }),
+    incidentSummary(prisma),
+    prisma.serverIncident.findMany({
+      orderBy: { detectedAt: 'desc' },
+      take: 8,
+    }),
   ])
   const timezone = preferences?.timezone
   const aiUsageCollections = aiUsageByCollection.length
@@ -95,6 +118,14 @@ export default async function ServerDashboard({
     aiFeatureRows.set(row.collectionId, existing)
   }
   const metricHistory = await serverMetricHistory()
+  const metricIncidentMarkers = await prisma.serverIncident.findMany({
+    where: {
+      metricType: { in: ['memory', 'disk', 'network'] },
+      detectedAt: { gte: metricHistory[0]?.capturedAt || new Date(Date.now() - 36 * 60 * 60 * 1000) },
+    },
+    orderBy: { detectedAt: 'asc' },
+    take: 50,
+  })
   const latest = latestSnapshot.metrics
   const diskUsedPercent = latest.disk.totalBytes ? (latest.disk.usedBytes / latest.disk.totalBytes) * 100 : 0
   const memoryUsedBytes = Math.max(0, latest.memory.systemTotalBytes - latest.memory.systemFreeBytes)
@@ -109,6 +140,12 @@ export default async function ServerDashboard({
     ['Code/app image', latest.disk.codeBytes, 'bg-[#6d7f6d]'],
     ['Other server usage', latest.disk.otherBytes, 'bg-stone-400'],
   ] as const
+  const markersFor = (metricType: string) => metricIncidentMarkers
+    .filter((incident) => incident.metricType === metricType)
+    .flatMap((incident) => [
+      { at: incident.detectedAt, label: incident.title, severity: incident.severity, status: incident.status, tooltip: markerTooltip(incident, timezone) },
+      ...(incident.resolvedAt ? [{ at: incident.resolvedAt, label: `${incident.title} resolved`, severity: incident.severity, status: 'RESOLVED', tooltip: markerTooltip(incident, timezone) }] : []),
+    ])
 
   const checks = [
     ['Server admin account', await prisma.user.count({ where: { email: 'admin@axildb.com', role: 'SERVER_ADMIN' } }) > 0],
@@ -126,6 +163,7 @@ export default async function ServerDashboard({
         </div>
         <div className="flex flex-wrap gap-2">
           <LinkButton href="/server/validated-definitions">Validated Definitions</LinkButton>
+          <LinkButton href="/server/incidents">Incident History</LinkButton>
           <LinkButton href="/server/image-moderation">Image Moderation</LinkButton>
           <LinkButton href="/server/orphaned-images">Orphaned Images</LinkButton>
           <LinkButton href="/server/collections">Collections</LinkButton>
@@ -147,6 +185,35 @@ export default async function ServerDashboard({
           </Card>
         ))}
       </div>
+
+      <Card>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="font-serif text-xl font-semibold">Server Health</h3>
+            <p className="mt-1 text-sm text-stone-600">Open incidents, recent resolutions, and operational notes stay here after metric snapshots expire.</p>
+          </div>
+          <LinkButton href="/server/incidents">Open Incident History</LinkButton>
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-4">
+          <div className="rounded-lg border border-stone-200 bg-white/60 p-3"><p className="text-sm text-stone-600">Open incidents</p><p className="mt-1 text-2xl font-bold">{incidentStats.open}</p></div>
+          <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-red-950"><p className="text-sm">Critical</p><p className="mt-1 text-2xl font-bold">{incidentStats.critical}</p></div>
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-950"><p className="text-sm">Warning</p><p className="mt-1 text-2xl font-bold">{incidentStats.warning}</p></div>
+          <div className="rounded-lg border border-stone-200 bg-white/60 p-3">
+            <p className="text-sm text-stone-600">Last resolved</p>
+            <p className="mt-1 truncate font-semibold">{incidentStats.lastResolved?.title || 'None recorded'}</p>
+          </div>
+        </div>
+        {recentIncidents.length > 0 && (
+          <div className="mt-4 grid gap-2">
+            {recentIncidents.slice(0, 4).map((incident) => (
+              <Link key={incident.id} href={`/server/incidents/${incident.id}`} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-stone-200 bg-white/50 px-3 py-2 text-sm hover:bg-white">
+                <span className="font-semibold">{incident.title}</span>
+                <span className="text-stone-600">{incident.severity.toLowerCase()} · {incident.status.toLowerCase()} · {formatIncidentDuration(incident.durationSeconds)}</span>
+              </Link>
+            ))}
+          </div>
+        )}
+      </Card>
 
       <Card>
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -307,6 +374,7 @@ export default async function ServerDashboard({
               at: snapshot.capturedAt,
               value: snapshot.metrics.memory.systemTotalBytes ? ((snapshot.metrics.memory.systemTotalBytes - snapshot.metrics.memory.systemFreeBytes) / snapshot.metrics.memory.systemTotalBytes) * 100 : 0,
             }))}
+            markers={markersFor('memory')}
           />
           <MetricChart
             title="Disk"
@@ -316,6 +384,7 @@ export default async function ServerDashboard({
               at: snapshot.capturedAt,
               value: snapshot.metrics.disk.totalBytes ? (snapshot.metrics.disk.usedBytes / snapshot.metrics.disk.totalBytes) * 100 : 0,
             }))}
+            markers={markersFor('disk')}
           />
           <MetricChart
             title="Network"
@@ -329,6 +398,7 @@ export default async function ServerDashboard({
                 value: prior ? (Math.max(0, snapshot.metrics.network.rxBytes - prior.metrics.network.rxBytes) + Math.max(0, snapshot.metrics.network.txBytes - prior.metrics.network.txBytes)) / seconds : 0,
               }
             })}
+            markers={markersFor('network')}
           />
         </div>
       </Card>

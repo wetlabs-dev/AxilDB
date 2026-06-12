@@ -353,6 +353,11 @@ export async function sendCareQueueDigestAlerts(prisma: PrismaClient, now = new 
 export async function sendServerHealthAlertEmails(prisma: PrismaClient, snapshot: ServerMetricSnapshot, now = new Date()) {
   const alert = serverHealthAlertFromSnapshot(snapshot)
   if (!alert) return { status: 'healthy' as const, considered: 0, sent: 0, failed: 0 }
+  const relatedIncidents = await prisma.serverIncident.findMany({
+    where: { status: 'OPEN', category: { in: ['MEMORY', 'DISK', 'WORKER', 'EMAIL', 'AI', 'NETWORK'] } },
+    orderBy: { detectedAt: 'desc' },
+    take: 5,
+  })
 
   const cooldownCutoff = hoursAgo(SERVER_HEALTH_COOLDOWN_HOURS)
   const admins = await prisma.user.findMany({
@@ -400,6 +405,17 @@ export async function sendServerHealthAlertEmails(prisma: PrismaClient, snapshot
         await sendServerHealthAlertEmail(admin, alert)
         delivered = true
         sent += 1
+        await Promise.all(relatedIncidents.map((incident) => prisma.serverIncidentNotification.create({
+          data: {
+            incidentId: incident.id,
+            userId: admin.id,
+            channel: 'EMAIL',
+            status: 'DELIVERED',
+            recipient: admin.email,
+            sentAt: now,
+            metadata: { alertStatus: alert.status, snapshotId: snapshot.id },
+          },
+        })))
       }
       if (delivered) {
         await prisma.emailPreference.upsert({
