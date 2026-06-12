@@ -400,6 +400,19 @@ export async function sendServerHealthAlertEmails(prisma: PrismaClient, snapshot
           preferenceKey: 'serverHealthPushEnabled',
         }, prisma)
         delivered = result.sent > 0 || delivered
+        if (!result.skipped && result.considered > 0) {
+          await Promise.all(relatedIncidents.map((incident) => prisma.serverIncidentNotification.create({
+            data: {
+              incidentId: incident.id,
+              userId: admin.id,
+              channel: 'PUSH',
+              status: result.sent > 0 ? 'DELIVERED' : 'FAILED',
+              recipient: admin.email,
+              sentAt: now,
+              metadata: { alertStatus: alert.status, snapshotId: snapshot.id, considered: result.considered, sent: result.sent },
+            },
+          })))
+        }
       }
       if (emailEnabled && admin.emailVerifiedAt) {
         await sendServerHealthAlertEmail(admin, alert)
@@ -426,6 +439,17 @@ export async function sendServerHealthAlertEmails(prisma: PrismaClient, snapshot
       }
     } catch (error) {
       failed += 1
+      await Promise.all(relatedIncidents.map((incident) => prisma.serverIncidentNotification.create({
+        data: {
+          incidentId: incident.id,
+          userId: admin.id,
+          channel: emailEnabled && admin.emailVerifiedAt ? 'EMAIL' : pushEnabled ? 'PUSH' : 'UNKNOWN',
+          status: 'FAILED',
+          recipient: admin.email,
+          sentAt: now,
+          metadata: { alertStatus: alert.status, snapshotId: snapshot.id, error: error instanceof Error ? error.message : String(error) },
+        },
+      })))
       console.error('Failed to send AxilDB server health alert', { userId: admin.id, error: error instanceof Error ? error.message : String(error) })
     }
   }

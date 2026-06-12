@@ -24,6 +24,14 @@ function metricValue(snapshot: any, metricType?: string | null) {
   return 0
 }
 
+function storedMetricPoints(metadata: unknown) {
+  const value = metadata as { metricSamples?: Array<{ at?: string; value?: number }>; resolutionMetricSamples?: Array<{ at?: string; value?: number }> } | null
+  const samples = [...(value?.metricSamples || []), ...(value?.resolutionMetricSamples || [])]
+  return samples
+    .map((sample) => ({ at: sample.at ? new Date(sample.at) : null, value: Number(sample.value) }))
+    .filter((sample): sample is { at: Date; value: number } => Boolean(sample.at && !Number.isNaN(sample.at.getTime()) && Number.isFinite(sample.value)))
+}
+
 export default async function ServerIncidentDetail({ params }: { params: Promise<{ id: string }> }) {
   const admin = await requireServerAdmin()
   const { id } = await params
@@ -39,9 +47,10 @@ export default async function ServerIncidentDetail({ params }: { params: Promise
     }),
   ])
   const history = incident.metricType ? await serverMetricHistory() : []
-  const chartPoints = history
+  const liveChartPoints = history
     .filter((snapshot) => snapshot.capturedAt >= new Date(incident.detectedAt.getTime() - 60 * 60 * 1000) && snapshot.capturedAt <= new Date((incident.resolvedAt || new Date()).getTime() + 60 * 60 * 1000))
     .map((snapshot) => ({ at: snapshot.capturedAt, value: metricValue(snapshot, incident.metricType) }))
+  const chartPoints = liveChartPoints.length ? liveChartPoints : storedMetricPoints(incident.metadata)
 
   return (
     <div className="space-y-5">

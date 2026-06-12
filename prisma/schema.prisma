@@ -7,6 +7,27 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum ServerIncidentCategory {
+  MEMORY
+  DISK
+  WORKER
+  EMAIL
+  AI
+  NETWORK
+  MANUAL
+}
+
+enum ServerIncidentSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+enum ServerIncidentStatus {
+  OPEN
+  RESOLVED
+}
+
 model GoverningBody {
   collectionId     String?
   id               String            @id @default(cuid())
@@ -412,9 +433,9 @@ model ServerMetricSnapshot {
 model ServerIncident {
   id              String    @id @default(cuid())
   type            String
-  category        String
-  severity        String
-  status          String    @default("OPEN")
+  category        ServerIncidentCategory
+  severity        ServerIncidentSeverity
+  status          ServerIncidentStatus @default(OPEN)
   title           String
   description     String?
   detectedAt      DateTime
@@ -476,6 +497,23 @@ model ServerIncidentNotification {
   @@index([userId])
   @@index([sentAt])
   @@index([status])
+}
+
+model ServerWorkerRun {
+  id          String    @id @default(cuid())
+  workerName  String
+  status      String
+  startedAt   DateTime  @default(now())
+  finishedAt  DateTime?
+  durationMs  Int?
+  summary     String?
+  error       String?
+  metadata    Json?
+  createdAt   DateTime  @default(now())
+
+  @@index([workerName])
+  @@index([status])
+  @@index([startedAt])
 }
 
 model BackupRun {

@@ -63,6 +63,18 @@ const reviewedAllowlist = [
     reason: 'Server incident detection intentionally counts sitewide image moderation failures for server-admin operational history.',
   },
   {
+    file: 'lib/server-incidents.ts',
+    model: 'reminderDelivery',
+    op: 'count',
+    reason: 'Server incident detection intentionally counts sitewide email delivery failures for server-admin operational history.',
+  },
+  {
+    file: 'lib/server-incidents.ts',
+    model: 'reminder',
+    op: 'count',
+    reason: 'Server incident detection intentionally counts sitewide due reminder backlog for server-admin operational history.',
+  },
+  {
     file: 'lib/admin/orphanedImages.ts',
     model: 'photo',
     op: 'findMany',

@@ -1,13 +1,14 @@
 'use server'
 
+import { ServerIncidentCategory, ServerIncidentSeverity, ServerIncidentStatus } from '@prisma/client'
 import { redirect } from 'next/navigation'
 import { audit, requireServerAdmin } from '@/lib/auth'
 import { deleteSelectedOrphanedImages, selectedOrphanedImagePaths } from '@/lib/admin/orphanedImages'
 import { prisma } from '@/lib/prisma'
 
-const incidentCategories = new Set(['MEMORY', 'DISK', 'WORKER', 'EMAIL', 'AI', 'NETWORK', 'MANUAL'])
-const incidentSeverities = new Set(['INFO', 'WARNING', 'CRITICAL'])
-const incidentStatuses = new Set(['OPEN', 'RESOLVED'])
+const incidentCategories = new Set(Object.values(ServerIncidentCategory))
+const incidentSeverities = new Set(Object.values(ServerIncidentSeverity))
+const incidentStatuses = new Set(Object.values(ServerIncidentStatus))
 
 function value(formData: FormData, key: string) {
   return String(formData.get(key) || '').trim()
@@ -15,6 +16,18 @@ function value(formData: FormData, key: string) {
 
 function durationSeconds(start: Date, end: Date) {
   return Math.max(0, Math.round((end.getTime() - start.getTime()) / 1000))
+}
+
+function categoryValue(input: string, fallback: ServerIncidentCategory) {
+  return incidentCategories.has(input as ServerIncidentCategory) ? input as ServerIncidentCategory : fallback
+}
+
+function severityValue(input: string, fallback: ServerIncidentSeverity) {
+  return incidentSeverities.has(input as ServerIncidentSeverity) ? input as ServerIncidentSeverity : fallback
+}
+
+function statusValue(input: string, fallback: ServerIncidentStatus) {
+  return incidentStatuses.has(input as ServerIncidentStatus) ? input as ServerIncidentStatus : fallback
 }
 
 export async function requestSitewideBackup(formData: FormData) {
@@ -73,9 +86,9 @@ export async function createManualServerIncident(formData: FormData) {
   const user = await requireServerAdmin()
   const title = value(formData, 'title')
   if (!title) redirect('/server/incidents?created=missing-title')
-  const category = incidentCategories.has(value(formData, 'category')) ? value(formData, 'category') : 'MANUAL'
-  const severity = incidentSeverities.has(value(formData, 'severity')) ? value(formData, 'severity') : 'INFO'
-  const status = incidentStatuses.has(value(formData, 'status')) ? value(formData, 'status') : 'OPEN'
+  const category = categoryValue(value(formData, 'category'), ServerIncidentCategory.MANUAL)
+  const severity = severityValue(value(formData, 'severity'), ServerIncidentSeverity.INFO)
+  const status = statusValue(value(formData, 'status'), ServerIncidentStatus.OPEN)
   const detectedAt = value(formData, 'detectedAt') ? new Date(value(formData, 'detectedAt')) : new Date()
   const resolvedAt = status === 'RESOLVED' ? (value(formData, 'resolvedAt') ? new Date(value(formData, 'resolvedAt')) : new Date()) : null
   const incident = await prisma.serverIncident.create({
@@ -102,9 +115,9 @@ export async function updateServerIncident(formData: FormData) {
   const id = value(formData, 'id')
   const incident = await prisma.serverIncident.findUniqueOrThrow({ where: { id } })
   const title = value(formData, 'title') || incident.title
-  const category = incidentCategories.has(value(formData, 'category')) ? value(formData, 'category') : incident.category
-  const severity = incidentSeverities.has(value(formData, 'severity')) ? value(formData, 'severity') : incident.severity
-  const status = incidentStatuses.has(value(formData, 'status')) ? value(formData, 'status') : incident.status
+  const category = categoryValue(value(formData, 'category'), incident.category)
+  const severity = severityValue(value(formData, 'severity'), incident.severity)
+  const status = statusValue(value(formData, 'status'), incident.status)
   const detectedAt = value(formData, 'detectedAt') ? new Date(value(formData, 'detectedAt')) : incident.detectedAt
   const resolvedAt = status === 'RESOLVED'
     ? (value(formData, 'resolvedAt') ? new Date(value(formData, 'resolvedAt')) : incident.resolvedAt || new Date())

@@ -15,6 +15,7 @@ const MEMORY_CRITICAL = 90
 const DISK_WARNING = 80
 const DISK_CRITICAL = 90
 const FAILURE_THRESHOLD = 3
+const EMAIL_BACKLOG_THRESHOLD = 50
 
 function pct(value: number) {
   return Number.isFinite(value) ? Number(value.toFixed(1)) : 0
@@ -96,7 +97,7 @@ async function openOrEscalateIncident(
           thresholdValue: input.thresholdValue ?? existing.thresholdValue,
           observedValue: input.observedValue ?? existing.observedValue,
           peakValue,
-          metadata: { ...(existing.metadata as any || {}), ...(input.metadata || {}) },
+          metadata: { ...(existing.metadata as any || {}), ...(input.metadata || {}) } as any,
         },
       })
     }
@@ -140,7 +141,7 @@ async function resolveIncident(prisma: PrismaClient, type: string, resolvedAt: D
       status: 'RESOLVED',
       resolvedAt,
       durationSeconds: durationSeconds(incident.detectedAt, resolvedAt),
-      metadata: { ...(incident.metadata as any || {}), ...(metadata || {}) },
+      metadata: { ...(incident.metadata as any || {}), ...(metadata || {}) } as any,
     },
   })
   await auditIncident(prisma, 'RESOLVE', incident.id, `Resolved ${incident.title}`, metadata)
@@ -156,13 +157,18 @@ async function evaluateMetricIncident(
     warning: number
     critical: number
     title: string
+    consecutiveOpen?: boolean
   },
 ) {
   const latest = input.points[input.points.length - 1]
   if (!latest) return
   const recent = input.points.slice(-SAMPLE_COUNT)
-  const allCritical = recent.length >= SAMPLE_COUNT && recent.every((point) => point.value > input.critical)
-  const allWarning = recent.length >= SAMPLE_COUNT && recent.every((point) => point.value > input.warning)
+  const allCritical = input.consecutiveOpen === false
+    ? latest.value > input.critical
+    : recent.length >= SAMPLE_COUNT && recent.every((point) => point.value > input.critical)
+  const allWarning = input.consecutiveOpen === false
+    ? latest.value > input.warning
+    : recent.length >= SAMPLE_COUNT && recent.every((point) => point.value > input.warning)
   const allClear = recent.length >= SAMPLE_COUNT && recent.every((point) => point.value <= input.warning)
 
   if (allCritical || allWarning) {
@@ -173,17 +179,24 @@ async function evaluateMetricIncident(
       category: input.category,
       severity,
       title: `${input.title} ${severity.toLowerCase()}`,
-      description: `${input.title} exceeded ${threshold}% for ${SAMPLE_COUNT} consecutive samples.`,
-      detectedAt: recent[0].at,
+      description: input.consecutiveOpen === false
+        ? `${input.title} exceeded ${threshold}%.`
+        : `${input.title} exceeded ${threshold}% for ${SAMPLE_COUNT} consecutive samples.`,
+      detectedAt: input.consecutiveOpen === false ? latest.at : recent[0].at,
       metricType: input.metricType,
       thresholdValue: threshold,
       observedValue: latest.value,
-      metadata: { sampleCount: SAMPLE_COUNT, recentValues: recent.map((point) => point.value) },
+      metadata: {
+        sampleCount: input.consecutiveOpen === false ? 1 : SAMPLE_COUNT,
+        recentValues: recent.map((point) => point.value),
+        metricSamples: recent.map((point) => ({ at: point.at.toISOString(), value: point.value })),
+      },
     })
   } else if (allClear) {
     await resolveIncident(prisma, input.type, latest.at, {
       resolvedAfterClearSamples: SAMPLE_COUNT,
       recentValues: recent.map((point) => point.value),
+      resolutionMetricSamples: recent.map((point) => ({ at: point.at.toISOString(), value: point.value })),
     })
   }
 }
@@ -246,14 +259,24 @@ export async function evaluateServerIncidents(prisma: PrismaClient, snapshot: Se
     warning: DISK_WARNING,
     critical: DISK_CRITICAL,
     title: 'Disk pressure',
+    consecutiveOpen: false,
   })
 
   const hourAgo = new Date(now.getTime() - 60 * 60 * 1000)
   const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-  const [recentBackupFailures, recentAiFailures, recentModerationFailures] = await Promise.all([
+  const [recentBackupFailures, recentAiFailures, recentModerationFailures, recentReminderWorkerFailures, recentMetricsWorkerFailures, recentModerationWorkerFailures, latestReminderWorkerRun, latestMetricsWorkerRun, latestModerationWorkerRun, recentEmailFailures, failedIncidentNotifications, reminderBacklog] = await Promise.all([
     prisma.backupRun.count({ where: { status: 'FAILED', updatedAt: { gte: dayAgo } } }),
     prisma.aiUsageEvent.count({ where: { success: false, createdAt: { gte: hourAgo } } }),
     prisma.photo.count({ where: { moderationStatus: 'MODERATION_FAILED', createdAt: { gte: dayAgo } } }),
+    prisma.serverWorkerRun.count({ where: { workerName: 'reminders', status: 'FAILED', startedAt: { gte: dayAgo } } }),
+    prisma.serverWorkerRun.count({ where: { workerName: 'metrics', status: 'FAILED', startedAt: { gte: dayAgo } } }),
+    prisma.serverWorkerRun.count({ where: { workerName: 'image-moderation', status: 'FAILED', startedAt: { gte: dayAgo } } }),
+    prisma.serverWorkerRun.findFirst({ where: { workerName: 'reminders' }, orderBy: { startedAt: 'desc' } }),
+    prisma.serverWorkerRun.findFirst({ where: { workerName: 'metrics' }, orderBy: { startedAt: 'desc' } }),
+    prisma.serverWorkerRun.findFirst({ where: { workerName: 'image-moderation' }, orderBy: { startedAt: 'desc' } }),
+    prisma.reminderDelivery.count({ where: { status: 'FAILED', createdAt: { gte: hourAgo } } }),
+    prisma.serverIncidentNotification.count({ where: { status: 'FAILED', sentAt: { gte: hourAgo } } }),
+    prisma.reminder.count({ where: { completedAt: null, pausedAt: null, nextSendAt: { lte: now } } }),
   ])
 
   await evaluateCountIncident(prisma, {
@@ -279,6 +302,39 @@ export async function evaluateServerIncidents(prisma: PrismaClient, snapshot: Se
     metadata: { window: '1h' },
   })
   await evaluateCountIncident(prisma, {
+    type: 'REMINDER_WORKER_FAILURES',
+    category: 'WORKER',
+    severity: recentReminderWorkerFailures >= FAILURE_THRESHOLD ? 'CRITICAL' : 'WARNING',
+    title: 'Reminder worker failures',
+    description: 'The reminder worker has failed recently.',
+    count: latestReminderWorkerRun?.status === 'FAILED' ? Math.max(1, recentReminderWorkerFailures) : 0,
+    threshold: 1,
+    now,
+    metadata: { window: '24h' },
+  })
+  await evaluateCountIncident(prisma, {
+    type: 'METRICS_WORKER_FAILURES',
+    category: 'WORKER',
+    severity: recentMetricsWorkerFailures >= FAILURE_THRESHOLD ? 'CRITICAL' : 'WARNING',
+    title: 'Metrics worker failures',
+    description: 'The metrics worker has failed recently.',
+    count: latestMetricsWorkerRun?.status === 'FAILED' ? Math.max(1, recentMetricsWorkerFailures) : 0,
+    threshold: 1,
+    now,
+    metadata: { window: '24h' },
+  })
+  await evaluateCountIncident(prisma, {
+    type: 'IMAGE_MODERATION_WORKER_FAILURES',
+    category: 'WORKER',
+    severity: recentModerationWorkerFailures >= FAILURE_THRESHOLD ? 'CRITICAL' : 'WARNING',
+    title: 'Image moderation worker failures',
+    description: 'The image moderation worker has failed recently.',
+    count: latestModerationWorkerRun?.status === 'FAILED' ? Math.max(1, recentModerationWorkerFailures) : 0,
+    threshold: 1,
+    now,
+    metadata: { window: '24h' },
+  })
+  await evaluateCountIncident(prisma, {
     type: 'IMAGE_MODERATION_FAILURES',
     category: 'AI',
     severity: recentModerationFailures >= FAILURE_THRESHOLD * 2 ? 'CRITICAL' : 'WARNING',
@@ -288,6 +344,28 @@ export async function evaluateServerIncidents(prisma: PrismaClient, snapshot: Se
     threshold: FAILURE_THRESHOLD,
     now,
     metadata: { window: '24h' },
+  })
+  await evaluateCountIncident(prisma, {
+    type: 'SMTP_FAILURES',
+    category: 'EMAIL',
+    severity: recentEmailFailures + failedIncidentNotifications >= FAILURE_THRESHOLD * 2 ? 'CRITICAL' : 'WARNING',
+    title: 'SMTP delivery failures',
+    description: 'Email delivery failures exceeded the incident threshold.',
+    count: recentEmailFailures + failedIncidentNotifications,
+    threshold: FAILURE_THRESHOLD,
+    now,
+    metadata: { window: '1h', reminderDeliveryFailures: recentEmailFailures, serverHealthNotificationFailures: failedIncidentNotifications },
+  })
+  await evaluateCountIncident(prisma, {
+    type: 'EMAIL_DELIVERY_BACKLOG',
+    category: 'EMAIL',
+    severity: reminderBacklog >= EMAIL_BACKLOG_THRESHOLD * 2 ? 'CRITICAL' : 'WARNING',
+    title: 'Email delivery backlog',
+    description: 'Due reminders waiting for delivery exceeded the backlog threshold.',
+    count: reminderBacklog,
+    threshold: EMAIL_BACKLOG_THRESHOLD,
+    now,
+    metadata: { source: 'due reminders' },
   })
 
   return prisma.serverIncident.findMany({
@@ -304,4 +382,31 @@ export async function incidentSummary(prisma: PrismaClient) {
     prisma.serverIncident.findFirst({ where: { status: 'RESOLVED' }, orderBy: { resolvedAt: 'desc' } }),
   ])
   return { open, critical, warning, lastResolved }
+}
+
+export async function recordServerWorkerRun(
+  prisma: PrismaClient,
+  input: {
+    workerName: string
+    status: 'SUCCEEDED' | 'FAILED'
+    startedAt: Date
+    finishedAt?: Date
+    summary?: string
+    error?: string
+    metadata?: Record<string, unknown>
+  },
+) {
+  const finishedAt = input.finishedAt || new Date()
+  return prisma.serverWorkerRun.create({
+    data: {
+      workerName: input.workerName,
+      status: input.status,
+      startedAt: input.startedAt,
+      finishedAt,
+      durationMs: Math.max(0, finishedAt.getTime() - input.startedAt.getTime()),
+      summary: input.summary,
+      error: input.error,
+      metadata: (input.metadata || undefined) as any,
+    },
+  })
 }

@@ -52,6 +52,19 @@ export function MetricChart({ title, value, subtitle, points, markers = [], clas
     if (severity === 'CRITICAL') return { fill: '#b64235', text: '!' }
     return { fill: '#d6a533', text: '!' }
   }
+  const markerClusters = markers
+    .map((marker) => ({ marker, x: markerPosition(marker.at) }))
+    .sort((a, b) => a.x - b.x)
+    .reduce<Array<{ x: number; markers: typeof markers }>>((clusters, item) => {
+      const latest = clusters[clusters.length - 1]
+      if (latest && Math.abs(latest.x - item.x) < 18) {
+        latest.markers.push(item.marker)
+        latest.x = (latest.x * (latest.markers.length - 1) + item.x) / latest.markers.length
+      } else {
+        clusters.push({ x: item.x, markers: [item.marker] })
+      }
+      return clusters
+    }, [])
 
   return (
     <div className={cn('min-w-0 overflow-hidden rounded-lg border border-stone-200 bg-[#10170f] p-4 text-[#f8f2e4] shadow-[0_8px_30px_rgba(47,38,24,0.12)]', className)}>
@@ -82,15 +95,28 @@ export function MetricChart({ title, value, subtitle, points, markers = [], clas
         ))}
         {areaPath && <path d={areaPath} fill={`url(#metric-fill-${title.replace(/\W+/g, '-')})`} />}
         {linePath && <path d={linePath} fill="none" stroke="#a8d08d" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />}
-        {markers.map((marker, index) => {
-          const x = markerPosition(marker.at)
-          const style = markerStyle(marker.severity, marker.status)
+        {markerClusters.map((cluster, index) => {
+          const primary = cluster.markers.some((marker) => marker.status === 'RESOLVED')
+            ? cluster.markers.find((marker) => marker.status === 'RESOLVED') || cluster.markers[0]
+            : cluster.markers.some((marker) => marker.severity === 'CRITICAL')
+              ? cluster.markers.find((marker) => marker.severity === 'CRITICAL') || cluster.markers[0]
+              : cluster.markers[0]
+          const style = markerStyle(primary.severity, primary.status)
+          const tooltip = cluster.markers.map((marker) => marker.tooltip).join('\n\n')
+          const lines = tooltip.split('\n').slice(0, 12)
+          const panelX = cluster.x > width - 190 ? -178 : 12
           return (
-            <g key={`${marker.label}-${marker.at.toISOString()}-${index}`} transform={`translate(${x.toFixed(1)} ${padding + 10 + (index % 3) * 18})`}>
-              <circle r="7" fill={style.fill} stroke="#f8f2e4" strokeWidth="1.5">
-                <title>{marker.tooltip}</title>
+            <g key={`${primary.label}-${primary.at.toISOString()}-${index}`} className="group" transform={`translate(${cluster.x.toFixed(1)} ${padding + 10 + (index % 3) * 18})`}>
+              <circle r={cluster.markers.length > 1 ? 9 : 7} fill={style.fill} stroke="#f8f2e4" strokeWidth="1.5">
+                <title>{tooltip}</title>
               </circle>
-              <text x="0" y="3" textAnchor="middle" fill="#fffdf7" fontSize="10" fontWeight="700">{style.text}</text>
+              <text x="0" y="3" textAnchor="middle" fill="#fffdf7" fontSize="10" fontWeight="700">{cluster.markers.length > 1 ? cluster.markers.length : style.text}</text>
+              <g className="pointer-events-none opacity-0 transition-opacity group-hover:opacity-100">
+                <rect x={panelX} y="-8" width="166" height={Math.max(42, lines.length * 11 + 12)} rx="5" fill="#fffaf0" stroke="#d6dfc9" />
+                {lines.map((line, lineIndex) => (
+                  <text key={`${line}-${lineIndex}`} x={panelX + 8} y={8 + lineIndex * 11} fill="#2f2a22" fontSize="8.5">{line}</text>
+                ))}
+              </g>
             </g>
           )
         })}

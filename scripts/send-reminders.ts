@@ -5,9 +5,11 @@ import { sendCareQueueDigestAlerts } from '../lib/email-alerts'
 import { sendCollectionUpdateDigestAlerts } from '../lib/collection-updates'
 import { sendPushNotification, pushPreferenceKeys } from '../lib/push'
 import { nextOccurrence, reminderCategoryLabel, reminderPreferenceKey } from '../lib/reminders'
+import { recordServerWorkerRun } from '../lib/server-incidents'
 import { timeZoneForPreference } from '../lib/time'
 
 const prisma = new PrismaClient()
+const startedAt = new Date()
 
 function collectionPath(slug: string | null | undefined, path = '/') {
   if (!slug) return '/collections'
@@ -199,12 +201,33 @@ async function main() {
 
   const digestResult = await sendCareQueueDigestAlerts(prisma, now)
   const updateDigestResult = await sendCollectionUpdateDigestAlerts(prisma, now)
+  await recordServerWorkerRun(prisma, {
+    workerName: 'reminders',
+    status: 'SUCCEEDED',
+    startedAt,
+    summary: `Processed ${reminders.length} due reminders.`,
+    metadata: {
+      reminders: reminders.length,
+      careDigestSent: digestResult.sent,
+      careDigestFailed: digestResult.failed,
+      collectionUpdateDigestSent: updateDigestResult.sent,
+      collectionUpdateDigestFailed: updateDigestResult.failed,
+    },
+  })
   console.info(`Processed ${reminders.length} due reminder(s). Sent ${digestResult.sent} care queue digest(s); ${digestResult.failed} failed. Sent ${updateDigestResult.sent} collection update digest(s); ${updateDigestResult.failed} failed.`)
 }
 
 main()
-  .catch((error) => {
+  .catch(async (error) => {
     console.error(error)
+    await recordServerWorkerRun(prisma, {
+      workerName: 'reminders',
+      status: 'FAILED',
+      startedAt,
+      error: error instanceof Error ? error.message : String(error),
+    }).catch((recordError) => {
+      console.error('Failed to record reminders worker failure', recordError)
+    })
     process.exitCode = 1
   })
   .finally(async () => {

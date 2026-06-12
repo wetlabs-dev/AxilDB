@@ -24,7 +24,7 @@ function statusClass(status: string) {
 export default async function ServerIncidentHistory({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; severity?: string; category?: string; from?: string; to?: string }>
+  searchParams: Promise<{ status?: string; severity?: string; category?: string; from?: string; to?: string; q?: string }>
 }) {
   const admin = await requireServerAdmin()
   const preferences = await prisma.emailPreference.findUnique({ where: { userId: admin.id } })
@@ -33,6 +33,13 @@ export default async function ServerIncidentHistory({
   if (params.status === 'OPEN' || params.status === 'RESOLVED') where.status = params.status
   if (params.severity && incidentSeverities.includes(params.severity as any)) where.severity = params.severity
   if (params.category && incidentCategories.includes(params.category as any)) where.category = params.category
+  if (params.q?.trim()) {
+    where.OR = [
+      { title: { contains: params.q.trim(), mode: 'insensitive' } },
+      { description: { contains: params.q.trim(), mode: 'insensitive' } },
+      { type: { contains: params.q.trim(), mode: 'insensitive' } },
+    ]
+  }
   if (params.from || params.to) {
     where.detectedAt = {
       ...(params.from ? { gte: new Date(`${params.from}T00:00:00`) } : {}),
@@ -59,6 +66,7 @@ export default async function ServerIncidentHistory({
 
       <Card>
         <form className="grid gap-3 md:grid-cols-6">
+          <Field label="Search" name="q" defaultValue={params.q || ''} wrapperClassName="md:col-span-2" />
           <Select label="Status" name="status" defaultValue={params.status || ''}>
             <option value="">Any</option>
             <option value="OPEN">Open only</option>
