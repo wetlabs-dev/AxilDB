@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { RefreshCw } from 'lucide-react'
 import { archiveLocation, movePlantInstanceLocation, regenerateLocationCode, updateLocation } from '@/app/actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { Button, Card, Field, LinkButton, TextArea } from '@/components/ui'
@@ -91,10 +92,11 @@ export default async function LocationDetail({ params }: { params: Promise<{ id:
                   title="Regenerate location code?"
                   message={`Change this location code from ${location.code} to ${proposedLocationCode}? Existing QR links point to this same location record, but printed labels using the old code should be replaced.`}
                   confirmLabel="Regenerate code"
+                  pendingLabel={<><RefreshCw className="h-4 w-4 animate-spin" aria-hidden="true" /><span className="sr-only">Regenerating location code</span></>}
                   className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#c7d8bd] bg-[#f5fbf0] p-0 text-[#2f6b45] shadow-sm hover:bg-[#e6f0db]"
                   confirmClassName="bg-[#2f6b45] hover:bg-[#245737]"
                 >
-                  R
+                  <RefreshCw className="h-4 w-4" aria-hidden="true" />
                   <span className="sr-only">Regenerate location code</span>
                 </ConfirmDeleteButton>
               </form>

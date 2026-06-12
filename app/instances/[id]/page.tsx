@@ -787,6 +787,7 @@ export default async function InstanceDetail({
                   title="Regenerate plant ID?"
                   message={`Change this plant ID from ${i.plantId} to ${expectedPlantId}? Existing links will continue to point to this same record, but printed labels using the old ID should be replaced.`}
                   confirmLabel="Regenerate ID"
+                  pendingLabel={<><RefreshCw className="h-4 w-4 animate-spin" aria-hidden="true" /><span className="sr-only">Regenerating plant ID</span></>}
                   className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#c7d8bd] bg-[#f5fbf0] p-0 text-[#2f6b45] shadow-sm hover:bg-[#e6f0db]"
                   confirmClassName="bg-[#2f6b45] hover:bg-[#245737]"
                 >

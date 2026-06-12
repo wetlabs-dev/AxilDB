@@ -1,14 +1,15 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import { useFormStatus } from 'react-dom'
 import { cn } from '@/lib/utils'
 
 type ConfirmDeleteButtonProps = {
-  children: any
+  children: ReactNode
   title: string
   message: string
   confirmLabel?: string
-  pendingLabel?: string
+  pendingLabel?: ReactNode
   pendingMessage?: string
   className?: string
   confirmClassName?: string
