@@ -179,11 +179,11 @@ svg {
   max-width: 100%;
 }
 
-:where(.grid, .flex) > * {
+main :where(.grid, .flex) > * {
   min-width: 0;
 }
 
-:where(.overflow-x-auto, .overflow-auto) {
+main :where(.overflow-x-auto, .overflow-auto) {
   max-width: 100%;
   min-width: 0;
 }
