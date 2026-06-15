@@ -3,7 +3,7 @@ import { appUrl, sendEmail } from '@/lib/email'
 import { renderBrandedEmail } from '@/lib/email-templates'
 import { getCareQueue, type CareQueueItem, type CareTaskType } from '@/lib/care-queue'
 import { sendPushNotification } from '@/lib/push'
-import { calendarDayIndexInTimeZone, timeZoneForPreference } from '@/lib/time'
+import { calendarDayIndexInTimeZone, endOfDayInTimeZone, timeZoneForPreference } from '@/lib/time'
 
 type ServerMetricSnapshot = {
   id: string
@@ -133,8 +133,8 @@ function careDigestCategory(type: CareTaskType): CareDigestCategory {
   return 'manual reminder'
 }
 
-function isDue(item: CareQueueItem, now: Date) {
-  return !item.completedAt && item.dueAt <= now
+function isDue(item: CareQueueItem, now: Date, timezone?: string) {
+  return !item.completedAt && item.dueAt <= endOfDayInTimeZone(now, timezone)
 }
 
 function isDueToday(item: CareQueueItem, now: Date, timezone?: string) {
@@ -278,7 +278,7 @@ export async function sendCareQueueDigestAlerts(prisma: PrismaClient, now = new 
         now,
         timezone,
       })
-      const dueItems = items.filter((item) => isDue(item, now))
+      const dueItems = items.filter((item) => isDue(item, now, timezone))
       if (!dueItems.length) continue
 
       const collectionDigest: CollectionDigest = {

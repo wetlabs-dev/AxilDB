@@ -49,6 +49,10 @@ function daysBetween(a: Date, b: Date, timezone?: string) {
   return calendarDayIndexInTimeZone(a, timezone) - calendarDayIndexInTimeZone(b, timezone)
 }
 
+function dayStart(date: Date, timezone?: string) {
+  return startOfDayInTimeZone(date, timezone)
+}
+
 function clampPriority(value: number) {
   return Math.max(0, Math.min(999, Math.round(value)))
 }
@@ -213,10 +217,12 @@ export async function getCareQueue(
   const pushDerived = (item: Omit<CareQueueItem, 'source' | 'href' | 'overdueDays' | 'priority'> & { basePriority: number }) => {
     const adjustment = item.plantInstanceId ? adjustmentMap.get(`${item.plantInstanceId}:${item.taskType}`) : null
     if (isSuppressed(adjustment, now)) return
-    const overdueDays = Math.max(0, daysBetween(now, item.dueAt, timezone))
+    const dueAt = dayStart(item.dueAt, timezone)
+    const overdueDays = Math.max(0, daysBetween(now, dueAt, timezone))
     items.push({
       ...item,
       source: 'derived',
+      dueAt,
       href: taskPath(collectionSlug, item.plantInstanceId, item.bloomEventId),
       overdueDays,
       priority: clampPriority(item.basePriority + overdueDays * 9),
@@ -350,8 +356,8 @@ export async function getCareQueue(
   }
 
   for (const reminder of reminders) {
-    const dueAt = reminder.nextSendAt || reminder.dueAt
-    const overdueDays = Math.max(0, daysBetween(now, dueAt, timezone))
+    const reminderDueAt = reminder.nextSendAt || reminder.dueAt
+    const overdueDays = Math.max(0, daysBetween(now, reminderDueAt, timezone))
     const reminderInstance = reminder.entityType === 'PLANT_INSTANCE' && reminder.entityId
       ? instanceById.get(reminder.entityId)
       : reminder.entityType === 'BLOOM_EVENT' && reminder.entityId
@@ -368,7 +374,7 @@ export async function getCareQueue(
       source: 'reminder',
       title: reminder.title,
       reason: `${reminderCategoryLabel(reminder.category)}${reminder.body ? `: ${reminder.body}` : ''}`,
-      dueAt,
+      dueAt: reminderDueAt,
       priority: reminder.completedAt ? 0 : clampPriority(60 + overdueDays * 8),
       overdueDays,
       href: path,

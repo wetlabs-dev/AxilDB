@@ -8,6 +8,10 @@ import { SidebarClient, type SidebarBadges, type SidebarCollection } from './Sid
 
 async function buildSidebarBadges(collection: { id: string; slug: string }, user: { id: string; role: string } | null): Promise<SidebarBadges> {
   const collectionId = collection.id
+  const preferences = user
+    ? await prisma.emailPreference.findUnique({ where: { userId: user.id }, select: { timezone: true } })
+    : null
+  const timezone = preferences?.timezone || undefined
   const [
     careItems,
     plantDefinitions,
@@ -29,7 +33,7 @@ async function buildSidebarBadges(collection: { id: string; slug: string }, user
     pendingDefinitionShares,
     accountReviews,
   ] = await Promise.all([
-    getCareQueue(prisma, { collectionId, collectionSlug: collection.slug, userId: user?.id }),
+    getCareQueue(prisma, { collectionId, collectionSlug: collection.slug, userId: user?.id, timezone }),
     prisma.plantDefinition.count({ where: { collectionId } }),
     prisma.plantInstance.count({ where: { collectionId, status: { not: 'ARCHIVED' } } }),
     prisma.location.count({ where: { collectionId, status: 'ACTIVE' } }),
@@ -86,7 +90,7 @@ async function buildSidebarBadges(collection: { id: string; slug: string }, user
     : 0
 
   return {
-    '/care': careQueueSummary(careItems).today,
+    '/care': careQueueSummary(careItems, new Date(), timezone).today,
     '/care-sheets': careSheets,
     '/plants': plantDefinitions,
     '/instances': activeInstances,
