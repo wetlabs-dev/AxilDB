@@ -2,6 +2,9 @@ import './globals.css'
 import { ScrollPreserver } from '@/components/ScrollPreserver'
 import { Sidebar } from '@/components/sidebar'
 import { headers } from 'next/headers'
+import { getCurrentUser, isAdmin } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+import { formatDateTime } from '@/lib/time'
 
 export const metadata = {
   title: 'AxilDB — Botanical Accession System',
@@ -22,11 +25,36 @@ export const viewport = {
   themeColor: '#3f6212',
 }
 
+const maintenanceAllowedPrefixes = ['/login', '/forgot-password', '/reset-password', '/magic-login', '/two-factor', '/verify-email']
+
+function MaintenanceScreen({ message, expectedReturnAt }: { message?: string | null; expectedReturnAt?: Date | null }) {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-[#f8f3e6] px-5 py-12 text-stone-900">
+      <section className="w-full max-w-2xl rounded-lg border border-stone-200 bg-white/85 p-8 shadow-sm">
+        <p className="text-sm font-semibold uppercase tracking-wide text-[#2f6b45]">Maintenance mode</p>
+        <h1 className="mt-3 font-serif text-4xl font-semibold">AxilDB is currently undergoing maintenance.</h1>
+        {message && <p className="mt-5 text-lg leading-8 text-stone-700">{message}</p>}
+        {expectedReturnAt && (
+          <p className="mt-5 rounded-md border border-stone-200 bg-[#fffaf0] px-4 py-3 text-sm text-stone-700">
+            Expected return: <span className="font-semibold">{formatDateTime(expectedReturnAt)}</span>
+          </p>
+        )}
+        <p className="mt-6 text-sm text-stone-500">Server admins can still sign in and manage the maintenance window.</p>
+      </section>
+    </main>
+  )
+}
+
 export default async function RootLayout({children}:{children:React.ReactNode}) {
   const requestHeaders = await headers()
   const host = requestHeaders.get('host')?.split(':')[0] || ''
   const isMarketingHost = host === 'axildb.com' || host === 'www.axildb.com'
   const isMarketingRoute = requestHeaders.get('x-axildb-marketing') === '1'
+  const requestPath = requestHeaders.get('x-axildb-path') || '/'
+  const maintenanceMode = await prisma.maintenanceMode.findFirst({ where: { enabled: true }, orderBy: { updatedAt: 'desc' } })
+  const maintenanceAuthAllowed = maintenanceAllowedPrefixes.some((prefix) => requestPath.startsWith(prefix))
+  const user = maintenanceMode && !maintenanceAuthAllowed ? await getCurrentUser() : null
+  const showMaintenance = Boolean(maintenanceMode && !maintenanceAuthAllowed && !isAdmin(user))
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -50,7 +78,9 @@ export default async function RootLayout({children}:{children:React.ReactNode}) 
         />
       </head>
       <body>
-        {isMarketingHost || isMarketingRoute ? (
+        {showMaintenance ? (
+          <MaintenanceScreen message={maintenanceMode?.message} expectedReturnAt={maintenanceMode?.expectedReturnAt} />
+        ) : isMarketingHost || isMarketingRoute ? (
           children
         ) : (
           <div className="min-h-screen min-w-0 md:flex">

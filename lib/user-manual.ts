@@ -396,7 +396,7 @@ export const manualSections: ManualSection[] = [
     title: 'Server Management',
     route: '/server',
     screenshot: 'server-management.png',
-    purpose: 'Server Management is restricted to server admins and covers sitewide users, collection creation and archival, validated definition review, image moderation, AI availability, AI access requests, collection requests, backups, health metrics, incident history, and usage statistics.',
+    purpose: 'Server Management is restricted to server admins and covers sitewide users, collection creation and archival, validated definition review, image moderation, AI availability, AI access requests, collection requests, maintenance mode, backups, restore planning, health metrics, incident history, and usage statistics.',
     howTo: [
       'Open Server Management from the admin nav when signed in as a server admin.',
       'Review server health, open incidents, collection usage, AI usage, pending collection and AI access requests, backup status, and storage estimates.',
@@ -405,7 +405,9 @@ export const manualSections: ManualSection[] = [
       'Use Validated Definitions to review nominations and disputes, edit approved site-level reference definitions, and preserve reusable taxonomy outside any one collection.',
       'Use Image Moderation to review censored uploads, override false alarms, remove images, or remove an image and block the uploader.',
       'Use Incident History to search/filter open or resolved incidents, inspect clustered memory/disk graph markers, create manual incidents, and attach notes or postmortem details.',
-      'Use backup controls to initiate sitewide backups.',
+      'Use Maintenance Mode before planned downtime so public visitors and normal users see a maintenance screen while server admins retain access.',
+      'Use backup controls to initiate sitewide backups, browse backup folders under the configured backup root, validate restore readiness, and generate the SSH-only restore command.',
+      'Use Restore History to document restore requests, validation results, generated commands, notes, and externally completed or cancelled restores. The web UI never executes a database or file restore.',
       'Use Orphaned Image Cleanup to scan uploaded image storage for files no longer referenced by database records, review the dry-run list, select files, and delete only after confirmation.',
     ],
     notes: [

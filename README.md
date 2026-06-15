@@ -263,6 +263,14 @@ Server admins can request a backup from **Server Management → Backups**. The `
 - generated label files from `public/labels`
 - a small manifest with timestamp and git commit
 
+Server Management also includes restore planning tools for server admins:
+
+- Maintenance Mode lets admins show a maintenance screen to public visitors and normal users while server admins keep access.
+- The backup browser lists folders under the configured backup root only, shows manifests and expected artifacts, and flags missing or empty files.
+- Restore requests record validation results, generated SSH commands, notes, and whether a restore was completed externally or cancelled.
+
+Set `AXILDB_BACKUP_ROOT` if backup folders live somewhere other than `backups` relative to the server repo root.
+
 To process one queued backup manually from a containerized deployment:
 
 ```bash
@@ -287,18 +295,20 @@ Copy backup folders off the server periodically. For example:
 scp -r ubuntu@app.axildb.com:/home/ubuntu/AxilDB/backups/axildb-YYYYMMDDTHHMMSSZ .
 ```
 
-Restore is intentionally command-line only because it replaces database contents. Planned restore strategy:
+Restore is intentionally command-line only because it replaces database contents. The web UI can validate backups, document restore requests, and generate the server-side command, but it never executes a restore. Planned restore strategy:
 
-1. Announce a maintenance window and stop app traffic if this is production.
+1. Announce a maintenance window and enable Maintenance Mode.
 2. Confirm the backup folder contains `axildb.dump`, `uploads.tar.gz`, `labels.tar.gz`, and `manifest.txt`.
-3. Run the guarded restore command from the server repo root.
-4. Rebuild/restart containers and run production checks.
+3. Stop app traffic if needed.
+4. SSH to the server and run the guarded restore command from the server repo root.
+5. Rebuild/restart containers and run production checks.
 
 The guarded restore command:
 
 ```bash
 AXILDB_RESTORE_CONFIRM=YES scripts/restore.sh backups/axildb-YYYYMMDDTHHMMSSZ
 docker compose up -d --build
+docker compose run --rm migrate npm run check:production
 ```
 
 The restore script restores Postgres and extracts uploaded images/labels. It does not restore Caddy certificates, SMTP config, or other server-level files. Keep `/etc/axildb/axildb.env` backed up separately somewhere secure.

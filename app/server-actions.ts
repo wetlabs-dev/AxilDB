@@ -1,14 +1,16 @@
 'use server'
 
-import { ServerIncidentCategory, ServerIncidentSeverity, ServerIncidentStatus } from '@prisma/client'
+import { RestoreRequestStatus, ServerIncidentCategory, ServerIncidentSeverity, ServerIncidentStatus } from '@prisma/client'
 import { redirect } from 'next/navigation'
 import { audit, requireServerAdmin } from '@/lib/auth'
 import { deleteSelectedOrphanedImages, selectedOrphanedImagePaths } from '@/lib/admin/orphanedImages'
+import { restoreCommandForBackup, resolveBackupFolder, validateBackupForRestore } from '@/lib/admin/restore-management'
 import { prisma } from '@/lib/prisma'
 
 const incidentCategories = new Set(Object.values(ServerIncidentCategory))
 const incidentSeverities = new Set(Object.values(ServerIncidentSeverity))
 const incidentStatuses = new Set(Object.values(ServerIncidentStatus))
+const restoreStatuses = new Set(Object.values(RestoreRequestStatus))
 
 function value(formData: FormData, key: string) {
   return String(formData.get(key) || '').trim()
@@ -50,6 +52,134 @@ export async function requestSitewideBackup(formData: FormData) {
   })
   await audit(user, 'REQUEST', 'BACKUP_RUN', run.id, 'Requested sitewide backup', { notes: notes || undefined })
   redirect('/server?backup=requested')
+}
+
+export async function updateMaintenanceMode(formData: FormData) {
+  const user = await requireServerAdmin()
+  const enabled = value(formData, 'enabled') === 'true'
+  const message = value(formData, 'message')
+  const expectedReturnAtValue = value(formData, 'expectedReturnAt')
+  const expectedReturnAt = expectedReturnAtValue ? new Date(expectedReturnAtValue) : null
+  const current = await prisma.maintenanceMode.findFirst({ orderBy: { updatedAt: 'desc' } })
+  const now = new Date()
+  const record = current
+    ? await prisma.maintenanceMode.update({
+        where: { id: current.id },
+        data: {
+          enabled,
+          message: message || null,
+          expectedReturnAt: expectedReturnAt && !Number.isNaN(expectedReturnAt.getTime()) ? expectedReturnAt : null,
+          startedAt: enabled && !current.enabled ? now : current.startedAt,
+          startedByUserId: enabled && !current.enabled ? user.id : current.startedByUserId,
+          endedAt: !enabled && current.enabled ? now : current.endedAt,
+          endedByUserId: !enabled && current.enabled ? user.id : current.endedByUserId,
+        },
+      })
+    : await prisma.maintenanceMode.create({
+        data: {
+          enabled,
+          message: message || null,
+          expectedReturnAt: expectedReturnAt && !Number.isNaN(expectedReturnAt.getTime()) ? expectedReturnAt : null,
+          startedAt: enabled ? now : null,
+          startedByUserId: enabled ? user.id : null,
+          endedAt: enabled ? null : now,
+          endedByUserId: enabled ? null : user.id,
+        },
+      })
+  const action = enabled ? (current?.enabled ? 'UPDATE' : 'ENABLE') : 'DISABLE'
+  await audit(user, action, 'MAINTENANCE_MODE', record.id, `${enabled ? 'Enabled/updated' : 'Disabled'} maintenance mode`, {
+    enabled,
+    message: message || undefined,
+    expectedReturnAt: record.expectedReturnAt?.toISOString(),
+  })
+  redirect('/server?maintenance=updated')
+}
+
+export async function createRestoreRequest(formData: FormData) {
+  const user = await requireServerAdmin()
+  const backupPath = value(formData, 'backupPath')
+  const notes = value(formData, 'notes')
+  let backup
+  try {
+    backup = resolveBackupFolder(backupPath)
+  } catch {
+    redirect('/server?restore=invalid-backup')
+  }
+  const request = await prisma.restoreRequest.create({
+    data: {
+      backupPath: backup.relativePath,
+      backupName: backup.name,
+      requestedByUserId: user.id,
+      notes: notes || null,
+    },
+  })
+  await audit(user, 'CREATE', 'RESTORE_REQUEST', request.id, `Created restore request for ${backup.name}`, { backupPath: backup.relativePath })
+  redirect('/server?restore=requested')
+}
+
+export async function validateRestoreRequest(formData: FormData) {
+  const user = await requireServerAdmin()
+  const id = value(formData, 'id')
+  const request = await prisma.restoreRequest.findUniqueOrThrow({ where: { id } })
+  const validation = await validateBackupForRestore(prisma, request.backupPath)
+  await prisma.restoreRequest.update({
+    where: { id },
+    data: {
+      status: RestoreRequestStatus.VALIDATED,
+      validationJson: validation,
+    },
+  })
+  await audit(user, 'VALIDATE', 'RESTORE_REQUEST', id, `Validated restore request for ${request.backupName}`, {
+    readiness: validation.readiness,
+    failed: validation.failed.length,
+    warnings: validation.warnings.length,
+  })
+  redirect('/server?restore=validated')
+}
+
+export async function generateRestoreCommand(formData: FormData) {
+  const user = await requireServerAdmin()
+  const id = value(formData, 'id')
+  const request = await prisma.restoreRequest.findUniqueOrThrow({ where: { id } })
+  const command = restoreCommandForBackup(request.backupPath)
+  await prisma.restoreRequest.update({
+    where: { id },
+    data: {
+      status: RestoreRequestStatus.COMMAND_GENERATED,
+      generatedCommand: command,
+      commandGeneratedAt: new Date(),
+    },
+  })
+  await audit(user, 'GENERATE', 'RESTORE_REQUEST_COMMAND', id, `Generated server-side restore command for ${request.backupName}`, { backupPath: request.backupPath })
+  redirect('/server?restore=command-generated')
+}
+
+export async function updateRestoreRequest(formData: FormData) {
+  const user = await requireServerAdmin()
+  const id = value(formData, 'id')
+  const status = value(formData, 'status')
+  const notes = value(formData, 'notes')
+  const request = await prisma.restoreRequest.findUniqueOrThrow({ where: { id } })
+  const nextStatus = restoreStatuses.has(status as RestoreRequestStatus) ? status as RestoreRequestStatus : request.status
+  const now = new Date()
+  await prisma.restoreRequest.update({
+    where: { id },
+    data: {
+      status: nextStatus,
+      notes: notes || null,
+      completedAt: nextStatus === RestoreRequestStatus.COMPLETED_EXTERNALLY ? request.completedAt || now : request.completedAt,
+      completedByUserId: nextStatus === RestoreRequestStatus.COMPLETED_EXTERNALLY ? user.id : request.completedByUserId,
+      cancelledAt: nextStatus === RestoreRequestStatus.CANCELLED ? request.cancelledAt || now : request.cancelledAt,
+      cancelledByUserId: nextStatus === RestoreRequestStatus.CANCELLED ? user.id : request.cancelledByUserId,
+    },
+  })
+  const action = nextStatus === RestoreRequestStatus.COMPLETED_EXTERNALLY
+    ? 'COMPLETE_EXTERNALLY'
+    : nextStatus === RestoreRequestStatus.CANCELLED
+      ? 'CANCEL'
+      : 'UPDATE'
+  await audit(user, action, 'RESTORE_REQUEST', id, `Updated restore request for ${request.backupName}`, { status: nextStatus, notes: notes || undefined })
+  redirect('/server?restore=updated')
 }
 
 export async function deleteOrphanedImages(formData: FormData) {

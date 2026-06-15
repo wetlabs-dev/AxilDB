@@ -28,6 +28,14 @@ enum ServerIncidentStatus {
   RESOLVED
 }
 
+enum RestoreRequestStatus {
+  PLANNED
+  VALIDATED
+  COMMAND_GENERATED
+  COMPLETED_EXTERNALLY
+  CANCELLED
+}
+
 model GoverningBody {
   collectionId     String?
   id               String            @id @default(cuid())
@@ -73,6 +81,11 @@ model User {
   aiUsageEvents       AiUsageEvent[]
   archivedCollections Collection[] @relation("CollectionArchivedBy")
   backupRuns          BackupRun[] @relation("BackupRunRequestedBy")
+  maintenanceStarted  MaintenanceMode[] @relation("MaintenanceModeStartedBy")
+  maintenanceEnded    MaintenanceMode[] @relation("MaintenanceModeEndedBy")
+  requestedRestoreRequests RestoreRequest[] @relation("RestoreRequestRequestedBy")
+  completedRestoreRequests RestoreRequest[] @relation("RestoreRequestCompletedBy")
+  cancelledRestoreRequests RestoreRequest[] @relation("RestoreRequestCancelledBy")
   generatedCollectionBriefings CollectionBriefing[]
   sunshine            Sunshine[]
   sentCollectionInvitations CollectionInvitation[] @relation("CollectionInvitationInviter")
@@ -538,6 +551,54 @@ model BackupRun {
   @@index([status])
   @@index([requestedAt])
   @@index([requestedById])
+}
+
+model MaintenanceMode {
+  id                  String    @id @default(cuid())
+  enabled             Boolean   @default(false)
+  message             String?
+  expectedReturnAt    DateTime?
+  startedAt           DateTime?
+  startedByUserId     String?
+  endedAt             DateTime?
+  endedByUserId       String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  startedBy User? @relation("MaintenanceModeStartedBy", fields: [startedByUserId], references: [id], onDelete: SetNull)
+  endedBy   User? @relation("MaintenanceModeEndedBy", fields: [endedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([enabled])
+  @@index([startedByUserId])
+  @@index([endedByUserId])
+}
+
+model RestoreRequest {
+  id                  String               @id @default(cuid())
+  backupPath          String
+  backupName          String
+  status              RestoreRequestStatus @default(PLANNED)
+  requestedByUserId   String?
+  requestedAt         DateTime             @default(now())
+  validationJson      Json?
+  generatedCommand    String?
+  commandGeneratedAt  DateTime?
+  notes               String?
+  completedAt         DateTime?
+  completedByUserId   String?
+  cancelledAt         DateTime?
+  cancelledByUserId   String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  requestedBy User? @relation("RestoreRequestRequestedBy", fields: [requestedByUserId], references: [id], onDelete: SetNull)
+  completedBy User? @relation("RestoreRequestCompletedBy", fields: [completedByUserId], references: [id], onDelete: SetNull)
+  cancelledBy User? @relation("RestoreRequestCancelledBy", fields: [cancelledByUserId], references: [id], onDelete: SetNull)
+
+  @@index([backupPath])
+  @@index([status])
+  @@index([requestedAt])
+  @@index([requestedByUserId])
 }
 
 model Session {

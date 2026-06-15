@@ -4,6 +4,12 @@ import { RETURN_TO_HEADER } from '@/lib/redirects'
 const marketingHosts = new Set(['axildb.com', 'www.axildb.com'])
 const publicFile = /\.(.*)$/
 
+function requestHeadersWithPath(request: NextRequest) {
+  const requestHeaders = new Headers(request.headers)
+  requestHeaders.set('x-axildb-path', `${request.nextUrl.pathname}${request.nextUrl.search}`)
+  return requestHeaders
+}
+
 export function middleware(request: NextRequest) {
   const host = request.headers.get('host')?.split(':')[0] || ''
   const { pathname, search } = request.nextUrl
@@ -17,7 +23,7 @@ export function middleware(request: NextRequest) {
     const [, , slug, ...rest] = pathname.split('/')
     const url = request.nextUrl.clone()
     url.pathname = `/${rest.join('/')}` || '/'
-    const requestHeaders = new Headers(request.headers)
+    const requestHeaders = requestHeadersWithPath(request)
     requestHeaders.set('x-axildb-collection', decodeURIComponent(slug))
     requestHeaders.set(RETURN_TO_HEADER, `${pathname}${search}`)
     return NextResponse.rewrite(url, {
@@ -28,7 +34,7 @@ export function middleware(request: NextRequest) {
   }
 
   if (pathname === '/splash') {
-    const requestHeaders = new Headers(request.headers)
+    const requestHeaders = requestHeadersWithPath(request)
     requestHeaders.set('x-axildb-marketing', '1')
     requestHeaders.set(RETURN_TO_HEADER, `${pathname}${search}`)
     return NextResponse.next({
@@ -42,7 +48,7 @@ export function middleware(request: NextRequest) {
     if (pathname === '/') {
       const url = request.nextUrl.clone()
       url.pathname = '/splash'
-      const requestHeaders = new Headers(request.headers)
+      const requestHeaders = requestHeadersWithPath(request)
       requestHeaders.set('x-axildb-marketing', '1')
       requestHeaders.set(RETURN_TO_HEADER, `${pathname}${search}`)
       return NextResponse.rewrite(url, {
@@ -60,7 +66,11 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  return NextResponse.next()
+  return NextResponse.next({
+    request: {
+      headers: requestHeadersWithPath(request),
+    },
+  })
 }
 
 export const config = {
