@@ -108,16 +108,32 @@ export default async function InstanceDetail({
       },
       parentLinks: {
         include: {
-          propagationEvent: true,
+          propagationEvent: {
+            include: {
+              children: {
+                include: {
+                  childPlantInstance: {
+                    include: {
+                      plantDefinition: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
       },
       childLinks: {
         include: {
           propagationEvent: {
             include: {
-              children: {
+              parents: {
                 include: {
-                  childPlantInstance: true,
+                  parentPlantInstance: {
+                    include: {
+                      plantDefinition: true,
+                    },
+                  },
                 },
               },
             },
@@ -290,6 +306,31 @@ export default async function InstanceDetail({
       acc[reminder.entityId].push(reminder)
       return acc
     }, {})
+  const parentRelationships = Array.from(
+    new Map(
+      i.childLinks
+        .flatMap((link) => link.propagationEvent.parents.map((parent) => ({
+          key: `${link.propagationEventId}:${parent.parentPlantInstanceId}:${parent.parentRole}`,
+          event: link.propagationEvent,
+          role: parent.parentRole,
+          plant: parent.parentPlantInstance,
+        })))
+        .filter((relationship) => relationship.plant.id !== id)
+        .map((relationship) => [relationship.key, relationship] as const),
+    ).values(),
+  )
+  const childRelationships = Array.from(
+    new Map(
+      i.parentLinks
+        .flatMap((link) => link.propagationEvent.children.map((child) => ({
+          key: `${link.propagationEventId}:${child.childPlantInstanceId}`,
+          event: link.propagationEvent,
+          plant: child.childPlantInstance,
+        })))
+        .filter((relationship) => relationship.plant.id !== id)
+        .map((relationship) => [relationship.key, relationship] as const),
+    ).values(),
+  )
 
   const qr = await QRCode.toDataURL(
     `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.axildb.com'}${collectionPath(collection.slug, `/instances/${id}`)}`
@@ -939,18 +980,40 @@ export default async function InstanceDetail({
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1fr)]">
         <Card className="xl:order-1">
-        <h3 className="font-bold">Children</h3>
-        {i.childLinks.length === 0 && <p className="text-sm text-neutral-600">No child propagations yet.</p>}
-        {i.childLinks
-          .flatMap((l) => l.propagationEvent.children)
-          .map((c) => (
-            <p key={c.id}>
-              <Link className="underline" href={collectionPath(collection.slug, `/instances/${c.childPlantInstanceId}`)}>
-                {c.childPlantInstance.plantId}
-              </Link>
-            </p>
-          ))}
-      </Card>
+          <h3 className="font-bold">Parents</h3>
+          {parentRelationships.length === 0 && <p className="text-sm text-neutral-600">No parent propagation recorded.</p>}
+          <div className="mt-2 grid gap-2 text-sm">
+            {parentRelationships.map((relationship) => (
+              <div key={relationship.key} className="rounded-md border border-stone-200 bg-white/60 p-2">
+                <Link className="font-medium underline" href={collectionPath(collection.slug, `/instances/${relationship.plant.id}`)}>
+                  {relationship.plant.plantId}
+                </Link>
+                <p className="text-xs text-stone-600">
+                  {relationship.role.replaceAll('_', ' ').toLowerCase()} · {relationship.event.method} · {fmtDate(relationship.event.date, timezone)}
+                </p>
+                <p className="text-xs text-stone-700">{plantName(relationship.plant.plantDefinition)}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <Card className="xl:order-2">
+          <h3 className="font-bold">Children</h3>
+          {childRelationships.length === 0 && <p className="text-sm text-neutral-600">No child propagations yet.</p>}
+          <div className="mt-2 grid gap-2 text-sm">
+            {childRelationships.map((relationship) => (
+              <div key={relationship.key} className="rounded-md border border-stone-200 bg-white/60 p-2">
+                <Link className="font-medium underline" href={collectionPath(collection.slug, `/instances/${relationship.plant.id}`)}>
+                  {relationship.plant.plantId}
+                </Link>
+                <p className="text-xs text-stone-600">
+                  {relationship.event.method} · {fmtDate(relationship.event.date, timezone)}
+                </p>
+                <p className="text-xs text-stone-700">{plantName(relationship.plant.plantDefinition)}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
 
         {followCard}
 
