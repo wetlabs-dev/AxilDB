@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { RefreshCw } from 'lucide-react'
 import { archiveLocation, movePlantInstanceLocation, regenerateLocationCode, updateLocation } from '@/app/actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
+import { PlantIdPreviewLink } from '@/components/PlantIdPreviewLink'
 import { Button, Card, Field, LinkButton, TextArea } from '@/components/ui'
 import { canEditInCollection, canManageCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { descendantLocationIds, isQuarantineLocation, locationPath, locationPathWithCodes, nextLocationCode } from '@/lib/locations'
@@ -175,7 +176,9 @@ export default async function LocationDetail({ params }: { params: Promise<{ id:
             {directPlants.map((plant) => (
               <div key={plant.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-stone-200 bg-white/55 p-3 text-sm">
                 <div>
-                  <Link href={collectionPath(collection.slug, `/instances/${plant.id}`)} className="font-semibold underline">{plant.plantId}</Link>
+                  <PlantIdPreviewLink collectionSlug={collection.slug} plantId={plant.plantId} href={collectionPath(collection.slug, `/instances/${plant.id}`)}>
+                    {plant.plantId}
+                  </PlantIdPreviewLink>
                   <p className="text-stone-600">{plantName(plant.plantDefinition)}</p>
                 </div>
                 {canMovePlants && (
@@ -201,7 +204,9 @@ export default async function LocationDetail({ params }: { params: Promise<{ id:
             {nestedPlants.length === 0 && <p className="text-sm text-stone-600">No plants are assigned in child locations.</p>}
             {nestedPlants.map((plant) => (
               <div key={plant.id} className="rounded-lg border border-stone-200 bg-white/55 p-3 text-sm">
-                <Link href={collectionPath(collection.slug, `/instances/${plant.id}`)} className="font-semibold underline">{plant.plantId}</Link>
+                <PlantIdPreviewLink collectionSlug={collection.slug} plantId={plant.plantId} href={collectionPath(collection.slug, `/instances/${plant.id}`)}>
+                  {plant.plantId}
+                </PlantIdPreviewLink>
                 <p className="text-stone-600">{plantName(plant.plantDefinition)}</p>
                 <p className="text-xs text-stone-500">{plant.currentLocation ? `${plant.currentLocation.code} · ${plant.currentLocation.name}` : 'No location'}</p>
               </div>

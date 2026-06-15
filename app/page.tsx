@@ -1,6 +1,7 @@
 import { PlantImage, type PlantImageFrame } from '@/components/PlantImage'
 import { regenerateCollectionBriefing } from '@/app/collection-actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
+import { PlantIdPreviewLink } from '@/components/PlantIdPreviewLink'
 import { Card } from '@/components/ui'
 import { getOrCreateTodaysCollectionBriefing } from '@/lib/briefing'
 import { careQueueSummary, getCareQueue } from '@/lib/care-queue'
@@ -26,6 +27,7 @@ type ActivityItem = {
   subtitle: string
   detail?: string | null
   image?: PlantImageFrame
+  plantId?: string | null
 }
 
 function coverFor(photos: PhotoLookup, id?: string | null) {
@@ -104,24 +106,18 @@ function toggleActivityKind(includedKinds: ActivityKind[], kind: ActivityKind) {
 function ActivityCard({
   item,
   timezone,
+  collectionSlug,
 }: {
   item: ActivityItem
   timezone?: string | null
+  collectionSlug: string
 }) {
   const style = activityStyles[item.kind]
   const Icon = style.icon
-
-  return (
-    <Link
-      href={item.href}
-      className={cn(
-        'group grid overflow-hidden rounded-lg border shadow-[0_8px_24px_rgba(47,38,24,0.06)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(47,38,24,0.10)] sm:h-36 sm:grid-cols-[8.5rem_1fr]',
-        style.className,
-      )}
-    >
-      <div className="h-40 overflow-hidden sm:h-full">
-        <PlantImage src={item.image} alt="" className={cn('transition duration-300 group-hover:scale-[1.03]', style.imageClassName)} />
-      </div>
+  const image = (
+    <PlantImage src={item.image} alt="" className={cn('transition duration-300 group-hover:scale-[1.03]', style.imageClassName)} />
+  )
+  const content = (
       <div className="min-h-0 min-w-0 overflow-hidden p-4">
         <div className="flex flex-wrap items-center gap-2">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-current/20 bg-white/55 px-2 py-0.5 text-[0.68rem] font-bold uppercase tracking-[0.14em] text-stone-700">
@@ -130,10 +126,40 @@ function ActivityCard({
           </span>
           <span className="text-xs font-medium text-stone-500">{fmtDate(item.date, timezone)}</span>
         </div>
-        <h4 className="mt-2 truncate font-serif text-lg leading-tight">{item.title}</h4>
+        <h4 className="mt-2 truncate font-serif text-lg leading-tight">
+          {item.plantId ? (
+            <PlantIdPreviewLink collectionSlug={collectionSlug} plantId={item.plantId} href={item.href}>
+              {item.title}
+            </PlantIdPreviewLink>
+          ) : (
+            item.title
+          )}
+        </h4>
         <p className="mt-1 truncate text-sm text-stone-700">{item.subtitle}</p>
         {item.detail && <p className="mt-2 line-clamp-2 text-xs leading-5 text-stone-600">{item.detail}</p>}
       </div>
+  )
+
+  const className = cn(
+    'group grid overflow-hidden rounded-lg border shadow-[0_8px_24px_rgba(47,38,24,0.06)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(47,38,24,0.10)] sm:h-36 sm:grid-cols-[8.5rem_1fr]',
+    style.className,
+  )
+
+  if (item.plantId) {
+    return (
+      <div className={className}>
+        <Link href={item.href} className="block h-40 overflow-hidden sm:h-full">
+          {image}
+        </Link>
+        {content}
+      </div>
+    )
+  }
+
+  return (
+    <Link href={item.href} className={className}>
+      <div className="h-40 overflow-hidden sm:h-full">{image}</div>
+      {content}
     </Link>
   )
 }
@@ -142,21 +168,19 @@ function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
-const briefingPlantIdClassName = 'inline-flex max-w-full items-center rounded border border-[color:var(--ax-border)] bg-[var(--ax-primary-wash)] px-1.5 py-0.5 font-mono text-[0.92em] font-semibold leading-snug text-[var(--ax-primary)] underline decoration-[color:var(--ax-primary)]/45 underline-offset-2 transition hover:text-[var(--ax-primary-strong)]'
-
 function sequencePrefix(plantId: string) {
   return plantId.slice(0, plantId.lastIndexOf('-'))
 }
 
-function renderBriefingPlantLink(link: BriefingPlantLink, children: ReactNode, key: string) {
+function renderBriefingPlantLink(collectionSlug: string, link: BriefingPlantLink, children: ReactNode, key: string) {
   return (
-    <Link key={key} href={link.href} className={briefingPlantIdClassName}>
+    <PlantIdPreviewLink key={key} collectionSlug={collectionSlug} plantId={link.plantId} href={link.href}>
       {children}
-    </Link>
+    </PlantIdPreviewLink>
   )
 }
 
-function renderLinkedText(text: string, plantLinks: BriefingPlantLink[], keyPrefix: string): ReactNode[] {
+function renderLinkedText(text: string, plantLinks: BriefingPlantLink[], keyPrefix: string, collectionSlug: string): ReactNode[] {
   if (!plantLinks.length || !text) return [text]
 
   const tokens = plantLinks.flatMap((link) => [link.plantId, ...link.aliases].map((value) => ({ value, link })))
@@ -176,7 +200,7 @@ function renderLinkedText(text: string, plantLinks: BriefingPlantLink[], keyPref
 
     const link = tokens.find((item) => item.value === value)?.link
     nodes.push(
-      link ? renderBriefingPlantLink(link, link.plantId, `${keyPrefix}-plant-${index}`) : value,
+      link ? renderBriefingPlantLink(collectionSlug, link, link.plantId, `${keyPrefix}-plant-${index}`) : value,
     )
     lastIndex = index + value.length
 
@@ -187,7 +211,7 @@ function renderLinkedText(text: string, plantLinks: BriefingPlantLink[], keyPref
         const candidate = plantById.get(`${prefix}${shorthand[2]}`)
         if (!candidate) break
         nodes.push(shorthand[1])
-        nodes.push(renderBriefingPlantLink(candidate, shorthand[2], `${keyPrefix}-plant-shorthand-${lastIndex}`))
+        nodes.push(renderBriefingPlantLink(collectionSlug, candidate, shorthand[2], `${keyPrefix}-plant-shorthand-${lastIndex}`))
         lastIndex += shorthand[0].length
         shorthand = text.slice(lastIndex).match(/^(\s*\/\s*)(-\d{3})/)
       }
@@ -198,7 +222,7 @@ function renderLinkedText(text: string, plantLinks: BriefingPlantLink[], keyPref
   return nodes
 }
 
-function renderInlineBriefingMarkdown(text: string, plantLinks: BriefingPlantLink[], keyPrefix: string): ReactNode[] {
+function renderInlineBriefingMarkdown(text: string, plantLinks: BriefingPlantLink[], keyPrefix: string, collectionSlug: string): ReactNode[] {
   const tokenPattern = /(\*\*[^*]+?\*\*|`[^`]+?`|\*[^*\n]+?\*)/g
   const nodes: ReactNode[] = []
   let lastIndex = 0
@@ -206,17 +230,17 @@ function renderInlineBriefingMarkdown(text: string, plantLinks: BriefingPlantLin
   for (const match of text.matchAll(tokenPattern)) {
     const token = match[0]
     const index = match.index ?? 0
-    if (index > lastIndex) nodes.push(...renderLinkedText(text.slice(lastIndex, index), plantLinks, `${keyPrefix}-text-${index}`))
+    if (index > lastIndex) nodes.push(...renderLinkedText(text.slice(lastIndex, index), plantLinks, `${keyPrefix}-text-${index}`, collectionSlug))
 
     if (token.startsWith('**')) {
       nodes.push(
         <strong key={`${keyPrefix}-bold-${index}`} className="font-semibold text-[var(--ax-heading)]">
-          {renderLinkedText(token.slice(2, -2), plantLinks, `${keyPrefix}-bold-${index}`)}
+          {renderLinkedText(token.slice(2, -2), plantLinks, `${keyPrefix}-bold-${index}`, collectionSlug)}
         </strong>,
       )
     } else if (token.startsWith('`')) {
       const codeText = token.slice(1, -1)
-      const linkedCode = renderLinkedText(codeText, plantLinks, `${keyPrefix}-code-${index}`)
+      const linkedCode = renderLinkedText(codeText, plantLinks, `${keyPrefix}-code-${index}`, collectionSlug)
       if (linkedCode.some((node) => typeof node !== 'string')) {
         nodes.push(...linkedCode)
         lastIndex = index + token.length
@@ -233,7 +257,7 @@ function renderInlineBriefingMarkdown(text: string, plantLinks: BriefingPlantLin
     } else {
       nodes.push(
         <em key={`${keyPrefix}-italic-${index}`} className="italic text-[var(--ax-muted-strong)]">
-          {renderLinkedText(token.slice(1, -1), plantLinks, `${keyPrefix}-italic-${index}`)}
+          {renderLinkedText(token.slice(1, -1), plantLinks, `${keyPrefix}-italic-${index}`, collectionSlug)}
         </em>,
       )
     }
@@ -241,11 +265,11 @@ function renderInlineBriefingMarkdown(text: string, plantLinks: BriefingPlantLin
     lastIndex = index + token.length
   }
 
-  if (lastIndex < text.length) nodes.push(...renderLinkedText(text.slice(lastIndex), plantLinks, `${keyPrefix}-text-end`))
+  if (lastIndex < text.length) nodes.push(...renderLinkedText(text.slice(lastIndex), plantLinks, `${keyPrefix}-text-end`, collectionSlug))
   return nodes
 }
 
-function renderBriefingMarkdown(markdown: string, links: BriefingPlantLink[]) {
+function renderBriefingMarkdown(markdown: string, links: BriefingPlantLink[], collectionSlug: string) {
   const plantLinks = links
     .filter((link) => [link.plantId, ...link.aliases].some((value) => markdown.includes(value)))
     .sort((a, b) => Math.max(b.plantId.length, ...b.aliases.map((value) => value.length)) - Math.max(a.plantId.length, ...a.aliases.map((value) => value.length)))
@@ -265,7 +289,7 @@ function renderBriefingMarkdown(markdown: string, links: BriefingPlantLink[]) {
             level <= 2 ? 'mt-5 font-serif text-xl leading-tight first:mt-0' : 'mt-4 text-base',
           )}
         >
-          {renderInlineBriefingMarkdown(heading[2], plantLinks, `briefing-${index}-heading`)}
+          {renderInlineBriefingMarkdown(heading[2], plantLinks, `briefing-${index}-heading`, collectionSlug)}
         </h4>
       )
     }
@@ -276,14 +300,14 @@ function renderBriefingMarkdown(markdown: string, links: BriefingPlantLink[]) {
       return (
         <div key={index} className="flex gap-2 text-sm leading-6 text-[var(--ax-text)]" style={{ paddingLeft: `${indent * 1.25}rem` }}>
           <span className="mt-[0.42rem] h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--ax-primary)]" aria-hidden="true" />
-          <span>{renderInlineBriefingMarkdown(bullet[1], plantLinks, `briefing-${index}-bullet`)}</span>
+          <span>{renderInlineBriefingMarkdown(bullet[1], plantLinks, `briefing-${index}-bullet`, collectionSlug)}</span>
         </div>
       )
     }
 
     return (
       <p key={index} className="text-sm leading-6 text-[var(--ax-text)]">
-        {renderInlineBriefingMarkdown(trimmed, plantLinks, `briefing-${index}-paragraph`)}
+        {renderInlineBriefingMarkdown(trimmed, plantLinks, `briefing-${index}-paragraph`, collectionSlug)}
       </p>
     )
   })
@@ -458,6 +482,7 @@ export default async function Dashboard({
         href: firstChild ? collectionPath(collection.slug, `/instances/${firstChild.id}`) : collectionPath(collection.slug, '/propagations'),
         date: event.date,
         title: firstChild?.plantId || event.method,
+        plantId: firstChild?.plantId,
         subtitle: `${event.method.replaceAll('_', ' ')} · ${event.successStatus.toLowerCase()}`,
         detail: `Children: ${children.join(', ') || '—'}${parents.length ? ` · Parents: ${parents.join(', ')}` : ''}`,
         image: coverFor(coverPhotosByInstance, firstChild?.id) || coverFor(coverPhotosByInstance, firstParent?.id),
@@ -469,6 +494,7 @@ export default async function Dashboard({
       href: collectionPath(collection.slug, `/instances/${bloom.plantInstanceId}`),
       date: bloom.bloomStartDate,
       title: bloom.plantInstance.plantId,
+      plantId: bloom.plantInstance.plantId,
       subtitle: plantName(bloom.plantInstance.plantDefinition),
       detail: [bloom.firstBloom ? 'First bloom' : null, bloom.flowerCount ? `${bloom.flowerCount} flower${bloom.flowerCount === 1 ? '' : 's'}` : null, bloom.notes].filter(Boolean).join(' · '),
       image: coverFor(bloomPhotosByEvent, bloom.id) || coverFor(coverPhotosByInstance, bloom.plantInstanceId),
@@ -479,6 +505,7 @@ export default async function Dashboard({
       href: collectionPath(collection.slug, `/instances/${sport.id}`),
       date: sport.updatedAt,
       title: sport.plantId,
+      plantId: sport.plantId,
       subtitle: `${sport.sportStatus.replaceAll('_', ' ').toLowerCase()} · ${plantName(sport.plantDefinition)}`,
       detail: sport.sportDescription,
       image: coverFor(coverPhotosByInstance, sport.id),
@@ -491,6 +518,7 @@ export default async function Dashboard({
         href: collectionPath(collection.slug, `/instances/${item.id}`),
         date: item.acquisitionDate || item.createdAt,
         title: item.plantId,
+        plantId: item.plantId,
         subtitle: isAcquiredPropagation ? `ACQUIRED PROPAGATION · ${plantName(item.plantDefinition)}` : plantName(item.plantDefinition),
         detail: [item.source, item.distributor, item.location].filter(Boolean).join(' · '),
         image: coverFor(coverPhotosByInstance, item.id),
@@ -502,6 +530,7 @@ export default async function Dashboard({
       href: collectionPath(collection.slug, `/instances/${item.id}`),
       date: item.archiveDate || item.updatedAt,
       title: item.plantId,
+      plantId: item.plantId,
       subtitle: item.archiveReason || plantName(item.plantDefinition),
       detail: item.archiveNotes,
       image: coverFor(coverPhotosByInstance, item.id),
@@ -596,7 +625,7 @@ export default async function Dashboard({
               </span>
             </summary>
             <div className="mt-3 rounded-lg border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] p-4">
-              {renderBriefingMarkdown(briefing.summaryMarkdown, briefingPlantLinks)}
+              {renderBriefingMarkdown(briefing.summaryMarkdown, briefingPlantLinks, collection.slug)}
             </div>
           </details>
         </Card>
@@ -682,7 +711,7 @@ export default async function Dashboard({
         </div>
         <div className="mt-4 grid gap-3 xl:grid-cols-2 2xl:grid-cols-3">
           {activity.map((item) => (
-            <ActivityCard key={`${item.kind}-${item.id}`} item={item} timezone={preferences?.timezone} />
+            <ActivityCard key={`${item.kind}-${item.id}`} item={item} timezone={preferences?.timezone} collectionSlug={collection.slug} />
           ))}
           {activity.length === 0 && <p className="text-sm text-stone-600">No recent activity yet.</p>}
         </div>

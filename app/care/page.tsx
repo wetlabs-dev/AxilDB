@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Bell, Bug, CheckCircle2, Droplets, Flower2, HeartPulse, Sprout } from 'lucide-react'
 import { completeCareTask, markPropagationEstablished, snoozeCareTask } from '@/app/actions'
+import { PlantIdPreviewLink } from '@/components/PlantIdPreviewLink'
 import { PlantImage } from '@/components/PlantImage'
 import { Button, Card, TextArea } from '@/components/ui'
 import { canCreateInCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
@@ -118,7 +119,13 @@ export default async function CareQueuePage({ searchParams }: { searchParams: Pr
                   <span className={item.priority >= 100 ? 'font-semibold text-[#9a3f35]' : 'font-medium text-stone-600'}>{priorityLabel(item.priority)}</span>
                 </div>
                 <div>
-                  <h3 className="font-serif text-xl font-bold leading-tight">{item.plantId || item.title}</h3>
+                  <h3 className="font-serif text-xl font-bold leading-tight">
+                    {item.plantId && item.plantInstanceId ? (
+                      <PlantIdPreviewLink collectionSlug={context.collection.slug} plantId={item.plantId} href={item.href}>
+                        {item.plantId}
+                      </PlantIdPreviewLink>
+                    ) : item.title}
+                  </h3>
                   <p className="text-sm text-stone-700">{item.plantName}</p>
                   {item.location && <p className="text-xs text-stone-500">{item.location}</p>}
                 </div>

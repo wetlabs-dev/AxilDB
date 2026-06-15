@@ -1,0 +1,133 @@
+import type { PrismaClient } from '@prisma/client'
+import { collectionPath } from '@/lib/collections'
+import { locationPathWithCodes } from '@/lib/locations'
+import { plantName } from '@/lib/utils'
+
+export type PlantInstancePreview = {
+  id: string
+  plantId: string
+  href: string
+  displayName: string
+  botanicalName: string
+  acquisitionLabel: string | null
+  coverPhotoUrl: string | null
+  currentLocationPath: string | null
+  currentLocationCode: string | null
+  status: string
+  activeConditionCount: number
+  activeBloomCount: number
+  activeQuarantine: boolean
+  lastObservedAt: string | null
+  lastPhotoAt: string | null
+  lastCareAt: string | null
+}
+
+function mostRecentDate(dates: Array<Date | null | undefined>) {
+  return dates
+    .filter((date): date is Date => date instanceof Date)
+    .sort((left, right) => right.getTime() - left.getTime())[0] || null
+}
+
+function acquisitionLabel(instance: {
+  instanceType: string
+  source?: string | null
+  distributor?: string | null
+  acquisitionDate?: Date | null
+  propagationDate?: Date | null
+}) {
+  const source = [instance.source, instance.distributor].filter(Boolean).join(' via ')
+  if (source) return source
+  if (instance.instanceType === 'ACQUIRED_PROPAGATION') return 'Acquired propagation'
+  if (instance.propagationDate) return 'Propagation'
+  if (instance.acquisitionDate) return 'Acquired plant'
+  return null
+}
+
+export async function getPlantInstancePreview(
+  prisma: PrismaClient,
+  options: {
+    collectionId: string
+    collectionSlug: string
+    plantInstanceIdOrCode: string
+  },
+): Promise<PlantInstancePreview | null> {
+  const instance = await prisma.plantInstance.findFirst({
+    where: {
+      collectionId: options.collectionId,
+      OR: [
+        { id: options.plantInstanceIdOrCode },
+        { plantId: options.plantInstanceIdOrCode },
+      ],
+    },
+    include: {
+      plantDefinition: true,
+      currentLocation: { include: { locationType: true } },
+      conditions: {
+        where: { status: 'OPEN' },
+        select: { id: true, observedAt: true },
+      },
+      blooms: {
+        where: { bloomEndDate: null },
+        select: { id: true, bloomStartDate: true },
+      },
+      quarantines: {
+        where: { status: 'ACTIVE' },
+        select: { id: true, startDate: true },
+      },
+      careEvents: {
+        orderBy: { performedAt: 'desc' },
+        take: 1,
+        select: { performedAt: true },
+      },
+    },
+  })
+  if (!instance) return null
+
+  const [coverPhoto, lastPhoto, locationNodes] = await Promise.all([
+    prisma.photo.findFirst({
+      where: { collectionId: options.collectionId, entityType: 'PLANT_INSTANCE', entityId: instance.id },
+      orderBy: [{ isCover: 'desc' }, { createdAt: 'desc' }],
+      select: { path: true, moderationStatus: true, nsfwFlagged: true },
+    }),
+    prisma.photo.findFirst({
+      where: { collectionId: options.collectionId, entityType: 'PLANT_INSTANCE', entityId: instance.id },
+      orderBy: { createdAt: 'desc' },
+      select: { createdAt: true },
+    }),
+    prisma.location.findMany({
+      where: { collectionId: options.collectionId },
+      include: { locationType: true },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+    }),
+  ])
+  const coverPhotoUrl = coverPhoto && !coverPhoto.nsfwFlagged && !['CENSORED', 'REMOVED'].includes(coverPhoto.moderationStatus)
+    ? coverPhoto.path
+    : null
+  const lastObservedAt = mostRecentDate([
+    ...instance.conditions.map((condition) => condition.observedAt),
+    ...instance.blooms.map((bloom) => bloom.bloomStartDate),
+    ...instance.quarantines.map((quarantine) => quarantine.startDate),
+  ])
+  const botanicalName = plantName(instance.plantDefinition)
+
+  return {
+    id: instance.id,
+    plantId: instance.plantId,
+    href: collectionPath(options.collectionSlug, `/instances/${instance.id}`),
+    displayName: botanicalName,
+    botanicalName,
+    acquisitionLabel: acquisitionLabel(instance),
+    coverPhotoUrl,
+    currentLocationPath: instance.currentLocationId
+      ? locationPathWithCodes(instance.currentLocationId, locationNodes)
+      : instance.legacyLocationText || instance.location || null,
+    currentLocationCode: instance.currentLocation?.code || null,
+    status: instance.status,
+    activeConditionCount: instance.conditions.length,
+    activeBloomCount: instance.blooms.length,
+    activeQuarantine: instance.quarantines.length > 0,
+    lastObservedAt: lastObservedAt?.toISOString() || null,
+    lastPhotoAt: lastPhoto?.createdAt.toISOString() || null,
+    lastCareAt: instance.careEvents[0]?.performedAt.toISOString() || null,
+  }
+}

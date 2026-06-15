@@ -118,6 +118,7 @@ export const manualSections: ManualSection[] = [
     ],
     notes: [
       'Plant IDs are generated from the plant definition and relevant date context, then made unique inside the collection.',
+      'Plant ID links in briefings, care lists, location views, recent activity, and related-specimen sections show compact hover/focus previews with a thumbnail and key status. On touch screens, tap once to preview and use Open plant inside the card to navigate.',
       'Structured locations show stable codes and breadcrumb paths. Legacy freeform location text is preserved for audit and migration context.',
       'Active quarantine records show on specimen pages and plant cards, and their target release dates create care queue review items.',
       'Acquired propagation is for purchased or received cuttings, leaf props, starter plugs, and similar plants without an internal parent record.',

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { CalendarDays, CheckCircle2, MapPin } from 'lucide-react'
 import { createCareSheet, completeCareTask, markPropagationEstablished, snoozeCareTask } from '@/app/actions'
+import { PlantIdPreviewLink } from '@/components/PlantIdPreviewLink'
 import { PlantImage } from '@/components/PlantImage'
 import { Button, Card, TextArea } from '@/components/ui'
 import { canCreateInCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
@@ -104,7 +105,13 @@ export default async function WeeklyChecklistPage() {
                     </div>
                     <div className="min-w-0">
                       <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#2f6b45]">{careTaskLabel(item.taskType)} · {dateLabel(item.dueAt, timezone)}</p>
-                      <p className="truncate font-serif text-lg font-bold">{item.plantId || item.title}</p>
+                      <p className="truncate font-serif text-lg font-bold">
+                        {item.plantId && item.plantInstanceId ? (
+                          <PlantIdPreviewLink collectionSlug={context.collection.slug} plantId={item.plantId} href={item.href}>
+                            {item.plantId}
+                          </PlantIdPreviewLink>
+                        ) : item.title}
+                      </p>
                       {item.plantName && <p className="truncate text-sm text-stone-700">{item.plantName}</p>}
                       <p className="mt-1 line-clamp-2 text-xs text-stone-600">{item.reason}</p>
                       <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">

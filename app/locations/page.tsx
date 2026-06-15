@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { batchMovePlantLocations, createLocation, createLocationType, movePlantInstanceLocation, updateLocationType } from '@/app/actions'
 import { AddPanel, Button, Card, Field, LinkButton, TextArea } from '@/components/ui'
 import { LocationDragDropManager } from '@/components/LocationDragDropManager'
+import { PlantIdPreviewLink } from '@/components/PlantIdPreviewLink'
 import { canEditInCollection, canManageCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { descendantLocationIds, locationPath, locationPathWithCodes } from '@/lib/locations'
 import { prisma } from '@/lib/prisma'
@@ -245,7 +246,9 @@ export default async function LocationsPage({
                 <input type="hidden" name="plantInstanceId" value={plant.id} />
                 <input type="hidden" name="back" value={collectionPath(collection.slug, '/locations')} />
                 <div className="min-w-0">
-                  <Link href={collectionPath(collection.slug, `/instances/${plant.id}`)} className="font-semibold underline">{plant.plantId}</Link>
+                  <PlantIdPreviewLink collectionSlug={collection.slug} plantId={plant.plantId} href={collectionPath(collection.slug, `/instances/${plant.id}`)}>
+                    {plant.plantId}
+                  </PlantIdPreviewLink>
                   <p className="truncate text-sm text-stone-600">{plantName(plant.plantDefinition)} · {plant.currentLocation ? `${plant.currentLocation.code} ${plant.currentLocation.name}` : plant.location || 'No location'}</p>
                 </div>
                 <select className={selectClass} name="toLocationId" defaultValue={plant.currentLocationId || ''}>

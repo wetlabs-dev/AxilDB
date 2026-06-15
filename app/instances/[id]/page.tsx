@@ -31,6 +31,7 @@ import {
 import { createPlantTransferRequest } from '@/app/transfer-actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { GreenThumbAssist } from '@/components/GreenThumbAssist'
+import { PlantIdPreviewLink } from '@/components/PlantIdPreviewLink'
 import { PlantImage } from '@/components/PlantImage'
 import { PlantHealthTimeline } from '@/components/PlantHealthTimeline'
 import { PhotoFramingEditor } from '@/components/PhotoFramingEditor'
@@ -893,7 +894,7 @@ export default async function InstanceDetail({
         {photosCard}
 
         <div className="xl:col-span-2">
-          <PlantHealthTimeline events={timelineEvents} metrics={timelineMetrics} timezone={timezone} />
+          <PlantHealthTimeline events={timelineEvents} metrics={timelineMetrics} timezone={timezone} collectionSlug={collection.slug} />
         </div>
 
         <div className="xl:col-span-2">{quarantineCard}</div>
@@ -985,9 +986,9 @@ export default async function InstanceDetail({
           <div className="mt-2 grid gap-2 text-sm">
             {parentRelationships.map((relationship) => (
               <div key={relationship.key} className="rounded-md border border-stone-200 bg-white/60 p-2">
-                <Link className="font-medium underline" href={collectionPath(collection.slug, `/instances/${relationship.plant.id}`)}>
+                <PlantIdPreviewLink collectionSlug={collection.slug} plantId={relationship.plant.plantId} href={collectionPath(collection.slug, `/instances/${relationship.plant.id}`)}>
                   {relationship.plant.plantId}
-                </Link>
+                </PlantIdPreviewLink>
                 <p className="text-xs text-stone-600">
                   {relationship.role.replaceAll('_', ' ').toLowerCase()} · {relationship.event.method} · {fmtDate(relationship.event.date, timezone)}
                 </p>
@@ -1003,9 +1004,9 @@ export default async function InstanceDetail({
           <div className="mt-2 grid gap-2 text-sm">
             {childRelationships.map((relationship) => (
               <div key={relationship.key} className="rounded-md border border-stone-200 bg-white/60 p-2">
-                <Link className="font-medium underline" href={collectionPath(collection.slug, `/instances/${relationship.plant.id}`)}>
+                <PlantIdPreviewLink collectionSlug={collection.slug} plantId={relationship.plant.plantId} href={collectionPath(collection.slug, `/instances/${relationship.plant.id}`)}>
                   {relationship.plant.plantId}
-                </Link>
+                </PlantIdPreviewLink>
                 <p className="text-xs text-stone-600">
                   {relationship.event.method} · {fmtDate(relationship.event.date, timezone)}
                 </p>

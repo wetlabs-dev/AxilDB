@@ -1,6 +1,7 @@
 'use client'
 
 import { PlantImage } from '@/components/PlantImage'
+import { PlantIdPreviewLink } from '@/components/PlantIdPreviewLink'
 import { Card } from '@/components/ui'
 import type { PlantTimelineEvent, PlantTimelineMetrics } from '@/lib/timeline/plantTimeline'
 import { cn, fmtDate } from '@/lib/utils'
@@ -116,10 +117,22 @@ function insightItems(metrics: PlantTimelineMetrics) {
 function EventDetails({
   event,
   timezone,
+  collectionSlug,
 }: {
   event: PlantTimelineEvent
   timezone?: string | null
+  collectionSlug: string
 }) {
+  const summary = event.relatedPlantLinks?.length
+    ? event.summary.split(new RegExp(`(${event.relatedPlantLinks.map((link) => link.plantId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'g')).map((part, index) => {
+        const link = event.relatedPlantLinks?.find((item) => item.plantId === part)
+        return link ? (
+          <PlantIdPreviewLink key={`${link.id}-${index}`} collectionSlug={collectionSlug} plantId={link.plantId} href={link.href}>
+            {link.plantId}
+          </PlantIdPreviewLink>
+        ) : part
+      })
+    : event.summary
   const content = (
     <>
       <div className="flex items-start gap-3">
@@ -131,7 +144,7 @@ function EventDetails({
         <div className="min-w-0">
           <p className="font-semibold text-[var(--ax-heading)]">{event.title}</p>
           <p className="text-xs text-[var(--ax-muted)]">{fmtDate(event.date, timezone)} · {event.category}</p>
-          <p className="mt-1 text-sm text-[var(--ax-text)]">{event.summary}</p>
+          <p className="mt-1 text-sm text-[var(--ax-text)]">{summary}</p>
           {(event.status || event.severity) && (
             <p className="mt-1 text-xs text-[var(--ax-muted)]">
               {[event.severity, event.status].filter(Boolean).join(' · ')}
@@ -142,7 +155,7 @@ function EventDetails({
     </>
   )
 
-  if (!event.href) return content
+  if (!event.href || event.relatedPlantLinks?.length) return content
   return (
     <Link href={event.href} className="block rounded-md transition hover:bg-[var(--ax-primary-wash)]">
       {content}
@@ -154,10 +167,12 @@ export function PlantHealthTimeline({
   events,
   metrics,
   timezone,
+  collectionSlug,
 }: {
   events: PlantTimelineEvent[]
   metrics: PlantTimelineMetrics
   timezone?: string | null
+  collectionSlug: string
 }) {
   const sorted = [...events].sort((left, right) => left.date.getTime() - right.date.getTime())
   const firstDate = sorted[0]?.date
@@ -238,7 +253,7 @@ export function PlantHealthTimeline({
                       styles.accent,
                     )}
                   >
-                    <EventDetails event={event} timezone={timezone} />
+                    <EventDetails event={event} timezone={timezone} collectionSlug={collectionSlug} />
                   </div>
                 )}
               </div>
@@ -265,7 +280,7 @@ export function PlantHealthTimeline({
                   const styles = colorStyles[event.colorVariant]
                   return (
                     <div key={event.id} className={cn('rounded-lg border p-3', eventPanelClass, styles.accent)}>
-                      <EventDetails event={event} timezone={timezone} />
+                      <EventDetails event={event} timezone={timezone} collectionSlug={collectionSlug} />
                     </div>
                   )
                 })}

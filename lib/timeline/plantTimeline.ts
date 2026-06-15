@@ -19,6 +19,7 @@ export type PlantTimelineEvent = {
   sourceModel: string
   sourceId: string
   thumbnailUrl?: string | null
+  relatedPlantLinks?: Array<{ id: string; plantId: string; href: string }>
   metadata?: Record<string, string | number | boolean | null>
 }
 
@@ -548,6 +549,11 @@ export async function collectPlantTimelineEvents(
       sourceModel: 'PropagationEvent',
       sourceId: event.id,
       status: event.successStatus,
+      relatedPlantLinks: related.map((plant) => ({
+        id: plant.id,
+        plantId: plant.plantId,
+        href: collectionPath(input.collectionSlug, `/instances/${plant.id}`),
+      })),
     })
   }
 
