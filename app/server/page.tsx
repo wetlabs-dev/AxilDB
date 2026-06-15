@@ -618,7 +618,16 @@ export default async function ServerDashboard({
           </div>
           <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(14rem,0.9fr)_minmax(18rem,1.1fr)]">
             <div className="grid content-start gap-2">
-              {backupFolders.length === 0 && <p className="rounded-lg border border-stone-200 bg-white/50 p-3 text-sm text-stone-600">No backup folders found under the configured backup root.</p>}
+              {backupFolders.length === 0 && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+                  <p className="font-semibold">No backup folders found under the configured backup root.</p>
+                  <p className="mt-1">
+                    {backupRuns.some((run) => run.backupPath)
+                      ? <>Backup run records exist, but the app process cannot read <code>{backupRootRelativePath()}</code>. Mount that backup directory into the app container or set <code>AXILDB_BACKUP_ROOT</code> to the readable backup root.</>
+                      : <>Create or process a backup first, then confirm the app can read <code>{backupRootRelativePath()}</code>.</>}
+                  </p>
+                </div>
+              )}
               {backupFolders.map((folder) => (
                 <Link
                   key={folder.relativePath}

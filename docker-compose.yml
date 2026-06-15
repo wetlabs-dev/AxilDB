@@ -67,6 +67,7 @@ services:
       - ./public/uploads:/app/public/uploads
       - ./public/labels:/app/public/labels
       - ./public/manual:/app/public/manual
+      - ./backups:/app/backups:ro
   reminders:
     build:
       context: .
