@@ -142,6 +142,20 @@ function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
+const briefingPlantIdClassName = 'inline-flex max-w-full items-center rounded border border-[color:var(--ax-border)] bg-[var(--ax-primary-wash)] px-1.5 py-0.5 font-mono text-[0.92em] font-semibold leading-snug text-[var(--ax-primary)] underline decoration-[color:var(--ax-primary)]/45 underline-offset-2 transition hover:text-[var(--ax-primary-strong)]'
+
+function sequencePrefix(plantId: string) {
+  return plantId.slice(0, plantId.lastIndexOf('-'))
+}
+
+function renderBriefingPlantLink(link: BriefingPlantLink, children: ReactNode, key: string) {
+  return (
+    <Link key={key} href={link.href} className={briefingPlantIdClassName}>
+      {children}
+    </Link>
+  )
+}
+
 function renderLinkedText(text: string, plantLinks: BriefingPlantLink[], keyPrefix: string): ReactNode[] {
   if (!plantLinks.length || !text) return [text]
 
@@ -150,6 +164,7 @@ function renderLinkedText(text: string, plantLinks: BriefingPlantLink[], keyPref
     .sort((a, b) => b.value.length - a.value.length)
   if (!tokens.length) return [text]
 
+  const plantById = new Map(plantLinks.map((link) => [link.plantId, link]))
   const pattern = new RegExp(`(${tokens.map((item) => escapeRegExp(item.value)).join('|')})`, 'g')
   const nodes: ReactNode[] = []
   let lastIndex = 0
@@ -161,17 +176,22 @@ function renderLinkedText(text: string, plantLinks: BriefingPlantLink[], keyPref
 
     const link = tokens.find((item) => item.value === value)?.link
     nodes.push(
-      link ? (
-        <Link
-          key={`${keyPrefix}-plant-${index}`}
-          href={link.href}
-          className="font-semibold text-[var(--ax-primary)] underline decoration-[color:var(--ax-primary)]/45 underline-offset-2 transition hover:text-[var(--ax-primary-strong)]"
-        >
-          {link.plantId}
-        </Link>
-      ) : value,
+      link ? renderBriefingPlantLink(link, link.plantId, `${keyPrefix}-plant-${index}`) : value,
     )
     lastIndex = index + value.length
+
+    if (link) {
+      const prefix = sequencePrefix(link.plantId)
+      let shorthand = text.slice(lastIndex).match(/^(\s*\/\s*)(-\d{3})/)
+      while (shorthand) {
+        const candidate = plantById.get(`${prefix}${shorthand[2]}`)
+        if (!candidate) break
+        nodes.push(shorthand[1])
+        nodes.push(renderBriefingPlantLink(candidate, shorthand[2], `${keyPrefix}-plant-shorthand-${lastIndex}`))
+        lastIndex += shorthand[0].length
+        shorthand = text.slice(lastIndex).match(/^(\s*\/\s*)(-\d{3})/)
+      }
+    }
   }
 
   if (lastIndex < text.length) nodes.push(text.slice(lastIndex))
@@ -195,12 +215,19 @@ function renderInlineBriefingMarkdown(text: string, plantLinks: BriefingPlantLin
         </strong>,
       )
     } else if (token.startsWith('`')) {
+      const codeText = token.slice(1, -1)
+      const linkedCode = renderLinkedText(codeText, plantLinks, `${keyPrefix}-code-${index}`)
+      if (linkedCode.some((node) => typeof node !== 'string')) {
+        nodes.push(...linkedCode)
+        lastIndex = index + token.length
+        continue
+      }
       nodes.push(
         <span
           key={`${keyPrefix}-code-${index}`}
           className="rounded border border-[color:var(--ax-border)] bg-[var(--ax-primary-wash)] px-1 py-0.5 font-mono text-[0.92em] text-[var(--ax-text)]"
         >
-          {renderLinkedText(token.slice(1, -1), plantLinks, `${keyPrefix}-code-${index}`)}
+          {linkedCode}
         </span>,
       )
     } else {

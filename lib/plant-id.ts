@@ -41,6 +41,7 @@ export function plantIdContextCode(instanceType?: string | null, method?: string
   if (method) return methodCodes[method] || segment(method, 'OT').slice(0, 2)
   if (instanceType === 'ACQUIRED_PROPAGATION') return 'AP'
   if (instanceType === 'PROPAGATION') return 'PR'
+  if (instanceType === 'MOTHER') return 'AC'
   return 'AC'
 }
 
@@ -123,7 +124,9 @@ export async function expectedPlantIdForInstance(
     },
   })
 
-  const propagationEvent = instance.parentLinks[0]?.propagationEvent
+  const propagationEvent = instance.instanceType === 'PROPAGATION'
+    ? instance.parentLinks[0]?.propagationEvent
+    : null
   const prefix = await plantIdPrefix(client, {
     collectionId: options.collectionId,
     plantDefinitionId: instance.plantDefinitionId,
