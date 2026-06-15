@@ -27,7 +27,6 @@ type ActivityItem = {
   subtitle: string
   detail?: string | null
   image?: PlantImageFrame
-  plantId?: string | null
 }
 
 function coverFor(photos: PhotoLookup, id?: string | null) {
@@ -106,18 +105,24 @@ function toggleActivityKind(includedKinds: ActivityKind[], kind: ActivityKind) {
 function ActivityCard({
   item,
   timezone,
-  collectionSlug,
 }: {
   item: ActivityItem
   timezone?: string | null
-  collectionSlug: string
 }) {
   const style = activityStyles[item.kind]
   const Icon = style.icon
-  const image = (
-    <PlantImage src={item.image} alt="" className={cn('transition duration-300 group-hover:scale-[1.03]', style.imageClassName)} />
-  )
-  const content = (
+
+  return (
+    <Link
+      href={item.href}
+      className={cn(
+        'group grid overflow-hidden rounded-lg border shadow-[0_8px_24px_rgba(47,38,24,0.06)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(47,38,24,0.10)] sm:h-36 sm:grid-cols-[8.5rem_1fr]',
+        style.className,
+      )}
+    >
+      <div className="h-40 overflow-hidden sm:h-full">
+        <PlantImage src={item.image} alt="" className={cn('transition duration-300 group-hover:scale-[1.03]', style.imageClassName)} />
+      </div>
       <div className="min-h-0 min-w-0 overflow-hidden p-4">
         <div className="flex flex-wrap items-center gap-2">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-current/20 bg-white/55 px-2 py-0.5 text-[0.68rem] font-bold uppercase tracking-[0.14em] text-stone-700">
@@ -126,40 +131,10 @@ function ActivityCard({
           </span>
           <span className="text-xs font-medium text-stone-500">{fmtDate(item.date, timezone)}</span>
         </div>
-        <h4 className="mt-2 truncate font-serif text-lg leading-tight">
-          {item.plantId ? (
-            <PlantIdPreviewLink collectionSlug={collectionSlug} plantId={item.plantId} href={item.href}>
-              {item.title}
-            </PlantIdPreviewLink>
-          ) : (
-            item.title
-          )}
-        </h4>
+        <h4 className="mt-2 truncate font-serif text-lg leading-tight">{item.title}</h4>
         <p className="mt-1 truncate text-sm text-stone-700">{item.subtitle}</p>
         {item.detail && <p className="mt-2 line-clamp-2 text-xs leading-5 text-stone-600">{item.detail}</p>}
       </div>
-  )
-
-  const className = cn(
-    'group grid overflow-hidden rounded-lg border shadow-[0_8px_24px_rgba(47,38,24,0.06)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(47,38,24,0.10)] sm:h-36 sm:grid-cols-[8.5rem_1fr]',
-    style.className,
-  )
-
-  if (item.plantId) {
-    return (
-      <div className={className}>
-        <Link href={item.href} className="block h-40 overflow-hidden sm:h-full">
-          {image}
-        </Link>
-        {content}
-      </div>
-    )
-  }
-
-  return (
-    <Link href={item.href} className={className}>
-      <div className="h-40 overflow-hidden sm:h-full">{image}</div>
-      {content}
     </Link>
   )
 }
@@ -482,7 +457,6 @@ export default async function Dashboard({
         href: firstChild ? collectionPath(collection.slug, `/instances/${firstChild.id}`) : collectionPath(collection.slug, '/propagations'),
         date: event.date,
         title: firstChild?.plantId || event.method,
-        plantId: firstChild?.plantId,
         subtitle: `${event.method.replaceAll('_', ' ')} · ${event.successStatus.toLowerCase()}`,
         detail: `Children: ${children.join(', ') || '—'}${parents.length ? ` · Parents: ${parents.join(', ')}` : ''}`,
         image: coverFor(coverPhotosByInstance, firstChild?.id) || coverFor(coverPhotosByInstance, firstParent?.id),
@@ -494,7 +468,6 @@ export default async function Dashboard({
       href: collectionPath(collection.slug, `/instances/${bloom.plantInstanceId}`),
       date: bloom.bloomStartDate,
       title: bloom.plantInstance.plantId,
-      plantId: bloom.plantInstance.plantId,
       subtitle: plantName(bloom.plantInstance.plantDefinition),
       detail: [bloom.firstBloom ? 'First bloom' : null, bloom.flowerCount ? `${bloom.flowerCount} flower${bloom.flowerCount === 1 ? '' : 's'}` : null, bloom.notes].filter(Boolean).join(' · '),
       image: coverFor(bloomPhotosByEvent, bloom.id) || coverFor(coverPhotosByInstance, bloom.plantInstanceId),
@@ -505,7 +478,6 @@ export default async function Dashboard({
       href: collectionPath(collection.slug, `/instances/${sport.id}`),
       date: sport.updatedAt,
       title: sport.plantId,
-      plantId: sport.plantId,
       subtitle: `${sport.sportStatus.replaceAll('_', ' ').toLowerCase()} · ${plantName(sport.plantDefinition)}`,
       detail: sport.sportDescription,
       image: coverFor(coverPhotosByInstance, sport.id),
@@ -518,7 +490,6 @@ export default async function Dashboard({
         href: collectionPath(collection.slug, `/instances/${item.id}`),
         date: item.acquisitionDate || item.createdAt,
         title: item.plantId,
-        plantId: item.plantId,
         subtitle: isAcquiredPropagation ? `ACQUIRED PROPAGATION · ${plantName(item.plantDefinition)}` : plantName(item.plantDefinition),
         detail: [item.source, item.distributor, item.location].filter(Boolean).join(' · '),
         image: coverFor(coverPhotosByInstance, item.id),
@@ -530,7 +501,6 @@ export default async function Dashboard({
       href: collectionPath(collection.slug, `/instances/${item.id}`),
       date: item.archiveDate || item.updatedAt,
       title: item.plantId,
-      plantId: item.plantId,
       subtitle: item.archiveReason || plantName(item.plantDefinition),
       detail: item.archiveNotes,
       image: coverFor(coverPhotosByInstance, item.id),
@@ -711,7 +681,7 @@ export default async function Dashboard({
         </div>
         <div className="mt-4 grid gap-3 xl:grid-cols-2 2xl:grid-cols-3">
           {activity.map((item) => (
-            <ActivityCard key={`${item.kind}-${item.id}`} item={item} timezone={preferences?.timezone} collectionSlug={collection.slug} />
+            <ActivityCard key={`${item.kind}-${item.id}`} item={item} timezone={preferences?.timezone} />
           ))}
           {activity.length === 0 && <p className="text-sm text-stone-600">No recent activity yet.</p>}
         </div>
