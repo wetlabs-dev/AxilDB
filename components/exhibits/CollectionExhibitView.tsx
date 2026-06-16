@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { CollectionExhibitAccessMode } from '@prisma/client'
 import { subscribeToCollectionExhibit } from '@/app/exhibit-actions'
 import { PlantImage } from '@/components/PlantImage'
-import { cn, plantName } from '@/lib/utils'
+import { cn, plantName, taxonomyLabel } from '@/lib/utils'
 import { formatDate } from '@/lib/time'
 
 type DisplayExhibit = Awaited<ReturnType<typeof import('@/lib/exhibits').loadExhibitForDisplay>>
@@ -198,7 +198,7 @@ function DefinitionGroup({ group, settings, collectionSlug }: { group: any; sett
               ['Authority', definition.authority],
               ['Registration', definition.cultivarRegistrationNumber],
               ['Governing body', definition.governingBody?.name],
-              ['Confidence', definition.confidence?.toLowerCase()],
+              ['Confidence', taxonomyLabel(definition.confidence)],
               ['Validation', definition.isValidated ? `Validated ${formatDate(definition.validatedAt)}` : 'Not validated'],
               ['Acquisition label', definition.acquisitionLabel],
             ]}
@@ -297,11 +297,11 @@ export function CollectionExhibitView({
                 <h2 className="font-serif text-2xl font-semibold">Get exhibit updates</h2>
                 <p className="text-sm text-stone-600">Subscribe by email with double opt-in. No account is required.</p>
               </div>
-              <form action={subscribeToCollectionExhibit} className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-96 sm:flex-row">
+              <form action={subscribeToCollectionExhibit} className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-[28rem] sm:flex-row">
                 <input type="hidden" name="slug" value={exhibit.slug} />
                 <input type="hidden" name="token" value={tokenValue || ''} />
-                <input className="min-w-0 rounded-md border border-stone-300 bg-white px-3 py-2 text-sm" name="email" type="email" placeholder="email@example.com" required />
-                <button className="rounded-md bg-[#2f6b45] px-4 py-2 text-sm font-semibold text-white">Subscribe</button>
+                <input className="min-w-0 flex-1 rounded-md border border-stone-300 bg-white px-3 py-2 text-sm" name="email" type="email" placeholder="email@example.com" required />
+                <button className="inline-flex min-w-[6rem] shrink-0 items-center justify-center whitespace-nowrap rounded-md bg-[#2f6b45] px-4 py-2 text-sm font-semibold text-white">Subscribe</button>
               </form>
             </div>
           </section>
