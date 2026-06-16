@@ -3,14 +3,13 @@ import { CollectionExhibitAccessMode } from '@prisma/client'
 import { createCollectionExhibit } from '@/app/exhibit-actions'
 import { CopyPublicUrlButton } from '@/components/exhibits/CopyPublicUrlButton'
 import { AddPanel, Button, Card, Field, LinkButton, Select, TextArea } from '@/components/ui'
-import { canManageCollection, collectionPath, requireCollectionGardener } from '@/lib/collections'
+import { collectionPath, requireCollectionGardener } from '@/lib/collections'
 import { publicExhibitPath } from '@/lib/exhibits'
 import { prisma } from '@/lib/prisma'
 import { formatDateTime } from '@/lib/time'
 
 export default async function CollectionExhibitsPage() {
   const context = await requireCollectionGardener()
-  const canManage = canManageCollection(context.user, context)
   const exhibits = await prisma.collectionExhibit.findMany({
     where: { collectionId: context.collection.id },
     include: {
@@ -81,11 +80,6 @@ export default async function CollectionExhibitsPage() {
                   </Link>
                 )}
                 {exhibit.status === 'PUBLISHED' && <CopyPublicUrlButton path={publicExhibitPath(exhibit)} />}
-                {canManage ? (
-                  <span className="inline-flex shrink-0 items-center whitespace-nowrap rounded-md border border-[#2f6b45]/20 bg-[#e8efdf] px-3 py-1.5 text-xs font-semibold text-[#2f6b45] dark:bg-[#2f6b45]/20 dark:text-[#b9d6a4]">Can publish</span>
-                ) : (
-                  <span className="inline-flex shrink-0 items-center whitespace-nowrap rounded-md border border-stone-200 bg-white/60 px-3 py-1.5 text-xs text-stone-600 dark:border-[color:var(--ax-border)] dark:bg-[color:var(--ax-surface-muted)] dark:text-[color:var(--ax-text-muted)]">Draft editor</span>
-                )}
               </div>
             </Card>
           ))}

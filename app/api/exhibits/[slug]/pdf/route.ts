@@ -111,26 +111,28 @@ function detailGrid(doc: PDFKit.PDFDocument, rows: Array<[string, string | null 
   }
 }
 
-function pillRow(doc: PDFKit.PDFDocument, items: Array<[string, string | null | undefined]>, title?: string) {
+function referenceLinkRow(doc: PDFKit.PDFDocument, items: Array<[string, string | null | undefined]>, title?: string) {
   const visible = items.filter(([, href]) => clean(href))
   if (!visible.length) return
-  ensureRoom(doc, 28, title)
+  ensureRoom(doc, 24, title)
+  doc.font('Helvetica').fontSize(8.5)
   let x = left(doc)
   let rowY = doc.y
   const startY = doc.y
+  doc.font('Helvetica-Bold').fontSize(7.5).fillColor(MUTED).text('REFERENCES', x, rowY + 1, { width: 66, characterSpacing: 0.7, lineBreak: false })
+  x += 76
   for (const [label, href] of visible) {
-    doc.font('Helvetica-Bold').fontSize(7.5)
-    const pillW = Math.max(64, doc.widthOfString(label) + 24)
-    if (x + pillW > right(doc)) {
+    doc.font('Helvetica-Bold').fontSize(8.5)
+    const linkW = doc.widthOfString(label)
+    if (x + linkW > right(doc)) {
       x = left(doc)
-      rowY += 24
-      ensureRoom(doc, 24, title)
+      rowY += 16
+      ensureRoom(doc, 16, title)
     }
-    doc.roundedRect(x, rowY, pillW, 18, 9).fillAndStroke('#eef5e8', '#c7d5b9')
-    doc.fillColor(GREEN).text(label, x + 10, rowY + 5, { width: pillW - 20, link: href || undefined, lineBreak: false })
-    x += pillW + 6
+    doc.fillColor(GREEN).text(label, x, rowY, { width: linkW, link: href || undefined, underline: true, lineBreak: false })
+    x += linkW + 12
   }
-  doc.y = Math.max(rowY + 24, startY + 24)
+  doc.y = Math.max(rowY + 18, startY + 18)
 }
 
 function writeParagraph(doc: PDFKit.PDFDocument, value?: string | null, fontSize = 9.5, title?: string) {
@@ -202,7 +204,7 @@ function drawDefinitionSection(
   }
 
   if (data.settings.referenceLinks) {
-    pillRow(doc, [
+    referenceLinkRow(doc, [
       ['Wikipedia', group.definition.wikipediaUrl],
       ['iNaturalist', group.definition.inaturalistUrl],
       ['POWO', group.definition.powoUrl],
@@ -275,20 +277,24 @@ function specimenSections(data: NonNullable<Awaited<ReturnType<typeof loadExhibi
   return sections
 }
 
+function sectionTextHeight(doc: PDFKit.PDFDocument, lines: string[], textW: number) {
+  doc.font('Helvetica').fontSize(7.8)
+  return lines.reduce((total, line) => total + Math.max(9.5, doc.heightOfString(line, { width: textW, lineGap: 1 })), 0)
+}
+
 function drawSpecimenCard(doc: PDFKit.PDFDocument, data: NonNullable<Awaited<ReturnType<typeof loadExhibitForDisplay>>>, entry: any) {
   const plant = entry.plantInstance
   const sections = specimenSections(data, entry)
-  const sectionLineCount = sections.reduce((total, section) => total + 1 + section.lines.length, 0)
-  const cardH = Math.max(154, 128 + sectionLineCount * 10 + sections.length * 4)
+  const imageSize = 96
+  const textX = left(doc) + 16
+  const imageX = right(doc) - imageSize - 16
+  const textW = imageX - textX - 16
+  const sectionHeight = sections.reduce((total, section) => total + 13 + sectionTextHeight(doc, section.lines, textW) + 5, 0)
+  const cardH = Math.max(154, 108 + sectionHeight)
   ensureRoom(doc, cardH + 14, data.exhibit.title)
   const x = left(doc)
   const y = doc.y
   doc.roundedRect(x, y, width(doc), cardH, 10).fillAndStroke(CARD, BORDER)
-
-  const textX = x + 16
-  const imageSize = 96
-  const imageX = right(doc) - imageSize - 16
-  const textW = imageX - textX - 16
 
   doc.font('Helvetica-Bold').fontSize(8.5).fillColor(GREEN).text(plant.plantId, textX, y + 14, { width: textW })
   doc.font('Times-Bold').fontSize(15).fillColor(INK).text(plantName(plant.plantDefinition), textX, doc.y + 2, { width: textW })
@@ -305,14 +311,13 @@ function drawSpecimenCard(doc: PDFKit.PDFDocument, data: NonNullable<Awaited<Ret
 
   let sectionY = Math.max(doc.y + 8, y + 74)
   for (const section of sections) {
-    if (sectionY > y + cardH - 18) break
     doc.font('Helvetica-Bold').fontSize(7.7).fillColor(INK).text(section.title, textX, sectionY, { width: textW, lineBreak: false })
     sectionY += 10
     doc.font('Helvetica').fontSize(7.8).fillColor('#4d463c')
     for (const line of section.lines) {
-      if (sectionY > y + cardH - 12) break
-      doc.text(line, textX, sectionY, { width: textW, height: 10, ellipsis: true, lineBreak: false })
-      sectionY += 9.5
+      const lineHeight = Math.max(9.5, doc.heightOfString(line, { width: textW, lineGap: 1 }))
+      doc.text(line, textX, sectionY, { width: textW, lineGap: 1 })
+      sectionY += lineHeight
     }
     sectionY += 3
   }
