@@ -280,7 +280,9 @@ export const manualSections: ManualSection[] = [
     purpose: 'Collection Exhibits are curated, read-only public or unlisted showcase pages made from selected specimens and grouped by plant definition.',
     howTo: [
       'Open Collection Exhibits from the Admin section of the sidebar.',
-      'Gardeners can create draft exhibits, edit title/intro text, select specimens, choose a cover photo, and control which public-safe sections appear.',
+      'Gardeners can create draft exhibits, edit title/intro text, choose a cover photo, and control which public-safe sections appear.',
+      'Use the Exhibit Builder to search, sort, or group available plants, then add specimens with the plus button or by dragging them into the Exhibit Plants pane.',
+      'Drag Exhibit Plant cards to change presentation order. Featured stars, captions, add/remove actions, and ordering save automatically as you curate.',
       'Managers can publish or unpublish exhibits, copy/open the public share link, review subscriber totals and subscriber status, and send manual update emails.',
       'Guests can view a published exhibit without an account and can subscribe to updates by confirming a double opt-in email.',
       'Use Print / save PDF for browser printing or Download PDF for a generated botanical booklet-style PDF.',
@@ -289,6 +291,7 @@ export const manualSections: ManualSection[] = [
       'Published exhibits can be public or unlisted. Unlisted links include a token and should be treated like share links.',
       'Sensitive specimen notes, care notes, and condition details are off by default and only appear when explicitly enabled in the exhibit editor.',
       'Images are filtered through public-safe moderation flags before display.',
+      'Basics, visibility toggles, image mode, and update digest settings still use the Save exhibit button.',
       'Daily and weekly automatic update digests are sent by the scheduled reminders worker when public-safe selected changes are detected.',
       'Manual updates can include a detected-change summary since the last sent exhibit update.',
     ],

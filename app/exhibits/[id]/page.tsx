@@ -6,6 +6,7 @@ import {
   unpublishCollectionExhibit,
   updateCollectionExhibit,
 } from '@/app/exhibit-actions'
+import { CollectionExhibitBuilder, type ExhibitBuilderPlant } from '@/components/exhibits/CollectionExhibitBuilder'
 import { Button, Card, Field, Select, TextArea } from '@/components/ui'
 import { canManageCollection, collectionPath, requireCollectionGardener } from '@/lib/collections'
 import { collectExhibitDigestChanges } from '@/lib/exhibit-digests'
@@ -17,7 +18,9 @@ import {
   publicExhibitPath,
   updateChangeLabels,
 } from '@/lib/exhibits'
+import { locationPathWithCodes } from '@/lib/locations'
 import { prisma } from '@/lib/prisma'
+import { sunshineCounts, sunshineKey } from '@/lib/sunshine'
 import { dateInput, plantName } from '@/lib/utils'
 import { formatDateTime } from '@/lib/time'
 
@@ -61,22 +64,81 @@ export default async function EditCollectionExhibitPage({ params }: { params: Pr
   ])
   const settings = normalizeExhibitSettings(exhibit.settingsJson)
   const updateSettings = normalizeExhibitUpdateSettings(exhibit.updateSettingsJson)
-  const selected = new Map(exhibit.plants.map((plant) => [plant.plantInstanceId, plant]))
   const selectedPlantIds = exhibit.plants.map((plant) => plant.plantInstanceId)
-  const coverPhotos = await prisma.photo.findMany({
-    where: {
-      collectionId: context.collection.id,
-      nsfwFlagged: false,
-      moderationStatus: { notIn: ['CENSORED', 'REMOVED'] },
-      OR: [
-        { entityType: 'COLLECTION', entityId: context.collection.id },
-        ...(selectedPlantIds.length ? [{ entityType: 'PLANT_INSTANCE', entityId: { in: selectedPlantIds } }] : []),
-        ...(candidates.length ? [{ entityType: 'PLANT_DEFINITION', entityId: { in: Array.from(new Set(candidates.map((plant) => plant.plantDefinitionId))) } }] : []),
-      ],
-    },
-    orderBy: [{ isCover: 'desc' }, { isType: 'desc' }, { createdAt: 'desc' }],
-    take: 80,
+  const locations = await prisma.location.findMany({
+    where: { collectionId: context.collection.id },
+    include: { locationType: true },
+    orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
   })
+  const [coverPhotos, candidatePhotos, candidateSunshineCounts] = await Promise.all([
+    prisma.photo.findMany({
+      where: {
+        collectionId: context.collection.id,
+        nsfwFlagged: false,
+        moderationStatus: { notIn: ['CENSORED', 'REMOVED'] },
+        OR: [
+          { entityType: 'COLLECTION', entityId: context.collection.id },
+          ...(selectedPlantIds.length ? [{ entityType: 'PLANT_INSTANCE', entityId: { in: selectedPlantIds } }] : []),
+          ...(candidates.length ? [{ entityType: 'PLANT_DEFINITION', entityId: { in: Array.from(new Set(candidates.map((plant) => plant.plantDefinitionId))) } }] : []),
+        ],
+      },
+      orderBy: [{ isCover: 'desc' }, { isType: 'desc' }, { createdAt: 'desc' }],
+      take: 80,
+    }),
+    candidates.length ? prisma.photo.findMany({
+      where: {
+        collectionId: context.collection.id,
+        entityType: 'PLANT_INSTANCE',
+        entityId: { in: candidates.map((plant) => plant.id) },
+        nsfwFlagged: false,
+        moderationStatus: { notIn: ['CENSORED', 'REMOVED'] },
+        OR: [{ plantDetected: null }, { plantDetected: true }],
+      },
+      orderBy: [{ isCover: 'desc' }, { createdAt: 'desc' }],
+      select: {
+        entityId: true,
+        path: true,
+        moderationStatus: true,
+        nsfwFlagged: true,
+        cropX: true,
+        cropY: true,
+        cropWidth: true,
+        cropHeight: true,
+        focalX: true,
+        focalY: true,
+      },
+    }) : [],
+    sunshineCounts(prisma, context.collection.id, candidates.map((plant) => ({ targetType: 'PLANT_INSTANCE' as const, targetId: plant.id }))),
+  ])
+  const photoByPlant = new Map<string, typeof candidatePhotos[number]>()
+  for (const photo of candidatePhotos) {
+    if (!photoByPlant.has(photo.entityId)) photoByPlant.set(photo.entityId, photo)
+  }
+  const builderPlants: ExhibitBuilderPlant[] = candidates.map((plant) => {
+    const acquisitionLabel = [plant.source, plant.distributor, plant.stockNumber].filter(Boolean).join(' · ') || null
+    return {
+      id: plant.id,
+      plantId: plant.plantId,
+      scientificName: plantName(plant.plantDefinition),
+      cultivarName: plant.plantDefinition.cultivarName,
+      acquisitionLabel,
+      locationPath: plant.currentLocationId ? locationPathWithCodes(plant.currentLocationId, locations) : plant.legacyLocationText || plant.location || null,
+      status: plant.status,
+      createdAt: plant.createdAt.toISOString(),
+      updatedAt: plant.updatedAt.toISOString(),
+      acquisitionDate: plant.acquisitionDate?.toISOString() || plant.propagationDate?.toISOString() || null,
+      plantDefinitionId: plant.plantDefinitionId,
+      plantDefinitionLabel: plantName(plant.plantDefinition),
+      sunshineCount: candidateSunshineCounts.get(sunshineKey('PLANT_INSTANCE', plant.id)) || 0,
+      coverPhoto: photoByPlant.get(plant.id) || null,
+    }
+  })
+  const exhibitSelections = exhibit.plants.map((plant) => ({
+    plantInstanceId: plant.plantInstanceId,
+    sortOrder: plant.sortOrder,
+    featured: plant.featured,
+    customCaption: plant.customCaption,
+  }))
   const activeSubscribers = exhibit.subscribers.filter((subscriber) => subscriber.status === 'ACTIVE')
   const publicPath = publicExhibitPath(exhibit)
   const lastSentUpdate = exhibit.updates.find((update) => update.sentAt)
@@ -155,50 +217,13 @@ export default async function EditCollectionExhibitPage({ params }: { params: Pr
           </Select>
         </Card>
 
-        <Card className="space-y-4">
-          <div>
-            <h3 className="font-serif text-2xl font-bold">Selected plants</h3>
-            <p className="text-sm text-stone-600">Choose specimens for the exhibit. They will be grouped automatically by plant definition on the public page.</p>
-          </div>
-          <div className="max-h-[560px] overflow-auto rounded-lg border border-stone-200">
-            <table className="w-full min-w-[760px] text-left text-sm">
-              <thead className="sticky top-0 bg-[#f5f0e2] text-xs uppercase tracking-[0.14em] text-stone-500">
-                <tr>
-                  <th className="p-3">Include</th>
-                  <th className="p-3">Plant</th>
-                  <th className="p-3">Sort</th>
-                  <th className="p-3">Featured</th>
-                  <th className="p-3">Caption</th>
-                </tr>
-              </thead>
-              <tbody>
-                {candidates.map((plant, index) => {
-                  const row = selected.get(plant.id)
-                  return (
-                    <tr key={plant.id} className="border-t border-stone-200 align-top">
-                      <td className="p-3">
-                        <input type="checkbox" name="plantInstanceId" value={plant.id} defaultChecked={Boolean(row)} />
-                      </td>
-                      <td className="p-3">
-                        <p className="font-mono text-xs font-semibold text-[#2f6b45]">{plant.plantId}</p>
-                        <p className="font-semibold">{plantName(plant.plantDefinition)}</p>
-                        <p className="text-xs text-stone-500">{plant.status.toLowerCase()}</p>
-                      </td>
-                      <td className="p-3">
-                        <input className="w-20 rounded-md border border-stone-300 bg-white px-2 py-1" name={`sortOrder:${plant.id}`} type="number" defaultValue={row?.sortOrder ?? index} />
-                      </td>
-                      <td className="p-3">
-                        <input type="checkbox" name={`featured:${plant.id}`} defaultChecked={Boolean(row?.featured)} />
-                      </td>
-                      <td className="p-3">
-                        <input className="w-full rounded-md border border-stone-300 bg-white px-2 py-1" name={`caption:${plant.id}`} defaultValue={row?.customCaption || ''} />
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+        <Card>
+          <CollectionExhibitBuilder
+            collectionSlug={context.collection.slug}
+            exhibitId={exhibit.id}
+            plants={builderPlants}
+            selections={exhibitSelections}
+          />
         </Card>
 
         <Card className="space-y-4">

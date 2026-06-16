@@ -1,6 +1,7 @@
 'use server'
 
 import { CollectionExhibitAccessMode, CollectionExhibitStatus, CollectionExhibitSubscriberStatus } from '@prisma/client'
+import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { audit } from '@/lib/auth'
 import { collectionPath, requireCollectionGardener, requireCollectionManager } from '@/lib/collections'
@@ -106,7 +107,8 @@ export async function updateCollectionExhibit(fd: FormData) {
   const context = await requireCollectionGardener(value(fd, 'collectionSlug'))
   const id = value(fd, 'id')
   const existing = await assertExhibitInCollection(id, context.collection.id)
-  const rows = selectedPlantRows(fd)
+  const shouldReplacePlants = fd.has('plantInstanceId')
+  const rows = shouldReplacePlants ? selectedPlantRows(fd) : []
   const validPlants = rows.length
     ? await prisma.plantInstance.findMany({
         where: { collectionId: context.collection.id, id: { in: rows.map((row) => row.plantInstanceId) } },
@@ -128,7 +130,7 @@ export async function updateCollectionExhibit(fd: FormData) {
         select: { id: true },
       })
     : null
-  await prisma.$transaction([
+  const updates = [
     prisma.collectionExhibit.update({
       where: { id },
       data: {
@@ -143,17 +145,112 @@ export async function updateCollectionExhibit(fd: FormData) {
         updateSettingsJson: updateSettingsFromForm(fd),
       },
     }),
-    prisma.collectionExhibitPlant.deleteMany({ where: { exhibitId: id } }),
-    ...filteredRows.map((row) => prisma.collectionExhibitPlant.create({
-      data: { exhibitId: id, ...row },
-    })),
-  ])
+    ...(shouldReplacePlants
+      ? [
+          prisma.collectionExhibitPlant.deleteMany({ where: { exhibitId: id } }),
+          ...filteredRows.map((row) => prisma.collectionExhibitPlant.create({
+            data: { exhibitId: id, ...row },
+          })),
+        ]
+      : []),
+  ]
+  await prisma.$transaction(updates)
   await audit(context.user, 'UPDATE', 'COLLECTION_EXHIBIT', id, `Updated exhibit ${existing.title}`, {
     accessMode,
-    selectedPlants: filteredRows.length,
+    selectedPlants: shouldReplacePlants ? filteredRows.length : undefined,
     settings: settingsFromForm(fd),
   }, context.collection.id)
   redirect(collectionPath(context.collection.slug, `/exhibits/${id}?saved=1`))
+}
+
+async function assertEditableExhibit(collectionSlug: string, exhibitId: string) {
+  const context = await requireCollectionGardener(collectionSlug)
+  const exhibit = await prisma.collectionExhibit.findFirstOrThrow({
+    where: { id: exhibitId, collectionId: context.collection.id },
+    select: { id: true, title: true, collectionId: true },
+  })
+  return { context, exhibit }
+}
+
+function exhibitEditorPath(collectionSlug: string, exhibitId: string) {
+  return collectionPath(collectionSlug, `/exhibits/${exhibitId}`)
+}
+
+async function normalizeExhibitPlantOrder(exhibitId: string, orderedPlantIds?: string[]) {
+  const rows = await prisma.collectionExhibitPlant.findMany({
+    where: { exhibitId },
+    orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+    select: { id: true, plantInstanceId: true },
+  })
+  const requested = orderedPlantIds?.filter(Boolean) || rows.map((row) => row.plantInstanceId)
+  const requestedSet = new Set(requested)
+  const normalizedPlantIds = [
+    ...requested.filter((plantId, index) => requested.indexOf(plantId) === index && rows.some((row) => row.plantInstanceId === plantId)),
+    ...rows.map((row) => row.plantInstanceId).filter((plantId) => !requestedSet.has(plantId)),
+  ]
+  await prisma.$transaction(normalizedPlantIds.map((plantInstanceId, index) => prisma.collectionExhibitPlant.update({
+    where: { exhibitId_plantInstanceId: { exhibitId, plantInstanceId } },
+    data: { sortOrder: index },
+  })))
+}
+
+export async function addPlantToCollectionExhibit(input: { collectionSlug: string; exhibitId: string; plantInstanceId: string; beforePlantInstanceId?: string | null }) {
+  const { context, exhibit } = await assertEditableExhibit(input.collectionSlug, input.exhibitId)
+  const plant = await prisma.plantInstance.findFirstOrThrow({
+    where: { id: input.plantInstanceId, collectionId: context.collection.id },
+    select: { id: true, plantId: true },
+  })
+  const currentRows = await prisma.collectionExhibitPlant.findMany({
+    where: { exhibitId: exhibit.id },
+    orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+    select: { plantInstanceId: true },
+  })
+  const currentIds = currentRows.map((row) => row.plantInstanceId).filter((id) => id !== plant.id)
+  const insertAt = input.beforePlantInstanceId ? currentIds.indexOf(input.beforePlantInstanceId) : -1
+  const orderedIds = [...currentIds]
+  orderedIds.splice(insertAt >= 0 ? insertAt : orderedIds.length, 0, plant.id)
+  await prisma.collectionExhibitPlant.upsert({
+    where: { exhibitId_plantInstanceId: { exhibitId: exhibit.id, plantInstanceId: plant.id } },
+    update: {},
+    create: {
+      exhibitId: exhibit.id,
+      plantInstanceId: plant.id,
+      sortOrder: orderedIds.indexOf(plant.id),
+    },
+  })
+  await normalizeExhibitPlantOrder(exhibit.id, orderedIds)
+  await audit(context.user, 'UPDATE', 'COLLECTION_EXHIBIT', exhibit.id, `Added ${plant.plantId} to exhibit ${exhibit.title}`, { plantInstanceId: plant.id }, context.collection.id)
+  revalidatePath(exhibitEditorPath(context.collection.slug, exhibit.id))
+}
+
+export async function removePlantFromCollectionExhibit(input: { collectionSlug: string; exhibitId: string; plantInstanceId: string }) {
+  const { context, exhibit } = await assertEditableExhibit(input.collectionSlug, input.exhibitId)
+  await prisma.collectionExhibitPlant.deleteMany({
+    where: { exhibitId: exhibit.id, plantInstanceId: input.plantInstanceId },
+  })
+  await normalizeExhibitPlantOrder(exhibit.id)
+  await audit(context.user, 'UPDATE', 'COLLECTION_EXHIBIT', exhibit.id, `Removed plant from exhibit ${exhibit.title}`, { plantInstanceId: input.plantInstanceId }, context.collection.id)
+  revalidatePath(exhibitEditorPath(context.collection.slug, exhibit.id))
+}
+
+export async function reorderCollectionExhibitPlants(input: { collectionSlug: string; exhibitId: string; orderedPlantInstanceIds: string[] }) {
+  const { context, exhibit } = await assertEditableExhibit(input.collectionSlug, input.exhibitId)
+  await normalizeExhibitPlantOrder(exhibit.id, input.orderedPlantInstanceIds)
+  await audit(context.user, 'UPDATE', 'COLLECTION_EXHIBIT', exhibit.id, `Reordered exhibit ${exhibit.title}`, { selectedPlants: input.orderedPlantInstanceIds.length }, context.collection.id)
+  revalidatePath(exhibitEditorPath(context.collection.slug, exhibit.id))
+}
+
+export async function updateCollectionExhibitPlantMetadata(input: { collectionSlug: string; exhibitId: string; plantInstanceId: string; featured?: boolean; customCaption?: string | null }) {
+  const { context, exhibit } = await assertEditableExhibit(input.collectionSlug, input.exhibitId)
+  await prisma.collectionExhibitPlant.update({
+    where: { exhibitId_plantInstanceId: { exhibitId: exhibit.id, plantInstanceId: input.plantInstanceId } },
+    data: {
+      ...(typeof input.featured === 'boolean' ? { featured: input.featured } : {}),
+      ...(input.customCaption !== undefined ? { customCaption: input.customCaption?.trim() || null } : {}),
+    },
+  })
+  await audit(context.user, 'UPDATE', 'COLLECTION_EXHIBIT', exhibit.id, `Updated exhibit plant metadata for ${exhibit.title}`, { plantInstanceId: input.plantInstanceId }, context.collection.id)
+  revalidatePath(exhibitEditorPath(context.collection.slug, exhibit.id))
 }
 
 export async function publishCollectionExhibit(fd: FormData) {
