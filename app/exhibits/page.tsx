@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { CollectionExhibitAccessMode } from '@prisma/client'
 import { createCollectionExhibit } from '@/app/exhibit-actions'
+import { CopyPublicUrlButton } from '@/components/exhibits/CopyPublicUrlButton'
 import { AddPanel, Button, Card, Field, LinkButton, Select, TextArea } from '@/components/ui'
 import { canManageCollection, collectionPath, requireCollectionGardener } from '@/lib/collections'
 import { publicExhibitPath } from '@/lib/exhibits'
@@ -56,8 +57,8 @@ export default async function CollectionExhibitsPage() {
         <div className="grid gap-3 lg:grid-cols-2">
           {exhibits.map((exhibit) => (
             <Card key={exhibit.id} className="space-y-3">
-              <div className="flex items-start justify-between gap-3">
-                <div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
                   <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#2f6b45]">{exhibit.status.toLowerCase()} · {exhibit.accessMode.toLowerCase()}</p>
                   <h3 className="font-serif text-2xl font-bold">
                     <Link className="hover:underline" href={collectionPath(context.collection.slug, `/exhibits/${exhibit.id}`)}>
@@ -69,20 +70,21 @@ export default async function CollectionExhibitsPage() {
                   </p>
                   {exhibit.publishedAt && <p className="text-xs text-stone-500">Published {formatDateTime(exhibit.publishedAt)}{exhibit.publishedBy ? ` by ${exhibit.publishedBy.email}` : ''}</p>}
                 </div>
-                <Link href={collectionPath(context.collection.slug, `/exhibits/${exhibit.id}`)} className="rounded-md border border-stone-300 bg-white/70 px-3 py-1.5 text-sm font-medium">
-                  Open
+                <Link href={collectionPath(context.collection.slug, `/exhibits/${exhibit.id}`)} className="inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-md border border-stone-300 bg-white/70 px-3 py-1.5 text-sm font-medium dark:border-[color:var(--ax-border)] dark:bg-[color:var(--ax-surface-muted)]">
+                  Edit
                 </Link>
               </div>
-              <div className="flex flex-wrap gap-2 text-sm">
+              <div className="flex flex-wrap items-center gap-2 text-sm">
                 {exhibit.status === 'PUBLISHED' && (
-                  <Link className="rounded-md border border-stone-300 bg-white/70 px-3 py-1.5 font-medium" href={publicExhibitPath(exhibit)}>
+                  <Link className="inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-md border border-stone-300 bg-white/70 px-3 py-1.5 font-medium dark:border-[color:var(--ax-border)] dark:bg-[color:var(--ax-surface-muted)]" href={publicExhibitPath(exhibit)}>
                     Public view
                   </Link>
                 )}
+                {exhibit.status === 'PUBLISHED' && <CopyPublicUrlButton path={publicExhibitPath(exhibit)} />}
                 {canManage ? (
-                  <span className="rounded-md border border-[#2f6b45]/20 bg-[#e8efdf] px-3 py-1.5 text-xs font-semibold text-[#2f6b45]">Manager publishing enabled</span>
+                  <span className="inline-flex shrink-0 items-center whitespace-nowrap rounded-md border border-[#2f6b45]/20 bg-[#e8efdf] px-3 py-1.5 text-xs font-semibold text-[#2f6b45] dark:bg-[#2f6b45]/20 dark:text-[#b9d6a4]">Can publish</span>
                 ) : (
-                  <span className="rounded-md border border-stone-200 bg-white/60 px-3 py-1.5 text-xs text-stone-600">Draft editing enabled</span>
+                  <span className="inline-flex shrink-0 items-center whitespace-nowrap rounded-md border border-stone-200 bg-white/60 px-3 py-1.5 text-xs text-stone-600 dark:border-[color:var(--ax-border)] dark:bg-[color:var(--ax-surface-muted)] dark:text-[color:var(--ax-text-muted)]">Draft editor</span>
                 )}
               </div>
             </Card>

@@ -23,11 +23,11 @@ export default async function PublicExhibitPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>
-  searchParams: Promise<{ token?: string }>
+  searchParams: Promise<{ subscribe?: string; token?: string }>
 }) {
   const { slug } = await params
   const query = await searchParams
   const data = await loadExhibitForDisplay(prisma, decodeURIComponent(slug))
   if (!data || !isPublishedExhibitVisible(data.exhibit, query.token || null)) return <Unavailable />
-  return <CollectionExhibitView data={data} token={query.token || null} />
+  return <CollectionExhibitView data={data} token={query.token || null} subscribeStatus={query.subscribe || null} />
 }

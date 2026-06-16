@@ -34,6 +34,12 @@ function nullableDate(value: string) {
   return Number.isNaN(parsed.getTime()) ? null : parsed
 }
 
+function exhibitSubscribePath(slug: string, token: string, status: 'failed' | 'invalid' | 'sent') {
+  const params = new URLSearchParams({ subscribe: status })
+  if (token) params.set('token', token)
+  return `/exhibit/${encodeURIComponent(slug)}?${params.toString()}`
+}
+
 function selectedPlantRows(fd: FormData) {
   const ids = fd.getAll('plantInstanceId').map((item) => String(item)).filter(Boolean)
   return ids.map((id, index) => ({
@@ -187,12 +193,12 @@ export async function subscribeToCollectionExhibit(fd: FormData) {
   const slug = value(fd, 'slug')
   const token = value(fd, 'token')
   const email = value(fd, 'email').toLowerCase()
-  if (!email || !email.includes('@')) redirect(`/exhibit/${encodeURIComponent(slug)}${token ? `?token=${encodeURIComponent(token)}&subscribe=invalid` : '?subscribe=invalid'}`)
-  const exhibit = await prisma.collectionExhibit.findUniqueOrThrow({
+  if (!email || !email.includes('@')) redirect(exhibitSubscribePath(slug, token, 'invalid'))
+  const exhibit = await prisma.collectionExhibit.findUnique({
     where: { slug },
     include: { collection: true },
   })
-  if (!isPublishedExhibitVisible(exhibit, token || null)) {
+  if (!exhibit || !isPublishedExhibitVisible(exhibit, token || null)) {
     redirect('/collections')
   }
   const confirmToken = secureToken()
@@ -224,9 +230,15 @@ export async function subscribeToCollectionExhibit(fd: FormData) {
     actionLabel: 'Confirm subscription',
     actionUrl: confirmUrl,
   })
-  await sendEmail({ to: email, subject: `Confirm AxilDB exhibit updates: ${exhibit.title}`, ...template })
+  try {
+    await sendEmail({ to: email, subject: `Confirm AxilDB exhibit updates: ${exhibit.title}`, ...template })
+  } catch (error) {
+    console.error('Failed to send exhibit subscription confirmation', error)
+    await audit(null, 'REQUEST_FAILED', 'COLLECTION_EXHIBIT_SUBSCRIBER', subscriber.id, `Failed exhibit subscription confirmation for ${exhibit.title}`, { email }, exhibit.collectionId)
+    redirect(exhibitSubscribePath(slug, token, 'failed'))
+  }
   await audit(null, 'REQUEST', 'COLLECTION_EXHIBIT_SUBSCRIBER', subscriber.id, `Requested exhibit subscription for ${exhibit.title}`, { email }, exhibit.collectionId)
-  redirect(`/exhibit/${encodeURIComponent(slug)}${token ? `?token=${encodeURIComponent(token)}&subscribe=sent` : '?subscribe=sent'}`)
+  redirect(exhibitSubscribePath(slug, token, 'sent'))
 }
 
 export async function sendCollectionExhibitUpdate(fd: FormData) {

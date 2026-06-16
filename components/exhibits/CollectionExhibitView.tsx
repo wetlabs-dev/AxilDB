@@ -246,14 +246,23 @@ export function CollectionExhibitView({
   token,
   staffCollectionSlug,
   print = false,
+  subscribeStatus,
 }: {
   data: NonNullable<DisplayExhibit>
   token?: string | null
   staffCollectionSlug?: string
   print?: boolean
+  subscribeStatus?: string | null
 }) {
   const { exhibit, settings, groups } = data
   const tokenValue = token || (exhibit.accessMode === CollectionExhibitAccessMode.UNLISTED ? exhibit.token : '')
+  const subscribeMessage = subscribeStatus === 'sent'
+    ? 'Check your email to confirm this exhibit subscription.'
+    : subscribeStatus === 'invalid'
+      ? 'Please enter a valid email address.'
+      : subscribeStatus === 'failed'
+        ? 'We could not send the confirmation email. Please try again later.'
+        : null
   return (
     <main className={cn('ax-public-light min-h-screen bg-[#f8f3e6] px-4 py-8 text-stone-900 print:bg-white print:px-0', print && 'bg-white')}>
       <article className="mx-auto grid max-w-6xl gap-8">
@@ -296,6 +305,11 @@ export function CollectionExhibitView({
               <div>
                 <h2 className="font-serif text-2xl font-semibold">Get exhibit updates</h2>
                 <p className="text-sm text-stone-600">Subscribe by email with double opt-in. No account is required.</p>
+                {subscribeMessage && (
+                  <p className={cn('mt-2 rounded-md border px-3 py-2 text-sm', subscribeStatus === 'failed' || subscribeStatus === 'invalid' ? 'border-red-200 bg-red-50 text-red-800' : 'border-[#2f6b45]/25 bg-[#e8efdf] text-[#2f6b45]')}>
+                    {subscribeMessage}
+                  </p>
+                )}
               </div>
               <form action={subscribeToCollectionExhibit} className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-[28rem] sm:flex-row">
                 <input type="hidden" name="slug" value={exhibit.slug} />
