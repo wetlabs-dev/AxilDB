@@ -18,6 +18,27 @@ const BORDER = '#d8d0bc'
 const CARD = '#fffaf0'
 const WASH = '#e8efdf'
 const FOOTER_Y = 724
+const FONT_DIR = path.join(process.cwd(), 'public', 'fonts')
+const AXILDB_FONT_FILES = {
+  sans: 'Inter-400.ttf',
+  sansMedium: 'Inter-500.ttf',
+  sansSemi: 'Inter-600.ttf',
+  sansBold: 'Inter-700.ttf',
+  serifSemi: 'Fraunces-600.ttf',
+  serifBold: 'Fraunces-700.ttf',
+  serifBlack: 'Fraunces-800.ttf',
+  mono: 'IBMPlexMono-Regular.ttf',
+} as const
+const FONT = {
+  sans: 'Helvetica',
+  sansMedium: 'Helvetica',
+  sansSemi: 'Helvetica-Bold',
+  sansBold: 'Helvetica-Bold',
+  serifSemi: 'Times-Bold',
+  serifBold: 'Times-Bold',
+  serifBlack: 'Times-Bold',
+  mono: 'Courier',
+}
 
 function left(doc: PDFKit.PDFDocument) {
   return doc.page.margins.left
@@ -42,9 +63,19 @@ function drawPageBackground(doc: PDFKit.PDFDocument) {
   doc.fillColor(INK)
 }
 
+function registerAxilDbFonts(doc: PDFKit.PDFDocument) {
+  for (const [name, filename] of Object.entries(AXILDB_FONT_FILES)) {
+    const fontPath = path.join(FONT_DIR, filename)
+    if (!existsSync(fontPath)) continue
+    const pdfName = `AxilDB-${name}`
+    doc.registerFont(pdfName, fontPath)
+    ;(FONT as Record<string, string>)[name] = pdfName
+  }
+}
+
 function drawRunningHeader(doc: PDFKit.PDFDocument, title: string) {
   doc.save()
-  doc.font('Helvetica').fontSize(7.5).fillColor('#8a8173')
+  doc.font(FONT.sans).fontSize(7.5).fillColor('#8a8173')
   doc.text(`AxilDB Collection Exhibit - ${title}`, left(doc), 30, { width: 360, lineBreak: false })
   doc.restore()
 }
@@ -82,7 +113,7 @@ function drawPhoto(doc: PDFKit.PDFDocument, photo: any, x: number, y: number, w:
     try {
       doc.image(local, x + 1, y + 1, { fit: [w - 2, h - 2], align: 'center', valign: 'center' })
     } catch {
-      doc.font('Helvetica').fontSize(8).fillColor(MUTED).text('Image unavailable', x + 8, y + h / 2 - 5, { width: w - 16, align: 'center' })
+      doc.font(FONT.sans).fontSize(8).fillColor(MUTED).text('Image unavailable', x + 8, y + h / 2 - 5, { width: w - 16, align: 'center' })
     }
   }
   doc.restore()
@@ -96,7 +127,7 @@ function detailGrid(doc: PDFKit.PDFDocument, rows: Array<[string, string | null 
   for (let i = 0; i < visible.length; i += columns) {
     const row = visible.slice(i, i + columns)
     const rowH = Math.max(44, ...row.map(([, value]) => {
-      doc.font('Helvetica').fontSize(9.2)
+      doc.font(FONT.sans).fontSize(9.2)
       return Math.min(72, doc.heightOfString(String(value), { width: colW - 18, lineGap: 1 }) + 28)
     }))
     ensureRoom(doc, rowH + 6, title)
@@ -104,8 +135,8 @@ function detailGrid(doc: PDFKit.PDFDocument, rows: Array<[string, string | null 
     row.forEach(([label, value], col) => {
       const x = left(doc) + col * (colW + gap)
       doc.roundedRect(x, y, colW, rowH, 6).fillAndStroke('#fffdf7', '#e1d8c7')
-      doc.font('Helvetica-Bold').fontSize(6.5).fillColor(MUTED).text(label.toUpperCase(), x + 9, y + 8, { width: colW - 18, characterSpacing: 0.7 })
-      doc.font('Helvetica').fontSize(9.2).fillColor(INK).text(String(value), x + 9, y + 22, { width: colW - 18, lineGap: 1, height: rowH - 28, ellipsis: true })
+      doc.font(FONT.sansBold).fontSize(6.5).fillColor(MUTED).text(label.toUpperCase(), x + 9, y + 8, { width: colW - 18, characterSpacing: 0.7 })
+      doc.font(FONT.sans).fontSize(9.2).fillColor(INK).text(String(value), x + 9, y + 22, { width: colW - 18, lineGap: 1, height: rowH - 28, ellipsis: true })
     })
     doc.y = y + rowH + 6
   }
@@ -115,14 +146,14 @@ function referenceLinkRow(doc: PDFKit.PDFDocument, items: Array<[string, string 
   const visible = items.filter(([, href]) => clean(href))
   if (!visible.length) return
   ensureRoom(doc, 24, title)
-  doc.font('Helvetica').fontSize(8.5)
+  doc.font(FONT.sans).fontSize(8.5)
   let x = left(doc)
   let rowY = doc.y
   const startY = doc.y
-  doc.font('Helvetica-Bold').fontSize(7.5).fillColor(MUTED).text('REFERENCES', x, rowY + 1, { width: 66, characterSpacing: 0.7, lineBreak: false })
+  doc.font(FONT.sansBold).fontSize(7.5).fillColor(MUTED).text('REFERENCES', x, rowY + 1, { width: 66, characterSpacing: 0.7, lineBreak: false })
   x += 76
   for (const [label, href] of visible) {
-    doc.font('Helvetica-Bold').fontSize(8.5)
+    doc.font(FONT.sansBold).fontSize(8.5)
     const linkW = doc.widthOfString(label)
     if (x + linkW > right(doc)) {
       x = left(doc)
@@ -139,7 +170,7 @@ function writeParagraph(doc: PDFKit.PDFDocument, value?: string | null, fontSize
   const body = clean(value)
   if (!body) return
   ensureRoom(doc, 38, title)
-  doc.font('Helvetica').fontSize(fontSize).fillColor(INK)
+  doc.font(FONT.sans).fontSize(fontSize).fillColor(INK)
   text(doc, body, { lineGap: 2 })
   doc.moveDown(0.55)
 }
@@ -153,9 +184,9 @@ function drawDefinitionSection(
   if (startNewPage) newPage(doc, data.exhibit.title)
   else ensureRoom(doc, 156, data.exhibit.title)
 
-  doc.font('Helvetica-Bold').fontSize(8.5).fillColor(GREEN).text(`${group.entries.length} selected specimen${group.entries.length === 1 ? '' : 's'}`.toUpperCase(), left(doc), doc.y, { characterSpacing: 1.1 })
+  doc.font(FONT.sansBold).fontSize(8.5).fillColor(GREEN).text(`${group.entries.length} selected specimen${group.entries.length === 1 ? '' : 's'}`.toUpperCase(), left(doc), doc.y, { characterSpacing: 1.1 })
   doc.moveDown(0.18)
-  doc.font('Times-Bold').fontSize(25).fillColor(INK)
+  doc.font(FONT.serifBold).fontSize(25).fillColor(INK)
   text(doc, plantName(group.definition))
   doc.moveDown(0.35)
   writeParagraph(doc, group.definition.description, 10, data.exhibit.title)
@@ -166,7 +197,7 @@ function drawDefinitionSection(
     group.typePhotos.slice(0, 4).forEach((photo: any, index: number) => {
       drawPhoto(doc, photo, left(doc) + index * 122, y, 112, 78)
       if (photo.caption) {
-        doc.font('Helvetica').fontSize(7.5).fillColor(MUTED).text(photo.caption, left(doc) + index * 122, y + 82, { width: 112, height: 16, ellipsis: true })
+        doc.font(FONT.sans).fontSize(7.5).fillColor(MUTED).text(photo.caption, left(doc) + index * 122, y + 82, { width: 112, height: 16, ellipsis: true })
       }
     })
     doc.y = y + 104
@@ -185,8 +216,8 @@ function drawDefinitionSection(
 
   if (data.settings.aliases && group.definition.aliases.length) {
     ensureRoom(doc, 32, data.exhibit.title)
-    doc.font('Helvetica-Bold').fontSize(8.5).fillColor(INK).text('Also known as', left(doc), doc.y)
-    doc.font('Helvetica').fontSize(9).fillColor(INK)
+    doc.font(FONT.sansBold).fontSize(8.5).fillColor(INK).text('Also known as', left(doc), doc.y)
+    doc.font(FONT.sans).fontSize(9).fillColor(INK)
     text(doc, group.definition.aliases.map((alias: any) => alias.name).join(', '))
     doc.moveDown(0.55)
   }
@@ -278,7 +309,7 @@ function specimenSections(data: NonNullable<Awaited<ReturnType<typeof loadExhibi
 }
 
 function sectionTextHeight(doc: PDFKit.PDFDocument, lines: string[], textW: number) {
-  doc.font('Helvetica').fontSize(7.8)
+  doc.font(FONT.sans).fontSize(7.8)
   return lines.reduce((total, line) => total + Math.max(9.5, doc.heightOfString(line, { width: textW, lineGap: 1 })), 0)
 }
 
@@ -296,9 +327,9 @@ function drawSpecimenCard(doc: PDFKit.PDFDocument, data: NonNullable<Awaited<Ret
   const y = doc.y
   doc.roundedRect(x, y, width(doc), cardH, 10).fillAndStroke(CARD, BORDER)
 
-  doc.font('Helvetica-Bold').fontSize(8.5).fillColor(GREEN).text(plant.plantId, textX, y + 14, { width: textW })
-  doc.font('Times-Bold').fontSize(15).fillColor(INK).text(plantName(plant.plantDefinition), textX, doc.y + 2, { width: textW })
-  doc.font('Helvetica').fontSize(8.7).fillColor('#4d463c')
+  doc.font(FONT.mono).fontSize(8.2).fillColor(GREEN).text(plant.plantId, textX, y + 14, { width: textW })
+  doc.font(FONT.serifBold).fontSize(15).fillColor(INK).text(plantName(plant.plantDefinition), textX, doc.y + 2, { width: textW })
+  doc.font(FONT.sans).fontSize(8.7).fillColor('#4d463c')
   const meta = [
     data.settings.location ? entry.locationPath || 'No location set' : null,
     data.settings.acquisitionSource && plant.source ? `Source: ${plant.source}` : null,
@@ -311,9 +342,9 @@ function drawSpecimenCard(doc: PDFKit.PDFDocument, data: NonNullable<Awaited<Ret
 
   let sectionY = Math.max(doc.y + 8, y + 74)
   for (const section of sections) {
-    doc.font('Helvetica-Bold').fontSize(7.7).fillColor(INK).text(section.title, textX, sectionY, { width: textW, lineBreak: false })
+    doc.font(FONT.sansBold).fontSize(7.7).fillColor(INK).text(section.title, textX, sectionY, { width: textW, lineBreak: false })
     sectionY += 10
-    doc.font('Helvetica').fontSize(7.8).fillColor('#4d463c')
+    doc.font(FONT.sans).fontSize(7.8).fillColor('#4d463c')
     for (const line of section.lines) {
       const lineHeight = Math.max(9.5, doc.heightOfString(line, { width: textW, lineGap: 1 }))
       doc.text(line, textX, sectionY, { width: textW, lineGap: 1 })
@@ -330,7 +361,7 @@ function addFooters(doc: PDFKit.PDFDocument, title: string) {
   const range = doc.bufferedPageRange()
   for (let i = 0; i < range.count; i += 1) {
     doc.switchToPage(range.start + i)
-    doc.font('Helvetica').fontSize(7.5).fillColor('#8a8173')
+    doc.font(FONT.sans).fontSize(7.5).fillColor('#8a8173')
     doc.text(`AxilDB Collection Exhibit - ${title}`, doc.page.margins.left, FOOTER_Y, { width: 360, lineBreak: false })
     doc.text(String(i + 1), doc.page.width - doc.page.margins.right - 40, FOOTER_Y, { width: 40, align: 'right', lineBreak: false })
   }
@@ -346,14 +377,15 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
   }
 
   const doc = new PDFDocument({ size: 'LETTER', margin: 56, bufferPages: true, autoFirstPage: true })
+  registerAxilDbFonts(doc)
   const chunks: Buffer[] = []
   doc.on('data', (chunk) => chunks.push(chunk))
   const done = new Promise<Buffer>((resolve) => doc.on('end', () => resolve(Buffer.concat(chunks))))
   drawPageBackground(doc)
 
-  doc.font('Helvetica-Bold').fontSize(9).fillColor(GREEN).text(data.exhibit.collection.name.toUpperCase(), 56, 72, { characterSpacing: 1.2 })
-  doc.font('Times-Bold').fontSize(34).fillColor(INK).text(data.exhibit.title, 56, 102, { width: 430 })
-  doc.font('Helvetica').fontSize(11).fillColor('#4d463c')
+  doc.font(FONT.sansBold).fontSize(9).fillColor(GREEN).text(data.exhibit.collection.name.toUpperCase(), 56, 72, { characterSpacing: 1.2 })
+  doc.font(FONT.serifBlack).fontSize(34).fillColor(INK).text(data.exhibit.title, 56, 102, { width: 430 })
+  doc.font(FONT.sans).fontSize(11).fillColor('#4d463c')
   const specimenCount = data.groups.reduce((total, group) => total + group.entries.length, 0)
   doc.text(`Generated ${formatDate(new Date())} - ${specimenCount} specimens - ${data.groups.length} definition section${data.groups.length === 1 ? '' : 's'}`, 56, 164, { width: 430 })
   if (data.exhibit.description) doc.text(data.exhibit.description, 56, 196, { width: 430, lineGap: 3 })
