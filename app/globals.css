@@ -855,6 +855,75 @@ section {
   color: #e7f1dc !important;
 }
 
+:root[data-theme='dark'] .ax-public-light {
+  color-scheme: light;
+  background-color: #f8f3e6 !important;
+  color: #1f2a22 !important;
+}
+
+:root[data-theme='dark'] .ax-public-light h1,
+:root[data-theme='dark'] .ax-public-light h2,
+:root[data-theme='dark'] .ax-public-light h3 {
+  color: #211f1b !important;
+}
+
+:root[data-theme='dark'] .ax-public-light .text-stone-900,
+:root[data-theme='dark'] .ax-public-light .text-stone-800,
+:root[data-theme='dark'] .ax-public-light .text-stone-700 {
+  color: #1f2a22 !important;
+}
+
+:root[data-theme='dark'] .ax-public-light .text-stone-600,
+:root[data-theme='dark'] .ax-public-light .text-stone-500 {
+  color: #6d675d !important;
+}
+
+:root[data-theme='dark'] .ax-public-light .text-\[\#2f6b45\] {
+  color: #2f6b45 !important;
+}
+
+:root[data-theme='dark'] .ax-public-light .bg-white,
+:root[data-theme='dark'] .ax-public-light .bg-white\/45,
+:root[data-theme='dark'] .ax-public-light .bg-white\/50,
+:root[data-theme='dark'] .ax-public-light .bg-white\/60,
+:root[data-theme='dark'] .ax-public-light .bg-white\/68,
+:root[data-theme='dark'] .ax-public-light .bg-white\/70,
+:root[data-theme='dark'] .ax-public-light .bg-white\/72,
+:root[data-theme='dark'] .ax-public-light .bg-white\/82,
+:root[data-theme='dark'] .ax-public-light .bg-white\/85 {
+  background-color: rgba(255, 255, 255, .72) !important;
+}
+
+:root[data-theme='dark'] .ax-public-light .bg-\[\#fffaf0\]\/72 {
+  background-color: rgba(255, 250, 240, .72) !important;
+}
+
+:root[data-theme='dark'] .ax-public-light .bg-\[\#f8f3e6\] {
+  background-color: #f8f3e6 !important;
+}
+
+:root[data-theme='dark'] .ax-public-light .bg-\[\#e8efdf\] {
+  background-color: #e8efdf !important;
+}
+
+:root[data-theme='dark'] .ax-public-light .border-stone-200,
+:root[data-theme='dark'] .ax-public-light .border-stone-300 {
+  border-color: #e7dfcf !important;
+}
+
+:root[data-theme='dark'] .ax-public-light input,
+:root[data-theme='dark'] .ax-public-light select,
+:root[data-theme='dark'] .ax-public-light textarea {
+  border-color: #d6cdb8 !important;
+  background-color: #fff !important;
+  color: #1f2a22 !important;
+}
+
+:root[data-theme='dark'] .ax-public-light input::placeholder,
+:root[data-theme='dark'] .ax-public-light textarea::placeholder {
+  color: #9a9387 !important;
+}
+
 :root[data-theme='dark'] .lineage-canvas {
   background:
     radial-gradient(circle at 15% 20%, rgba(155, 195, 138, .16), transparent 18rem),

@@ -255,7 +255,7 @@ export function CollectionExhibitView({
   const { exhibit, settings, groups } = data
   const tokenValue = token || (exhibit.accessMode === CollectionExhibitAccessMode.UNLISTED ? exhibit.token : '')
   return (
-    <main className={cn('min-h-screen bg-[#f8f3e6] px-4 py-8 text-stone-900 print:bg-white print:px-0', print && 'bg-white')}>
+    <main className={cn('ax-public-light min-h-screen bg-[#f8f3e6] px-4 py-8 text-stone-900 print:bg-white print:px-0', print && 'bg-white')}>
       <article className="mx-auto grid max-w-6xl gap-8">
         <header className="grid gap-4 rounded-xl border border-stone-200 bg-white/82 p-6 shadow-sm print:border-0 print:shadow-none">
           <div className="flex flex-wrap items-start justify-between gap-4">

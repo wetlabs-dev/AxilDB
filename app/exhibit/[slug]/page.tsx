@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma'
 
 function Unavailable() {
   return (
-    <main className="min-h-screen bg-[#f8f3e6] px-4 py-10 text-stone-900">
+    <main className="ax-public-light min-h-screen bg-[#f8f3e6] px-4 py-10 text-stone-900">
       <section className="mx-auto grid max-w-xl gap-4 rounded-lg border border-stone-200 bg-white/85 p-6 shadow-sm">
         <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#2f6b45]">Collection exhibit</p>
         <h1 className="font-serif text-3xl font-semibold">This exhibit is not available.</h1>
