@@ -50,6 +50,7 @@ export default async function RootLayout({children}:{children:React.ReactNode}) 
   const host = requestHeaders.get('host')?.split(':')[0] || ''
   const isMarketingHost = host === 'axildb.com' || host === 'www.axildb.com'
   const isMarketingRoute = requestHeaders.get('x-axildb-marketing') === '1'
+  const isPublicPageRoute = requestHeaders.get('x-axildb-public-page') === '1'
   const requestPath = requestHeaders.get('x-axildb-path') || '/'
   const maintenanceMode = await prisma.maintenanceMode.findFirst({ where: { enabled: true }, orderBy: { updatedAt: 'desc' } })
   const maintenanceAuthAllowed = maintenanceAllowedPrefixes.some((prefix) => requestPath.startsWith(prefix))
@@ -80,7 +81,7 @@ export default async function RootLayout({children}:{children:React.ReactNode}) 
       <body>
         {showMaintenance ? (
           <MaintenanceScreen message={maintenanceMode?.message} expectedReturnAt={maintenanceMode?.expectedReturnAt} />
-        ) : isMarketingHost || isMarketingRoute ? (
+        ) : isMarketingHost || isMarketingRoute || isPublicPageRoute ? (
           children
         ) : (
           <div className="min-h-screen min-w-0 md:flex">

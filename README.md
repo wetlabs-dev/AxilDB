@@ -23,6 +23,7 @@ It is designed for real collection work: messy taxonomy, acquisition names, alia
 - Care event history for watering, fertilizing, repotting, pest checks, health checks, propagation checks, bloom checks, and other care tasks.
 - Plant condition tracking for issues like wilting, yellowing leaves, crispy leaves, pests, disease, root issues, sunburn, nutrient issues, and mechanical damage, with severity/status follow-up.
 - Care sheets that combine selected specimens, photos, quick care badges, selected husbandry sections, and local care adjustments into a shareable web view or printable PDF.
+- Collection Exhibits for curated, read-only public or unlisted specimen showcases grouped by plant definition, with manager-controlled publishing, guest email update subscriptions, and print/PDF-friendly pages.
 - Weekly greenhouse checklist generation from the care queue, grouped by location and covering overdue, due-today, and upcoming care tasks.
 - Plant sitter mode with expiring/revocable token links that expose only selected plants and tasks, allow limited checklist completion, and log sitter actions back into AxilDB.
 - Plant instances with generated plant IDs, acquisition/propagation dates, source/distributor metadata, hierarchical locations, archive status, notes, and photos.
@@ -104,6 +105,8 @@ Collection roles:
 
 Server administration is intentionally separate from collection work. Normal plant work is collection-scoped through collection memberships.
 Public collections are browseable without signing in, but following records requires an active collection membership.
+
+Collection Exhibits are managed from the Admin sidebar by gardeners and managers. Gardeners can create and edit draft exhibits, select specimens, choose public-safe display sections, and configure stored update preferences. Collection managers can publish or unpublish the public/unlisted share link, review subscriber counts, and send manual update emails to double opt-in guests. Sensitive specimen notes, care notes, and condition details are disabled by default and only appear on an exhibit when explicitly enabled.
 
 The bootstrap script creates the first admin user:
 

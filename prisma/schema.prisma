@@ -36,6 +36,30 @@ enum RestoreRequestStatus {
   CANCELLED
 }
 
+enum CollectionExhibitAccessMode {
+  PUBLIC
+  UNLISTED
+}
+
+enum CollectionExhibitStatus {
+  DRAFT
+  PUBLISHED
+  UNPUBLISHED
+  EXPIRED
+}
+
+enum CollectionExhibitSubscriberStatus {
+  PENDING
+  ACTIVE
+  UNSUBSCRIBED
+}
+
+enum CollectionExhibitUpdateDeliveryStatus {
+  SENT
+  FAILED
+  SKIPPED
+}
+
 model GoverningBody {
   collectionId     String?
   id               String            @id @default(cuid())
@@ -116,6 +140,9 @@ model User {
   cancelledPlantQuarantines PlantQuarantine[] @relation("PlantQuarantineCancelledBy")
   careSheets          CareSheet[]
   completedCareSheetTasks CareSheetTask[] @relation("CareSheetTaskCompletedBy")
+  createdCollectionExhibits CollectionExhibit[] @relation("CollectionExhibitCreatedBy")
+  publishedCollectionExhibits CollectionExhibit[] @relation("CollectionExhibitPublishedBy")
+  createdCollectionExhibitUpdates CollectionExhibitUpdate[] @relation("CollectionExhibitUpdateCreatedBy")
 
   @@index([role])
   @@index([emailVerifiedAt])
@@ -183,6 +210,7 @@ model Collection {
   careSheetTasks      CareSheetTask[]
   careSheetAccessLogs CareSheetAccessLog[]
   collectionUpdateDigestDeliveries CollectionUpdateDigestDelivery[]
+  exhibits            CollectionExhibit[]
 
   @@index([visibility])
   @@index([status])
@@ -551,6 +579,119 @@ model BackupRun {
   @@index([status])
   @@index([requestedAt])
   @@index([requestedById])
+}
+
+model CollectionExhibit {
+  id                 String                      @id @default(cuid())
+  collectionId       String
+  title              String
+  slug               String                      @unique
+  token              String?                     @unique
+  accessMode         CollectionExhibitAccessMode @default(UNLISTED)
+  status             CollectionExhibitStatus     @default(DRAFT)
+  description        String?
+  introMarkdown      String?
+  coverPhotoId       String?
+  createdByUserId    String?
+  publishedByUserId  String?
+  publishedAt        DateTime?
+  expiresAt          DateTime?
+  revokedAt          DateTime?
+  settingsJson       Json?
+  updateSettingsJson Json?
+  createdAt          DateTime                    @default(now())
+  updatedAt          DateTime                    @updatedAt
+
+  collection  Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  coverPhoto  Photo?     @relation("CollectionExhibitCoverPhoto", fields: [coverPhotoId], references: [id], onDelete: SetNull)
+  createdBy   User?      @relation("CollectionExhibitCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  publishedBy User?      @relation("CollectionExhibitPublishedBy", fields: [publishedByUserId], references: [id], onDelete: SetNull)
+  plants      CollectionExhibitPlant[]
+  subscribers CollectionExhibitSubscriber[]
+  updates     CollectionExhibitUpdate[]
+
+  @@index([collectionId])
+  @@index([status])
+  @@index([accessMode])
+  @@index([expiresAt])
+  @@index([createdByUserId])
+  @@index([publishedByUserId])
+}
+
+model CollectionExhibitPlant {
+  id              String   @id @default(cuid())
+  exhibitId       String
+  plantInstanceId String
+  sortOrder       Int      @default(0)
+  featured        Boolean  @default(false)
+  customCaption   String?
+  createdAt       DateTime @default(now())
+
+  exhibit       CollectionExhibit @relation(fields: [exhibitId], references: [id], onDelete: Cascade)
+  plantInstance PlantInstance     @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
+
+  @@unique([exhibitId, plantInstanceId])
+  @@index([exhibitId])
+  @@index([plantInstanceId])
+  @@index([sortOrder])
+}
+
+model CollectionExhibitSubscriber {
+  id                   String                            @id @default(cuid())
+  exhibitId            String
+  email                String
+  status               CollectionExhibitSubscriberStatus @default(PENDING)
+  confirmTokenHash     String?                           @unique
+  unsubscribeTokenHash String                            @unique
+  confirmedAt          DateTime?
+  unsubscribedAt       DateTime?
+  createdAt            DateTime                          @default(now())
+  updatedAt            DateTime                          @updatedAt
+
+  exhibit    CollectionExhibit @relation(fields: [exhibitId], references: [id], onDelete: Cascade)
+  deliveries CollectionExhibitDelivery[]
+
+  @@unique([exhibitId, email])
+  @@index([exhibitId])
+  @@index([email])
+  @@index([status])
+}
+
+model CollectionExhibitUpdate {
+  id                String    @id @default(cuid())
+  exhibitId         String
+  title             String
+  summary           String?
+  changeSummaryJson Json?
+  createdByUserId   String?
+  createdAt         DateTime  @default(now())
+  sentAt            DateTime?
+
+  exhibit    CollectionExhibit @relation(fields: [exhibitId], references: [id], onDelete: Cascade)
+  createdBy  User?             @relation("CollectionExhibitUpdateCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  deliveries CollectionExhibitDelivery[]
+
+  @@index([exhibitId])
+  @@index([createdAt])
+  @@index([sentAt])
+  @@index([createdByUserId])
+}
+
+model CollectionExhibitDelivery {
+  id              String                                @id @default(cuid())
+  exhibitUpdateId String
+  subscriberId    String
+  status          CollectionExhibitUpdateDeliveryStatus @default(SKIPPED)
+  error           String?
+  sentAt          DateTime?
+  createdAt       DateTime                              @default(now())
+
+  exhibitUpdate CollectionExhibitUpdate     @relation(fields: [exhibitUpdateId], references: [id], onDelete: Cascade)
+  subscriber    CollectionExhibitSubscriber @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
+
+  @@index([exhibitUpdateId])
+  @@index([subscriberId])
+  @@index([status])
 }
 
 model MaintenanceMode {
@@ -1150,6 +1291,7 @@ model PlantInstance {
   incomingTransferRequests PlantTransferRequest[] @relation("TargetPlantTransferRequests")
   careSheetPlants CareSheetPlant[]
   careSheetTasks  CareSheetTask[]
+  exhibitPlants   CollectionExhibitPlant[]
 
   @@index([collectionId])
   @@unique([collectionId, plantId])
@@ -1626,6 +1768,7 @@ model Photo {
   uploadedByUser User? @relation("PhotoUploader", fields: [uploadedByUserId], references: [id], onDelete: SetNull)
   moderationReviews ImageModerationReview[]
   plantIdentificationLogs PlantIdentificationLog[]
+  exhibitCoverPhotos CollectionExhibit[] @relation("CollectionExhibitCoverPhoto")
 
   @@index([collectionId])
   @@index([uploadedByUserId])
