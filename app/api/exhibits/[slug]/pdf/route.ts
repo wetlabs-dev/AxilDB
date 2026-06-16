@@ -17,6 +17,7 @@ const GREEN = '#2f6b45'
 const BORDER = '#d8d0bc'
 const CARD = '#fffaf0'
 const WASH = '#e8efdf'
+const FOOTER_Y = 724
 
 function left(doc: PDFKit.PDFDocument) {
   return doc.page.margins.left
@@ -41,13 +42,22 @@ function drawPageBackground(doc: PDFKit.PDFDocument) {
   doc.fillColor(INK)
 }
 
-function newPage(doc: PDFKit.PDFDocument) {
-  doc.addPage()
-  drawPageBackground(doc)
+function drawRunningHeader(doc: PDFKit.PDFDocument, title: string) {
+  doc.save()
+  doc.font('Helvetica').fontSize(7.5).fillColor('#8a8173')
+  doc.text(`AxilDB Collection Exhibit - ${title}`, left(doc), 30, { width: 360, lineBreak: false })
+  doc.restore()
 }
 
-function ensureRoom(doc: PDFKit.PDFDocument, needed: number) {
-  if (doc.y + needed > bottom(doc)) newPage(doc)
+function newPage(doc: PDFKit.PDFDocument, title?: string) {
+  doc.addPage()
+  drawPageBackground(doc)
+  if (title) drawRunningHeader(doc, title)
+  doc.y = doc.page.margins.top
+}
+
+function ensureRoom(doc: PDFKit.PDFDocument, needed: number, title?: string) {
+  if (doc.y + needed > bottom(doc)) newPage(doc, title)
 }
 
 function text(doc: PDFKit.PDFDocument, value: string, options: PDFKit.Mixins.TextOptions = {}) {
@@ -78,29 +88,33 @@ function drawPhoto(doc: PDFKit.PDFDocument, photo: any, x: number, y: number, w:
   doc.restore()
 }
 
-function detailGrid(doc: PDFKit.PDFDocument, rows: Array<[string, string | null | undefined]>, columns = 2) {
+function detailGrid(doc: PDFKit.PDFDocument, rows: Array<[string, string | null | undefined]>, columns = 2, title?: string) {
   const visible = rows.filter(([, value]) => clean(value))
   if (!visible.length) return
   const gap = 8
   const colW = (width(doc) - gap * (columns - 1)) / columns
-  const rowH = 42
   for (let i = 0; i < visible.length; i += columns) {
-    ensureRoom(doc, rowH + 6)
+    const row = visible.slice(i, i + columns)
+    const rowH = Math.max(44, ...row.map(([, value]) => {
+      doc.font('Helvetica').fontSize(9.2)
+      return Math.min(72, doc.heightOfString(String(value), { width: colW - 18, lineGap: 1 }) + 28)
+    }))
+    ensureRoom(doc, rowH + 6, title)
     const y = doc.y
-    visible.slice(i, i + columns).forEach(([label, value], col) => {
+    row.forEach(([label, value], col) => {
       const x = left(doc) + col * (colW + gap)
       doc.roundedRect(x, y, colW, rowH, 6).fillAndStroke('#fffdf7', '#e1d8c7')
       doc.font('Helvetica-Bold').fontSize(6.5).fillColor(MUTED).text(label.toUpperCase(), x + 9, y + 8, { width: colW - 18, characterSpacing: 0.7 })
-      doc.font('Helvetica').fontSize(9.2).fillColor(INK).text(String(value), x + 9, y + 22, { width: colW - 18, height: 16, ellipsis: true })
+      doc.font('Helvetica').fontSize(9.2).fillColor(INK).text(String(value), x + 9, y + 22, { width: colW - 18, lineGap: 1, height: rowH - 28, ellipsis: true })
     })
     doc.y = y + rowH + 6
   }
 }
 
-function pillRow(doc: PDFKit.PDFDocument, items: Array<[string, string | null | undefined]>) {
+function pillRow(doc: PDFKit.PDFDocument, items: Array<[string, string | null | undefined]>, title?: string) {
   const visible = items.filter(([, href]) => clean(href))
   if (!visible.length) return
-  ensureRoom(doc, 28)
+  ensureRoom(doc, 28, title)
   let x = left(doc)
   const y = doc.y
   for (const [label, href] of visible) {
@@ -116,26 +130,33 @@ function pillRow(doc: PDFKit.PDFDocument, items: Array<[string, string | null | 
   doc.y = Math.max(doc.y + 24, y + 24)
 }
 
-function writeParagraph(doc: PDFKit.PDFDocument, value?: string | null, fontSize = 9.5) {
+function writeParagraph(doc: PDFKit.PDFDocument, value?: string | null, fontSize = 9.5, title?: string) {
   const body = clean(value)
   if (!body) return
-  ensureRoom(doc, 38)
+  ensureRoom(doc, 38, title)
   doc.font('Helvetica').fontSize(fontSize).fillColor(INK)
   text(doc, body, { lineGap: 2 })
   doc.moveDown(0.55)
 }
 
-function drawDefinitionSection(doc: PDFKit.PDFDocument, data: NonNullable<Awaited<ReturnType<typeof loadExhibitForDisplay>>>, group: any) {
-  newPage(doc)
+function drawDefinitionSection(
+  doc: PDFKit.PDFDocument,
+  data: NonNullable<Awaited<ReturnType<typeof loadExhibitForDisplay>>>,
+  group: any,
+  startNewPage: boolean,
+) {
+  if (startNewPage) newPage(doc, data.exhibit.title)
+  else ensureRoom(doc, 156, data.exhibit.title)
+
   doc.font('Helvetica-Bold').fontSize(8.5).fillColor(GREEN).text(`${group.entries.length} selected specimen${group.entries.length === 1 ? '' : 's'}`.toUpperCase(), left(doc), doc.y, { characterSpacing: 1.1 })
   doc.moveDown(0.18)
   doc.font('Times-Bold').fontSize(25).fillColor(INK)
   text(doc, plantName(group.definition))
   doc.moveDown(0.35)
-  writeParagraph(doc, group.definition.description, 10)
+  writeParagraph(doc, group.definition.description, 10, data.exhibit.title)
 
   if (data.settings.typeImages && group.typePhotos.length) {
-    ensureRoom(doc, 106)
+    ensureRoom(doc, 106, data.exhibit.title)
     const y = doc.y
     group.typePhotos.slice(0, 4).forEach((photo: any, index: number) => {
       drawPhoto(doc, photo, left(doc) + index * 122, y, 112, 78)
@@ -154,10 +175,11 @@ function drawDefinitionSection(doc: PDFKit.PDFDocument, data: NonNullable<Awaite
       ['Confidence', taxonomyLabel(group.definition.confidence)],
       ['Validation', group.definition.isValidated ? `Validated ${formatDate(group.definition.validatedAt)}` : 'Not validated'],
       ['Acquisition label', group.definition.acquisitionLabel],
-    ])
+    ], 2, data.exhibit.title)
   }
 
   if (data.settings.aliases && group.definition.aliases.length) {
+    ensureRoom(doc, 32, data.exhibit.title)
     doc.font('Helvetica-Bold').fontSize(8.5).fillColor(INK).text('Also known as', left(doc), doc.y)
     doc.font('Helvetica').fontSize(9).fillColor(INK)
     text(doc, group.definition.aliases.map((alias: any) => alias.name).join(', '))
@@ -173,7 +195,7 @@ function drawDefinitionSection(doc: PDFKit.PDFDocument, data: NonNullable<Awaite
       ['Medium', guide.mediumPreferred],
       ['Bloom', guide.bloomSeason],
       ['Propagation', guide.propagationMethods],
-    ])
+    ], 2, data.exhibit.title)
   }
 
   if (data.settings.referenceLinks) {
@@ -182,7 +204,7 @@ function drawDefinitionSection(doc: PDFKit.PDFDocument, data: NonNullable<Awaite
       ['iNaturalist', group.definition.inaturalistUrl],
       ['POWO', group.definition.powoUrl],
       ['GBIF', group.definition.gbifUrl],
-    ])
+    ], data.exhibit.title)
   }
 
   doc.moveDown(0.4)
@@ -192,7 +214,7 @@ function drawDefinitionSection(doc: PDFKit.PDFDocument, data: NonNullable<Awaite
 function drawSpecimenCard(doc: PDFKit.PDFDocument, data: NonNullable<Awaited<ReturnType<typeof loadExhibitForDisplay>>>, entry: any) {
   const plant = entry.plantInstance
   const cardH = 154
-  ensureRoom(doc, cardH + 14)
+  ensureRoom(doc, cardH + 14, data.exhibit.title)
   const x = left(doc)
   const y = doc.y
   doc.roundedRect(x, y, width(doc), cardH, 10).fillAndStroke(CARD, BORDER)
@@ -245,8 +267,8 @@ function addFooters(doc: PDFKit.PDFDocument, title: string) {
   for (let i = 0; i < range.count; i += 1) {
     doc.switchToPage(range.start + i)
     doc.font('Helvetica').fontSize(7.5).fillColor('#8a8173')
-    doc.text(`AxilDB Collection Exhibit - ${title}`, doc.page.margins.left, doc.page.height - 34, { width: 360 })
-    doc.text(String(i + 1), doc.page.width - doc.page.margins.right - 40, doc.page.height - 34, { width: 40, align: 'right' })
+    doc.text(`AxilDB Collection Exhibit - ${title}`, doc.page.margins.left, FOOTER_Y, { width: 360, lineBreak: false })
+    doc.text(String(i + 1), doc.page.width - doc.page.margins.right - 40, FOOTER_Y, { width: 40, align: 'right', lineBreak: false })
   }
 }
 
@@ -259,7 +281,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
     return NextResponse.json({ error: 'Exhibit not found' }, { status: 404 })
   }
 
-  const doc = new PDFDocument({ size: 'LETTER', margin: 44, bufferPages: true, autoFirstPage: true })
+  const doc = new PDFDocument({ size: 'LETTER', margin: 56, bufferPages: true, autoFirstPage: true })
   const chunks: Buffer[] = []
   doc.on('data', (chunk) => chunks.push(chunk))
   const done = new Promise<Buffer>((resolve) => doc.on('end', () => resolve(Buffer.concat(chunks))))
@@ -272,8 +294,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
   doc.text(`Generated ${formatDate(new Date())} - ${specimenCount} specimens - ${data.groups.length} definition section${data.groups.length === 1 ? '' : 's'}`, 56, 164, { width: 430 })
   if (data.exhibit.description) doc.text(data.exhibit.description, 56, 196, { width: 430, lineGap: 3 })
   if (data.exhibit.coverPhoto) drawPhoto(doc, data.exhibit.coverPhoto, 56, 338, 500, 260)
+  else doc.y = Math.max(doc.y + 36, 232)
 
-  for (const group of data.groups) drawDefinitionSection(doc, data, group)
+  data.groups.forEach((group, index) => {
+    drawDefinitionSection(doc, data, group, index > 0 || Boolean(data.exhibit.coverPhoto))
+  })
 
   addFooters(doc, data.exhibit.title)
   doc.end()
