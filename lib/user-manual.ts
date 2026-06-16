@@ -438,7 +438,8 @@ export const manualSections: ManualSection[] = [
       'Use Image Moderation to review censored uploads, override false alarms, remove images, or remove an image and block the uploader.',
       'Use Incident History to search/filter open or resolved incidents, inspect clustered memory/disk graph markers, create manual incidents, and attach notes or postmortem details.',
       'Use Maintenance Mode before planned downtime so public visitors and normal users see a maintenance screen while server admins retain access.',
-      'Use backup controls to initiate sitewide backups, browse backup folders under the configured backup root, validate restore readiness, and generate the SSH-only restore command.',
+      'Use Backup Management to initiate sitewide backups, review recent runs and readable backup folders in one list, inspect manifests/artifact sizes/git commits, validate restore readiness, and generate the SSH-only restore command.',
+      'Use backup deletion tools only when intentionally pruning server storage: individual deletion requires the exact folder name, and older-than cleanup starts with a dry-run preview before confirmation. Active and incomplete backups are skipped by default, and restore request history is retained.',
       'Use Restore History to document restore requests, validation results, generated commands, notes, and externally completed or cancelled restores. The web UI never executes a database or file restore.',
       'Use Orphaned Image Cleanup to scan uploaded image storage for files no longer referenced by database records, review the dry-run list, select files, and delete only after confirmation.',
     ],
@@ -449,6 +450,7 @@ export const manualSections: ManualSection[] = [
       'AI availability can be toggled per collection by server admins, and collection managers can request AI access.',
       'Incidents are durable operational records. Memory incidents open after three consecutive samples above warning or critical thresholds; disk incidents open on threshold crossing; metric incidents resolve automatically after three clear samples. Worker, SMTP, email backlog, AI, and moderation incidents are detected from durable worker/delivery records. Manual incidents remain until a server admin resolves them.',
       'Orphaned Image Cleanup only scans the upload image directory and re-checks database references immediately before deleting selected files.',
+      'Backup manifests record deployment commit metadata from GIT_COMMIT, SOURCE_COMMIT, common provider commit variables, or git rev-parse when repository metadata is available.',
     ],
     warnings: [
       'Permanent collection deletion cascades collection-owned records. Archive first and verify backups before deleting.',

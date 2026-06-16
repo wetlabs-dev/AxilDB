@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { approveAiAccessRequest, approveCollectionRequest, rejectAiAccessRequest, rejectCollectionRequest } from '@/app/collection-actions'
 import {
   createRestoreRequest,
+  deleteOldBackups,
+  deleteSelectedBackup,
   generateRestoreCommand,
   requestSitewideBackup,
   updateMaintenanceMode,
@@ -10,7 +12,7 @@ import {
 } from '@/app/server-actions'
 import { MetricChart } from '@/components/MetricChart'
 import { Button, Card, LinkButton, TextArea } from '@/components/ui'
-import { backupDetail, backupRootRelativePath, listBackupFolders, type RestoreValidationResult } from '@/lib/admin/restore-management'
+import { backupCleanupPreview, backupDetail, backupRootRelativePath, listBackupFolders, type BackupFolder, type RestoreValidationResult } from '@/lib/admin/restore-management'
 import { requireServerAdmin } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { formatIncidentDuration, incidentSummary } from '@/lib/server-incidents'
@@ -58,6 +60,28 @@ function formatManifest(manifest: Record<string, unknown> | null) {
   return Object.entries(manifest).map(([key, value]) => `${key}: ${String(value)}`).join('\n')
 }
 
+function artifact(folder: BackupFolder, name: string) {
+  return folder.artifacts.find((item) => item.name === name)
+}
+
+function artifactStatusLabel(folder: BackupFolder, name: string) {
+  const item = artifact(folder, name)
+  if (!item?.present) return 'missing'
+  if (item.sizeBytes === 0) return 'empty'
+  return 'present'
+}
+
+function artifactStatusClass(status: string) {
+  if (status === 'present') return 'border-green-200 bg-green-50 text-green-900'
+  if (status === 'missing' || status === 'empty') return 'border-red-200 bg-red-50 text-red-900'
+  return 'border-stone-200 bg-stone-50 text-stone-700'
+}
+
+function manifestGitCommit(folder: BackupFolder | null) {
+  const commit = folder?.manifest?.git_commit
+  return typeof commit === 'string' && commit.trim() ? commit.trim() : 'unknown'
+}
+
 function featureLabel(feature: string) {
   if (feature === 'AI_DESCRIPTION') return 'Description drafts'
   if (feature === 'AI_MAGIC_FILL') return 'Definition Magic Fill'
@@ -88,7 +112,20 @@ function markerTooltip(incident: {
 export default async function ServerDashboard({
   searchParams,
 }: {
-  searchParams: Promise<{ backup?: string; collectionRequest?: string; aiAccess?: string; maintenance?: string; restore?: string; selectedBackup?: string }>
+  searchParams: Promise<{
+    backup?: string
+    collectionRequest?: string
+    aiAccess?: string
+    maintenance?: string
+    restore?: string
+    selectedBackup?: string
+    cleanupPreview?: string
+    cleanupMonths?: string
+    deleted?: string
+    failed?: string
+    bytes?: string
+    reason?: string
+  }>
 }) {
   const admin = await requireServerAdmin()
   const sp = await searchParams
@@ -157,6 +194,25 @@ export default async function ServerDashboard({
   ])
   const timezone = preferences?.timezone
   const selectedBackup = sp.selectedBackup ? await backupDetail(prisma, sp.selectedBackup) : backupFolders[0] || null
+  const cleanupMonths = Number(sp.cleanupMonths || '6')
+  const cleanupPreview = sp.cleanupPreview === '1' ? await backupCleanupPreview(prisma, cleanupMonths) : null
+  const backupFoldersByPath = new Map(backupFolders.map((folder) => [folder.relativePath, folder]))
+  const backupRunsWithoutFolders = backupRuns.filter((run) => !run.backupPath || !backupFoldersByPath.has(run.backupPath))
+  const unifiedBackups = [
+    ...backupFolders.map((folder) => ({
+      key: folder.relativePath,
+      folder,
+      run: folder.linkedRun,
+      sortAt: folder.linkedRun?.requestedAt || folder.createdAt || new Date(0),
+    })),
+    ...backupRunsWithoutFolders.map((run) => ({
+      key: run.id,
+      folder: null,
+      run,
+      sortAt: run.requestedAt,
+    })),
+  ].sort((a, b) => b.sortAt.getTime() - a.sortAt.getTime())
+  const availableBackupPaths = new Set(backupFolders.map((folder) => folder.relativePath))
   const aiUsageCollections = aiUsageByCollection.length
     ? await prisma.collection.findMany({
         where: { id: { in: aiUsageByCollection.map((row) => row.collectionId) } },
@@ -578,6 +634,16 @@ export default async function ServerDashboard({
         </p>
         {sp.backup === 'requested' && <p className="mt-3 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900">Backup requested. The backup worker should pick it up shortly.</p>}
         {sp.backup === 'already-queued' && <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">A sitewide backup is already requested or running.</p>}
+        {sp.backup === 'deleted' && <p className="mt-3 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900">Backup folder deleted.</p>}
+        {sp.backup === 'delete-confirmation-required' && <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">Type the exact backup folder name before deleting.</p>}
+        {sp.backup === 'delete-failed' && <p className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">Backup deletion failed{sp.reason ? `: ${sp.reason}` : '.'}</p>}
+        {sp.backup === 'invalid-delete' && <p className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">That backup folder is not valid under the configured backup root.</p>}
+        {sp.backup === 'cleanup-confirmation-required' && <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">Preview old backups first, then type the confirmation phrase to delete.</p>}
+        {sp.backup === 'cleanup-done' && (
+          <p className="mt-3 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900">
+            Old-backup cleanup finished: {sp.deleted || '0'} deleted, {sp.failed || '0'} failed, {formatBytes(Number(sp.bytes || 0))} reclaimed.
+          </p>
+        )}
         <form action={requestSitewideBackup} className="mt-4 grid gap-3 rounded-lg border border-stone-200 bg-white/50 p-3">
           <label className="text-sm font-semibold" htmlFor="backup-notes">Backup notes</label>
           <input
@@ -591,45 +657,81 @@ export default async function ServerDashboard({
             <span className="text-xs text-stone-600">Handled by the <code>backups</code> worker service.</span>
           </div>
         </form>
-        <div className="mt-5">
-          <h4 className="text-sm font-semibold uppercase tracking-wide text-stone-500">Recent backup runs</h4>
-          <div className="mt-3 grid gap-2">
-            {backupRuns.length === 0 && <p className="rounded-lg border border-stone-200 bg-white/50 p-3 text-sm text-stone-600">No backup requests yet.</p>}
-            {backupRuns.map((run) => (
-              <div key={run.id} className="grid gap-2 rounded-lg border border-stone-200 bg-white/50 p-3 text-sm lg:grid-cols-[8rem_minmax(10rem,1fr)_10rem_8rem]">
-                <div>
-                  <span className={`rounded-full border px-2 py-1 text-xs font-semibold ${statusClass(run.status)}`}>{run.status.toLowerCase()}</span>
-                </div>
-                <div className="min-w-0">
-                  <p className="truncate font-semibold">{run.backupPath || 'Path assigned when worker starts'}</p>
-                  <p className="text-xs text-stone-500">
-                    Requested {formatDateTime(run.requestedAt, timezone)} by {run.requestedBy?.email || 'unknown'}
-                  </p>
-                  {run.notes && <p className="mt-1 text-xs text-stone-600">{run.notes}</p>}
-                  {run.error && <p className="mt-1 text-xs text-red-800">{run.error}</p>}
-                </div>
-                <div className="text-xs text-stone-600">
-                  <p>Started: {formatDateTime(run.startedAt, timezone)}</p>
-                  <p>Finished: {formatDateTime(run.finishedAt, timezone)}</p>
-                </div>
-                <p className="text-xs text-stone-600">Duration: {formatDuration(run.startedAt, run.finishedAt)}</p>
-              </div>
-            ))}
-          </div>
-        </div>
         <div className="mt-6 border-t border-stone-200 pt-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h4 className="text-sm font-semibold uppercase tracking-wide text-stone-500">Backup browser</h4>
-              <p className="mt-1 text-xs text-stone-600">Browsing is limited to <code>{backupRootRelativePath()}</code>.</p>
+              <h4 className="text-sm font-semibold uppercase tracking-wide text-stone-500">Backup management</h4>
+              <p className="mt-1 text-xs text-stone-600">Browsing and cleanup are limited to <code>{backupRootRelativePath()}</code>.</p>
             </div>
-            <span className="rounded-full border border-stone-200 bg-white/70 px-3 py-1 text-xs font-semibold text-stone-700">{backupFolders.length} folder{backupFolders.length === 1 ? '' : 's'}</span>
+            <span className="rounded-full border border-stone-200 bg-white/70 px-3 py-1 text-xs font-semibold text-stone-700">
+              {backupFolders.length} folder{backupFolders.length === 1 ? '' : 's'} · {backupRuns.length} recent run{backupRuns.length === 1 ? '' : 's'}
+            </span>
+          </div>
+          <div className="mt-3 rounded-lg border border-stone-200 bg-white/50 p-3">
+            <form className="flex flex-wrap items-end gap-3">
+              <input type="hidden" name="cleanupPreview" value="1" />
+              <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-stone-500">
+                Cleanup dry run
+                <span className="flex items-center gap-2 text-sm font-normal normal-case tracking-normal text-stone-700">
+                  Delete backups older than
+                  <input
+                    name="cleanupMonths"
+                    type="number"
+                    min="1"
+                    max="120"
+                    defaultValue={Number.isFinite(cleanupMonths) ? cleanupMonths : 6}
+                    className="w-20 rounded-md border border-stone-300 bg-white px-2 py-1 text-sm"
+                  />
+                  months
+                </span>
+              </label>
+              <Button type="submit" className="px-3 py-1.5">Preview cleanup</Button>
+              <p className="text-xs text-stone-600">The first step only previews complete, inactive backup folders. Restore request history is never deleted.</p>
+            </form>
+            {cleanupPreview && (
+              <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+                <p className="font-semibold">
+                  Cleanup preview: {cleanupPreview.matched.length} backup{cleanupPreview.matched.length === 1 ? '' : 's'} matched · {formatBytes(cleanupPreview.totalBytes)} reclaimable
+                </p>
+                <p className="mt-1 text-xs">
+                  Cutoff: before {formatDateTime(cleanupPreview.cutoff, timezone)}.
+                  {cleanupPreview.oldest && cleanupPreview.newest ? ` Matched range: ${formatDateTime(cleanupPreview.oldest, timezone)} to ${formatDateTime(cleanupPreview.newest, timezone)}.` : ''}
+                </p>
+                {cleanupPreview.matched.length > 0 ? (
+                  <>
+                    <ul className="mt-2 max-h-36 overflow-auto rounded border border-amber-200 bg-white/60 p-2 text-xs">
+                      {cleanupPreview.matched.map((folder) => (
+                        <li key={folder.relativePath} className="flex justify-between gap-3">
+                          <span className="font-mono">{folder.relativePath}</span>
+                          <span>{formatBytes(folder.sizeBytes)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <form action={deleteOldBackups} className="mt-3 flex flex-wrap items-end gap-2">
+                      <input type="hidden" name="months" value={cleanupPreview.months} />
+                      <label className="grid gap-1 text-xs font-semibold">
+                        Type DELETE OLD BACKUPS to delete these folders
+                        <input name="confirmation" className="min-w-64 rounded-md border border-amber-300 bg-white px-3 py-2 text-sm font-normal" />
+                      </label>
+                      <button type="submit" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-900">Delete matched backups</button>
+                    </form>
+                  </>
+                ) : (
+                  <p className="mt-2 text-xs">No complete inactive backup folders matched this retention window.</p>
+                )}
+                {(cleanupPreview.skippedActive.length > 0 || cleanupPreview.skippedIncomplete.length > 0) && (
+                  <p className="mt-2 text-xs">
+                    Skipped {cleanupPreview.skippedActive.length} active and {cleanupPreview.skippedIncomplete.length} incomplete backup folder{cleanupPreview.skippedActive.length + cleanupPreview.skippedIncomplete.length === 1 ? '' : 's'}.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
           <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(14rem,0.9fr)_minmax(18rem,1.1fr)]">
             <div className="grid content-start gap-2">
-              {backupFolders.length === 0 && (
+              {unifiedBackups.length === 0 && (
                 <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
-                  <p className="font-semibold">No backup folders found under the configured backup root.</p>
+                  <p className="font-semibold">No backup runs or folders found under the configured backup root.</p>
                   <p className="mt-1">
                     {backupRuns.some((run) => run.backupPath)
                       ? <>Backup run records exist, but the app process cannot read <code>{backupRootRelativePath()}</code>. Mount that backup directory into the app container or set <code>AXILDB_BACKUP_ROOT</code> to the readable backup root.</>
@@ -637,23 +739,43 @@ export default async function ServerDashboard({
                   </p>
                 </div>
               )}
-              {backupFolders.map((folder) => (
-                <Link
-                  key={folder.relativePath}
-                  href={`/server?selectedBackup=${encodeURIComponent(folder.name)}`}
-                  className={`rounded-lg border p-3 text-sm transition hover:border-[#8fa58f] hover:bg-white/80 ${selectedBackup?.name === folder.name ? 'border-[#8fa58f] bg-white/80' : 'border-stone-200 bg-white/50'}`}
-                >
+              {unifiedBackups.map(({ key, folder, run }) => folder ? (
+                <Link key={key} href={`/server?selectedBackup=${encodeURIComponent(folder.name)}`} className={`rounded-lg border p-3 text-sm transition hover:border-[#8fa58f] hover:bg-white/80 ${selectedBackup?.name === folder.name ? 'border-[#8fa58f] bg-white/80' : 'border-stone-200 bg-white/50'}`}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate font-semibold">{folder.name}</p>
-                      <p className="text-xs text-stone-500">{folder.createdAt ? formatDateTime(folder.createdAt, timezone) : 'Created date unknown'}</p>
+                      <p className="text-xs text-stone-500">
+                        Requested {run?.requestedAt ? formatDateTime(run.requestedAt, timezone) : 'unknown'} by {run?.requestedByEmail || 'unknown'}
+                      </p>
                     </div>
                     <span className={`shrink-0 rounded-full border px-2 py-1 text-[11px] font-semibold ${readinessClass(folder.quickStatus === 'Complete' ? 'Ready' : folder.quickStatus === 'Incomplete' ? 'Ready with warnings' : folder.quickStatus === 'Invalid' ? 'Not ready' : null)}`}>
                       {folder.quickStatus}
                     </span>
                   </div>
-                  <p className="mt-2 text-xs text-stone-600">{formatBytes(folder.sizeBytes)} · manifest {folder.manifestStatus}</p>
+                  <div className="mt-2 grid gap-1 text-xs text-stone-600">
+                    <p>{folder.relativePath}</p>
+                    <p>Started {run?.startedAt ? formatDateTime(run.startedAt, timezone) : '—'} · Finished {run?.finishedAt ? formatDateTime(run.finishedAt, timezone) : '—'} · Duration {formatDuration(run?.startedAt, run?.finishedAt)}</p>
+                    <p>{formatBytes(folder.sizeBytes)} · manifest {folder.manifestStatus} · git {manifestGitCommit(folder)}</p>
+                    <div className="flex flex-wrap gap-1">
+                      {['axildb.dump', 'uploads.tar.gz', 'labels.tar.gz'].map((name) => {
+                        const status = artifactStatusLabel(folder, name)
+                        return <span key={name} className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${artifactStatusClass(status)}`}>{name.replace('.tar.gz', '').replace('axildb.dump', 'db')}: {status}</span>
+                      })}
+                    </div>
+                  </div>
                 </Link>
+              ) : (
+                <div key={key} className="rounded-lg border border-stone-200 bg-white/50 p-3 text-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold">{run?.backupPath || 'Path assigned when worker starts'}</p>
+                      <p className="text-xs text-stone-500">Requested {run ? formatDateTime(run.requestedAt, timezone) : 'unknown'} by {run?.requestedBy?.email || 'unknown'}</p>
+                    </div>
+                    <span className={`shrink-0 rounded-full border px-2 py-1 text-[11px] font-semibold ${statusClass(run?.status || 'UNKNOWN')}`}>{(run?.status || 'unknown').toLowerCase()}</span>
+                  </div>
+                  <p className="mt-2 text-xs text-stone-600">Started {run?.startedAt ? formatDateTime(run.startedAt, timezone) : '—'} · Finished {run?.finishedAt ? formatDateTime(run.finishedAt, timezone) : '—'} · Duration {formatDuration(run?.startedAt, run?.finishedAt)}</p>
+                  <p className="mt-1 text-xs text-amber-800">{run?.status === 'DELETED' ? 'Backup folder has been deleted.' : 'Backup folder is not currently readable by the app.'}</p>
+                </div>
               ))}
             </div>
             <div className="rounded-lg border border-stone-200 bg-white/50 p-3 text-sm">
@@ -669,7 +791,16 @@ export default async function ServerDashboard({
                         {selectedBackup.quickStatus}
                       </span>
                     </div>
-                    {selectedBackup.linkedRunStatus && <p className="mt-2 text-xs text-stone-600">Linked backup run: {selectedBackup.linkedRunStatus.toLowerCase()}</p>}
+                    <div className="mt-2 grid gap-1 text-xs text-stone-600 sm:grid-cols-2">
+                      <p>Linked run: {selectedBackup.linkedRunStatus?.toLowerCase() || 'none'}</p>
+                      <p>Requested: {selectedBackup.linkedRun?.requestedAt ? formatDateTime(selectedBackup.linkedRun.requestedAt, timezone) : 'unknown'}</p>
+                      <p>Started: {selectedBackup.linkedRun?.startedAt ? formatDateTime(selectedBackup.linkedRun.startedAt, timezone) : '—'}</p>
+                      <p>Finished: {selectedBackup.linkedRun?.finishedAt ? formatDateTime(selectedBackup.linkedRun.finishedAt, timezone) : '—'}</p>
+                      <p>Duration: {formatDuration(selectedBackup.linkedRun?.startedAt, selectedBackup.linkedRun?.finishedAt)}</p>
+                      <p>Requested by: {selectedBackup.linkedRun?.requestedByEmail || 'unknown'}</p>
+                      <p>Git commit: <code>{manifestGitCommit(selectedBackup)}</code></p>
+                      <p>Manifest: {selectedBackup.manifestStatus}</p>
+                    </div>
                   </div>
                   <div className="grid gap-2 sm:grid-cols-3">
                     {selectedBackup.artifacts.map((artifact) => (
@@ -702,6 +833,27 @@ export default async function ServerDashboard({
                     />
                     <Button type="submit">Create restore request</Button>
                   </form>
+                  <details className="rounded-md border border-red-200 bg-red-50 p-3 text-red-950">
+                    <summary className="cursor-pointer text-sm font-semibold">Delete this backup folder</summary>
+                    <div className="mt-3 grid gap-2 text-xs">
+                      <p>This removes only the selected folder under <code>{backupRootRelativePath()}</code>. It does not delete restore request history or database contents.</p>
+                      <dl className="grid gap-1 rounded border border-red-200 bg-white/70 p-2 sm:grid-cols-2">
+                        <div><dt className="font-semibold">Folder</dt><dd className="font-mono">{selectedBackup.name}</dd></div>
+                        <div><dt className="font-semibold">Size</dt><dd>{formatBytes(selectedBackup.sizeBytes)}</dd></div>
+                        <div><dt className="font-semibold">Manifest</dt><dd>{selectedBackup.manifestStatus}</dd></div>
+                        <div><dt className="font-semibold">Linked run</dt><dd>{selectedBackup.linkedRunStatus?.toLowerCase() || 'none'}</dd></div>
+                      </dl>
+                      <form action={deleteSelectedBackup} className="flex flex-wrap items-end gap-2">
+                        <input type="hidden" name="backupPath" value={selectedBackup.relativePath} />
+                        <input type="hidden" name="expectedName" value={selectedBackup.name} />
+                        <label className="grid gap-1 font-semibold">
+                          Type {selectedBackup.name} to confirm
+                          <input name="confirmation" className="min-w-72 rounded-md border border-red-300 bg-white px-3 py-2 text-sm font-normal text-stone-900" />
+                        </label>
+                        <button type="submit" className="rounded-md border border-red-300 bg-red-100 px-3 py-2 text-sm font-semibold text-red-950">Delete backup</button>
+                      </form>
+                    </div>
+                  </details>
                 </div>
               ) : (
                 <p className="text-sm text-stone-600">Select a backup folder to inspect its manifest, artifacts, warnings, and restore planning options.</p>
@@ -751,6 +903,9 @@ export default async function ServerDashboard({
                     <p className="text-xs text-stone-500">
                       Requested {formatDateTime(request.requestedAt, timezone)} by {request.requestedBy?.email || 'unknown'} · {request.backupPath}
                     </p>
+                    {!availableBackupPaths.has(request.backupPath) && (
+                      <p className="mt-1 text-xs font-semibold text-amber-800">Backup folder is missing or has been deleted; restore history is retained.</p>
+                    )}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <span className={`rounded-full border px-2 py-1 text-xs font-semibold ${restoreStatusClass(request.status)}`}>{request.status.toLowerCase().replaceAll('_', ' ')}</span>

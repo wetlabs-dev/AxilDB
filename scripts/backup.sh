@@ -8,6 +8,34 @@ backup_dir="${AXILDB_BACKUP_DIR:-${backup_root%/}/axildb-${timestamp}}"
 mkdir -p "$backup_dir"
 mkdir -p public/uploads public/labels
 
+resolve_git_commit() {
+  if [ -n "${GIT_COMMIT:-}" ]; then
+    printf '%s\n' "$GIT_COMMIT"
+    return
+  fi
+  if [ -n "${SOURCE_COMMIT:-}" ]; then
+    printf '%s\n' "$SOURCE_COMMIT"
+    return
+  fi
+  if [ -n "${VERCEL_GIT_COMMIT_SHA:-}" ]; then
+    printf '%s\n' "$VERCEL_GIT_COMMIT_SHA"
+    return
+  fi
+  if [ -n "${RENDER_GIT_COMMIT:-}" ]; then
+    printf '%s\n' "$RENDER_GIT_COMMIT"
+    return
+  fi
+  if git rev-parse --verify HEAD >/dev/null 2>&1; then
+    git rev-parse --short HEAD
+    return
+  fi
+  if [ -n "${NEXT_PUBLIC_APP_VERSION:-}" ]; then
+    printf '%s\n' "$NEXT_PUBLIC_APP_VERSION"
+    return
+  fi
+  printf '%s\n' "unknown"
+}
+
 echo "Creating AxilDB backup in $backup_dir"
 
 if [ -n "${DATABASE_URL:-}" ] && command -v pg_dump >/dev/null 2>&1; then
@@ -21,7 +49,7 @@ tar -czf "$backup_dir/labels.tar.gz" public/labels
 
 {
   echo "created_at=$timestamp"
-  echo "git_commit=$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+  echo "git_commit=$(resolve_git_commit)"
   echo "database=axildb"
   echo "database_format=pg_dump_custom"
 } > "$backup_dir/manifest.txt"

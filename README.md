@@ -271,10 +271,13 @@ Server admins can request a backup from **Server Management → Backups**. The `
 Server Management also includes restore planning tools for server admins:
 
 - Maintenance Mode lets admins show a maintenance screen to public visitors and normal users while server admins keep access.
-- The backup browser lists folders under the configured backup root only, shows manifests and expected artifacts, and flags missing or empty files.
+- Backup Management combines recent backup runs and readable backup folders in one view. It lists folders under the configured backup root only, shows linked run metadata, manifests, git commit, file sizes, and expected database/upload/label artifacts, and flags missing or empty files.
+- Server admins can delete an individual backup folder after typing its exact folder name, or preview backups older than a chosen retention window before confirming deletion. Cleanup defaults to six months, skips active or incomplete backups, never deletes restore request history, and records audit log entries.
 - Restore requests record validation results, generated SSH commands, notes, and whether a restore was completed externally or cancelled.
 
 Set `AXILDB_BACKUP_ROOT` if backup folders live somewhere other than `backups` relative to the server repo root.
+
+Backup manifests capture `git_commit` from `GIT_COMMIT`, then `SOURCE_COMMIT`, common deployment commit variables, and finally `git rev-parse HEAD` when `.git` is available. Docker deployments should set `GIT_COMMIT` or `SOURCE_COMMIT` during deploy if the runtime image does not include `.git`; otherwise new manifests will fall back to `unknown`.
 
 To process one queued backup manually from a containerized deployment:
 

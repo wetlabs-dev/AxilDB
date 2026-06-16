@@ -60,6 +60,8 @@ services:
       NEXT_PUBLIC_MARKETING_URL: https://axildb.com
       NEXT_PUBLIC_GITHUB_URL: https://github.com/wetlabs-dev/AxilDB
       NEXT_PUBLIC_DONATE_URL: https://ko-fi.com/wetlabs
+      GIT_COMMIT: ${GIT_COMMIT:-}
+      SOURCE_COMMIT: ${SOURCE_COMMIT:-}
       PORT: 3000
     expose:
       - "3000"
@@ -67,7 +69,7 @@ services:
       - ./public/uploads:/app/public/uploads
       - ./public/labels:/app/public/labels
       - ./public/manual:/app/public/manual
-      - ./backups:/app/backups:ro
+      - ./backups:/app/backups
   reminders:
     build:
       context: .
@@ -154,6 +156,8 @@ services:
       TZ: ${TZ:-America/New_York}
       AXILDB_DEFAULT_TIMEZONE: ${AXILDB_DEFAULT_TIMEZONE:-America/New_York}
       DATABASE_URL: postgresql://plants:plants@db:5432/axildb?schema=public
+      GIT_COMMIT: ${GIT_COMMIT:-}
+      SOURCE_COMMIT: ${SOURCE_COMMIT:-}
     volumes:
       - ./public/uploads:/app/public/uploads
       - ./public/labels:/app/public/labels

@@ -4,7 +4,7 @@ import { RestoreRequestStatus, ServerIncidentCategory, ServerIncidentSeverity, S
 import { redirect } from 'next/navigation'
 import { audit, requireServerAdmin } from '@/lib/auth'
 import { deleteSelectedOrphanedImages, selectedOrphanedImagePaths } from '@/lib/admin/orphanedImages'
-import { restoreCommandForBackup, resolveBackupFolder, validateBackupForRestore } from '@/lib/admin/restore-management'
+import { deleteBackupFolder, deleteOldBackupFolders, restoreCommandForBackup, resolveBackupFolder, validateBackupForRestore } from '@/lib/admin/restore-management'
 import { prisma } from '@/lib/prisma'
 
 const incidentCategories = new Set(Object.values(ServerIncidentCategory))
@@ -115,6 +115,61 @@ export async function createRestoreRequest(formData: FormData) {
   })
   await audit(user, 'CREATE', 'RESTORE_REQUEST', request.id, `Created restore request for ${backup.name}`, { backupPath: backup.relativePath })
   redirect('/server?restore=requested')
+}
+
+export async function deleteSelectedBackup(formData: FormData) {
+  const user = await requireServerAdmin()
+  const backupPath = value(formData, 'backupPath')
+  const expectedName = value(formData, 'expectedName')
+  const confirmation = value(formData, 'confirmation')
+  let backup
+  try {
+    backup = resolveBackupFolder(backupPath)
+  } catch {
+    redirect('/server?backup=invalid-delete')
+  }
+  if (confirmation !== expectedName || expectedName !== backup.name) redirect(`/server?selectedBackup=${encodeURIComponent(backup.name)}&backup=delete-confirmation-required`)
+
+  let deleted
+  try {
+    deleted = await deleteBackupFolder(prisma, backup.relativePath, user.id)
+  } catch (error) {
+    const params = new URLSearchParams({
+      selectedBackup: backup.name,
+      backup: 'delete-failed',
+      reason: error instanceof Error ? error.message : 'unknown',
+    })
+    redirect(`/server?${params.toString()}`)
+  }
+  await audit(user, 'DELETE', 'BACKUP_FOLDER', deleted.relativePath, `Deleted backup folder ${deleted.name}`, {
+    backupPath: deleted.relativePath,
+    sizeBytes: deleted.sizeBytes,
+  })
+  redirect('/server?backup=deleted')
+}
+
+export async function deleteOldBackups(formData: FormData) {
+  const user = await requireServerAdmin()
+  const months = Number(value(formData, 'months') || '6')
+  const confirmation = value(formData, 'confirmation')
+  if (confirmation !== 'DELETE OLD BACKUPS') redirect(`/server?cleanupPreview=1&cleanupMonths=${Number.isFinite(months) ? months : 6}&backup=cleanup-confirmation-required`)
+
+  const result = await deleteOldBackupFolders(prisma, months, user.id)
+  await audit(user, 'CLEANUP', 'BACKUP_FOLDER', null, `Deleted ${result.deleted.length} old backup folder(s)`, {
+    months,
+    deletedCount: result.deleted.length,
+    failedCount: result.failed.length,
+    bytesReclaimed: result.bytesReclaimed,
+    deleted: result.deleted.map((folder) => folder.relativePath),
+    failed: result.failed,
+  })
+  const params = new URLSearchParams({
+    backup: 'cleanup-done',
+    deleted: String(result.deleted.length),
+    failed: String(result.failed.length),
+    bytes: String(result.bytesReclaimed),
+  })
+  redirect(`/server?${params.toString()}`)
 }
 
 export async function validateRestoreRequest(formData: FormData) {
