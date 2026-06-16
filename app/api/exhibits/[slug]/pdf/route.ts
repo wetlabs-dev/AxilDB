@@ -116,18 +116,21 @@ function pillRow(doc: PDFKit.PDFDocument, items: Array<[string, string | null | 
   if (!visible.length) return
   ensureRoom(doc, 28, title)
   let x = left(doc)
-  const y = doc.y
+  let rowY = doc.y
+  const startY = doc.y
   for (const [label, href] of visible) {
-    const pillW = Math.max(58, doc.widthOfString(label) + 20)
+    doc.font('Helvetica-Bold').fontSize(7.5)
+    const pillW = Math.max(64, doc.widthOfString(label) + 24)
     if (x + pillW > right(doc)) {
       x = left(doc)
-      doc.y += 24
+      rowY += 24
+      ensureRoom(doc, 24, title)
     }
-    doc.roundedRect(x, doc.y, pillW, 18, 9).fillAndStroke('#eef5e8', '#c7d5b9')
-    doc.font('Helvetica-Bold').fontSize(7.5).fillColor(GREEN).text(label, x + 10, doc.y + 5, { width: pillW - 20, link: href || undefined })
+    doc.roundedRect(x, rowY, pillW, 18, 9).fillAndStroke('#eef5e8', '#c7d5b9')
+    doc.fillColor(GREEN).text(label, x + 10, rowY + 5, { width: pillW - 20, link: href || undefined, lineBreak: false })
     x += pillW + 6
   }
-  doc.y = Math.max(doc.y + 24, y + 24)
+  doc.y = Math.max(rowY + 24, startY + 24)
 }
 
 function writeParagraph(doc: PDFKit.PDFDocument, value?: string | null, fontSize = 9.5, title?: string) {
@@ -211,9 +214,72 @@ function drawDefinitionSection(
   for (const entry of group.entries) drawSpecimenCard(doc, data, entry)
 }
 
+function specimenTimelineHighlights(plant: any, entry: any) {
+  const openConditions = plant.conditions.filter((condition: any) => condition.status !== 'RESOLVED')
+  return [
+    ...plant.blooms.slice(0, 2).map((bloom: any) => ({ at: bloom.bloomStartDate, text: `Bloom noted ${formatDate(bloom.bloomStartDate)}` })),
+    ...plant.careEvents.slice(0, 2).map((event: any) => ({ at: event.performedAt, text: `${String(event.eventType).toLowerCase()} care ${formatDate(event.performedAt)}` })),
+    ...entry.photos.slice(0, 2).map((photo: any) => ({ at: photo.createdAt, text: `Photo added ${formatDate(photo.createdAt)}` })),
+    ...openConditions.slice(0, 2).map((condition: any) => ({ at: condition.observedAt, text: `${condition.category} observed ${formatDate(condition.observedAt)}` })),
+  ].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime()).slice(0, 4)
+}
+
+function specimenSections(data: NonNullable<Awaited<ReturnType<typeof loadExhibitForDisplay>>>, entry: any) {
+  const plant = entry.plantInstance
+  const sections: Array<{ title: string; lines: string[] }> = []
+  const openConditions = plant.conditions.filter((condition: any) => condition.status !== 'RESOLVED')
+  const activeQuarantine = plant.quarantines.find((quarantine: any) => quarantine.status === 'ACTIVE')
+  const lineageItems = [
+    ...plant.parentLinks.map((link: any) => `Parent in propagation ${formatDate(link.propagationEvent.date)} (${String(link.parentRole).toLowerCase()})`),
+    ...plant.childLinks.map((link: any) => `Produced ${link.childPlantInstance.plantId} on ${formatDate(link.propagationEvent.date)}`),
+  ]
+  const compactLineage = [
+    ...plant.parentLinks.map((link: any) => `${link.parentPlantInstance.plantId} -> ${plant.plantId}`),
+    ...plant.childLinks.map((link: any) => `${plant.plantId} -> ${link.childPlantInstance.plantId}`),
+  ]
+  const timelineHighlights = specimenTimelineHighlights(plant, entry)
+
+  if (data.settings.bloomHistory && plant.blooms.length) {
+    sections.push({
+      title: 'Bloom history',
+      lines: plant.blooms.slice(0, 4).map((bloom: any) => `${formatDate(bloom.bloomStartDate)}${bloom.flowerCount ? ` - ${bloom.flowerCount} flowers` : ''}${bloom.firstBloom ? ' - first bloom' : ''}`),
+    })
+  }
+  if (data.settings.quarantineStatus && activeQuarantine) {
+    sections.push({ title: 'Quarantine', lines: [activeQuarantine.reason || `Started ${formatDate(activeQuarantine.startedAt)}`] })
+  }
+  if (data.settings.conditions && openConditions.length) {
+    sections.push({
+      title: 'Open conditions',
+      lines: openConditions.slice(0, 4).map((condition: any) => `${condition.category} - ${String(condition.severity).toLowerCase()} - ${formatDate(condition.observedAt)}`),
+    })
+  }
+  if (data.settings.careNotes && plant.careEvents.length) {
+    sections.push({
+      title: 'Recent care',
+      lines: plant.careEvents.slice(0, 4).map((event: any) => `${String(event.eventType).toLowerCase()} - ${formatDate(event.performedAt)}${event.notes ? ` - ${event.notes}` : ''}`),
+    })
+  }
+  if (data.settings.notes && entry.notes.length) {
+    sections.push({ title: 'Notes', lines: entry.notes.slice(0, 3).map((note: any) => note.note) })
+  }
+  if ((data.settings.lineage || data.settings.miniLineage || data.settings.propagationHistory) && lineageItems.length) {
+    sections.push({
+      title: 'Lineage',
+      lines: [...(data.settings.miniLineage ? compactLineage.slice(0, 6) : []), ...lineageItems.slice(0, 5)],
+    })
+  }
+  if (data.settings.timeline && timelineHighlights.length) {
+    sections.push({ title: 'Timeline highlights', lines: timelineHighlights.map((item) => item.text) })
+  }
+  return sections
+}
+
 function drawSpecimenCard(doc: PDFKit.PDFDocument, data: NonNullable<Awaited<ReturnType<typeof loadExhibitForDisplay>>>, entry: any) {
   const plant = entry.plantInstance
-  const cardH = 154
+  const sections = specimenSections(data, entry)
+  const sectionLineCount = sections.reduce((total, section) => total + 1 + section.lines.length, 0)
+  const cardH = Math.max(154, 128 + sectionLineCount * 10 + sections.length * 4)
   ensureRoom(doc, cardH + 14, data.exhibit.title)
   const x = left(doc)
   const y = doc.y
@@ -237,25 +303,18 @@ function drawSpecimenCard(doc: PDFKit.PDFDocument, data: NonNullable<Awaited<Ret
   doc.text(meta.join(' - '), textX, doc.y + 5, { width: textW, lineGap: 2 })
   if (entry.customCaption) doc.text(entry.customCaption, textX, doc.y + 5, { width: textW, lineGap: 2 })
 
-  const lines: string[] = []
-  const activeQuarantine = plant.quarantines.find((quarantine: any) => quarantine.status === 'ACTIVE')
-  const openConditions = plant.conditions.filter((condition: any) => condition.status !== 'RESOLVED')
-  if (data.settings.bloomHistory && plant.blooms.length) {
-    const bloom = plant.blooms[0]
-    lines.push(`Recent bloom: ${formatDate(bloom.bloomStartDate)}${bloom.flowerCount ? `, ${bloom.flowerCount} flowers` : ''}${bloom.firstBloom ? ', first bloom' : ''}`)
-  }
-  if (data.settings.quarantineStatus && activeQuarantine) lines.push(`Quarantine: ${activeQuarantine.reason}`)
-  if (data.settings.conditions && openConditions.length) lines.push(`Open condition: ${openConditions[0].category} (${String(openConditions[0].severity).toLowerCase()})`)
-  if ((data.settings.lineage || data.settings.miniLineage || data.settings.propagationHistory) && (plant.parentLinks.length || plant.childLinks.length)) {
-    lines.push(`Lineage: ${plant.parentLinks.length} parent link${plant.parentLinks.length === 1 ? '' : 's'}, ${plant.childLinks.length} child link${plant.childLinks.length === 1 ? '' : 's'}`)
-  }
-  if (data.settings.timeline && lines.length === 0 && (plant.careEvents.length || entry.photos.length)) {
-    const recentCare = plant.careEvents[0]
-    lines.push(recentCare ? `Recent care: ${String(recentCare.eventType).toLowerCase()} on ${formatDate(recentCare.performedAt)}` : `Recent photo: ${formatDate(entry.photos[0].createdAt)}`)
-  }
-  if (lines.length) {
-    doc.font('Helvetica').fontSize(8.3).fillColor('#4d463c')
-    doc.text(lines.slice(0, 4).join('\n'), textX, doc.y + 7, { width: textW, lineGap: 2, height: 48 })
+  let sectionY = Math.max(doc.y + 8, y + 74)
+  for (const section of sections) {
+    if (sectionY > y + cardH - 18) break
+    doc.font('Helvetica-Bold').fontSize(7.7).fillColor(INK).text(section.title, textX, sectionY, { width: textW, lineBreak: false })
+    sectionY += 10
+    doc.font('Helvetica').fontSize(7.8).fillColor('#4d463c')
+    for (const line of section.lines) {
+      if (sectionY > y + cardH - 12) break
+      doc.text(line, textX, sectionY, { width: textW, height: 10, ellipsis: true, lineBreak: false })
+      sectionY += 9.5
+    }
+    sectionY += 3
   }
 
   if (entry.photos.length) drawPhoto(doc, entry.photos[0], imageX, y + 18, imageSize, imageSize)

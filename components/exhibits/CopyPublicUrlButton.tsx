@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Link2 } from 'lucide-react'
+import { Check, Link2 } from 'lucide-react'
 
 export function CopyPublicUrlButton({ path }: { path: string }) {
   const [copied, setCopied] = useState(false)
@@ -41,7 +41,7 @@ export function CopyPublicUrlButton({ path }: { path: string }) {
       aria-label={copied ? 'Public URL copied' : 'Copy public URL'}
       title={copied ? 'Copied' : 'Copy public URL'}
     >
-      <Link2 className="h-4 w-4" aria-hidden="true" />
+      {copied ? <Check className="h-4 w-4 text-[#2f6b45] dark:text-[#b9d6a4]" aria-hidden="true" /> : <Link2 className="h-4 w-4" aria-hidden="true" />}
       <span className="sr-only">{copied ? 'Copied' : 'Copy public URL'}</span>
     </button>
   )
