@@ -71,6 +71,12 @@ export default async function CareQueuePage({ searchParams }: { searchParams: Pr
         </div>
         <div className="flex flex-wrap items-end justify-end gap-2">
           <Link
+            href={collectionPath(context.collection.slug, '/care/bulk')}
+            className="rounded-md border border-[#c7d8bd] bg-white/70 px-3 py-2 text-sm font-semibold text-[#2f6b45] shadow-sm hover:bg-[#f5fbf0]"
+          >
+            Bulk care by location
+          </Link>
+          <Link
             href={collectionPath(context.collection.slug, '/care/checklist')}
             className="rounded-md border border-[#c7d8bd] bg-white/70 px-3 py-2 text-sm font-semibold text-[#2f6b45] shadow-sm hover:bg-[#f5fbf0]"
           >

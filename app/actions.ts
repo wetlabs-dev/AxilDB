@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { unlink } from 'fs/promises'
 import path from 'path'
+import { randomUUID } from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { audit, requireServerAdmin, requireUser } from '@/lib/auth'
 import {
@@ -81,6 +82,22 @@ const careEventForTask = (taskType?: string | null) => {
   if (taskType === 'HEALTH_CHECK') return 'HEALTH_CHECK'
   if (taskType === 'BLOOM_CHECK') return 'BLOOM_CHECK'
   return 'OTHER'
+}
+const careEventForBulkCare = (careType?: string | null) => {
+  if (careType === 'WATERING') return 'WATERED'
+  if (careType === 'FERTILIZING') return 'FERTILIZED'
+  if (careType === 'REPOTTING') return 'REPOTTED'
+  if (careType === 'PEST_CHECK') return 'PEST_CHECK'
+  if (careType === 'HEALTH_CHECK') return 'HEALTH_CHECK'
+  if (careType === 'PROPAGATION_CHECK') return 'PROPAGATION_CHECK'
+  if (careType === 'BLOOM_CHECK') return 'BLOOM_CHECK'
+  return 'OTHER'
+}
+const queueTaskForBulkCare = (careType?: string | null) => {
+  if (careType === 'WATERING') return 'WATER'
+  if (['PEST_CHECK', 'HEALTH_CHECK', 'PROPAGATION_CHECK', 'BLOOM_CHECK'].includes(careType || '')) return careType
+  if (careType === 'OTHER') return 'REMINDER'
+  return null
 }
 
 function aliasRows(fd: FormData) {
@@ -2241,6 +2258,168 @@ export async function completeCareTask(fd: FormData) {
   await audit(context.user, 'CREATE', 'PLANT_CARE_EVENT', event.id, `Completed ${taskType.toLowerCase().replaceAll('_', ' ')} for ${plant.plantId}`, undefined, context.collection.id)
   revalidateDestination(destination)
   redirect(destination)
+}
+
+export async function completeBulkCare(fd: FormData) {
+  const slug = await collectionSlug(fd)
+  const context = await requireCollectionLogger(slug)
+  const preferences = await prisma.emailPreference.findUnique({ where: { userId: context.user.id } })
+  const timezone = timeZoneForPreference(preferences)
+  const locationId = val(fd, 'locationId')!
+  const includeNested = fd.get('includeNested') === 'on'
+  const includeArchived = fd.get('includeArchived') === 'on'
+  const careType = val(fd, 'careType') || 'OTHER'
+  const sharedNote = val(fd, 'sharedNote') || ''
+  const sharedResult = val(fd, 'sharedResult') || ''
+  const performedAt = parseDateLocal(val(fd, 'performedAt'), timezone) || new Date()
+  const selectedIds = fd.getAll('plantInstanceId').map((item) => String(item)).filter(Boolean)
+  const batchId = val(fd, 'bulkCareBatchId') || randomUUID()
+
+  if (!selectedIds.length) {
+    redirect(collectionPath(context.collection.slug, `/care/bulk?locationId=${encodeURIComponent(locationId)}&error=none-selected`))
+  }
+
+  const [location, allLocations] = await Promise.all([
+    prisma.location.findFirstOrThrow({ where: { id: locationId, collectionId: context.collection.id }, select: { id: true, name: true, code: true } }),
+    prisma.location.findMany({ where: { collectionId: context.collection.id }, select: { id: true, parentLocationId: true } }),
+  ])
+  const allowedLocationIds = includeNested
+    ? [location.id, ...Array.from(descendantLocationIds(location.id, allLocations))]
+    : [location.id]
+  const plants = await prisma.plantInstance.findMany({
+    where: {
+      id: { in: selectedIds },
+      collectionId: context.collection.id,
+      currentLocationId: { in: allowedLocationIds },
+      ...(includeArchived ? {} : { status: { not: 'ARCHIVED' } }),
+    },
+    select: { id: true, plantId: true },
+  })
+  const validIds = new Set(plants.map((plant) => plant.id))
+  const skipped = selectedIds.filter((id) => fd.get(`skip:${id}`) === 'on' || !validIds.has(id))
+  const skippedDetails = skipped.map((id) => ({
+    plantInstanceId: id,
+    reason: val(fd, `skipReason:${id}`) || (validIds.has(id) ? 'Skipped by user' : 'Plant not eligible for this location scope'),
+  }))
+  const eventPlants = plants.filter((plant) => !skipped.includes(plant.id))
+
+  if (!eventPlants.length) {
+    redirect(collectionPath(context.collection.slug, `/care/bulk?locationId=${encodeURIComponent(locationId)}&includeNested=${includeNested ? '1' : '0'}&error=all-skipped`))
+  }
+
+  const existingBatch = await prisma.plantCareEvent.findFirst({
+    where: {
+      collectionId: context.collection.id,
+      metadata: { path: ['bulkCareBatchId'], equals: batchId },
+    },
+    select: { id: true },
+  })
+  if (existingBatch) {
+    redirect(collectionPath(context.collection.slug, `/care/bulk?locationId=${encodeURIComponent(locationId)}&includeNested=${includeNested ? '1' : '0'}&bulk=duplicate`))
+  }
+
+  const queueTaskType = queueTaskForBulkCare(careType)
+  const queueItems = queueTaskType
+    ? await getCareQueue(prisma, {
+        collectionId: context.collection.id,
+        collectionSlug: context.collection.slug,
+        userId: context.user.id,
+        timezone,
+      })
+    : []
+  const matchingQueueItems = queueItems.filter((item) =>
+    !item.completedAt
+    && item.plantInstanceId
+    && validIds.has(item.plantInstanceId)
+    && !skipped.includes(item.plantInstanceId)
+    && item.taskType === queueTaskType
+    && item.dueAt <= new Date()
+  )
+  const matchingReminderIds = [...new Set(matchingQueueItems.map((item) => item.reminderId).filter(Boolean) as string[])]
+
+  const events = await prisma.$transaction(async (tx) => {
+    const created = []
+    for (const plant of eventPlants) {
+      const noteOverride = val(fd, `note:${plant.id}`) || ''
+      const resultOverride = val(fd, `result:${plant.id}`) || ''
+      const notes = [
+        sharedNote,
+        sharedResult ? `Result: ${sharedResult}` : '',
+        noteOverride ? `Plant note: ${noteOverride}` : '',
+        resultOverride ? `Plant result: ${resultOverride}` : '',
+      ].filter(Boolean).join('\n')
+      const event = await tx.plantCareEvent.create({
+        data: {
+          collectionId: context.collection.id,
+          plantInstanceId: plant.id,
+          userId: context.user.id,
+          eventType: careEventForBulkCare(careType),
+          performedAt,
+          notes,
+          metadata: {
+            source: 'BULK_CARE',
+            bulkCareBatchId: batchId,
+            locationId,
+            includeNested,
+            careType,
+            sharedResult: sharedResult || null,
+            noteOverride: noteOverride || null,
+            resultOverride: resultOverride || null,
+          },
+        },
+      })
+      created.push(event)
+    }
+
+    if (queueTaskType) {
+      await tx.plantCareAdjustment.updateMany({
+        where: { collectionId: context.collection.id, plantInstanceId: { in: eventPlants.map((plant) => plant.id) }, taskType: queueTaskType },
+        data: { snoozedUntil: null },
+      })
+    }
+
+    for (const reminderId of matchingReminderIds) {
+      const reminder = await tx.reminder.findFirst({
+        where: { id: reminderId, collectionId: context.collection.id, userId: context.user.id },
+        include: { user: { include: { emailPreference: true } } },
+      })
+      if (!reminder) continue
+      const reminderTimezone = timeZoneForPreference(reminder.user.emailPreference)
+      const nextSendAt = nextOccurrence(performedAt, reminder.rrule, reminderTimezone)
+      await tx.reminder.update({
+        where: { id: reminder.id },
+        data: nextSendAt ? { dueAt: nextSendAt, nextSendAt, completedAt: null } : { completedAt: performedAt, nextSendAt: null },
+      })
+    }
+
+    return created
+  })
+
+  await audit(context.user, 'CREATE', 'BULK_CARE_BATCH', batchId, `Recorded ${careType.toLowerCase().replaceAll('_', ' ')} for ${events.length} plant(s) in ${location.code} ${location.name}`, {
+    locationId,
+    includeNested,
+    includeArchived,
+    careType,
+    selected: selectedIds.length,
+    eventsCreated: events.length,
+    skipped: skipped.length,
+    skippedDetails,
+    queueItemsCompleted: matchingQueueItems.length,
+    reminderIds: matchingReminderIds,
+  }, context.collection.id)
+
+  revalidatePath(collectionPath(context.collection.slug, '/care'))
+  revalidatePath(collectionPath(context.collection.slug, `/locations/${locationId}`))
+  for (const plant of eventPlants) revalidatePath(collectionPath(context.collection.slug, `/instances/${plant.id}`))
+  const params = new URLSearchParams({
+    locationId,
+    includeNested: includeNested ? '1' : '0',
+    bulk: 'success',
+    events: String(events.length),
+    completed: String(matchingQueueItems.length),
+    skipped: String(skipped.length),
+  })
+  redirect(collectionPath(context.collection.slug, `/care/bulk?${params.toString()}`))
 }
 
 export async function snoozeCareTask(fd: FormData) {

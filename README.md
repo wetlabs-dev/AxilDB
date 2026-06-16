@@ -106,6 +106,8 @@ Collection roles:
 Server administration is intentionally separate from collection work. Normal plant work is collection-scoped through collection memberships.
 Public collections are browseable without signing in, but following records requires an active collection membership.
 
+Bulk care entry is available from **Care Queue → Bulk care by location** and from each location detail page. Loggers, gardeners, and managers can choose a location, include direct plants only or direct plus child-location plants, filter by due/overdue work, active issues, quarantine, or plant search, then review the selected plants before submitting. Submitting creates one normal care event per non-skipped plant, stores bulk batch/location metadata on those events, records an audit entry, and completes only matching due care queue items for the selected plants. Archived plants are excluded unless explicitly included.
+
 Collection Exhibits are managed from the Admin sidebar by gardeners and managers. Gardeners can create and edit draft exhibits, select specimens, choose public-safe display sections, and configure stored update preferences. Collection managers can publish or unpublish the public/unlisted share link, review subscriber lists and counts, send manual update emails to double opt-in guests, and enable daily or weekly automatic exhibit digests through the existing reminders worker. Sensitive specimen notes, care notes, and condition details are disabled by default and only appear on an exhibit when explicitly enabled. Exhibit pages include browser print styling and a dedicated PDF download that respects the same visibility toggles.
 
 The bootstrap script creates the first admin user:

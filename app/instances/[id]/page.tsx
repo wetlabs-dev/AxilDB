@@ -599,6 +599,7 @@ export default async function InstanceDetail({
           const isGreenThumb = event.eventType === 'GREEN_THUMB_NOTE'
           const metadata = careEventMetadata(event.metadata)
           const question = typeof metadata.question === 'string' ? metadata.question : ''
+          const isBulkCare = metadata.source === 'BULK_CARE'
           return (
             <div
               key={event.id}
@@ -614,6 +615,7 @@ export default async function InstanceDetail({
                     {careEventLabel(event.eventType)} · {fmtDate(event.performedAt, timezone)}
                   </p>
                   {question && <p className="mt-1 text-xs font-medium text-stone-600">Q: {question}</p>}
+                  {isBulkCare && <p className="mt-1 text-xs font-medium text-stone-600">Recorded via bulk care batch.</p>}
                 </div>
                 {isGreenThumb && canEditRecords && (
                   <form action={deleteGreenThumbCareNote}>

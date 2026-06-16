@@ -215,6 +215,9 @@ export const manualSections: ManualSection[] = [
     howTo: [
       'Open Care Queue from the sidebar to review today’s tasks, overdue work, watering, propagation checks, health issues, pest checks, bloom follow-ups, custom reminders, and completed care.',
       'Complete or snooze generated care tasks from the queue.',
+      'Use Bulk care by location to record one care event per selected plant in a location, with direct-only or nested-location scope and a required review step before submit.',
+      'Open Bulk care from a location detail page when you want the location preselected.',
+      'Use per-plant overrides for individual notes, results, or skip reasons while keeping shared task details on the batch.',
       'Open Weekly checklist to group overdue, due, and upcoming care by location for a printable work session.',
       'Open a specimen to log watering, add conditions such as wilting or pests, resolve conditions, and review recent care history.',
       'Use Green Thumb assist on a specimen to ask one concise care question per day with plant identity, husbandry, recent care history, and optional photo context.',
@@ -222,6 +225,7 @@ export const manualSections: ManualSection[] = [
     ],
     notes: [
       'Generated care tasks are dynamic; completed care is stored as care events.',
+      'Bulk care completes only matching due or overdue care queue items for the selected plants; unrelated queue items are left alone.',
       'Manual reminders continue to send email and are also merged into the queue when due.',
       'Green Thumb requests are limited per specimen and per collection to control AI usage.',
     ],

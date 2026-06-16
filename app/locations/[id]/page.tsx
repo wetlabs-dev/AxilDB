@@ -4,7 +4,7 @@ import { archiveLocation, movePlantInstanceLocation, regenerateLocationCode, upd
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { PlantIdPreviewLink } from '@/components/PlantIdPreviewLink'
 import { Button, Card, Field, LinkButton, TextArea } from '@/components/ui'
-import { canEditInCollection, canManageCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
+import { canCreateInCollection, canEditInCollection, canManageCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { descendantLocationIds, isQuarantineLocation, locationPath, locationPathWithCodes, nextLocationCode } from '@/lib/locations'
 import { prisma } from '@/lib/prisma'
 import { plantName } from '@/lib/utils'
@@ -16,6 +16,7 @@ export default async function LocationDetail({ params }: { params: Promise<{ id:
   const { collection, user } = context
   const { id } = await params
   const canManage = canManageCollection(user, context)
+  const canBulkCare = canCreateInCollection(user, context)
   const canMovePlants = canEditInCollection(user, context)
   const [location, allLocations, types] = await Promise.all([
     prisma.location.findFirstOrThrow({
@@ -118,6 +119,7 @@ export default async function LocationDetail({ params }: { params: Promise<{ id:
         </div>
         <div className="flex flex-wrap gap-2">
           <LinkButton href={collectionPath(collection.slug, '/locations')}>All Locations</LinkButton>
+          {canBulkCare && <LinkButton href={collectionPath(collection.slug, `/care/bulk?locationId=${encodeURIComponent(location.id)}&includeNested=1`)}>Bulk care</LinkButton>}
           <LinkButton href={`/api/labels/bulk?collectionSlug=${encodeURIComponent(collection.slug)}&target=locations&id=${encodeURIComponent(location.id)}`}>QR label</LinkButton>
         </div>
       </div>

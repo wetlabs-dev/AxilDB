@@ -391,12 +391,16 @@ export async function collectPlantTimelineEvents(
 
   for (const event of careEvents) {
     const presentation = careEventPresentation(event.eventType)
+    const metadata = event.metadata && typeof event.metadata === 'object' && !Array.isArray(event.metadata)
+      ? event.metadata as Record<string, unknown>
+      : {}
+    const bulkSummary = metadata.source === 'BULK_CARE' ? ' Recorded via bulk care batch.' : ''
     addEvent(events, {
       id: `care-${event.id}`,
       type: event.eventType,
       ...presentation,
       date: event.performedAt,
-      summary: compactText(event.notes, `${presentation.title} logged.`),
+      summary: compactText(event.notes ? `${event.notes}${bulkSummary}` : bulkSummary.trim(), `${presentation.title} logged.`),
       href: eventHref(input.collectionSlug, input.plantInstanceId, 'care-history'),
       sourceModel: 'PlantCareEvent',
       sourceId: event.id,
