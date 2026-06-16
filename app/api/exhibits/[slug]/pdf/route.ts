@@ -8,26 +8,54 @@ import PDFDocument from 'pdfkit'
 import { isPublishedExhibitVisible, loadExhibitForDisplay } from '@/lib/exhibits'
 import { prisma } from '@/lib/prisma'
 import { formatDate } from '@/lib/time'
-import { plantName } from '@/lib/utils'
+import { plantName, taxonomyLabel } from '@/lib/utils'
 
-function contentLeft(doc: PDFKit.PDFDocument) {
+const PAGE_BG = '#f8f3e6'
+const INK = '#2f2618'
+const MUTED = '#756f64'
+const GREEN = '#2f6b45'
+const BORDER = '#d8d0bc'
+const CARD = '#fffaf0'
+const WASH = '#e8efdf'
+
+function left(doc: PDFKit.PDFDocument) {
   return doc.page.margins.left
 }
 
-function contentWidth(doc: PDFKit.PDFDocument) {
-  return doc.page.width - doc.page.margins.left - doc.page.margins.right
+function right(doc: PDFKit.PDFDocument) {
+  return doc.page.width - doc.page.margins.right
 }
 
-function line(doc: PDFKit.PDFDocument, text: string, options: PDFKit.Mixins.TextOptions = {}) {
-  doc.x = contentLeft(doc)
-  doc.text(text, { width: contentWidth(doc), ...options })
+function width(doc: PDFKit.PDFDocument) {
+  return right(doc) - left(doc)
 }
 
-function ensureRoom(doc: PDFKit.PDFDocument, needed = 92, footer: () => void) {
-  if (doc.y > doc.page.height - doc.page.margins.bottom - needed) {
-    footer()
-    doc.addPage()
-  }
+function bottom(doc: PDFKit.PDFDocument) {
+  return doc.page.height - doc.page.margins.bottom
+}
+
+function drawPageBackground(doc: PDFKit.PDFDocument) {
+  doc.save()
+  doc.rect(0, 0, doc.page.width, doc.page.height).fill(PAGE_BG)
+  doc.restore()
+  doc.fillColor(INK)
+}
+
+function newPage(doc: PDFKit.PDFDocument) {
+  doc.addPage()
+  drawPageBackground(doc)
+}
+
+function ensureRoom(doc: PDFKit.PDFDocument, needed: number) {
+  if (doc.y + needed > bottom(doc)) newPage(doc)
+}
+
+function text(doc: PDFKit.PDFDocument, value: string, options: PDFKit.Mixins.TextOptions = {}) {
+  doc.text(value, left(doc), doc.y, { width: width(doc), ...options })
+}
+
+function clean(value?: string | null) {
+  return value?.trim() || null
 }
 
 function localUploadPath(photo?: { path?: string | null } | null) {
@@ -36,23 +64,190 @@ function localUploadPath(photo?: { path?: string | null } | null) {
   return existsSync(local) ? local : null
 }
 
-function drawPhoto(doc: PDFKit.PDFDocument, photo: any, x: number, y: number, width: number, height: number) {
+function drawPhoto(doc: PDFKit.PDFDocument, photo: any, x: number, y: number, w: number, h: number) {
   const local = localUploadPath(photo)
-  doc.roundedRect(x, y, width, height, 8).fillAndStroke('#e8efdf', '#d8d0bc')
-  if (!local) return
-  try {
-    doc.image(local, x, y, { fit: [width, height], align: 'center', valign: 'center' })
-  } catch {
-    doc.font('Helvetica').fontSize(8).fillColor('#756f64').text('Image unavailable', x + 8, y + height / 2 - 5, { width: width - 16, align: 'center' })
+  doc.save()
+  doc.roundedRect(x, y, w, h, 8).fillAndStroke(WASH, BORDER)
+  if (local) {
+    try {
+      doc.image(local, x + 1, y + 1, { fit: [w - 2, h - 2], align: 'center', valign: 'center' })
+    } catch {
+      doc.font('Helvetica').fontSize(8).fillColor(MUTED).text('Image unavailable', x + 8, y + h / 2 - 5, { width: w - 16, align: 'center' })
+    }
+  }
+  doc.restore()
+}
+
+function detailGrid(doc: PDFKit.PDFDocument, rows: Array<[string, string | null | undefined]>, columns = 2) {
+  const visible = rows.filter(([, value]) => clean(value))
+  if (!visible.length) return
+  const gap = 8
+  const colW = (width(doc) - gap * (columns - 1)) / columns
+  const rowH = 42
+  for (let i = 0; i < visible.length; i += columns) {
+    ensureRoom(doc, rowH + 6)
+    const y = doc.y
+    visible.slice(i, i + columns).forEach(([label, value], col) => {
+      const x = left(doc) + col * (colW + gap)
+      doc.roundedRect(x, y, colW, rowH, 6).fillAndStroke('#fffdf7', '#e1d8c7')
+      doc.font('Helvetica-Bold').fontSize(6.5).fillColor(MUTED).text(label.toUpperCase(), x + 9, y + 8, { width: colW - 18, characterSpacing: 0.7 })
+      doc.font('Helvetica').fontSize(9.2).fillColor(INK).text(String(value), x + 9, y + 22, { width: colW - 18, height: 16, ellipsis: true })
+    })
+    doc.y = y + rowH + 6
   }
 }
 
-function detail(doc: PDFKit.PDFDocument, label: string, value?: string | null) {
-  if (!value) return
-  doc.font('Helvetica-Bold').fontSize(8).fillColor('#756f64').text(label.toUpperCase(), { continued: false })
-  doc.font('Helvetica').fontSize(10).fillColor('#2f2618')
-  line(doc, value)
+function pillRow(doc: PDFKit.PDFDocument, items: Array<[string, string | null | undefined]>) {
+  const visible = items.filter(([, href]) => clean(href))
+  if (!visible.length) return
+  ensureRoom(doc, 28)
+  let x = left(doc)
+  const y = doc.y
+  for (const [label, href] of visible) {
+    const pillW = Math.max(58, doc.widthOfString(label) + 20)
+    if (x + pillW > right(doc)) {
+      x = left(doc)
+      doc.y += 24
+    }
+    doc.roundedRect(x, doc.y, pillW, 18, 9).fillAndStroke('#eef5e8', '#c7d5b9')
+    doc.font('Helvetica-Bold').fontSize(7.5).fillColor(GREEN).text(label, x + 10, doc.y + 5, { width: pillW - 20, link: href || undefined })
+    x += pillW + 6
+  }
+  doc.y = Math.max(doc.y + 24, y + 24)
+}
+
+function writeParagraph(doc: PDFKit.PDFDocument, value?: string | null, fontSize = 9.5) {
+  const body = clean(value)
+  if (!body) return
+  ensureRoom(doc, 38)
+  doc.font('Helvetica').fontSize(fontSize).fillColor(INK)
+  text(doc, body, { lineGap: 2 })
+  doc.moveDown(0.55)
+}
+
+function drawDefinitionSection(doc: PDFKit.PDFDocument, data: NonNullable<Awaited<ReturnType<typeof loadExhibitForDisplay>>>, group: any) {
+  newPage(doc)
+  doc.font('Helvetica-Bold').fontSize(8.5).fillColor(GREEN).text(`${group.entries.length} selected specimen${group.entries.length === 1 ? '' : 's'}`.toUpperCase(), left(doc), doc.y, { characterSpacing: 1.1 })
+  doc.moveDown(0.18)
+  doc.font('Times-Bold').fontSize(25).fillColor(INK)
+  text(doc, plantName(group.definition))
   doc.moveDown(0.35)
+  writeParagraph(doc, group.definition.description, 10)
+
+  if (data.settings.typeImages && group.typePhotos.length) {
+    ensureRoom(doc, 106)
+    const y = doc.y
+    group.typePhotos.slice(0, 4).forEach((photo: any, index: number) => {
+      drawPhoto(doc, photo, left(doc) + index * 122, y, 112, 78)
+      if (photo.caption) {
+        doc.font('Helvetica').fontSize(7.5).fillColor(MUTED).text(photo.caption, left(doc) + index * 122, y + 82, { width: 112, height: 16, ellipsis: true })
+      }
+    })
+    doc.y = y + 104
+  }
+
+  if (data.settings.taxonomyDetails) {
+    detailGrid(doc, [
+      ['Authority', group.definition.authority],
+      ['Registration', group.definition.cultivarRegistrationNumber],
+      ['Governing body', group.definition.governingBody?.name],
+      ['Confidence', taxonomyLabel(group.definition.confidence)],
+      ['Validation', group.definition.isValidated ? `Validated ${formatDate(group.definition.validatedAt)}` : 'Not validated'],
+      ['Acquisition label', group.definition.acquisitionLabel],
+    ])
+  }
+
+  if (data.settings.aliases && group.definition.aliases.length) {
+    doc.font('Helvetica-Bold').fontSize(8.5).fillColor(INK).text('Also known as', left(doc), doc.y)
+    doc.font('Helvetica').fontSize(9).fillColor(INK)
+    text(doc, group.definition.aliases.map((alias: any) => alias.name).join(', '))
+    doc.moveDown(0.55)
+  }
+
+  if (data.settings.husbandry && group.definition.husbandryGuide) {
+    const guide = group.definition.husbandryGuide
+    detailGrid(doc, [
+      ['Care', guide.summaryCare],
+      ['Water', guide.summaryWater || guide.wateringCadence],
+      ['Light', guide.summaryLight || guide.lightIntensity],
+      ['Medium', guide.mediumPreferred],
+      ['Bloom', guide.bloomSeason],
+      ['Propagation', guide.propagationMethods],
+    ])
+  }
+
+  if (data.settings.referenceLinks) {
+    pillRow(doc, [
+      ['Wikipedia', group.definition.wikipediaUrl],
+      ['iNaturalist', group.definition.inaturalistUrl],
+      ['POWO', group.definition.powoUrl],
+      ['GBIF', group.definition.gbifUrl],
+    ])
+  }
+
+  doc.moveDown(0.4)
+  for (const entry of group.entries) drawSpecimenCard(doc, data, entry)
+}
+
+function drawSpecimenCard(doc: PDFKit.PDFDocument, data: NonNullable<Awaited<ReturnType<typeof loadExhibitForDisplay>>>, entry: any) {
+  const plant = entry.plantInstance
+  const cardH = 154
+  ensureRoom(doc, cardH + 14)
+  const x = left(doc)
+  const y = doc.y
+  doc.roundedRect(x, y, width(doc), cardH, 10).fillAndStroke(CARD, BORDER)
+
+  const textX = x + 16
+  const imageSize = 96
+  const imageX = right(doc) - imageSize - 16
+  const textW = imageX - textX - 16
+
+  doc.font('Helvetica-Bold').fontSize(8.5).fillColor(GREEN).text(plant.plantId, textX, y + 14, { width: textW })
+  doc.font('Times-Bold').fontSize(15).fillColor(INK).text(plantName(plant.plantDefinition), textX, doc.y + 2, { width: textW })
+  doc.font('Helvetica').fontSize(8.7).fillColor('#4d463c')
+  const meta = [
+    data.settings.location ? entry.locationPath || 'No location set' : null,
+    data.settings.acquisitionSource && plant.source ? `Source: ${plant.source}` : null,
+    data.settings.acquisitionSource && plant.distributor ? `Distributor: ${plant.distributor}` : null,
+    data.settings.archivedStatus ? `Status: ${String(plant.status).toLowerCase()}` : null,
+    data.settings.sunshine ? `Sunshine: ${entry.sunshineCount || 0}` : null,
+  ].filter(Boolean)
+  doc.text(meta.join(' - '), textX, doc.y + 5, { width: textW, lineGap: 2 })
+  if (entry.customCaption) doc.text(entry.customCaption, textX, doc.y + 5, { width: textW, lineGap: 2 })
+
+  const lines: string[] = []
+  const activeQuarantine = plant.quarantines.find((quarantine: any) => quarantine.status === 'ACTIVE')
+  const openConditions = plant.conditions.filter((condition: any) => condition.status !== 'RESOLVED')
+  if (data.settings.bloomHistory && plant.blooms.length) {
+    const bloom = plant.blooms[0]
+    lines.push(`Recent bloom: ${formatDate(bloom.bloomStartDate)}${bloom.flowerCount ? `, ${bloom.flowerCount} flowers` : ''}${bloom.firstBloom ? ', first bloom' : ''}`)
+  }
+  if (data.settings.quarantineStatus && activeQuarantine) lines.push(`Quarantine: ${activeQuarantine.reason}`)
+  if (data.settings.conditions && openConditions.length) lines.push(`Open condition: ${openConditions[0].category} (${String(openConditions[0].severity).toLowerCase()})`)
+  if ((data.settings.lineage || data.settings.miniLineage || data.settings.propagationHistory) && (plant.parentLinks.length || plant.childLinks.length)) {
+    lines.push(`Lineage: ${plant.parentLinks.length} parent link${plant.parentLinks.length === 1 ? '' : 's'}, ${plant.childLinks.length} child link${plant.childLinks.length === 1 ? '' : 's'}`)
+  }
+  if (data.settings.timeline && lines.length === 0 && (plant.careEvents.length || entry.photos.length)) {
+    const recentCare = plant.careEvents[0]
+    lines.push(recentCare ? `Recent care: ${String(recentCare.eventType).toLowerCase()} on ${formatDate(recentCare.performedAt)}` : `Recent photo: ${formatDate(entry.photos[0].createdAt)}`)
+  }
+  if (lines.length) {
+    doc.font('Helvetica').fontSize(8.3).fillColor('#4d463c')
+    doc.text(lines.slice(0, 4).join('\n'), textX, doc.y + 7, { width: textW, lineGap: 2, height: 48 })
+  }
+
+  if (entry.photos.length) drawPhoto(doc, entry.photos[0], imageX, y + 18, imageSize, imageSize)
+  doc.y = y + cardH + 12
+}
+
+function addFooters(doc: PDFKit.PDFDocument, title: string) {
+  const range = doc.bufferedPageRange()
+  for (let i = 0; i < range.count; i += 1) {
+    doc.switchToPage(range.start + i)
+    doc.font('Helvetica').fontSize(7.5).fillColor('#8a8173')
+    doc.text(`AxilDB Collection Exhibit - ${title}`, doc.page.margins.left, doc.page.height - 34, { width: 360 })
+    doc.text(String(i + 1), doc.page.width - doc.page.margins.right - 40, doc.page.height - 34, { width: 40, align: 'right' })
+  }
 }
 
 export async function GET(req: Request, { params }: { params: Promise<{ slug: string }> }) {
@@ -64,90 +259,23 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
     return NextResponse.json({ error: 'Exhibit not found' }, { status: 404 })
   }
 
-  const doc = new PDFDocument({ size: 'LETTER', margin: 44, bufferPages: true })
+  const doc = new PDFDocument({ size: 'LETTER', margin: 44, bufferPages: true, autoFirstPage: true })
   const chunks: Buffer[] = []
   doc.on('data', (chunk) => chunks.push(chunk))
   const done = new Promise<Buffer>((resolve) => doc.on('end', () => resolve(Buffer.concat(chunks))))
+  drawPageBackground(doc)
 
-  let pageNumber = 0
-  const footer = () => {
-    pageNumber += 1
-    const bottom = doc.page.height - 36
-    doc.font('Helvetica').fontSize(8).fillColor('#8a8173')
-    doc.text(`AxilDB Collection Exhibit · ${data.exhibit.title}`, doc.page.margins.left, bottom, { width: 360 })
-    doc.text(String(pageNumber), doc.page.width - doc.page.margins.right - 40, bottom, { width: 40, align: 'right' })
-    doc.fillColor('#2f2618')
-  }
+  doc.font('Helvetica-Bold').fontSize(9).fillColor(GREEN).text(data.exhibit.collection.name.toUpperCase(), 56, 72, { characterSpacing: 1.2 })
+  doc.font('Times-Bold').fontSize(34).fillColor(INK).text(data.exhibit.title, 56, 102, { width: 430 })
+  doc.font('Helvetica').fontSize(11).fillColor('#4d463c')
+  const specimenCount = data.groups.reduce((total, group) => total + group.entries.length, 0)
+  doc.text(`Generated ${formatDate(new Date())} - ${specimenCount} specimens - ${data.groups.length} definition section${data.groups.length === 1 ? '' : 's'}`, 56, 164, { width: 430 })
+  if (data.exhibit.description) doc.text(data.exhibit.description, 56, 196, { width: 430, lineGap: 3 })
+  if (data.exhibit.coverPhoto) drawPhoto(doc, data.exhibit.coverPhoto, 56, 338, 500, 260)
 
-  doc.rect(0, 0, doc.page.width, doc.page.height).fill('#f8f3e6')
-  doc.fillColor('#2f2618')
-  doc.font('Times-Bold').fontSize(32).text(data.exhibit.title, 56, 92, { width: 390 })
-  doc.moveDown(0.4)
-  doc.font('Helvetica-Bold').fontSize(10).fillColor('#2f6b45')
-  line(doc, data.exhibit.collection.name)
-  doc.moveDown(1)
-  doc.font('Helvetica').fontSize(12).fillColor('#4d463c')
-  if (data.exhibit.description) line(doc, data.exhibit.description, { lineGap: 3 })
-  doc.moveDown(1)
-  line(doc, `Generated ${formatDate(new Date())} · ${data.groups.reduce((total, group) => total + group.entries.length, 0)} specimens · ${data.groups.length} definition sections`)
-  if (data.exhibit.coverPhoto) drawPhoto(doc, data.exhibit.coverPhoto, 56, 360, 500, 260)
+  for (const group of data.groups) drawDefinitionSection(doc, data, group)
 
-  for (const group of data.groups) {
-    footer()
-    doc.addPage()
-    doc.font('Times-Bold').fontSize(22).fillColor('#2f2618')
-    line(doc, plantName(group.definition))
-    doc.font('Helvetica').fontSize(10).fillColor('#756f64')
-    line(doc, `${group.entries.length} selected specimen${group.entries.length === 1 ? '' : 's'}`)
-    doc.moveDown(0.5)
-    doc.fillColor('#2f2618')
-    if (group.definition.description) {
-      doc.font('Helvetica').fontSize(10)
-      line(doc, group.definition.description, { lineGap: 2 })
-      doc.moveDown(0.6)
-    }
-    if (data.settings.taxonomyDetails) {
-      detail(doc, 'Authority', group.definition.authority)
-      detail(doc, 'Registration', group.definition.cultivarRegistrationNumber)
-      detail(doc, 'Validation', group.definition.isValidated ? `Validated ${formatDate(group.definition.validatedAt)}` : 'Not validated')
-    }
-    if (data.settings.typeImages && group.typePhotos.length) {
-      const y = doc.y + 4
-      group.typePhotos.slice(0, 3).forEach((photo, index) => drawPhoto(doc, photo, contentLeft(doc) + index * 120, y, 108, 82))
-      doc.y = y + 96
-    }
-
-    for (const entry of group.entries) {
-      ensureRoom(doc, 178, footer)
-      const plant = entry.plantInstance
-      const startY = doc.y
-      doc.roundedRect(contentLeft(doc), startY, contentWidth(doc), 150, 10).fillAndStroke('#fffaf0', '#d8d0bc')
-      doc.fillColor('#2f2618')
-      const textX = contentLeft(doc) + 16
-      const photoX = contentLeft(doc) + contentWidth(doc) - 128
-      doc.font('Helvetica-Bold').fontSize(9).fillColor('#2f6b45').text(plant.plantId, textX, startY + 14, { width: 320 })
-      doc.font('Times-Bold').fontSize(15).fillColor('#2f2618').text(plantName(plant.plantDefinition), textX, doc.y + 2, { width: 320 })
-      doc.font('Helvetica').fontSize(9).fillColor('#4d463c')
-      const meta = [
-        data.settings.location ? entry.locationPath || 'No location set' : null,
-        data.settings.acquisitionSource && plant.source ? `Source: ${plant.source}` : null,
-        data.settings.archivedStatus ? `Status: ${plant.status.toLowerCase()}` : null,
-        data.settings.sunshine ? `Sunshine: ${entry.sunshineCount || 0}` : null,
-      ].filter(Boolean)
-      doc.text(meta.join(' · '), textX, doc.y + 4, { width: 340, lineGap: 2 })
-      if (entry.customCaption) doc.text(entry.customCaption, textX, doc.y + 5, { width: 340, lineGap: 2 })
-      if (data.settings.bloomHistory && plant.blooms.length) {
-        doc.text(`Recent bloom: ${formatDate(plant.blooms[0].bloomStartDate)}${plant.blooms[0].flowerCount ? ` · ${plant.blooms[0].flowerCount} flowers` : ''}`, textX, doc.y + 5, { width: 340 })
-      }
-      if ((data.settings.lineage || data.settings.miniLineage) && (plant.parentLinks.length || plant.childLinks.length)) {
-        doc.text(`Lineage links: ${plant.parentLinks.length} parent · ${plant.childLinks.length} child`, textX, doc.y + 5, { width: 340 })
-      }
-      if (entry.photos.length) drawPhoto(doc, entry.photos[0], photoX, startY + 16, 104, 104)
-      doc.y = startY + 166
-    }
-  }
-
-  footer()
+  addFooters(doc, data.exhibit.title)
   doc.end()
   const pdf = await done
   await prisma.auditLog.create({

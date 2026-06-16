@@ -890,7 +890,8 @@ section {
 :root[data-theme='dark'] .ax-public-light .bg-white\/70,
 :root[data-theme='dark'] .ax-public-light .bg-white\/72,
 :root[data-theme='dark'] .ax-public-light .bg-white\/82,
-:root[data-theme='dark'] .ax-public-light .bg-white\/85 {
+:root[data-theme='dark'] .ax-public-light .bg-white\/85,
+:root[data-theme='dark'] .ax-public-light .bg-\[\#fffaf0\] {
   background-color: rgba(255, 255, 255, .72) !important;
 }
 
