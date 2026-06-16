@@ -125,15 +125,15 @@ function AvailablePlantCard({ plant, onAdd }: { plant: ExhibitBuilderPlant; onAd
     <div
       ref={setNodeRef}
       style={style}
-      className={cn('rounded-lg border border-stone-200 bg-white/70 p-2 text-sm shadow-sm transition', isDragging && 'opacity-45')}
+      className={cn('rounded-lg border border-stone-200 bg-white/70 p-2 text-sm shadow-sm transition dark:border-[color:var(--ax-border)] dark:bg-[color:var(--ax-surface-solid)]', isDragging && 'opacity-45')}
     >
       <div className="flex min-w-0 gap-2">
         <PlantThumb plant={plant} className="h-16 w-16" />
         <div className="min-w-0 flex-1">
-          <p className="truncate font-mono text-xs font-bold text-[#2f6b45]">{plant.plantId}</p>
-          <p className="truncate font-semibold text-stone-900">{plant.scientificName}</p>
-          {plant.cultivarName && <p className="truncate text-xs text-stone-600">{plant.cultivarName}</p>}
-          <p className="truncate text-xs text-stone-500">{plant.locationPath || 'No location set'} · {statusLabel(plant.status)}</p>
+          <p className="truncate font-mono text-xs font-bold text-[#2f6b45] dark:text-[color:var(--ax-primary)]">{plant.plantId}</p>
+          <p className="truncate font-semibold text-stone-900 dark:text-[color:var(--ax-heading)]">{plant.scientificName}</p>
+          {plant.cultivarName && <p className="truncate text-xs text-stone-600 dark:text-[color:var(--ax-muted-strong)]">{plant.cultivarName}</p>}
+          <p className="truncate text-xs text-stone-500 dark:text-[color:var(--ax-muted)]">{plant.locationPath || 'No location set'} · {statusLabel(plant.status)}</p>
         </div>
         <div className="flex shrink-0 flex-col gap-1">
           <button
@@ -146,7 +146,7 @@ function AvailablePlantCard({ plant, onAdd }: { plant: ExhibitBuilderPlant; onAd
           </button>
           <button
             type="button"
-            className="inline-flex h-8 w-8 cursor-grab items-center justify-center rounded-md border border-stone-300 bg-white/80 text-stone-600 active:cursor-grabbing"
+            className="inline-flex h-8 w-8 cursor-grab items-center justify-center rounded-md border border-stone-300 bg-white/80 text-stone-600 active:cursor-grabbing dark:border-[color:var(--ax-border)] dark:bg-[color:var(--ax-field)] dark:text-[color:var(--ax-muted-strong)]"
             aria-label={`Drag ${plant.plantId}`}
             {...attributes}
             {...listeners}
@@ -185,12 +185,12 @@ function ExhibitPlantCard({
     <div
       ref={setNodeRef}
       style={style}
-      className={cn('relative rounded-xl border border-[#d8deca] bg-[#fffdf7] p-3 text-sm shadow-sm transition', isDragging && 'opacity-45')}
+      className={cn('relative rounded-xl border border-[#d8deca] bg-[#fffdf7] p-3 text-sm shadow-sm transition dark:border-[color:var(--ax-border-strong)] dark:bg-[color:var(--ax-surface-solid)]', isDragging && 'opacity-45')}
     >
       <button
         type="button"
         onClick={() => onRemove(plant.id)}
-        className="absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-md border border-stone-300 bg-white/90 text-stone-600 transition hover:border-[#9a3f35] hover:text-[#9a3f35]"
+        className="absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-md border border-stone-300 bg-white/90 text-stone-600 transition hover:border-[#9a3f35] hover:text-[#9a3f35] dark:border-[color:var(--ax-border)] dark:bg-[color:var(--ax-field)] dark:text-[color:var(--ax-muted-strong)] dark:hover:border-[color:var(--ax-danger)] dark:hover:text-[color:var(--ax-danger-strong)]"
         aria-label={`Remove ${plant.plantId} from exhibit`}
       >
         <X className="h-4 w-4" />
@@ -198,10 +198,10 @@ function ExhibitPlantCard({
       <div className="flex min-w-0 gap-3 pr-8">
         <PlantThumb plant={plant} className="h-24 w-24" />
         <div className="min-w-0 flex-1">
-          <p className="font-mono text-xs font-bold text-[#2f6b45]">{plant.plantId}</p>
-          <p className="font-serif text-xl font-semibold leading-tight text-stone-950">{plant.scientificName}</p>
-          {plant.cultivarName && <p className="text-sm text-stone-700">{plant.cultivarName}</p>}
-          <p className="mt-1 text-xs text-stone-600">{plant.locationPath || 'No location set'}</p>
+          <p className="font-mono text-xs font-bold text-[#2f6b45] dark:text-[color:var(--ax-primary)]">{plant.plantId}</p>
+          <p className="font-serif text-xl font-semibold leading-tight text-stone-950 dark:text-[color:var(--ax-heading)]">{plant.scientificName}</p>
+          {plant.cultivarName && <p className="text-sm text-stone-700 dark:text-[color:var(--ax-muted-strong)]">{plant.cultivarName}</p>}
+          <p className="mt-1 text-xs text-stone-600 dark:text-[color:var(--ax-muted)]">{plant.locationPath || 'No location set'}</p>
           <div className="mt-2 flex flex-wrap gap-2">
             <button
               type="button"
@@ -209,8 +209,8 @@ function ExhibitPlantCard({
               className={cn(
                 'inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-semibold transition',
                 selection.featured
-                  ? 'border-[#2f6b45]/30 bg-[#e8efdf] text-[#2f6b45]'
-                  : 'border-stone-300 bg-white/70 text-stone-600 hover:border-[#8fa58f]',
+                  ? 'border-[#2f6b45]/30 bg-[#e8efdf] text-[#2f6b45] dark:border-[color:var(--ax-primary)]/40 dark:bg-[color:var(--ax-primary-soft)] dark:text-[color:var(--ax-primary-strong)]'
+                  : 'border-stone-300 bg-white/70 text-stone-600 hover:border-[#8fa58f] dark:border-[color:var(--ax-border)] dark:bg-[color:var(--ax-field)] dark:text-[color:var(--ax-muted-strong)] dark:hover:border-[color:var(--ax-primary)]',
               )}
               aria-pressed={selection.featured}
             >
@@ -219,7 +219,7 @@ function ExhibitPlantCard({
             </button>
             <button
               type="button"
-              className="inline-flex cursor-grab items-center gap-1 rounded-md border border-stone-300 bg-white/70 px-2 py-1 text-xs font-semibold text-stone-600 active:cursor-grabbing"
+              className="inline-flex cursor-grab items-center gap-1 rounded-md border border-stone-300 bg-white/70 px-2 py-1 text-xs font-semibold text-stone-600 active:cursor-grabbing dark:border-[color:var(--ax-border)] dark:bg-[color:var(--ax-field)] dark:text-[color:var(--ax-muted-strong)]"
               aria-label={`Drag ${plant.plantId}`}
               {...attributes}
               {...listeners}
@@ -230,13 +230,13 @@ function ExhibitPlantCard({
           </div>
         </div>
       </div>
-      <label className="mt-3 grid gap-1 text-xs font-semibold uppercase tracking-[0.12em] text-stone-500">
+      <label className="mt-3 grid gap-1 text-xs font-semibold uppercase tracking-[0.12em] text-stone-500 dark:text-[color:var(--ax-muted-strong)]">
         Caption
         <textarea
           value={caption}
           onChange={(event) => setCaption(event.target.value)}
           onBlur={() => onCaption(plant.id, caption)}
-          className="min-h-16 rounded-md border border-stone-300 bg-white px-2.5 py-2 text-sm font-normal normal-case tracking-normal text-stone-900 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30"
+          className="min-h-16 rounded-md border border-stone-300 bg-white px-2.5 py-2 text-sm font-normal normal-case tracking-normal text-stone-900 outline-none transition placeholder:text-stone-500 focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30 dark:border-[color:var(--ax-border)] dark:bg-[color:var(--ax-field)] dark:text-[color:var(--ax-text)] dark:placeholder:text-[color:var(--ax-muted)] dark:focus:border-[color:var(--ax-primary)]"
           placeholder="Optional exhibit caption"
         />
       </label>
@@ -247,7 +247,7 @@ function ExhibitPlantCard({
 function DropPanel({ id, children, className = '' }: { id: string; children: React.ReactNode; className?: string }) {
   const { isOver, setNodeRef } = useDroppable({ id })
   return (
-    <div ref={setNodeRef} className={cn(className, isOver && 'ring-2 ring-[#8fa58f] ring-offset-2 ring-offset-[#fffaf0]')}>
+    <div ref={setNodeRef} className={cn(className, isOver && 'ring-2 ring-[#8fa58f] ring-offset-2 ring-offset-[#fffaf0] dark:ring-[color:var(--ax-primary)] dark:ring-offset-[color:var(--ax-bg)]')}>
       {children}
     </div>
   )
@@ -401,17 +401,17 @@ export function CollectionExhibitBuilder({
     <div className="space-y-4">
       <div>
         <h3 className="font-serif text-2xl font-bold">Exhibit builder</h3>
-        <p className="text-sm text-stone-600">Search, add, and arrange specimens as a curated exhibit. Plant membership changes save automatically.</p>
+        <p className="text-sm text-stone-600 dark:text-[color:var(--ax-muted)]">Search, add, and arrange specimens as a curated exhibit. Plant membership changes save automatically.</p>
       </div>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className="grid gap-4 xl:grid-cols-[minmax(18rem,0.9fr)_minmax(22rem,1.1fr)]">
-          <DropPanel id="available-drop" className="min-w-0 rounded-xl border border-stone-200 bg-white/45 p-3">
+          <DropPanel id="available-drop" className="min-w-0 rounded-xl border border-stone-200 bg-white/45 p-3 dark:border-[color:var(--ax-border)] dark:bg-[color:var(--ax-surface)]">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
                 <h4 className="font-serif text-xl font-semibold">Available plants</h4>
-                <p className="text-sm text-stone-600">{availablePlants.length} eligible specimen{availablePlants.length === 1 ? '' : 's'}</p>
+                <p className="text-sm text-stone-600 dark:text-[color:var(--ax-muted)]">{availablePlants.length} eligible specimen{availablePlants.length === 1 ? '' : 's'}</p>
               </div>
-              <div className="text-xs text-stone-500">{isPending ? 'Saving...' : status}</div>
+              <div className="text-xs text-stone-500 dark:text-[color:var(--ax-muted)]">{isPending ? 'Saving...' : status}</div>
             </div>
             <div className="mt-3 grid gap-2 md:grid-cols-[minmax(0,1fr)_10rem_10rem]">
               <label className="relative">
@@ -419,11 +419,11 @@ export function CollectionExhibitBuilder({
                 <input
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  className="w-full rounded-md border border-stone-300 bg-[#fffdf7] py-2 pl-8 pr-3 text-sm outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30"
+                  className="w-full rounded-md border border-stone-300 bg-[#fffdf7] py-2 pl-8 pr-3 text-sm outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30 dark:border-[color:var(--ax-border)] dark:bg-[color:var(--ax-field)] dark:text-[color:var(--ax-text)] dark:placeholder:text-[color:var(--ax-muted)]"
                   placeholder="Search plants"
                 />
               </label>
-              <select value={sortMode} onChange={(event) => setSortMode(event.target.value as SortMode)} className="rounded-md border border-stone-300 bg-[#fffdf7] px-2 py-2 text-sm">
+              <select value={sortMode} onChange={(event) => setSortMode(event.target.value as SortMode)} className="rounded-md border border-stone-300 bg-[#fffdf7] px-2 py-2 text-sm dark:border-[color:var(--ax-border)] dark:bg-[color:var(--ax-field)] dark:text-[color:var(--ax-text)]">
                 <option value="plantId">Plant ID</option>
                 <option value="scientificName">Scientific name</option>
                 <option value="dateAdded">Date added</option>
@@ -431,36 +431,36 @@ export function CollectionExhibitBuilder({
                 <option value="sunshine">Sunshine</option>
                 <option value="recentlyUpdated">Recently updated</option>
               </select>
-              <select value={groupMode} onChange={(event) => setGroupMode(event.target.value as GroupMode)} className="rounded-md border border-stone-300 bg-[#fffdf7] px-2 py-2 text-sm">
+              <select value={groupMode} onChange={(event) => setGroupMode(event.target.value as GroupMode)} className="rounded-md border border-stone-300 bg-[#fffdf7] px-2 py-2 text-sm dark:border-[color:var(--ax-border)] dark:bg-[color:var(--ax-field)] dark:text-[color:var(--ax-text)]">
                 <option value="none">No grouping</option>
                 <option value="location">By location</option>
                 <option value="definition">By plant definition</option>
               </select>
             </div>
             <div className="mt-3 grid max-h-[42rem] gap-3 overflow-auto pr-1">
-              {availablePlants.length === 0 && <p className="rounded-lg border border-dashed border-stone-300 bg-white/55 p-4 text-sm text-stone-600">No additional plants available.</p>}
+              {availablePlants.length === 0 && <p className="rounded-lg border border-dashed border-stone-300 bg-white/55 p-4 text-sm text-stone-600 dark:border-[color:var(--ax-border)] dark:bg-[color:var(--ax-surface-muted)] dark:text-[color:var(--ax-muted)]">No additional plants available.</p>}
               {groups.map((group) => (
                 <div key={group.key} className="grid gap-2">
-                  {group.label && <p className="sticky top-0 z-10 rounded-md bg-[#f5f0e2]/95 px-2 py-1 text-xs font-bold uppercase tracking-[0.12em] text-stone-500">{group.label}</p>}
+                  {group.label && <p className="sticky top-0 z-10 rounded-md bg-[#f5f0e2]/95 px-2 py-1 text-xs font-bold uppercase tracking-[0.12em] text-stone-500 dark:bg-[color:var(--ax-surface-solid)] dark:text-[color:var(--ax-muted-strong)]">{group.label}</p>}
                   {group.plants.map((plant) => <AvailablePlantCard key={plant.id} plant={plant} onAdd={addPlant} />)}
                 </div>
               ))}
             </div>
           </DropPanel>
 
-          <DropPanel id="exhibit-drop" className="min-w-0 rounded-xl border border-[#cfd8c2] bg-[#f8f3e7]/70 p-3">
+          <DropPanel id="exhibit-drop" className="min-w-0 rounded-xl border border-[#cfd8c2] bg-[#f8f3e7]/70 p-3 dark:border-[color:var(--ax-border-strong)] dark:bg-[color:var(--ax-surface)]">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h4 className="font-serif text-xl font-semibold">Exhibit plants</h4>
-                <p className="text-sm text-stone-600">Drag cards to set the public presentation order.</p>
+                <p className="text-sm text-stone-600 dark:text-[color:var(--ax-muted)]">Drag cards to set the public presentation order.</p>
               </div>
-              <div className="rounded-full border border-[#8fa58f]/40 bg-[#e8efdf] px-3 py-1 text-sm font-semibold text-[#2f6b45]">
+              <div className="rounded-full border border-[#8fa58f]/40 bg-[#e8efdf] px-3 py-1 text-sm font-semibold text-[#2f6b45] dark:border-[color:var(--ax-primary)]/40 dark:bg-[color:var(--ax-primary-soft)] dark:text-[color:var(--ax-primary-strong)]">
                 {selectedRows.length} specimens · {representedDefinitions} plant definitions · {featuredCount} featured · about {estimatedPages} page{estimatedPages === 1 ? '' : 's'}
               </div>
             </div>
             <SortableContext items={selectedIds.map((id) => `selected:${id}`)} strategy={verticalListSortingStrategy}>
               <div className="mt-3 grid max-h-[46rem] gap-3 overflow-auto pr-1">
-                {selectedRows.length === 0 && <p className="rounded-lg border border-dashed border-[#8fa58f] bg-white/60 p-6 text-center text-sm text-stone-600">Drag plants here to build the exhibit.</p>}
+                {selectedRows.length === 0 && <p className="rounded-lg border border-dashed border-[#8fa58f] bg-white/60 p-6 text-center text-sm text-stone-600 dark:border-[color:var(--ax-primary)] dark:bg-[color:var(--ax-surface-muted)] dark:text-[color:var(--ax-muted)]">Drag plants here to build the exhibit.</p>}
                 {selectedRows.map((selection) => {
                   const plant = plantById.get(selection.plantInstanceId)
                   if (!plant) return null
@@ -480,7 +480,7 @@ export function CollectionExhibitBuilder({
           </DropPanel>
         </div>
         <DragOverlay>
-          {activeLabel ? <div className="rounded-lg border border-[#8fa58f] bg-[#fffdf7] px-3 py-2 text-sm font-semibold shadow-lg">{activeLabel}</div> : null}
+          {activeLabel ? <div className="rounded-lg border border-[#8fa58f] bg-[#fffdf7] px-3 py-2 text-sm font-semibold shadow-lg dark:border-[color:var(--ax-primary)] dark:bg-[color:var(--ax-surface-solid)] dark:text-[color:var(--ax-heading)]">{activeLabel}</div> : null}
         </DragOverlay>
       </DndContext>
     </div>

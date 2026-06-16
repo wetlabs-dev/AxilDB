@@ -243,25 +243,34 @@ export default async function ServerDashboard({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h3 className="font-serif text-xl font-semibold">Server Health</h3>
-            <p className="mt-1 text-sm text-stone-600">Open incidents, recent resolutions, and operational notes stay here after metric snapshots expire.</p>
+            <p className="mt-1 text-sm text-stone-600 dark:text-[color:var(--ax-muted)]">Open incidents, recent resolutions, and operational notes stay here after metric snapshots expire.</p>
           </div>
           <LinkButton href="/server/incidents">Open Incident History</LinkButton>
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-4">
-          <div className="rounded-lg border border-stone-200 bg-white/60 p-3"><p className="text-sm text-stone-600">Open incidents</p><p className="mt-1 text-2xl font-bold">{incidentStats.open}</p></div>
-          <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-red-950"><p className="text-sm">Critical</p><p className="mt-1 text-2xl font-bold">{incidentStats.critical}</p></div>
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-950"><p className="text-sm">Warning</p><p className="mt-1 text-2xl font-bold">{incidentStats.warning}</p></div>
-          <div className="rounded-lg border border-stone-200 bg-white/60 p-3">
-            <p className="text-sm text-stone-600">Last resolved</p>
-            <p className="mt-1 truncate font-semibold">{incidentStats.lastResolved?.title || 'None recorded'}</p>
+          <div className="rounded-lg border border-stone-200 bg-white/60 p-3 dark:border-[color:var(--ax-border)] dark:bg-[color:var(--ax-surface-muted)]">
+            <p className="text-sm text-stone-600 dark:text-[color:var(--ax-muted)]">Open incidents</p>
+            <p className="mt-1 text-2xl font-bold text-stone-950 dark:text-[color:var(--ax-heading)]">{incidentStats.open}</p>
+          </div>
+          <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-red-950 dark:border-[color:var(--ax-danger)]/45 dark:bg-[color:var(--ax-danger-soft)] dark:text-[color:var(--ax-danger-strong)]">
+            <p className="text-sm font-semibold">Critical</p>
+            <p className="mt-1 text-2xl font-bold">{incidentStats.critical}</p>
+          </div>
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-950 dark:border-[color:var(--ax-warning)]/45 dark:bg-[color:var(--ax-warning-soft)] dark:text-[color:var(--ax-warning)]">
+            <p className="text-sm font-semibold">Warning</p>
+            <p className="mt-1 text-2xl font-bold">{incidentStats.warning}</p>
+          </div>
+          <div className="rounded-lg border border-stone-200 bg-white/60 p-3 dark:border-[color:var(--ax-border)] dark:bg-[color:var(--ax-surface-muted)]">
+            <p className="text-sm text-stone-600 dark:text-[color:var(--ax-muted)]">Last resolved</p>
+            <p className="mt-1 truncate font-semibold text-stone-950 dark:text-[color:var(--ax-heading)]">{incidentStats.lastResolved?.title || 'None recorded'}</p>
           </div>
         </div>
         {recentIncidents.length > 0 && (
           <div className="mt-4 grid gap-2">
             {recentIncidents.slice(0, 4).map((incident) => (
-              <Link key={incident.id} href={`/server/incidents/${incident.id}`} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-stone-200 bg-white/50 px-3 py-2 text-sm hover:bg-white">
-                <span className="font-semibold">{incident.title}</span>
-                <span className="text-stone-600">{incident.severity.toLowerCase()} · {incident.status.toLowerCase()} · {formatIncidentDuration(incident.durationSeconds)}</span>
+              <Link key={incident.id} href={`/server/incidents/${incident.id}`} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-stone-200 bg-white/50 px-3 py-2 text-sm transition hover:bg-white dark:border-[color:var(--ax-border)] dark:bg-[color:var(--ax-surface-muted)] dark:hover:bg-[color:var(--ax-primary-wash)]">
+                <span className="font-semibold text-stone-900 dark:text-[color:var(--ax-heading)]">{incident.title}</span>
+                <span className="text-stone-600 dark:text-[color:var(--ax-muted)]">{incident.severity.toLowerCase()} · {incident.status.toLowerCase()} · {formatIncidentDuration(incident.durationSeconds)}</span>
               </Link>
             ))}
           </div>
