@@ -1,11 +1,12 @@
 'use server'
 
-import { CollectionExhibitAccessMode, CollectionExhibitStatus, CollectionExhibitSubscriberStatus, CollectionExhibitUpdateDeliveryStatus } from '@prisma/client'
+import { CollectionExhibitAccessMode, CollectionExhibitStatus, CollectionExhibitSubscriberStatus } from '@prisma/client'
 import { redirect } from 'next/navigation'
 import { audit } from '@/lib/auth'
 import { collectionPath, requireCollectionGardener, requireCollectionManager } from '@/lib/collections'
 import { appUrl, sendEmail } from '@/lib/email'
 import { renderBrandedEmail } from '@/lib/email-templates'
+import { collectExhibitDigestChanges, exhibitDigestSummary, sendExhibitUpdateToSubscribers } from '@/lib/exhibit-digests'
 import {
   defaultExhibitSettings,
   defaultExhibitUpdateSettings,
@@ -234,54 +235,27 @@ export async function sendCollectionExhibitUpdate(fd: FormData) {
   const exhibit = await assertExhibitInCollection(id, context.collection.id)
   const title = value(fd, 'updateTitle') || `Update from ${exhibit.title}`
   const summary = value(fd, 'updateSummary')
+  const previousUpdate = await prisma.collectionExhibitUpdate.findFirst({
+    where: { exhibitId: id, sentAt: { not: null } },
+    orderBy: { sentAt: 'desc' },
+    select: { sentAt: true },
+  })
+  const includeDetectedChanges = checkbox(fd, 'includeDetectedChanges')
+  const detectedChanges = includeDetectedChanges
+    ? await collectExhibitDigestChanges(prisma, id, previousUpdate?.sentAt || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), new Date())
+    : []
+  const combinedSummary = [summary, includeDetectedChanges && detectedChanges.length ? exhibitDigestSummary(detectedChanges) : ''].filter(Boolean).join('\n\n')
   const update = await prisma.collectionExhibitUpdate.create({
     data: {
       exhibitId: id,
       title,
-      summary,
-      changeSummaryJson: { manual: true },
+      summary: combinedSummary,
+      changeSummaryJson: { manual: true, detectedChangesIncluded: includeDetectedChanges, changes: detectedChanges },
       createdByUserId: context.user.id,
     },
   })
-  const subscribers = await prisma.collectionExhibitSubscriber.findMany({
-    where: { exhibitId: id, status: CollectionExhibitSubscriberStatus.ACTIVE },
-  })
-  let sent = 0
-  let failed = 0
-  for (const subscriber of subscribers) {
-    const unsubscribeToken = secureToken()
-    await prisma.collectionExhibitSubscriber.update({
-      where: { id: subscriber.id },
-      data: { unsubscribeTokenHash: hashExhibitToken(unsubscribeToken) },
-    })
-    const exhibitUrl = publicExhibitUrl(exhibit)
-    const unsubscribeUrl = appUrl(`/exhibit-subscription/unsubscribe?token=${encodeURIComponent(unsubscribeToken)}`)
-    const template = renderBrandedEmail({
-      title,
-      preview: summary || `A calm update from ${exhibit.title}.`,
-      body: [
-        summary || 'A new exhibit update is available.',
-        `Open the exhibit to review ${exhibit.title}.`,
-        `Unsubscribe: ${unsubscribeUrl}`,
-      ],
-      actionLabel: 'Open exhibit',
-      actionUrl: exhibitUrl,
-      footer: 'Sent by AxilDB Collection Exhibits. Use the unsubscribe link above to stop these messages.',
-    })
-    try {
-      await sendEmail({ to: subscriber.email, subject: title, ...template })
-      await prisma.collectionExhibitDelivery.create({
-        data: { exhibitUpdateId: update.id, subscriberId: subscriber.id, status: CollectionExhibitUpdateDeliveryStatus.SENT, sentAt: new Date() },
-      })
-      sent += 1
-    } catch (error) {
-      await prisma.collectionExhibitDelivery.create({
-        data: { exhibitUpdateId: update.id, subscriberId: subscriber.id, status: CollectionExhibitUpdateDeliveryStatus.FAILED, error: String(error) },
-      })
-      failed += 1
-    }
-  }
+  const { sent, failed, skipped } = await sendExhibitUpdateToSubscribers(prisma, exhibit, update.id, { title, summary: combinedSummary || summary, changes: detectedChanges })
   await prisma.collectionExhibitUpdate.update({ where: { id: update.id }, data: { sentAt: new Date() } })
-  await audit(context.user, 'SEND', 'COLLECTION_EXHIBIT_UPDATE', update.id, `Sent exhibit update ${title}`, { sent, failed }, context.collection.id)
-  redirect(collectionPath(context.collection.slug, `/exhibits/${id}?update=sent&sent=${sent}&failed=${failed}`))
+  await audit(context.user, 'SEND', 'COLLECTION_EXHIBIT_UPDATE', update.id, `Sent exhibit update ${title}`, { sent, failed, skipped, detectedChanges: detectedChanges.length }, context.collection.id)
+  redirect(collectionPath(context.collection.slug, `/exhibits/${id}?update=sent&sent=${sent}&failed=${failed}&skipped=${skipped}`))
 }

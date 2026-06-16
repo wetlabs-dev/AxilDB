@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client'
 import { appUrl, sendEmail } from '../lib/email'
 import { reminderEmail } from '../lib/email-templates'
 import { sendCareQueueDigestAlerts } from '../lib/email-alerts'
+import { sendScheduledCollectionExhibitDigests } from '../lib/exhibit-digests'
 import { sendCollectionUpdateDigestAlerts } from '../lib/collection-updates'
 import { sendPushNotification, pushPreferenceKeys } from '../lib/push'
 import { nextOccurrence, reminderCategoryLabel, reminderPreferenceKey } from '../lib/reminders'
@@ -201,6 +202,7 @@ async function main() {
 
   const digestResult = await sendCareQueueDigestAlerts(prisma, now)
   const updateDigestResult = await sendCollectionUpdateDigestAlerts(prisma, now)
+  const exhibitDigestResult = await sendScheduledCollectionExhibitDigests(prisma, now)
   await recordServerWorkerRun(prisma, {
     workerName: 'reminders',
     status: 'SUCCEEDED',
@@ -212,9 +214,12 @@ async function main() {
       careDigestFailed: digestResult.failed,
       collectionUpdateDigestSent: updateDigestResult.sent,
       collectionUpdateDigestFailed: updateDigestResult.failed,
+      exhibitDigestSent: exhibitDigestResult.sent,
+      exhibitDigestFailed: exhibitDigestResult.failed,
+      exhibitDigestSkipped: exhibitDigestResult.skipped,
     },
   })
-  console.info(`Processed ${reminders.length} due reminder(s). Sent ${digestResult.sent} care queue digest(s); ${digestResult.failed} failed. Sent ${updateDigestResult.sent} collection update digest(s); ${updateDigestResult.failed} failed.`)
+  console.info(`Processed ${reminders.length} due reminder(s). Sent ${digestResult.sent} care queue digest(s); ${digestResult.failed} failed. Sent ${updateDigestResult.sent} collection update digest(s); ${updateDigestResult.failed} failed. Sent ${exhibitDigestResult.sent} exhibit digest(s); ${exhibitDigestResult.failed} failed.`)
 }
 
 main()

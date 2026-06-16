@@ -8,6 +8,7 @@ import {
 } from '@/app/exhibit-actions'
 import { Button, Card, Field, Select, TextArea } from '@/components/ui'
 import { canManageCollection, collectionPath, requireCollectionGardener } from '@/lib/collections'
+import { collectExhibitDigestChanges } from '@/lib/exhibit-digests'
 import {
   exhibitPlantCandidates,
   exhibitSettingLabels,
@@ -78,6 +79,10 @@ export default async function EditCollectionExhibitPage({ params }: { params: Pr
   })
   const activeSubscribers = exhibit.subscribers.filter((subscriber) => subscriber.status === 'ACTIVE')
   const publicPath = publicExhibitPath(exhibit)
+  const lastSentUpdate = exhibit.updates.find((update) => update.sentAt)
+  const detectedChanges = canManage
+    ? await collectExhibitDigestChanges(prisma, exhibit.id, lastSentUpdate?.sentAt || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), new Date())
+    : []
 
   return (
     <div className="space-y-5">
@@ -96,6 +101,11 @@ export default async function EditCollectionExhibitPage({ params }: { params: Pr
           {exhibit.status === CollectionExhibitStatus.PUBLISHED && (
             <Link className="rounded-md bg-[#2f6b45] px-3 py-2 text-sm font-semibold text-white" href={publicPath}>
               Public view
+            </Link>
+          )}
+          {exhibit.status === CollectionExhibitStatus.PUBLISHED && (
+            <Link className="rounded-md border border-stone-300 bg-white/70 px-3 py-2 text-sm font-semibold" href={`/api/exhibits/${exhibit.slug}/pdf${exhibit.accessMode === CollectionExhibitAccessMode.UNLISTED && exhibit.token ? `?token=${encodeURIComponent(exhibit.token)}` : ''}`}>
+              Download PDF
             </Link>
           )}
         </div>
@@ -194,7 +204,7 @@ export default async function EditCollectionExhibitPage({ params }: { params: Pr
         <Card className="space-y-4">
           <div>
             <h3 className="font-serif text-2xl font-bold">Update digest settings</h3>
-            <p className="text-sm text-stone-600">Manual sends are available now. Automatic cadence is stored for scheduled digest support.</p>
+            <p className="text-sm text-stone-600">Manual sends are available now. Daily and weekly digests are sent by the scheduled reminder worker when public-safe selected changes are detected.</p>
           </div>
           <Select label="Cadence" name="updateCadence" defaultValue={updateSettings.cadence}>
             <option value="manual">Manual only</option>
@@ -247,13 +257,54 @@ export default async function EditCollectionExhibitPage({ params }: { params: Pr
             <h3 className="font-serif text-2xl font-bold">Subscriber updates</h3>
             <p className="text-sm text-stone-600">{activeSubscribers.length} active subscribers · {exhibit.subscribers.length} total subscription records.</p>
           </div>
+          {detectedChanges.length > 0 && (
+            <div className="rounded-md border border-[#8fa58f]/35 bg-[#e8efdf]/60 p-3 text-sm">
+              <p className="font-semibold text-[#2f6b45]">Detected changes since the last sent update</p>
+              <div className="mt-2 grid gap-1 text-stone-700">
+                {detectedChanges.slice(0, 8).map((change) => (
+                  <p key={change.key}>{change.label}: {change.summary}</p>
+                ))}
+              </div>
+            </div>
+          )}
           <form action={sendCollectionExhibitUpdate} className="grid gap-3">
             <input type="hidden" name="collectionSlug" value={context.collection.slug} />
             <input type="hidden" name="id" value={exhibit.id} />
             <Field label="Update title" name="updateTitle" defaultValue={`Update from ${exhibit.title}`} />
             <TextArea label="Update summary" name="updateSummary" required />
+            <label className="flex gap-3 rounded-md border border-stone-200 bg-white/50 p-3 text-sm">
+              <input className="mt-1 h-4 w-4" type="checkbox" name="includeDetectedChanges" defaultChecked={detectedChanges.length > 0} />
+              <span>
+                <span className="block font-semibold text-stone-900">Include detected changes</span>
+                <span className="mt-1 block text-xs leading-5 text-stone-600">Adds the public-safe detected change summary above to this manual update email.</span>
+              </span>
+            </label>
             <Button>Send manual update</Button>
           </form>
+          {exhibit.subscribers.length > 0 && (
+            <div className="overflow-auto rounded-md border border-stone-200">
+              <table className="w-full min-w-[560px] text-left text-sm">
+                <thead className="bg-[#f5f0e2] text-xs uppercase tracking-[0.14em] text-stone-500">
+                  <tr>
+                    <th className="p-3">Email</th>
+                    <th className="p-3">Status</th>
+                    <th className="p-3">Confirmed</th>
+                    <th className="p-3">Unsubscribed</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {exhibit.subscribers.map((subscriber) => (
+                    <tr key={subscriber.id} className="border-t border-stone-200">
+                      <td className="p-3 font-mono text-xs">{subscriber.email}</td>
+                      <td className="p-3">{subscriber.status.toLowerCase()}</td>
+                      <td className="p-3">{subscriber.confirmedAt ? formatDateTime(subscriber.confirmedAt) : '—'}</td>
+                      <td className="p-3">{subscriber.unsubscribedAt ? formatDateTime(subscriber.unsubscribedAt) : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
           {exhibit.updates.length > 0 && (
             <div className="grid gap-2 border-t border-stone-200 pt-3 text-sm">
               {exhibit.updates.map((update) => (

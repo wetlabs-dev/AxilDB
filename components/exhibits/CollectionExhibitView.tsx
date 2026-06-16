@@ -66,10 +66,20 @@ function PlantCard({ entry, settings, collectionSlug }: { entry: any; settings: 
   const plant = entry.plantInstance
   const openConditions = plant.conditions.filter((condition: any) => condition.status !== 'RESOLVED')
   const activeQuarantine = plant.quarantines.find((quarantine: any) => quarantine.status === 'ACTIVE')
+  const timelineHighlights = [
+    ...plant.blooms.slice(0, 2).map((bloom: any) => ({ at: bloom.bloomStartDate, text: `Bloom noted ${formatDate(bloom.bloomStartDate)}` })),
+    ...plant.careEvents.slice(0, 2).map((event: any) => ({ at: event.performedAt, text: `${event.eventType.toLowerCase()} care ${formatDate(event.performedAt)}` })),
+    ...entry.photos.slice(0, 2).map((photo: any) => ({ at: photo.createdAt, text: `Photo added ${formatDate(photo.createdAt)}` })),
+    ...openConditions.slice(0, 2).map((condition: any) => ({ at: condition.observedAt, text: `${condition.category} observed ${formatDate(condition.observedAt)}` })),
+  ].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime()).slice(0, 4)
   const lineageItems = [
     ...plant.parentLinks.map((link: any) => `Parent in propagation ${formatDate(link.propagationEvent.date)} (${link.parentRole.toLowerCase()})`),
     ...plant.childLinks.map((link: any) => `Produced ${link.childPlantInstance.plantId} on ${formatDate(link.propagationEvent.date)}`),
   ]
+  const compactLineage = [
+    ...plant.parentLinks.map((link: any) => `${link.parentPlantInstance.plantId} -> ${plant.plantId}`),
+    ...plant.childLinks.map((link: any) => `${plant.plantId} -> ${link.childPlantInstance.plantId}`),
+  ].slice(0, 6)
 
   return (
     <article className="grid gap-4 rounded-lg border border-stone-200 bg-[#fffaf0]/72 p-4">
@@ -142,7 +152,21 @@ function PlantCard({ entry, settings, collectionSlug }: { entry: any; settings: 
       {(settings.lineage || settings.miniLineage || settings.propagationHistory) && lineageItems.length > 0 && (
         <section className="grid gap-1 text-sm">
           <h5 className="font-semibold">Lineage</h5>
+          {settings.miniLineage && compactLineage.length > 0 && (
+            <div className="flex flex-wrap gap-2 py-1">
+              {compactLineage.map((item) => (
+                <span key={item} className="rounded-full border border-stone-200 bg-white/70 px-2 py-1 font-mono text-[0.7rem] text-stone-700">{item}</span>
+              ))}
+            </div>
+          )}
           {lineageItems.slice(0, 5).map((item) => <p key={item} className="text-stone-700">{item}</p>)}
+        </section>
+      )}
+
+      {settings.timeline && timelineHighlights.length > 0 && (
+        <section className="grid gap-1 text-sm">
+          <h5 className="font-semibold">Timeline highlights</h5>
+          {timelineHighlights.map((item) => <p key={`${item.at}-${item.text}`} className="text-stone-700">{item.text}</p>)}
         </section>
       )}
 
@@ -243,6 +267,9 @@ export function CollectionExhibitView({
             <div className="flex flex-wrap gap-2 print:hidden">
               <Link className="rounded-md border border-stone-300 bg-white/70 px-3 py-2 text-sm font-semibold text-stone-800" href={`/exhibit/${exhibit.slug}/print${tokenValue ? `?token=${encodeURIComponent(tokenValue)}` : ''}`}>
                 Print / save PDF
+              </Link>
+              <Link className="rounded-md border border-stone-300 bg-white/70 px-3 py-2 text-sm font-semibold text-stone-800" href={`/api/exhibits/${exhibit.slug}/pdf${tokenValue ? `?token=${encodeURIComponent(tokenValue)}` : ''}`}>
+                Download PDF
               </Link>
               {staffCollectionSlug && (
                 <Link className="rounded-md bg-[#2f6b45] px-3 py-2 text-sm font-semibold text-white" href={`/c/${staffCollectionSlug}/exhibits/${exhibit.id}`}>

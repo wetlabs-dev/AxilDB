@@ -340,16 +340,17 @@ App route: `/exhibits`
 
 - Open Collection Exhibits from the Admin section of the sidebar.
 - Gardeners can create draft exhibits, edit title/intro text, select specimens, choose a cover photo, and control which public-safe sections appear.
-- Managers can publish or unpublish exhibits, copy/open the public share link, review subscriber totals, and send manual update emails.
+- Managers can publish or unpublish exhibits, copy/open the public share link, review subscriber totals and subscriber status, and send manual update emails.
 - Guests can view a published exhibit without an account and can subscribe to updates by confirming a double opt-in email.
-- Use Print / save PDF on the public exhibit page for presentation or archival handouts.
+- Use Print / save PDF for browser printing or Download PDF for a generated botanical booklet-style PDF.
 
 ### Notes
 
 - Published exhibits can be public or unlisted. Unlisted links include a token and should be treated like share links.
 - Sensitive specimen notes, care notes, and condition details are off by default and only appear when explicitly enabled in the exhibit editor.
 - Images are filtered through public-safe moderation flags before display.
-- Automatic update cadence is stored with the exhibit; manual update sending is available from the editor.
+- Daily and weekly automatic update digests are sent by the scheduled reminders worker when public-safe selected changes are detected.
+- Manual updates can include a detected-change summary since the last sent exhibit update.
 
 ### Warnings
 

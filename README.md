@@ -106,7 +106,7 @@ Collection roles:
 Server administration is intentionally separate from collection work. Normal plant work is collection-scoped through collection memberships.
 Public collections are browseable without signing in, but following records requires an active collection membership.
 
-Collection Exhibits are managed from the Admin sidebar by gardeners and managers. Gardeners can create and edit draft exhibits, select specimens, choose public-safe display sections, and configure stored update preferences. Collection managers can publish or unpublish the public/unlisted share link, review subscriber counts, and send manual update emails to double opt-in guests. Sensitive specimen notes, care notes, and condition details are disabled by default and only appear on an exhibit when explicitly enabled.
+Collection Exhibits are managed from the Admin sidebar by gardeners and managers. Gardeners can create and edit draft exhibits, select specimens, choose public-safe display sections, and configure stored update preferences. Collection managers can publish or unpublish the public/unlisted share link, review subscriber lists and counts, send manual update emails to double opt-in guests, and enable daily or weekly automatic exhibit digests through the existing reminders worker. Sensitive specimen notes, care notes, and condition details are disabled by default and only appear on an exhibit when explicitly enabled. Exhibit pages include browser print styling and a dedicated PDF download that respects the same visibility toggles.
 
 The bootstrap script creates the first admin user:
 

@@ -279,7 +279,9 @@ export async function loadExhibitForDisplay(prisma: PrismaClient, slug: string) 
       ? currentPhotos
       : settings.imageMode === 'recent'
         ? currentPhotos.slice(0, 4)
-        : currentPhotos.slice(0, 1)
+        : settings.imageMode === 'selected'
+          ? (currentPhotos.filter((photo) => photo.isCover).slice(0, 4).length ? currentPhotos.filter((photo) => photo.isCover).slice(0, 4) : currentPhotos.slice(0, 1))
+          : currentPhotos.slice(0, 1)
     existing.entries.push({
       ...entry,
       sunshineCount: sunshineByPlant.get(entry.plantInstance.id) || 0,
