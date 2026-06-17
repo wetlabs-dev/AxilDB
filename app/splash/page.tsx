@@ -1,12 +1,17 @@
 import {
   BadgeCheck,
+  Bell,
   Camera,
-  ClipboardCheck,
-  Flower2,
   GitBranch,
   Github,
   Heart,
-  Search,
+  HeartPulse,
+  IdCard,
+  ListChecks,
+  MapPinned,
+  PanelsTopLeft,
+  ScanQrCode,
+  ShieldAlert,
   ShieldCheck,
   Sparkles,
   Sprout,
@@ -18,24 +23,130 @@ const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.axildb.com'
 const githubUrl = process.env.NEXT_PUBLIC_GITHUB_URL || 'https://github.com/wetlabs-dev/AxilDB'
 const donateUrl = process.env.NEXT_PUBLIC_DONATE_URL || 'https://ko-fi.com/wetlabs'
 
-const features = [
-  ['Multi-collection workspaces', 'Keep accession records separated by collection, with public or private visibility and collection-scoped membership.', Users],
-  ['Accession and taxonomy records', 'Trace living specimens, generated plant IDs, accepted names, author citations, aliases, source details, sitewide validated definitions, and confidence levels without losing the story.', BadgeCheck],
-  ['Structured husbandry guides', 'Keep water, light, toxicity, soil, pest, propagation, bloom, and conservation guidance close to each definition and specimen.', Sprout],
-  ['AI-assisted records', 'Draft concise descriptions, taxonomy metadata, aliases, reference links, structured husbandry guides, and ID suggestions with review-first AI tools.', Sparkles],
-  ['Care sheets and sitter plans', 'Generate printable care sheets, weekly greenhouse checklists, and limited plant-sitter links from husbandry and care queue data.', ClipboardCheck],
-  ['Transfers and shared definitions', 'Connect collections, share plant definitions, and queue specimen transfers while keeping private data behind review gates.', GitBranch],
-  ['Secure roles and server tools', 'Use viewer, logger, gardener, manager, and server-admin boundaries with 2FA, backups, audit history, image moderation, and health checks.', ShieldCheck],
-  ['Useful odds and ends', 'Search, follows, reminder emails, push alerts, activity timelines, gallery browsing, AI access controls, documentation, and QR labels all stay close at hand.', Search],
+const featureCards = [
+  {
+    group: 'Collection structure',
+    title: 'Multi-collection workspaces',
+    text: 'Run separate personal, greenhouse, club, or research collections with scoped members, privacy controls, roles, audit history, and collection-specific settings.',
+    Icon: Users,
+  },
+  {
+    group: 'Collection structure',
+    title: 'Validated plant definitions',
+    text: 'Reuse reviewed site-level definitions with taxonomy, aliases, type images, and husbandry while keeping local overrides for collection-specific care.',
+    Icon: BadgeCheck,
+  },
+  {
+    group: 'Collection structure',
+    title: 'Locations and shelf QR labels',
+    text: 'Model rooms, cabinets, shelves, benches, and nested locations with stable codes, move history, location filters, and scannable QR labels.',
+    Icon: MapPinned,
+  },
+  {
+    group: 'Collection structure',
+    title: 'Collection Exhibits',
+    text: 'Create curated read-only exhibit pages from selected specimens, grouped by plant definition, with configurable details, update subscriptions, and polished PDF export.',
+    Icon: PanelsTopLeft,
+  },
+  {
+    group: 'Daily plant work',
+    title: 'Smart Care Queue',
+    text: 'Prioritize watering, propagation checks, open issues, pest checks, bloom follow-ups, reminders, and weekly greenhouse work from one care engine.',
+    Icon: Sprout,
+  },
+  {
+    group: 'Daily plant work',
+    title: 'Bulk care by location',
+    text: 'Record watering, pest checks, repotting, health reviews, and other care events for selected plants in a location, with direct or nested scope.',
+    Icon: ListChecks,
+  },
+  {
+    group: 'Daily plant work',
+    title: 'Quarantine workflow',
+    text: 'Track new or risky plants with quarantine locations, risk levels, checklists, target release dates, care queue reviews, and release history.',
+    Icon: ShieldAlert,
+  },
+  {
+    group: 'Daily plant work',
+    title: 'Plant Health Timeline',
+    text: 'Scan the life history of each specimen across care, blooms, issues, photos, moves, notes, reminders, propagation, archive, and lineage events.',
+    Icon: HeartPulse,
+  },
+  {
+    group: 'Records and intelligence',
+    title: 'Photo-backed records',
+    text: 'Attach specimen, definition, bloom, and note photos with galleries, cover images, captions, plant-content checks, and moderation review states.',
+    Icon: Camera,
+  },
+  {
+    group: 'Records and intelligence',
+    title: 'ID My Plant history',
+    text: 'Use cautious AI identification from descriptions, known names, and optional images, then save results to personal and collection history or create a definition from a result.',
+    Icon: IdCard,
+  },
+  {
+    group: 'Records and intelligence',
+    title: 'Review-first AI assists',
+    text: 'Draft definitions, husbandry guides, aliases, descriptions, collection briefings, and Green Thumb care notes without saving generated text automatically.',
+    Icon: Sparkles,
+  },
+  {
+    group: 'Sharing and continuity',
+    title: 'Labels, care sheets, and sitter links',
+    text: 'Generate plant and location QR labels, printable care sheets, weekly checklists, and limited plant-sitter links that stay tied to the living record.',
+    Icon: ScanQrCode,
+  },
+  {
+    group: 'Sharing and continuity',
+    title: 'Notifications that respect context',
+    text: 'Send opt-out-aware email and Web Push reminders, care digests, exhibit updates, follows, sunshine notices, collection update digests, and server health alerts.',
+    Icon: Bell,
+  },
+  {
+    group: 'Sharing and continuity',
+    title: 'Lineage, transfers, and shared definitions',
+    text: 'Connect propagations, sport candidates, shared definitions, specimen transfers, and follower-visible updates without exposing private collection data.',
+    Icon: GitBranch,
+  },
+  {
+    group: 'Operations',
+    title: 'Self-hosted server tools',
+    text: 'Use 2FA, role boundaries, backups, storage estimates, image moderation queues, server incidents, health checks, and maintenance controls.',
+    Icon: ShieldCheck,
+  },
+] as const
+
+const featureHighlights = [
+  {
+    title: 'Archive-quality photos',
+    text: 'Keep specimen, bloom, and definition images close to the records they explain.',
+    image: '/splash-photos.png',
+    imageClassName: 'max-h-72 w-full object-contain mix-blend-multiply',
+    Icon: Camera,
+  },
+  {
+    title: 'Lineage at a glance',
+    text: 'See propagation relationships and candidate sport lines without losing parent context.',
+    image: '/splash-lineage-diagram.png',
+    imageClassName: 'max-h-72 w-full object-contain mix-blend-multiply',
+    Icon: GitBranch,
+  },
+  {
+    title: 'Labels that travel',
+    text: 'Print plant and location labels that lead back to the right record or shelf.',
+    image: '/splash-plant-label.png',
+    imageClassName: 'max-h-56 w-full object-contain',
+    Icon: ScanQrCode,
+  },
 ] as const
 
 const workflow = [
-  ['Create a collection', 'Start with a private workspace, invite members when ready, or make a public collection browseable without exposing other data.'],
-  ['Define the plant', 'Capture the accepted identity, aliases, reference links, registration context, confidence level, and reusable validated-definition links, with optional AI assistance.'],
-  ['Grow the accession', 'Track specimens, locations, acquisition history, generated plant IDs, photos, husbandry, and propagation batches.'],
-  ['Care and observe', 'Use the Care Queue, notes, blooms, conditions, reminders, Green Thumb notes, and weekly checklists to keep attention where it matters.'],
-  ['Resolve and share', 'Confirm sport traits, promote stable lines, share definitions, transfer specimens, generate care sheets, or create a sitter plan.'],
-  ['Keep tending', 'Use the timeline, care history, reminders, photos, and documentation to build steady habits around plants that are quietly doing well.'],
+  ['Create the collection', 'Start a scoped workspace, invite the right roles, and decide what stays private, public, or exhibit-ready.'],
+  ['Define the plant', 'Use local or validated definitions, add aliases and references, and draft taxonomy or husbandry with review-first AI tools.'],
+  ['Place the specimen', 'Accession the plant, assign a structured location, print labels, and keep acquisition, source, and photo context together.'],
+  ['Care by queue or shelf', 'Work from due care, bulk-log tasks by location, manage quarantine, and keep plant-sitter or weekly checklists aligned.'],
+  ['Read the life story', 'Use timelines, blooms, photos, notes, moves, conditions, propagation, and lineage records to understand what happened and why.'],
+  ['Share carefully', 'Publish exhibits, generate PDFs, send update subscriptions, transfer specimens, or share care links without exposing private data.'],
 ] as const
 
 export default function SplashPage() {
@@ -72,11 +183,11 @@ export default function SplashPage() {
             <p className="mb-4 inline-flex rounded-md border border-[#8fa58f]/40 bg-white/60 px-3 py-1 text-sm font-medium text-[#2f6b45]">
               Botanical Accession System
             </p>
-            <h1 className="text-5xl leading-[1.02] sm:text-6xl lg:text-7xl">A living database for plants with complicated names.</h1>
+            <h1 className="text-5xl leading-[1.02] sm:text-6xl lg:text-7xl">A living database for collections with complicated plants.</h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-stone-700">
-              AxilDB tracks collection workspaces, plant definitions, accessioned specimens, propagations, blooms,
-              taxonomy uncertainty, aliases, generated plant IDs, photos, QR tags, sport stability, husbandry,
-              care queues, care sheets, sitter plans, reminders, follower notifications, transfers, and audit history in one self-hosted app.
+              AxilDB is a self-hosted botanical accession system for serious personal and small-collection work:
+              structured locations, validated definitions, specimen history, care queues, exhibits, QR labels,
+              cautious AI tools, notifications, and audit-friendly collaboration in one calm app.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <a className="inline-flex items-center justify-center rounded-md bg-[#2f6b45] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#255537]" href={appUrl}>
@@ -115,98 +226,39 @@ export default function SplashPage() {
       </section>
 
       <section className="mx-auto max-w-7xl px-5 py-16 sm:px-6 lg:px-8">
-        <div className="mb-8 max-w-2xl">
-          <h2 className="text-3xl">Built for real collection work</h2>
-          <p className="mt-3 text-stone-700">The app is designed around the day-to-day messiness of horticultural records, care, collaboration, and long-lived accession history.</p>
+        <div className="mb-8 max-w-3xl">
+          <p className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-[#2f6b45]">Built for living collections</p>
+          <h2 className="text-3xl">Real accession work, without the recordkeeping sprawl</h2>
+          <p className="mt-3 text-stone-700">
+            AxilDB is designed around the steady work of identifying, placing, caring for, reviewing, and sharing living plants.
+            The public page stays concise; the app keeps the detail where it belongs.
+          </p>
         </div>
-        <div className="grid grid-flow-dense gap-4 md:grid-cols-2 xl:grid-cols-6">
-          {features.slice(0, 3).map(([title, text, Icon]) => (
-            <article key={title} className="rounded-lg border border-stone-200 bg-white/65 p-5 shadow-[0_8px_30px_rgba(47,38,24,0.06)] xl:col-span-2">
-              <Icon className="mb-4 h-6 w-6 text-[#2f6b45]" />
-              <h3 className="font-serif text-xl">{title}</h3>
-              <p className="mt-2 text-sm leading-6 text-stone-700">{text}</p>
+
+        <div className="grid items-stretch gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {featureCards.map(({ group, title, text, Icon }) => (
+            <article key={title} className="flex min-h-[228px] flex-col rounded-lg border border-stone-200 bg-white/65 p-5 shadow-[0_8px_30px_rgba(47,38,24,0.06)]">
+              <div className="mb-5 flex items-center justify-between gap-3">
+                <Icon className="h-6 w-6 shrink-0 text-[#2f6b45]" />
+                <span className="rounded-md border border-[#d6dfc9] bg-[#fffdf7] px-2.5 py-1 text-xs font-medium text-[#2f6b45]">{group}</span>
+              </div>
+              <h3 className="font-serif text-xl leading-7">{title}</h3>
+              <p className="mt-3 text-sm leading-6 text-stone-700">{text}</p>
             </article>
           ))}
-          <article className="overflow-hidden rounded-lg border border-stone-200 bg-white/70 shadow-[0_8px_30px_rgba(47,38,24,0.06)] md:col-span-2 xl:col-span-4">
-            <div className="grid h-full min-h-[260px] gap-4 md:grid-cols-[1fr_1.1fr]">
-              <div className="flex items-center justify-center bg-[#fffdf7] p-4">
-                <img src="/splash-photos.png" alt="" className="max-h-72 w-full object-contain mix-blend-multiply" />
+        </div>
+
+        <div className="mt-10 grid gap-4 lg:grid-cols-3">
+          {featureHighlights.map(({ title, text, image, imageClassName, Icon }) => (
+            <article key={title} className="overflow-hidden rounded-lg border border-stone-200 bg-white/70 shadow-[0_8px_30px_rgba(47,38,24,0.06)]">
+              <div className="flex h-64 items-center justify-center bg-[#fffdf7] p-5">
+                <img src={image} alt="" className={imageClassName} />
               </div>
-              <div className="flex flex-col justify-center p-5">
-                <Camera className="mb-4 h-6 w-6 text-[#2f6b45]" />
-                <h3 className="font-serif text-xl">Photo-backed records</h3>
-                <p className="mt-2 text-sm leading-6 text-stone-700">Choose specimen cover photos, type images for definitions, browse the collection gallery, and let background moderation separate unsafe, no-plant, and uncertain uploads for review.</p>
+              <div className="p-5">
+                <Icon className="mb-4 h-6 w-6 text-[#2f6b45]" />
+                <h3 className="font-serif text-xl">{title}</h3>
+                <p className="mt-2 text-sm leading-6 text-stone-700">{text}</p>
               </div>
-            </div>
-          </article>
-          {features.slice(3, 4).map(([title, text, Icon]) => (
-            <article key={title} className="rounded-lg border border-stone-200 bg-white/65 p-5 shadow-[0_8px_30px_rgba(47,38,24,0.06)] xl:col-span-2">
-              <Icon className="mb-4 h-6 w-6 text-[#2f6b45]" />
-              <h3 className="font-serif text-xl">{title}</h3>
-              <p className="mt-2 text-sm leading-6 text-stone-700">{text}</p>
-            </article>
-          ))}
-          <article className="rounded-lg border border-stone-200 bg-white/65 p-5 shadow-[0_8px_30px_rgba(47,38,24,0.06)] xl:col-span-2">
-            <ClipboardCheck className="mb-4 h-6 w-6 text-[#2f6b45]" />
-            <h3 className="font-serif text-xl">Smart Care Queue</h3>
-            <p className="mt-2 text-sm leading-6 text-stone-700">Turn husbandry, watering history, propagation stage, open conditions, blooms, and manual reminders into a prioritized daily worklist.</p>
-          </article>
-          <article className="overflow-hidden rounded-lg border border-stone-200 bg-white/70 shadow-[0_8px_30px_rgba(47,38,24,0.06)] md:col-span-2 xl:col-span-4">
-            <div className="grid h-full min-h-[260px] gap-4 md:grid-cols-[1.1fr_1fr]">
-              <div className="flex flex-col justify-center p-5">
-                <Flower2 className="mb-4 h-6 w-6 text-[#2f6b45]" />
-                <h3 className="font-serif text-xl">Bloom history without guesswork</h3>
-                <p className="mt-2 text-sm leading-6 text-stone-700">Log bloom starts, peaks, closures, flower counts, first blooms, notes, photos, and reminders as each bloom moves through its cycle.</p>
-              </div>
-              <div className="flex items-center justify-center bg-[#fffdf7]">
-                <img src="/splash-bloom.png" alt="" className="h-full max-h-80 w-full object-cover object-center mix-blend-multiply" />
-              </div>
-            </div>
-          </article>
-          <article className="overflow-hidden rounded-lg border border-stone-200 bg-white/70 shadow-[0_8px_30px_rgba(47,38,24,0.06)] md:col-span-2 xl:col-span-4">
-            <div className="grid h-full min-h-[280px] gap-4 md:grid-cols-[1fr_1fr]">
-              <div className="flex items-center justify-center bg-[#fffdf7]">
-                <img src="/splash-green-thumb.png" alt="" className="h-full max-h-96 w-full object-cover object-center" />
-              </div>
-              <div className="flex flex-col justify-center p-5">
-                <Sprout className="mb-4 h-6 w-6 text-[#2f6b45]" />
-                <h3 className="font-serif text-xl">Green Thumb care assist</h3>
-                <p className="mt-2 text-sm leading-6 text-stone-700">
-                  Ask one focused care question per specimen per day. AxilDB includes plant identity, husbandry, recent care history, and optional photo context, then saves the concise answer as a care note.
-                </p>
-              </div>
-            </div>
-          </article>
-          {features.slice(4, 5).map(([title, text, Icon]) => (
-            <article key={title} className="rounded-lg border border-stone-200 bg-white/65 p-5 shadow-[0_8px_30px_rgba(47,38,24,0.06)] xl:col-span-2">
-              <Icon className="mb-4 h-6 w-6 text-[#2f6b45]" />
-              <h3 className="font-serif text-xl">{title}</h3>
-              <p className="mt-2 text-sm leading-6 text-stone-700">{text}</p>
-            </article>
-          ))}
-          <article className="overflow-hidden rounded-lg border border-stone-200 bg-white/70 shadow-[0_8px_30px_rgba(47,38,24,0.06)] md:col-span-2 xl:col-span-3">
-            <div className="flex h-56 items-center justify-center bg-[#fffdf7] p-4">
-              <img src="/splash-plant-label.png" alt="" className="max-h-full w-full object-contain" />
-            </div>
-            <div className="p-5">
-              <h3 className="font-serif text-xl">Readable plant tags and QR labels</h3>
-              <p className="mt-2 text-sm leading-6 text-stone-700">Connect physical labels, generated plant IDs, and scannable QR codes back to the living record.</p>
-            </div>
-          </article>
-          <article className="overflow-hidden rounded-lg border border-stone-200 bg-white/70 shadow-[0_8px_30px_rgba(47,38,24,0.06)] md:col-span-2 xl:col-span-3">
-            <div className="grid h-full min-h-56 items-center gap-4 bg-[#fffdf7] p-5">
-              <div>
-                <h3 className="font-serif text-2xl">Lineage you can see</h3>
-                <p className="mt-3 text-sm leading-6 text-stone-700">Propagations inherit their parent context, while suspected sports become candidate lines only when observations justify it.</p>
-              </div>
-              <img src="/splash-lineage-diagram.png" alt="" className="max-h-72 w-full object-contain mix-blend-multiply" />
-            </div>
-          </article>
-          {features.slice(5).map(([title, text, Icon]) => (
-            <article key={title} className="rounded-lg border border-stone-200 bg-white/65 p-5 shadow-[0_8px_30px_rgba(47,38,24,0.06)] xl:col-span-2">
-              <Icon className="mb-4 h-6 w-6 text-[#2f6b45]" />
-              <h3 className="font-serif text-xl">{title}</h3>
-              <p className="mt-2 text-sm leading-6 text-stone-700">{text}</p>
             </article>
           ))}
         </div>
