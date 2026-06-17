@@ -44,6 +44,42 @@ export function workflowStepLabel(type: string) {
   return labels[type] || type.toLowerCase().replaceAll('_', ' ')
 }
 
+export function workflowStepFamily(type: string) {
+  if (['CHECKLIST', 'ADD_NOTE', 'ADD_PHOTO'].includes(type)) return 'Input'
+  if (type === 'DECISION_NOTE') return 'Decision'
+  if (['CREATE_REMINDER'].includes(type)) return 'Output'
+  if ([
+    'WATER',
+    'FERTILIZE',
+    'PEST_CHECK',
+    'HEALTH_CHECK',
+    'RELOCATE',
+    'START_QUARANTINE',
+    'RELEASE_QUARANTINE',
+    'PROPAGATION_CHECK',
+    'BLOOM_CHECK',
+    'CREATE_CARE_EVENT',
+  ].includes(type)) return 'Function'
+  return 'Input'
+}
+
+export function queueTaskForWorkflowStep(stepType: string, fallback?: string | null) {
+  if (stepType === 'WATER') return 'WATER'
+  if (['PEST_CHECK', 'HEALTH_CHECK', 'PROPAGATION_CHECK', 'BLOOM_CHECK'].includes(stepType)) return stepType
+  if (stepType === 'CREATE_CARE_EVENT') {
+    if (fallback === 'WATERED') return 'WATER'
+    if (['PEST_CHECK', 'HEALTH_CHECK', 'PROPAGATION_CHECK', 'BLOOM_CHECK'].includes(fallback || '')) return fallback
+  }
+  return null
+}
+
+export function workflowOutputBehaviorLabel(value?: string | null) {
+  if (value === 'CONFIRM_ONLY') return 'Confirm only'
+  if (value === 'RECORD_ONLY') return 'Create record'
+  if (value === 'RECORD_OR_CONFIRM') return 'Create record or confirm'
+  return 'Create record or confirm'
+}
+
 export function workflowRunStatusLabel(status: string) {
   return status.toLowerCase().replaceAll('_', ' ')
 }

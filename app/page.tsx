@@ -1,15 +1,17 @@
 import { PlantImage, type PlantImageFrame } from '@/components/PlantImage'
 import { regenerateCollectionBriefing } from '@/app/collection-actions'
+import { startWorkflowRun } from '@/app/workflow-actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { PlantIdPreviewLink } from '@/components/PlantIdPreviewLink'
-import { Card } from '@/components/ui'
+import { Button, Card, Select } from '@/components/ui'
 import { getOrCreateTodaysCollectionBriefing } from '@/lib/briefing'
 import { careQueueSummary, getCareQueue } from '@/lib/care-queue'
-import { canEditInCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
+import { canCreateInCollection, canEditInCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { recentCollectionUpdates } from '@/lib/collection-updates'
 import { prisma } from '@/lib/prisma'
 import { isServerAdminRole } from '@/lib/roles'
 import { resolveSunshineTarget, sunshineCountLabel, sunshineCounts, sunshineKey } from '@/lib/sunshine'
+import { ensureStarterWorkflowTemplates, workflowProgress, workflowScopeLabel } from '@/lib/workflows'
 import { cn, fmtDate, plantName } from '@/lib/utils'
 import { Archive, ClipboardCheck, Flower2, GitBranch, Leaf, Sparkles, Sprout, Sun } from 'lucide-react'
 import Link from 'next/link'
@@ -317,6 +319,8 @@ export default async function Dashboard({
       && isServerAdminRole(context.user.role),
   )
   const canViewCollectionUpdates = canEditInCollection(context.user, context)
+  const canStartWorkflows = canCreateInCollection(context.user, context)
+  await ensureStarterWorkflowTemplates(prisma, collection.id)
   const briefing = canGenerateBriefing
     ? await getOrCreateTodaysCollectionBriefing(prisma, {
         collectionId: collection.id,
@@ -338,6 +342,8 @@ export default async function Dashboard({
     archived,
     careItems,
     recentSunshine,
+    workflowTemplates,
+    activeWorkflowRuns,
   ] = await Promise.all([
     prisma.plantInstance.count({ where: { ...collectionWhere, status: 'ACTIVE' } }),
     prisma.propagationEvent.count({ where: collectionWhere }),
@@ -383,6 +389,17 @@ export default async function Dashboard({
       orderBy: { createdAt: 'desc' },
       take: includesActivityKind('sunshine') ? queryTake : 0,
       select: { id: true, targetType: true, targetId: true, createdAt: true },
+    }),
+    prisma.workflowTemplate.findMany({
+      where: { collectionId: collection.id, isArchived: false },
+      orderBy: [{ isBuiltIn: 'desc' }, { name: 'asc' }],
+      take: 8,
+    }),
+    prisma.workflowRun.findMany({
+      where: { collectionId: collection.id, status: 'ACTIVE' },
+      include: { steps: true, location: true, assignedTo: { select: { email: true } }, plants: true },
+      orderBy: { startedAt: 'desc' },
+      take: 4,
     }),
   ])
   const care = careQueueSummary(careItems, new Date(), preferences?.timezone)
@@ -600,6 +617,44 @@ export default async function Dashboard({
           </details>
         </Card>
       )}
+
+      <Card>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h3 className="font-serif text-2xl font-semibold">Workflow launchpad</h3>
+            <p className="mt-1 text-sm text-stone-600">Start a common greenhouse workflow or jump back into active runs.</p>
+          </div>
+          <Link className="rounded-full border border-stone-300 bg-white/70 px-3 py-1 text-xs font-semibold text-stone-700" href={collectionPath(collection.slug, '/workflows')}>
+            All workflows
+          </Link>
+        </div>
+        <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
+          {canStartWorkflows ? (
+            <form action={startWorkflowRun} className="grid gap-3 rounded-lg border border-stone-200 bg-white/55 p-3">
+              <input type="hidden" name="collectionSlug" value={collection.slug} />
+              <input type="hidden" name="scopeType" value="COLLECTION" />
+              <Select label="Start workflow" name="templateId">
+                {workflowTemplates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}
+              </Select>
+              <Button>Start collection workflow</Button>
+            </form>
+          ) : (
+            <p className="rounded-lg border border-stone-200 bg-white/55 p-3 text-sm text-stone-600">Viewer access can inspect workflows but cannot start runs.</p>
+          )}
+          <div className="grid gap-2">
+            {activeWorkflowRuns.length === 0 && <p className="rounded-lg border border-stone-200 bg-white/55 p-3 text-sm text-stone-600">No active workflow runs.</p>}
+            {activeWorkflowRuns.map((run) => {
+              const progress = workflowProgress(run)
+              return (
+                <Link key={run.id} href={collectionPath(collection.slug, `/workflows/runs/${run.id}`)} className="rounded-lg border border-stone-200 bg-white/55 p-3 text-sm transition hover:border-[#8fa58f]">
+                  <span className="font-serif text-lg font-semibold">{run.title}</span>
+                  <span className="mt-1 block text-stone-600">{workflowScopeLabel(run.scopeType)} · {run.location ? `${run.location.code} ${run.location.name}` : `${run.plants.length} selected plant${run.plants.length === 1 ? '' : 's'}`} · {progress.completed}/{progress.total} steps</span>
+                </Link>
+              )
+            })}
+          </div>
+        </div>
+      </Card>
 
       {canViewCollectionUpdates && (
         <Card>

@@ -2,13 +2,16 @@
 
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { audit } from '@/lib/auth'
 import { collectionPath, requireCollectionGardener, requireCollectionLogger, requireCollectionManager } from '@/lib/collections'
 import { collectionRoleAtLeast } from '@/lib/roles'
 import { addCalendarDays, parseDateLocal, parseDateTimeLocal, timeZoneForPreference } from '@/lib/time'
-import { normalizeQuarantineRiskLevel, quarantineChecklistItems } from '@/lib/locations'
-import { workflowStepTypes } from '@/lib/workflows'
+import { descendantLocationIds, normalizeQuarantineRiskLevel, quarantineChecklistItems } from '@/lib/locations'
+import { queueTaskForWorkflowStep, workflowStepTypes } from '@/lib/workflows'
+import { getCareQueue } from '@/lib/care-queue'
+import { nextOccurrence } from '@/lib/reminders'
 
 const val = (fd: FormData, key: string) => String(fd.get(key) || '').trim()
 const optional = (fd: FormData, key: string) => val(fd, key) || null
@@ -27,6 +30,10 @@ function careEventForWorkflowStep(stepType: string, fallback?: string | null) {
   if (stepType === 'PROPAGATION_CHECK') return 'PROPAGATION_CHECK'
   if (stepType === 'BLOOM_CHECK') return 'BLOOM_CHECK'
   return fallback || 'OTHER'
+}
+
+function editableTemplateWhere(id: string, collectionId: string) {
+  return { id, collectionId, isBuiltIn: false }
 }
 
 async function workflowRunWithSteps(runId: string, collectionId: string) {
@@ -50,7 +57,7 @@ export async function createWorkflowTemplate(fd: FormData) {
       description: optional(fd, 'description'),
       category: optional(fd, 'category'),
       triggerType: optional(fd, 'triggerType'),
-      triggerConfigJson: val(fd, 'triggerConfigJson') ? { note: val(fd, 'triggerConfigJson') } : undefined,
+      triggerConfigJson: val(fd, 'triggerConfigJson') ? { note: val(fd, 'triggerConfigJson') } : Prisma.JsonNull,
       isTriggerEnabled: false,
     },
   })
@@ -62,7 +69,7 @@ export async function createWorkflowTemplate(fd: FormData) {
 export async function updateWorkflowTemplate(fd: FormData) {
   const context = await requireCollectionManager(val(fd, 'collectionSlug'))
   const id = val(fd, 'templateId')
-  const template = await prisma.workflowTemplate.findFirstOrThrow({ where: { id, collectionId: context.collection.id } })
+  const template = await prisma.workflowTemplate.findFirstOrThrow({ where: editableTemplateWhere(id, context.collection.id) })
   await prisma.workflowTemplate.update({
     where: { id },
     data: {
@@ -82,9 +89,26 @@ export async function updateWorkflowTemplate(fd: FormData) {
 export async function archiveWorkflowTemplate(fd: FormData) {
   const context = await requireCollectionManager(val(fd, 'collectionSlug'))
   const id = val(fd, 'templateId')
-  const template = await prisma.workflowTemplate.findFirstOrThrow({ where: { id, collectionId: context.collection.id } })
+  const template = await prisma.workflowTemplate.findFirstOrThrow({ where: { id, collectionId: context.collection.id, isBuiltIn: false } })
   await prisma.workflowTemplate.update({ where: { id }, data: { isArchived: true } })
   await audit(context.user, 'ARCHIVE', 'WORKFLOW_TEMPLATE', id, `Archived workflow template ${template.name}`, undefined, context.collection.id)
+  redirect(collectionPath(context.collection.slug, '/workflows'))
+}
+
+export async function deleteWorkflowTemplate(fd: FormData) {
+  const context = await requireCollectionManager(val(fd, 'collectionSlug'))
+  const id = val(fd, 'templateId')
+  const template = await prisma.workflowTemplate.findFirstOrThrow({
+    where: { id, collectionId: context.collection.id, isBuiltIn: false },
+    include: { _count: { select: { runs: true } } },
+  })
+  if (template._count.runs > 0) {
+    await prisma.workflowTemplate.update({ where: { id }, data: { isArchived: true } })
+    await audit(context.user, 'ARCHIVE', 'WORKFLOW_TEMPLATE', id, `Archived workflow template ${template.name}; run history prevents deletion`, undefined, context.collection.id)
+  } else {
+    await prisma.workflowTemplate.delete({ where: { id } })
+    await audit(context.user, 'DELETE', 'WORKFLOW_TEMPLATE', id, `Deleted unused workflow template ${template.name}`, undefined, context.collection.id)
+  }
   redirect(collectionPath(context.collection.slug, '/workflows'))
 }
 
@@ -126,7 +150,7 @@ export async function addWorkflowStep(fd: FormData) {
   const context = await requireCollectionManager(val(fd, 'collectionSlug'))
   const templateId = val(fd, 'templateId')
   const template = await prisma.workflowTemplate.findFirstOrThrow({
-    where: { id: templateId, collectionId: context.collection.id },
+    where: editableTemplateWhere(templateId, context.collection.id),
     include: { _count: { select: { steps: true } } },
   })
   await prisma.workflowStep.create({
@@ -147,7 +171,7 @@ export async function addWorkflowStep(fd: FormData) {
 export async function updateWorkflowStep(fd: FormData) {
   const context = await requireCollectionManager(val(fd, 'collectionSlug'))
   const id = val(fd, 'stepId')
-  const step = await prisma.workflowStep.findFirstOrThrow({ where: { id, template: { collectionId: context.collection.id } }, include: { template: true } })
+  const step = await prisma.workflowStep.findFirstOrThrow({ where: { id, template: { collectionId: context.collection.id, isBuiltIn: false } }, include: { template: true } })
   await prisma.workflowStep.update({
     where: { id },
     data: {
@@ -155,7 +179,8 @@ export async function updateWorkflowStep(fd: FormData) {
       title: val(fd, 'title') || step.title,
       instructions: optional(fd, 'instructions'),
       required: fd.get('required') === 'on',
-      configJson: val(fd, 'configJson') ? { note: val(fd, 'configJson') } : undefined,
+      configJson: val(fd, 'configJson') ? { note: val(fd, 'configJson') } : Prisma.JsonNull,
+      outputBehavior: ['CONFIRM_ONLY', 'RECORD_ONLY', 'RECORD_OR_CONFIRM'].includes(val(fd, 'outputBehavior')) ? val(fd, 'outputBehavior') : 'RECORD_OR_CONFIRM',
     },
   })
   await audit(context.user, 'UPDATE', 'WORKFLOW_STEP', id, `Updated workflow step ${step.title}`, undefined, context.collection.id)
@@ -166,7 +191,7 @@ export async function moveWorkflowStep(fd: FormData) {
   const context = await requireCollectionManager(val(fd, 'collectionSlug'))
   const id = val(fd, 'stepId')
   const direction = val(fd, 'direction') === 'down' ? 1 : -1
-  const step = await prisma.workflowStep.findFirstOrThrow({ where: { id, template: { collectionId: context.collection.id } }, include: { template: { include: { steps: { orderBy: { sortOrder: 'asc' } } } } } })
+  const step = await prisma.workflowStep.findFirstOrThrow({ where: { id, template: { collectionId: context.collection.id, isBuiltIn: false } }, include: { template: { include: { steps: { orderBy: { sortOrder: 'asc' } } } } } })
   const steps = step.template.steps
   const index = steps.findIndex((candidate) => candidate.id === id)
   const swap = steps[index + direction]
@@ -179,10 +204,26 @@ export async function moveWorkflowStep(fd: FormData) {
   redirect(back(fd))
 }
 
+export async function reorderWorkflowSteps(input: { collectionSlug: string; templateId: string; orderedStepIds: string[] }) {
+  const context = await requireCollectionManager(input.collectionSlug)
+  const template = await prisma.workflowTemplate.findFirstOrThrow({
+    where: { id: input.templateId, collectionId: context.collection.id, isBuiltIn: false },
+    include: { steps: { select: { id: true } } },
+  })
+  const existingIds = new Set(template.steps.map((step) => step.id))
+  const orderedIds = Array.from(new Set(input.orderedStepIds)).filter((id) => existingIds.has(id))
+  if (orderedIds.length !== template.steps.length) throw new Error('Workflow step order is stale. Refresh and try again.')
+  await prisma.$transaction(orderedIds.map((id, index) =>
+    prisma.workflowStep.update({ where: { id }, data: { sortOrder: (index + 1) * 10 } }),
+  ))
+  await audit(context.user, 'UPDATE', 'WORKFLOW_TEMPLATE', template.id, `Reordered workflow steps for ${template.name}`, { orderedStepIds: orderedIds }, context.collection.id)
+  revalidatePath(collectionPath(context.collection.slug, `/workflows/templates/${template.id}`))
+}
+
 export async function duplicateWorkflowStep(fd: FormData) {
   const context = await requireCollectionManager(val(fd, 'collectionSlug'))
   const id = val(fd, 'stepId')
-  const step = await prisma.workflowStep.findFirstOrThrow({ where: { id, template: { collectionId: context.collection.id } } })
+  const step = await prisma.workflowStep.findFirstOrThrow({ where: { id, template: { collectionId: context.collection.id, isBuiltIn: false } } })
   await prisma.workflowStep.create({
     data: {
       templateId: step.templateId,
@@ -201,7 +242,7 @@ export async function duplicateWorkflowStep(fd: FormData) {
 export async function deleteWorkflowStep(fd: FormData) {
   const context = await requireCollectionManager(val(fd, 'collectionSlug'))
   const id = val(fd, 'stepId')
-  await prisma.workflowStep.deleteMany({ where: { id, template: { collectionId: context.collection.id } } })
+  await prisma.workflowStep.deleteMany({ where: { id, template: { collectionId: context.collection.id, isBuiltIn: false } } })
   await audit(context.user, 'DELETE', 'WORKFLOW_STEP', id, 'Deleted workflow step', undefined, context.collection.id)
   redirect(back(fd))
 }
@@ -215,12 +256,18 @@ export async function startWorkflowRun(fd: FormData) {
     include: { steps: { orderBy: { sortOrder: 'asc' } } },
   })
   const locationId = scopeType === 'LOCATION' ? optional(fd, 'locationId') : null
+  const includeNested = fd.get('includeNestedLocations') !== '0'
   if (locationId) await prisma.location.findFirstOrThrow({ where: { id: locationId, collectionId: context.collection.id } })
+  const locationIds = locationId
+    ? [locationId, ...(includeNested
+      ? Array.from(descendantLocationIds(locationId, await prisma.location.findMany({ where: { collectionId: context.collection.id }, select: { id: true, parentLocationId: true } })))
+      : [])]
+    : []
   const explicitPlantIds = uniqueIds(fd.getAll('plantInstanceId'))
   const plants = explicitPlantIds.length
     ? await prisma.plantInstance.findMany({ where: { id: { in: explicitPlantIds }, collectionId: context.collection.id, status: 'ACTIVE' }, select: { id: true } })
     : locationId
-      ? await prisma.plantInstance.findMany({ where: { collectionId: context.collection.id, currentLocationId: locationId, status: 'ACTIVE' }, select: { id: true } })
+      ? await prisma.plantInstance.findMany({ where: { collectionId: context.collection.id, currentLocationId: { in: locationIds }, status: 'ACTIVE' }, select: { id: true } })
       : []
   const run = await prisma.workflowRun.create({
     data: {
@@ -249,7 +296,7 @@ export async function startWorkflowRun(fd: FormData) {
       },
     },
   })
-  await audit(context.user, 'START', 'WORKFLOW_RUN', run.id, `Started workflow ${run.title}`, { templateId: template.id, scopeType, locationId, plantCount: plants.length }, context.collection.id)
+  await audit(context.user, 'START', 'WORKFLOW_RUN', run.id, `Started workflow ${run.title}`, { templateId: template.id, scopeType, locationId, includeNested, plantCount: plants.length }, context.collection.id)
   redirect(collectionPath(context.collection.slug, `/workflows/runs/${run.id}`))
 }
 
@@ -265,6 +312,13 @@ export async function completeWorkflowRunStep(fd: FormData) {
     throw new Error('This workflow step requires gardener access.')
   }
 
+  const claimed = await prisma.workflowRunStep.updateMany({
+    where: { id: step.id, collectionId: context.collection.id, status: 'PENDING', run: { status: 'ACTIVE' } },
+    data: { status: 'COMPLETING' },
+  })
+  if (claimed.count === 0) redirect(back(fd))
+
+  try {
   const preferences = await prisma.emailPreference.findUnique({ where: { userId: context.user.id } })
   const timezone = timeZoneForPreference(preferences)
   const selectedPlantIds = uniqueIds(fd.getAll('plantInstanceId'))
@@ -279,8 +333,11 @@ export async function completeWorkflowRunStep(fd: FormData) {
   const notes = optional(fd, 'notes')
   const performedAt = parseDateLocal(val(fd, 'performedAt'), timezone) || new Date()
   const createdRecords: { type: string; id: string }[] = []
+  let queueItemsCompleted = 0
+  let matchingReminderIds: string[] = []
 
   if (['WATER', 'FERTILIZE', 'PEST_CHECK', 'HEALTH_CHECK', 'PROPAGATION_CHECK', 'BLOOM_CHECK', 'CREATE_CARE_EVENT'].includes(step.stepType)) {
+    const queueTaskType = queueTaskForWorkflowStep(step.stepType, optional(fd, 'careEventType'))
     for (const plant of plants) {
       const event = await prisma.plantCareEvent.create({
         data: {
@@ -310,6 +367,41 @@ export async function completeWorkflowRunStep(fd: FormData) {
           },
         })
         createdRecords.push({ type: 'PLANT_CONDITION', id: condition.id })
+      }
+    }
+    if (queueTaskType && plants.length) {
+      const plantIds = new Set(plants.map((plant) => plant.id))
+      const queueItems = await getCareQueue(prisma, {
+        collectionId: context.collection.id,
+        collectionSlug: context.collection.slug,
+        userId: context.user.id,
+        timezone,
+      })
+      const matchingQueueItems = queueItems.filter((item) =>
+        !item.completedAt
+        && item.plantInstanceId
+        && plantIds.has(item.plantInstanceId)
+        && item.taskType === queueTaskType
+        && item.dueAt <= new Date()
+      )
+      queueItemsCompleted = matchingQueueItems.length
+      matchingReminderIds = [...new Set(matchingQueueItems.map((item) => item.reminderId).filter(Boolean) as string[])]
+      await prisma.plantCareAdjustment.updateMany({
+        where: { collectionId: context.collection.id, plantInstanceId: { in: plants.map((plant) => plant.id) }, taskType: queueTaskType },
+        data: { snoozedUntil: null },
+      })
+      for (const reminderId of matchingReminderIds) {
+        const reminder = await prisma.reminder.findFirst({
+          where: { id: reminderId, collectionId: context.collection.id, userId: context.user.id },
+          include: { user: { include: { emailPreference: true } } },
+        })
+        if (!reminder) continue
+        const reminderTimezone = timeZoneForPreference(reminder.user.emailPreference)
+        const nextSendAt = nextOccurrence(performedAt, reminder.rrule, reminderTimezone)
+        await prisma.reminder.update({
+          where: { id: reminder.id },
+          data: nextSendAt ? { dueAt: nextSendAt, nextSendAt, completedAt: null } : { completedAt: performedAt, nextSendAt: null },
+        })
       }
     }
   }
@@ -408,15 +500,23 @@ export async function completeWorkflowRunStep(fd: FormData) {
       completedByUserId: context.user.id,
       completedAt: new Date(),
       notes,
-      outputJson: { result: optional(fd, 'result'), createdRecords } as any,
+      outputJson: { result: optional(fd, 'result'), createdRecords, queueItemsCompleted, reminderIds: matchingReminderIds } as any,
       createdRecordType: createdRecords[0]?.type || null,
       createdRecordId: createdRecords[0]?.id || null,
     },
   })
   await audit(context.user, 'COMPLETE', 'WORKFLOW_RUN_STEP', step.id, `Completed workflow step ${step.title}`, { workflowRunId: step.runId, createdRecords }, context.collection.id)
   revalidatePath(collectionPath(context.collection.slug, `/workflows/runs/${step.runId}`))
+  revalidatePath(collectionPath(context.collection.slug, '/care'))
   for (const plant of plants) revalidatePath(collectionPath(context.collection.slug, `/instances/${plant.id}`))
   redirect(back(fd))
+  } catch (error) {
+    await prisma.workflowRunStep.updateMany({
+      where: { id: step.id, collectionId: context.collection.id, status: 'COMPLETING' },
+      data: { status: 'PENDING' },
+    })
+    throw error
+  }
 }
 
 export async function skipWorkflowRunStep(fd: FormData) {
@@ -433,7 +533,7 @@ export async function completeWorkflowRun(fd: FormData) {
   const context = await requireCollectionGardener(val(fd, 'collectionSlug'))
   const id = val(fd, 'runId')
   const run = await workflowRunWithSteps(id, context.collection.id)
-  const requiredPending = run.steps.some((step) => step.required && step.status === 'PENDING')
+  const requiredPending = run.steps.some((step) => step.required && !['COMPLETED', 'SKIPPED'].includes(step.status))
   if (requiredPending) redirect(`${back(fd)}?workflow=required-pending`)
   await prisma.workflowRun.update({ where: { id }, data: { status: 'COMPLETED', completedAt: new Date(), summary: optional(fd, 'summary') } })
   await audit(context.user, 'COMPLETE', 'WORKFLOW_RUN', id, `Completed workflow ${run.title}`, undefined, context.collection.id)

@@ -4,6 +4,9 @@ set -eu
 echo "==> Checking TypeScript"
 npx tsc --noEmit --pretty false
 
+echo "==> Checking workflow invariants"
+npm run check:workflows
+
 echo "==> Checking collection-scoped query guardrail"
 npm run check:collection-scope
 

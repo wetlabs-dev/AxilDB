@@ -9,11 +9,12 @@ import { plantName } from '@/lib/utils'
 function stepStatusClass(status: string) {
   if (status === 'COMPLETED') return 'border-green-200 bg-green-50 text-green-900'
   if (status === 'SKIPPED') return 'border-stone-300 bg-stone-100 text-stone-700'
+  if (status === 'COMPLETING') return 'border-blue-200 bg-blue-50 text-blue-900'
   return 'border-amber-200 bg-amber-50 text-amber-900'
 }
 
 function needsPlants(stepType: string) {
-  return ['WATER', 'FERTILIZE', 'PEST_CHECK', 'HEALTH_CHECK', 'RELOCATE', 'START_QUARANTINE', 'RELEASE_QUARANTINE', 'CREATE_REMINDER', 'PROPAGATION_CHECK', 'BLOOM_CHECK', 'CREATE_CARE_EVENT'].includes(stepType)
+  return ['WATER', 'FERTILIZE', 'PEST_CHECK', 'HEALTH_CHECK', 'RELOCATE', 'START_QUARANTINE', 'RELEASE_QUARANTINE', 'CREATE_REMINDER', 'PROPAGATION_CHECK', 'BLOOM_CHECK', 'CREATE_CARE_EVENT', 'ADD_PHOTO'].includes(stepType)
 }
 
 export default async function WorkflowRunPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ workflow?: string }> }) {
@@ -94,6 +95,29 @@ export default async function WorkflowRunPage({ params, searchParams }: { params
             </div>
             {canComplete && !readOnly && step.status === 'PENDING' && (
               <div className="mt-4 grid gap-3 rounded-lg border border-stone-200 bg-white/55 p-3">
+                {step.stepType === 'ADD_PHOTO' ? (
+                  <form action="/api/photos" method="post" encType="multipart/form-data" className="grid gap-3">
+                    <input type="hidden" name="collectionSlug" value={collection.slug} />
+                    <input type="hidden" name="workflowRunId" value={run.id} />
+                    <input type="hidden" name="workflowRunStepId" value={step.id} />
+                    <input type="hidden" name="back" value={collectionPath(collection.slug, `/workflows/runs/${run.id}`)} />
+                    <div className="grid gap-2">
+                      <Select label="Photo target" name="target" defaultValue={run.plants[0] ? `PLANT_INSTANCE:${run.plants[0].plantInstanceId}` : run.location ? `LOCATION:${run.location.id}` : `COLLECTION:${collection.id}`}>
+                        {run.plants.map((entry) => (
+                          <option key={entry.plantInstanceId} value={`PLANT_INSTANCE:${entry.plantInstanceId}`}>{entry.plantInstance.plantId} · {plantName(entry.plantInstance.plantDefinition)}</option>
+                        ))}
+                        {run.location && <option value={`LOCATION:${run.location.id}`}>{run.location.code} · {run.location.name}</option>}
+                        <option value={`COLLECTION:${collection.id}`}>Collection-level photo</option>
+                      </Select>
+                    </div>
+                    <label className="grid gap-1 text-sm font-medium text-stone-800">
+                      Photo
+                      <input className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" type="file" name="photo" accept="image/*" required />
+                    </label>
+                    <TextArea label="Caption / step notes" name="caption" defaultValue={step.instructions || ''} />
+                    <Button>Upload photo and complete step</Button>
+                  </form>
+                ) : (
                 <form action={completeWorkflowRunStep} className="grid gap-3">
                   <input type="hidden" name="collectionSlug" value={collection.slug} />
                   <input type="hidden" name="runStepId" value={step.id} />
@@ -173,13 +197,13 @@ export default async function WorkflowRunPage({ params, searchParams }: { params
                       <Field label="Recurrence rule" name="rrule" placeholder="Optional RRULE" />
                     </div>
                   )}
-                  {step.stepType === 'ADD_PHOTO' && <p className="rounded-md border border-amber-200 bg-amber-50 p-2 text-sm text-amber-950">Photo upload uses the existing plant/location photo tools. Complete this step after photos are attached.</p>}
                   {step.stepType === 'DECISION_NOTE' && <Field label="Decision / branch note" name="result" />}
                   <TextArea label="Step notes" name="notes" />
                   <div className="flex flex-wrap gap-2">
                     <Button>Complete step</Button>
                   </div>
                 </form>
+                )}
                 {!step.required && (
                   <form action={skipWorkflowRunStep} className="flex flex-wrap items-end gap-2">
                     <input type="hidden" name="collectionSlug" value={collection.slug} />

@@ -116,6 +116,11 @@ export default async function WorkflowsPage({ searchParams }: { searchParams: Pr
                 <option value="">No location scope</option>
                 {locations.map((location) => <option key={location.id} value={location.id}>{location.code} · {location.name}</option>)}
               </Select>
+              <label className="inline-flex items-center gap-2 rounded-md border border-stone-200 bg-white/60 p-2 text-sm">
+                <input type="hidden" name="includeNestedLocations" value="0" />
+                <input type="checkbox" name="includeNestedLocations" value="1" defaultChecked />
+                Include child locations
+              </label>
               <Select label="Assign whole run" name="assignedToUserId" defaultValue="">
                 <option value="">Unassigned</option>
                 {members.map((member) => <option key={member.user.id} value={member.user.id}>{member.user.email} · {member.role.toLowerCase()}</option>)}

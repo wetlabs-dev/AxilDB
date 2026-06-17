@@ -48,17 +48,34 @@ export async function POST(req: Request) {
     return redirectBack(req, '/', 'upload_failed')
   }
   const file = form.get('photo') as File | null
-  const entityType = String(form.get('entityType') || '')
-  const entityId = String(form.get('entityId') || '')
+  const target = String(form.get('target') || '')
+  const [targetType, targetId] = target.includes(':') ? target.split(':', 2) : ['', '']
+  const entityType = targetType || String(form.get('entityType') || '')
+  const entityId = targetId || String(form.get('entityId') || '')
   const rawCaption = String(form.get('caption') || '')
   const caption = rawCaption.trim() ? rawCaption : undefined
   const source = String(form.get('source') || '') || undefined
   const sourceUrl = String(form.get('sourceUrl') || '') || undefined
+  const workflowRunStepId = String(form.get('workflowRunStepId') || '').trim()
+  const workflowRunId = String(form.get('workflowRunId') || '').trim()
   const back = String(form.get('back') || '/')
   const context = await requireCollectionLogger(String(form.get('collectionSlug') || '') || await getCurrentCollectionSlug())
   const { user, collection } = context
   if (!file || !entityType || !entityId) return redirectBack(req, back, 'missing_photo')
   if (file.type && !SUPPORTED_IMAGE_TYPES.has(file.type)) return redirectBack(req, back, 'unsupported_format')
+  let workflowStep: { id: string; runId: string; title: string; status: string; run: { status: string } } | null = null
+  if (workflowRunStepId) {
+    workflowStep = await prisma.workflowRunStep.findFirst({
+      where: { id: workflowRunStepId, collectionId: collection.id, stepType: 'ADD_PHOTO' },
+      include: { run: { select: { status: true } } },
+    })
+    if (!workflowStep || workflowStep.run.status !== 'ACTIVE') return redirectBack(req, back, 'workflow_step_unavailable')
+    const claimed = await prisma.workflowRunStep.updateMany({
+      where: { id: workflowRunStepId, collectionId: collection.id, status: 'PENDING', run: { status: 'ACTIVE' } },
+      data: { status: 'COMPLETING' },
+    })
+    if (claimed.count === 0) return redirectBack(req, back)
+  }
   const original = Buffer.from(await file.arrayBuffer())
   let bytes: Buffer
   try {
@@ -74,6 +91,7 @@ export async function POST(req: Request) {
       .toBuffer()
   } catch (error) {
     console.error('Photo processing failed', { filename: file.name, type: file.type, error })
+    if (workflowRunStepId) await prisma.workflowRunStep.updateMany({ where: { id: workflowRunStepId, collectionId: collection.id, status: 'COMPLETING' }, data: { status: 'PENDING' } })
     return redirectBack(req, back, 'processing_failed')
   }
   try {
@@ -89,7 +107,7 @@ export async function POST(req: Request) {
       filename,
       path: `/uploads/${filename}`,
       caption,
-      source,
+      source: workflowRunStepId ? 'WORKFLOW' : source,
       sourceUrl,
       isType: entityType === 'PLANT_DEFINITION',
       ...framingFromForm(form),
@@ -101,6 +119,27 @@ export async function POST(req: Request) {
         ]))[1]
       : await prisma.photo.create({ data })
     await audit(user, 'CREATE', 'PHOTO', photo.id, `Uploaded photo for ${entityType} ${entityId}`, { filename, originalBytes: original.length, storedBytes: bytes.length, maxDimension: MAX_PHOTO_DIMENSION, source, sourceUrl, framing: framingFromForm(form) }, collection.id)
+    if (workflowStep) {
+      await prisma.workflowRunStep.update({
+        where: { id: workflowStep.id },
+        data: {
+          status: 'COMPLETED',
+          completedByUserId: user.id,
+          completedAt: new Date(),
+          notes: caption || null,
+          outputJson: {
+            result: 'Photo uploaded',
+            createdRecords: [{ type: 'PHOTO', id: photo.id }],
+            entityType,
+            entityId,
+            workflowRunId: workflowRunId || workflowStep.runId,
+          },
+          createdRecordType: 'PHOTO',
+          createdRecordId: photo.id,
+        },
+      })
+      await audit(user, 'COMPLETE', 'WORKFLOW_RUN_STEP', workflowStep.id, `Completed workflow photo step ${workflowStep.title}`, { workflowRunId: workflowRunId || workflowStep.runId, photoId: photo.id }, collection.id)
+    }
 
     if (entityType === 'PLANT_INSTANCE') {
       const instance = await prisma.plantInstance.findFirst({ where: { id: entityId, collectionId: collection.id } })
@@ -145,6 +184,7 @@ export async function POST(req: Request) {
     return redirectBack(req, back)
   } catch (error) {
     console.error('Photo upload failed', { entityType, entityId, filename: file.name, type: file.type, error })
+    if (workflowRunStepId) await prisma.workflowRunStep.updateMany({ where: { id: workflowRunStepId, collectionId: collection.id, status: 'COMPLETING' }, data: { status: 'PENDING' } })
     return redirectBack(req, back, 'upload_failed')
   }
 }

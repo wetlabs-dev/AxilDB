@@ -1,4 +1,5 @@
 import { createLocation, createPlantInstance } from '@/app/actions'
+import { startWorkflowRun } from '@/app/workflow-actions'
 import { PlantImage } from '@/components/PlantImage'
 import { SortControl } from '@/components/SortControl'
 import { SunshineButton } from '@/components/SunshineButton'
@@ -11,6 +12,7 @@ import { compareText, sortPreference, timeValue, type SortOption } from '@/lib/s
 import { sunshineCounts, sunshineKey, sunshineStateForUser, WELL_LOVED_THRESHOLD } from '@/lib/sunshine'
 import { rankedSuggestions } from '@/lib/suggestions'
 import { cn, plantName } from '@/lib/utils'
+import { ensureStarterWorkflowTemplates } from '@/lib/workflows'
 import Link from 'next/link'
 
 const instanceSortOptions: SortOption[] = [
@@ -38,7 +40,8 @@ export default async function Instances({
   const locationFilter = sp.location || ''
   const includeNestedLocations = sp.includeNested !== '0'
   const sortKey = await sortPreference(user?.id, 'instances', 'plantIdAsc', instanceSortOptions.map((option) => option.value))
-  const [defs, instanceSuggestionRows, locations, locationTypes] = await Promise.all([
+  await ensureStarterWorkflowTemplates(prisma, collection.id)
+  const [defs, instanceSuggestionRows, locations, locationTypes, workflowTemplates] = await Promise.all([
     prisma.plantDefinition.findMany({
       where: { OR: [collectionWhere, { collectionId: null, isValidated: true }] },
       orderBy: [{ isValidated: 'desc' }, { genus: 'asc' }, { species: 'asc' }, { cultivarName: 'asc' }],
@@ -55,6 +58,11 @@ export default async function Instances({
     prisma.locationType.findMany({
       where: { collectionId: collection.id, status: 'ACTIVE' },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+    }),
+    prisma.workflowTemplate.findMany({
+      where: { collectionId: collection.id, isArchived: false },
+      orderBy: [{ isBuiltIn: 'desc' }, { name: 'asc' }],
+      take: 12,
     }),
   ])
   const locationNodes = locations.map((location) => ({
@@ -252,6 +260,23 @@ export default async function Instances({
         </AddPanel>
       )}
 
+      {canCreateInCollection(user, context) && (
+        <Card>
+          <form id="selected-plants-workflow" action={startWorkflowRun} className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+            <input type="hidden" name="collectionSlug" value={collection.slug} />
+            <input type="hidden" name="scopeType" value="PLANTS" />
+            <label className="grid gap-1 text-sm font-medium">
+              Start workflow for checked plants
+              <select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="templateId">
+                {workflowTemplates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}
+              </select>
+            </label>
+            <Button>Start selected workflow</Button>
+          </form>
+          <p className="mt-2 text-xs text-stone-500">Check specimens below, then start a workflow scoped to those plants.</p>
+        </Card>
+      )}
+
       <div className="grid auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
         {sortedInstances.map((instance) => {
           const count = sunshineCount(instance.id)
@@ -263,6 +288,12 @@ export default async function Instances({
                 count >= WELL_LOVED_THRESHOLD ? 'well-loved-card' : '',
               )}
             >
+              {canCreateInCollection(user, context) && (
+                <label className="flex items-center gap-2 border-b border-stone-200 bg-white/70 px-3 py-2 text-xs font-semibold">
+                  <input form="selected-plants-workflow" type="checkbox" name="plantInstanceId" value={instance.id} />
+                  Include in workflow
+                </label>
+              )}
               <Link href={collectionPath(collection.slug, `/instances/${instance.id}`)} className="block flex-1">
                 <div className="aspect-[4/3] overflow-hidden">
                   <PlantImage src={photoByInstance[instance.id]} alt={instance.plantId} />

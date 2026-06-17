@@ -1,6 +1,7 @@
 import Link from 'next/link'
-import { archiveWorkflowTemplate, copyWorkflowTemplate, addWorkflowStep, deleteWorkflowStep, duplicateWorkflowStep, moveWorkflowStep, startWorkflowRun, updateWorkflowStep, updateWorkflowTemplate } from '@/app/workflow-actions'
+import { archiveWorkflowTemplate, copyWorkflowTemplate, addWorkflowStep, deleteWorkflowTemplate, startWorkflowRun, updateWorkflowTemplate } from '@/app/workflow-actions'
 import { Button, Card, DangerButton, Field, LinkButton, Select, TextArea } from '@/components/ui'
+import { WorkflowStepBuilder } from '@/components/workflows/WorkflowStepBuilder'
 import { canCreateInCollection, canManageCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
 import { workflowStepLabel, workflowStepTypes } from '@/lib/workflows'
@@ -21,6 +22,7 @@ export default async function WorkflowTemplatePage({ params }: { params: Promise
     prisma.plantInstance.findMany({ where: { collectionId: collection.id, status: 'ACTIVE' }, include: { plantDefinition: true, currentLocation: true }, orderBy: { plantId: 'asc' }, take: 500 }),
     prisma.collectionMembership.findMany({ where: { collectionId: collection.id, status: 'ACTIVE' }, include: { user: { select: { id: true, email: true } } }, orderBy: { role: 'asc' } }),
   ])
+  const canEditTemplate = canManage && !template.isBuiltIn
 
   return (
     <div className="space-y-6">
@@ -46,7 +48,7 @@ export default async function WorkflowTemplatePage({ params }: { params: Promise
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.8fr)]">
         <Card>
           <h3 className="font-serif text-xl font-semibold">Template Details</h3>
-          {canManage ? (
+          {canEditTemplate ? (
             <form action={updateWorkflowTemplate} className="mt-4 grid gap-3">
               <input type="hidden" name="collectionSlug" value={collection.slug} />
               <input type="hidden" name="templateId" value={template.id} />
@@ -61,7 +63,11 @@ export default async function WorkflowTemplatePage({ params }: { params: Promise
               </div>
             </form>
           ) : (
-            <p className="mt-3 text-sm text-stone-600">Only collection managers can edit workflow templates.</p>
+            <p className="mt-3 text-sm text-stone-600">
+              {template.isBuiltIn
+                ? 'Starter templates stay stable. Copy this starter to create an editable collection template.'
+                : 'Only collection managers can edit workflow templates.'}
+            </p>
           )}
         </Card>
 
@@ -81,6 +87,11 @@ export default async function WorkflowTemplatePage({ params }: { params: Promise
                 <option value="">No location scope</option>
                 {locations.map((location) => <option key={location.id} value={location.id}>{location.code} · {location.name}</option>)}
               </Select>
+              <label className="inline-flex items-center gap-2 rounded-md border border-stone-200 bg-white/60 p-2 text-sm">
+                <input type="hidden" name="includeNestedLocations" value="0" />
+                <input type="checkbox" name="includeNestedLocations" value="1" defaultChecked />
+                Include child locations
+              </label>
               <Select label="Assign whole run" name="assignedToUserId" defaultValue="">
                 <option value="">Unassigned</option>
                 {members.map((member) => <option key={member.user.id} value={member.user.id}>{member.user.email} · {member.role.toLowerCase()}</option>)}
@@ -108,9 +119,9 @@ export default async function WorkflowTemplatePage({ params }: { params: Promise
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="font-serif text-xl font-semibold">Workflow Builder</h3>
-            <p className="mt-1 text-sm text-stone-600">Order steps with the move controls. Each step is snapped into new runs when they start.</p>
+            <p className="mt-1 text-sm text-stone-600">{canEditTemplate ? 'Drag steps to reorder them. Each step is snapped into new runs when they start.' : 'Copy starter templates before editing their steps.'}</p>
           </div>
-          {canManage && (
+          {canEditTemplate && (
             <details className="rounded-md border border-stone-200 bg-white/60 p-2 text-sm">
               <summary className="cursor-pointer font-semibold">Add step</summary>
               <form action={addWorkflowStep} className="mt-3 grid gap-2">
@@ -129,78 +140,38 @@ export default async function WorkflowTemplatePage({ params }: { params: Promise
           )}
         </div>
 
-        <div className="mt-4 grid gap-3">
-          {template.steps.length === 0 && <p className="rounded-md border border-stone-200 bg-white/60 p-3 text-sm text-stone-600">No steps yet. Add a step to make this workflow runnable.</p>}
-          {template.steps.map((step, index) => (
-            <div key={step.id} className="rounded-lg border border-stone-200 bg-white/60 p-3">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">Step {index + 1} · {workflowStepLabel(step.stepType)} · {step.required ? 'required' : 'optional'}</p>
-                  <h4 className="mt-1 font-serif text-xl font-semibold">{step.title}</h4>
-                  {step.instructions && <p className="mt-1 text-sm text-stone-600">{step.instructions}</p>}
-                </div>
-                {canManage && (
-                  <div className="flex flex-wrap gap-2">
-                    <form action={moveWorkflowStep}>
-                      <input type="hidden" name="collectionSlug" value={collection.slug} />
-                      <input type="hidden" name="stepId" value={step.id} />
-                      <input type="hidden" name="direction" value="up" />
-                      <input type="hidden" name="back" value={collectionPath(collection.slug, `/workflows/templates/${template.id}`)} />
-                      <Button className="px-2 py-1 text-xs">Up</Button>
-                    </form>
-                    <form action={moveWorkflowStep}>
-                      <input type="hidden" name="collectionSlug" value={collection.slug} />
-                      <input type="hidden" name="stepId" value={step.id} />
-                      <input type="hidden" name="direction" value="down" />
-                      <input type="hidden" name="back" value={collectionPath(collection.slug, `/workflows/templates/${template.id}`)} />
-                      <Button className="px-2 py-1 text-xs">Down</Button>
-                    </form>
-                    <form action={duplicateWorkflowStep}>
-                      <input type="hidden" name="collectionSlug" value={collection.slug} />
-                      <input type="hidden" name="stepId" value={step.id} />
-                      <input type="hidden" name="back" value={collectionPath(collection.slug, `/workflows/templates/${template.id}`)} />
-                      <Button className="px-2 py-1 text-xs">Duplicate</Button>
-                    </form>
-                    <form action={deleteWorkflowStep}>
-                      <input type="hidden" name="collectionSlug" value={collection.slug} />
-                      <input type="hidden" name="stepId" value={step.id} />
-                      <input type="hidden" name="back" value={collectionPath(collection.slug, `/workflows/templates/${template.id}`)} />
-                      <DangerButton className="px-2 py-1 text-xs">Remove</DangerButton>
-                    </form>
-                  </div>
-                )}
+        {canEditTemplate ? (
+          <WorkflowStepBuilder
+            collectionSlug={collection.slug}
+            templateId={template.id}
+            steps={template.steps}
+            back={collectionPath(collection.slug, `/workflows/templates/${template.id}`)}
+          />
+        ) : (
+          <div className="mt-4 grid gap-3">
+            {template.steps.map((step, index) => (
+              <div key={step.id} className="rounded-lg border border-stone-200 bg-white/60 p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">Step {index + 1} · {workflowStepLabel(step.stepType)} · {step.required ? 'required' : 'optional'}</p>
+                <h4 className="mt-1 font-serif text-xl font-semibold">{step.title}</h4>
+                {step.instructions && <p className="mt-1 text-sm text-stone-600">{step.instructions}</p>}
               </div>
-              {canManage && (
-                <details className="mt-3 rounded-md border border-stone-200 bg-[#fffaf0] p-3 text-sm">
-                  <summary className="cursor-pointer font-semibold">Edit step</summary>
-                  <form action={updateWorkflowStep} className="mt-3 grid gap-2">
-                    <input type="hidden" name="collectionSlug" value={collection.slug} />
-                    <input type="hidden" name="stepId" value={step.id} />
-                    <input type="hidden" name="back" value={collectionPath(collection.slug, `/workflows/templates/${template.id}`)} />
-                    <Select label="Step type" name="stepType" defaultValue={step.stepType}>
-                      {workflowStepTypes.map((type) => <option key={type} value={type}>{workflowStepLabel(type)}</option>)}
-                    </Select>
-                    <Field label="Title" name="title" defaultValue={step.title} />
-                    <TextArea label="Instructions" name="instructions" defaultValue={step.instructions || ''} />
-                    <TextArea label="Config notes" name="configJson" defaultValue={typeof step.configJson === 'object' && step.configJson && 'note' in step.configJson ? String((step.configJson as any).note || '') : ''} />
-                    <label className="inline-flex items-center gap-2 text-sm"><input type="checkbox" name="required" defaultChecked={step.required} /> Required</label>
-                    <Button>Save step</Button>
-                  </form>
-                </details>
-              )}
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </Card>
 
       {canManage && !template.isBuiltIn && (
         <Card className="border-red-200 bg-red-50 text-red-950">
-          <h3 className="font-serif text-xl font-semibold">Archive Template</h3>
-          <p className="mt-1 text-sm">Archiving hides this template from new runs. Existing workflow runs remain intact.</p>
-          <form action={archiveWorkflowTemplate} className="mt-3">
+          <h3 className="font-serif text-xl font-semibold">{template._count.runs > 0 ? 'Archive Template' : 'Delete Template'}</h3>
+          <p className="mt-1 text-sm">
+            {template._count.runs > 0
+              ? 'This template has run history, so it can be archived but not hard-deleted.'
+              : 'This unused custom template can be permanently deleted.'}
+          </p>
+          <form action={template._count.runs > 0 ? archiveWorkflowTemplate : deleteWorkflowTemplate} className="mt-3">
             <input type="hidden" name="collectionSlug" value={collection.slug} />
             <input type="hidden" name="templateId" value={template.id} />
-            <DangerButton>Archive template</DangerButton>
+            <DangerButton>{template._count.runs > 0 ? 'Archive template' : 'Delete template'}</DangerButton>
           </form>
         </Card>
       )}

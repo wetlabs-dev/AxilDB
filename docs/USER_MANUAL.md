@@ -296,18 +296,20 @@ App route: `/workflows`
 ### How It Is Used
 
 - Open Workflows from the sidebar.
-- Use starter templates as-is, copy them into editable collection-local templates, or create a custom template.
-- Managers can edit ordered workflow steps, choose typed step functions, mark steps required or optional, and store future trigger notes while triggers remain disabled.
-- Start a manual workflow run from Workflows, Care Queue, a location detail page, or a specimen detail page.
-- Scope a run to the whole collection, one location, or selected plants, and optionally assign the whole run to a user.
-- Complete steps from the run page. Typed steps can create care events, notes, reminders, location moves, quarantine records, quarantine releases, and condition records.
+- Use starter templates as-is, copy them into editable collection-local templates, or create a custom template. Starter templates stay read-only so they remain stable.
+- Managers can drag steps into order, use keyboard move controls, choose typed step functions, mark steps required or optional, and store future trigger notes while triggers remain disabled.
+- Start a manual workflow run from Workflows, the Dashboard launchpad, Care Queue, the plant list selection bar, a location detail page, quarantine context, or a specimen detail page.
+- Scope a run to the whole collection, one location with child locations included by default, or selected plants, and optionally assign the whole run to a user.
+- Complete steps from the run page. Typed steps can create care events, notes, reminders, photo records, location moves, quarantine records, quarantine releases, and condition records.
 - Complete or cancel the run once the required steps are handled.
 
 ### Notes
 
 - Workflow runs snapshot their template steps when started, so later template edits do not rewrite run history.
 - Workflow-created records appear in normal AxilDB history, including Plant Health Timeline where relevant.
-- Photo steps are procedure checkpoints in v1; use the existing plant/location photo tools to upload images, then complete the workflow step.
+- Photo steps upload through the existing photo pipeline and complete the step after linking the photo to the selected plant, location, or collection.
+- Workflow-created care events clear matching due care queue items and reminders where appropriate.
+- Unused custom templates can be deleted. Templates with run history are archived instead so history remains intact.
 - Trigger fields are stored for future automation, but v1 does not run workflows automatically.
 
 ### Warnings

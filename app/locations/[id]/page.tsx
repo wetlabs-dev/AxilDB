@@ -165,6 +165,17 @@ export default async function LocationDetail({ params }: { params: Promise<{ id:
               </Link>
             ))}
           </div>
+          {canBulkCare && activeQuarantines.length > 0 && (
+            <form action={startWorkflowRun} className="mt-3 flex flex-wrap items-end gap-2 border-t border-stone-200 pt-3">
+              <input type="hidden" name="collectionSlug" value={collection.slug} />
+              <input type="hidden" name="scopeType" value="PLANTS" />
+              {activeQuarantines.map((quarantine) => <input key={quarantine.id} type="hidden" name="plantInstanceId" value={quarantine.plantInstanceId} />)}
+              <select name="templateId" className={selectClass}>
+                {workflowTemplates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}
+              </select>
+              <Button>Start quarantine workflow</Button>
+            </form>
+          )}
         </Card>
       )}
 
@@ -179,6 +190,7 @@ export default async function LocationDetail({ params }: { params: Promise<{ id:
               <input type="hidden" name="collectionSlug" value={collection.slug} />
               <input type="hidden" name="scopeType" value="LOCATION" />
               <input type="hidden" name="locationId" value={location.id} />
+              <input type="hidden" name="includeNestedLocations" value="1" />
               <select name="templateId" className={selectClass}>
                 {workflowTemplates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}
               </select>
