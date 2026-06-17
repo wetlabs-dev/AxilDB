@@ -141,7 +141,7 @@ export async function collectPlantTimelineEvents(
   })
   const bloomIds = blooms.map((bloom) => bloom.id)
 
-  const [careEvents, conditions, photos, notes, propagationEvents, reminders, sportRecords, locationMoves, quarantines] = await Promise.all([
+  const [careEvents, conditions, photos, notes, propagationEvents, reminders, sportRecords, locationMoves, quarantines, workflowRuns] = await Promise.all([
     prisma.plantCareEvent.findMany({
       where: { collectionId: input.collectionId, plantInstanceId: input.plantInstanceId },
       orderBy: { performedAt: 'asc' },
@@ -213,6 +213,11 @@ export async function collectPlantTimelineEvents(
         cancelledByUser: { select: { email: true } },
       },
       orderBy: { startDate: 'asc' },
+    }),
+    prisma.workflowRun.findMany({
+      where: { collectionId: input.collectionId, plants: { some: { plantInstanceId: input.plantInstanceId } } },
+      include: { template: true },
+      orderBy: { startedAt: 'asc' },
     }),
   ])
 
@@ -389,18 +394,52 @@ export async function collectPlantTimelineEvents(
     })
   }
 
+  for (const run of workflowRuns) {
+    addEvent(events, {
+      id: `workflow-start-${run.id}`,
+      type: 'WORKFLOW_STARTED',
+      category: 'documentation',
+      date: run.startedAt,
+      title: 'Workflow started',
+      summary: compactText(run.title, `${run.template?.name || 'Workflow'} started for this specimen.`),
+      icon: '📋',
+      colorVariant: 'sage',
+      href: collectionPath(input.collectionSlug, `/workflows/runs/${run.id}`),
+      sourceModel: 'WorkflowRun',
+      sourceId: run.id,
+      status: run.status,
+    })
+    if (run.completedAt) {
+      addEvent(events, {
+        id: `workflow-complete-${run.id}`,
+        type: 'WORKFLOW_COMPLETED',
+        category: 'documentation',
+        date: run.completedAt,
+        title: 'Workflow completed',
+        summary: compactText(run.summary, `${run.title} completed.`),
+        icon: '✅',
+        colorVariant: 'green',
+        href: collectionPath(input.collectionSlug, `/workflows/runs/${run.id}`),
+        sourceModel: 'WorkflowRun',
+        sourceId: run.id,
+        status: run.status,
+      })
+    }
+  }
+
   for (const event of careEvents) {
     const presentation = careEventPresentation(event.eventType)
     const metadata = event.metadata && typeof event.metadata === 'object' && !Array.isArray(event.metadata)
       ? event.metadata as Record<string, unknown>
       : {}
     const bulkSummary = metadata.source === 'BULK_CARE' ? ' Recorded via bulk care batch.' : ''
+    const workflowSummary = metadata.source === 'WORKFLOW' ? ' Recorded via workflow.' : ''
     addEvent(events, {
       id: `care-${event.id}`,
       type: event.eventType,
       ...presentation,
       date: event.performedAt,
-      summary: compactText(event.notes ? `${event.notes}${bulkSummary}` : bulkSummary.trim(), `${presentation.title} logged.`),
+      summary: compactText(event.notes ? `${event.notes}${bulkSummary}${workflowSummary}` : `${bulkSummary}${workflowSummary}`.trim(), `${presentation.title} logged.`),
       href: eventHref(input.collectionSlug, input.plantInstanceId, 'care-history'),
       sourceModel: 'PlantCareEvent',
       sourceId: event.id,

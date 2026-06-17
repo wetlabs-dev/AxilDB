@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { RefreshCw } from 'lucide-react'
 import { archiveLocation, movePlantInstanceLocation, regenerateLocationCode, updateLocation } from '@/app/actions'
+import { startWorkflowRun } from '@/app/workflow-actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { PlantIdPreviewLink } from '@/components/PlantIdPreviewLink'
 import { Button, Card, Field, LinkButton, TextArea } from '@/components/ui'
@@ -8,6 +9,7 @@ import { canCreateInCollection, canEditInCollection, canManageCollection, collec
 import { descendantLocationIds, isQuarantineLocation, locationPath, locationPathWithCodes, nextLocationCode } from '@/lib/locations'
 import { prisma } from '@/lib/prisma'
 import { plantName } from '@/lib/utils'
+import { ensureStarterWorkflowTemplates } from '@/lib/workflows'
 
 const selectClass = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
 
@@ -18,6 +20,7 @@ export default async function LocationDetail({ params }: { params: Promise<{ id:
   const canManage = canManageCollection(user, context)
   const canBulkCare = canCreateInCollection(user, context)
   const canMovePlants = canEditInCollection(user, context)
+  if (canBulkCare) await ensureStarterWorkflowTemplates(prisma, collection.id)
   const [location, allLocations, types] = await Promise.all([
     prisma.location.findFirstOrThrow({
       where: { id, collectionId: collection.id },
@@ -42,7 +45,7 @@ export default async function LocationDetail({ params }: { params: Promise<{ id:
   }))
   const descendantIds = descendantLocationIds(location.id, allLocations)
   const locationAndDescendantIds = [location.id, ...Array.from(descendantIds)]
-  const [directPlants, nestedPlants, childLocations, activeQuarantines] = await Promise.all([
+  const [directPlants, nestedPlants, childLocations, activeQuarantines, workflowTemplates, activeWorkflowRuns] = await Promise.all([
     prisma.plantInstance.findMany({
       where: { collectionId: collection.id, currentLocationId: location.id, status: 'ACTIVE' },
       include: { plantDefinition: true },
@@ -68,6 +71,13 @@ export default async function LocationDetail({ params }: { params: Promise<{ id:
       },
       include: { plantInstance: { include: { plantDefinition: true, currentLocation: true } } },
       orderBy: { targetReleaseDate: 'asc' },
+    }),
+    prisma.workflowTemplate.findMany({ where: { collectionId: collection.id, isArchived: false }, orderBy: [{ isBuiltIn: 'desc' }, { name: 'asc' }] }),
+    prisma.workflowRun.findMany({
+      where: { collectionId: collection.id, locationId: location.id, status: 'ACTIVE' },
+      include: { steps: true, assignedTo: { select: { email: true } } },
+      orderBy: { startedAt: 'desc' },
+      take: 6,
     }),
   ])
   const parentOptions = locationNodes.filter((item) => item.id !== location.id && !descendantIds.has(item.id))
@@ -152,6 +162,34 @@ export default async function LocationDetail({ params }: { params: Promise<{ id:
             {activeQuarantines.map((quarantine) => (
               <Link key={quarantine.id} href={collectionPath(collection.slug, `/instances/${quarantine.plantInstanceId}#quarantine`)} className="rounded-lg border border-stone-200 bg-white/55 p-3 text-sm underline">
                 {quarantine.plantInstance.plantId} · {plantName(quarantine.plantInstance.plantDefinition)} · {quarantine.riskLevel.toLowerCase()} risk · release review {quarantine.targetReleaseDate.toLocaleDateString()}
+              </Link>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {canBulkCare && (
+        <Card>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="font-serif text-xl font-semibold">Location workflows</h3>
+              <p className="mt-1 text-sm text-stone-600">Start a greenhouse round, pest response, move, or other workflow scoped to this location.</p>
+            </div>
+            <form action={startWorkflowRun} className="flex flex-wrap items-end gap-2">
+              <input type="hidden" name="collectionSlug" value={collection.slug} />
+              <input type="hidden" name="scopeType" value="LOCATION" />
+              <input type="hidden" name="locationId" value={location.id} />
+              <select name="templateId" className={selectClass}>
+                {workflowTemplates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}
+              </select>
+              <Button>Start workflow here</Button>
+            </form>
+          </div>
+          <div className="mt-3 grid gap-2">
+            {activeWorkflowRuns.length === 0 && <p className="text-sm text-stone-600">No active workflow runs for this location.</p>}
+            {activeWorkflowRuns.map((run) => (
+              <Link key={run.id} href={collectionPath(collection.slug, `/workflows/runs/${run.id}`)} className="rounded-lg border border-stone-200 bg-white/55 p-3 text-sm underline">
+                {run.title} · {run.steps.filter((step) => step.status !== 'PENDING').length}/{run.steps.length} steps · assigned to {run.assignedTo?.email || 'no one'}
               </Link>
             ))}
           </div>

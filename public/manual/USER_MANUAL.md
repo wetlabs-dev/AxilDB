@@ -19,6 +19,7 @@ AXILDB_DOCS_BASE_URL=https://app.axildb.com AXILDB_DOCS_COLLECTION_SLUG=axildb n
 - [Photos and Gallery](#photos-gallery)
 - [Plant Husbandry](#husbandry)
 - [Care Queue and Green Thumb](#care-queue)
+- [Greenhouse Workflows](#greenhouse-workflows)
 - [Weekly Greenhouse Checklist](#weekly-checklist)
 - [Care Sheets and Plant Sitter Mode](#care-sheets)
 - [Collection Exhibits](#collection-exhibits)
@@ -285,6 +286,34 @@ App route: `/care`
 ### Warnings
 
 - Green Thumb responses are care suggestions, not guaranteed diagnoses. Review the plant directly before treating pests, disease, toxicity, or severe decline.
+
+## Greenhouse Workflows
+
+Greenhouse Workflows let collections define repeatable operating procedures such as new-arrival quarantine, weekly greenhouse rounds, pest response, seasonal moves, bloom reviews, and propagation checks.
+
+App route: `/workflows`
+
+### How It Is Used
+
+- Open Workflows from the sidebar.
+- Use starter templates as-is, copy them into editable collection-local templates, or create a custom template.
+- Managers can edit ordered workflow steps, choose typed step functions, mark steps required or optional, and store future trigger notes while triggers remain disabled.
+- Start a manual workflow run from Workflows, Care Queue, a location detail page, or a specimen detail page.
+- Scope a run to the whole collection, one location, or selected plants, and optionally assign the whole run to a user.
+- Complete steps from the run page. Typed steps can create care events, notes, reminders, location moves, quarantine records, quarantine releases, and condition records.
+- Complete or cancel the run once the required steps are handled.
+
+### Notes
+
+- Workflow runs snapshot their template steps when started, so later template edits do not rewrite run history.
+- Workflow-created records appear in normal AxilDB history, including Plant Health Timeline where relevant.
+- Photo steps are procedure checkpoints in v1; use the existing plant/location photo tools to upload images, then complete the workflow step.
+- Trigger fields are stored for future automation, but v1 does not run workflows automatically.
+
+### Warnings
+
+- Workflows are collection-internal. Viewers and public visitors cannot start or complete workflow runs.
+- Moving plants or starting quarantine from a workflow still requires explicit step completion and selected targets.
 
 ## Weekly Greenhouse Checklist
 

@@ -143,6 +143,10 @@ model User {
   createdCollectionExhibits CollectionExhibit[] @relation("CollectionExhibitCreatedBy")
   publishedCollectionExhibits CollectionExhibit[] @relation("CollectionExhibitPublishedBy")
   createdCollectionExhibitUpdates CollectionExhibitUpdate[] @relation("CollectionExhibitUpdateCreatedBy")
+  createdWorkflowTemplates WorkflowTemplate[] @relation("WorkflowTemplateCreatedBy")
+  startedWorkflowRuns WorkflowRun[] @relation("WorkflowRunStartedBy")
+  assignedWorkflowRuns WorkflowRun[] @relation("WorkflowRunAssignedTo")
+  completedWorkflowRunSteps WorkflowRunStep[] @relation("WorkflowRunStepCompletedBy")
 
   @@index([role])
   @@index([emailVerifiedAt])
@@ -211,6 +215,10 @@ model Collection {
   careSheetAccessLogs CareSheetAccessLog[]
   collectionUpdateDigestDeliveries CollectionUpdateDigestDelivery[]
   exhibits            CollectionExhibit[]
+  workflowTemplates   WorkflowTemplate[]
+  workflowRuns        WorkflowRun[]
+  workflowRunPlants   WorkflowRunPlant[]
+  workflowRunSteps    WorkflowRunStep[]
 
   @@index([visibility])
   @@index([status])
@@ -1292,6 +1300,7 @@ model PlantInstance {
   careSheetPlants CareSheetPlant[]
   careSheetTasks  CareSheetTask[]
   exhibitPlants   CollectionExhibitPlant[]
+  workflowRunPlants WorkflowRunPlant[]
 
   @@index([collectionId])
   @@unique([collectionId, plantId])
@@ -1346,6 +1355,7 @@ model Location {
   movesFrom      PlantLocationMove[] @relation("PlantLocationMoveFrom")
   movesTo        PlantLocationMove[] @relation("PlantLocationMoveTo")
   quarantineRecords PlantQuarantine[]
+  workflowRuns   WorkflowRun[]
 
   @@unique([collectionId, code])
   @@index([collectionId])
@@ -1883,6 +1893,146 @@ model SportStabilityRecord {
 
   @@index([plantInstanceId])
   @@index([propagationEventId])
+}
+
+model WorkflowTemplate {
+  id               String   @id @default(cuid())
+  collectionId     String
+  name             String
+  description      String?
+  category         String?
+  isBuiltIn        Boolean  @default(false)
+  isArchived       Boolean  @default(false)
+  createdByUserId  String?
+  triggerType      String?
+  triggerConfigJson Json?
+  isTriggerEnabled Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  collection    Collection     @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  createdByUser User?          @relation("WorkflowTemplateCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  steps         WorkflowStep[]
+  runs          WorkflowRun[]
+
+  @@index([collectionId])
+  @@index([createdByUserId])
+  @@index([isBuiltIn])
+  @@index([isArchived])
+  @@index([category])
+  @@index([triggerType])
+  @@index([isTriggerEnabled])
+}
+
+model WorkflowStep {
+  id             String   @id @default(cuid())
+  templateId     String
+  stepType       String
+  title          String
+  instructions   String?
+  required       Boolean  @default(true)
+  sortOrder      Int      @default(0)
+  configJson     Json?
+  outputBehavior String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  template WorkflowTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  runSteps WorkflowRunStep[]
+
+  @@index([templateId])
+  @@index([stepType])
+  @@index([sortOrder])
+}
+
+model WorkflowRun {
+  id                String    @id @default(cuid())
+  collectionId      String
+  templateId        String?
+  title             String
+  status            String    @default("ACTIVE")
+  scopeType         String    @default("COLLECTION")
+  locationId        String?
+  assignedToUserId  String?
+  startedByUserId   String
+  startedAt         DateTime  @default(now())
+  completedAt       DateTime?
+  cancelledAt       DateTime?
+  summary           String?
+  triggerType       String?
+  triggerConfigJson Json?
+  isTriggerEnabled  Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  collection Collection        @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  template   WorkflowTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  location   Location?         @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  assignedTo User?             @relation("WorkflowRunAssignedTo", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  startedBy  User              @relation("WorkflowRunStartedBy", fields: [startedByUserId], references: [id], onDelete: Cascade)
+  plants     WorkflowRunPlant[]
+  steps      WorkflowRunStep[]
+
+  @@index([collectionId])
+  @@index([templateId])
+  @@index([status])
+  @@index([scopeType])
+  @@index([locationId])
+  @@index([assignedToUserId])
+  @@index([startedByUserId])
+  @@index([startedAt])
+  @@index([triggerType])
+  @@index([isTriggerEnabled])
+}
+
+model WorkflowRunPlant {
+  id              String @id @default(cuid())
+  collectionId    String
+  runId           String
+  plantInstanceId String
+
+  collection    Collection    @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  run           WorkflowRun   @relation(fields: [runId], references: [id], onDelete: Cascade)
+  plantInstance PlantInstance @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
+
+  @@unique([runId, plantInstanceId])
+  @@index([collectionId])
+  @@index([runId])
+  @@index([plantInstanceId])
+}
+
+model WorkflowRunStep {
+  id                String    @id @default(cuid())
+  collectionId      String
+  runId             String
+  templateStepId    String?
+  stepType          String
+  title             String
+  instructions      String?
+  required          Boolean   @default(true)
+  sortOrder         Int       @default(0)
+  configJson        Json?
+  status            String    @default("PENDING")
+  completedByUserId String?
+  completedAt       DateTime?
+  notes             String?
+  outputJson        Json?
+  createdRecordType String?
+  createdRecordId   String?
+
+  collection      Collection    @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  run             WorkflowRun   @relation(fields: [runId], references: [id], onDelete: Cascade)
+  templateStep    WorkflowStep? @relation(fields: [templateStepId], references: [id], onDelete: SetNull)
+  completedByUser User?         @relation("WorkflowRunStepCompletedBy", fields: [completedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([collectionId])
+  @@index([runId])
+  @@index([templateStepId])
+  @@index([stepType])
+  @@index([status])
+  @@index([sortOrder])
+  @@index([completedByUserId])
+  @@index([createdRecordType, createdRecordId])
 }
 
 model Reminder {

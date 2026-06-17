@@ -28,6 +28,7 @@ import {
   updatePlantCondition,
   unfollowEntity,
 } from '@/app/actions'
+import { startWorkflowRun } from '@/app/workflow-actions'
 import { createPlantTransferRequest } from '@/app/transfer-actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { GreenThumbAssist } from '@/components/GreenThumbAssist'
@@ -51,6 +52,7 @@ import { sunshineCounts, sunshineKey, sunshineStateForUser } from '@/lib/sunshin
 import { addCalendarDays, formatDateTime, startOfDayInTimeZone } from '@/lib/time'
 import { collectPlantTimelineEvents, getPlantTimelineMetrics } from '@/lib/timeline/plantTimeline'
 import { dateInput, fmtDate, plantName, taxonomyLabel } from '@/lib/utils'
+import { ensureStarterWorkflowTemplates } from '@/lib/workflows'
 import Link from 'next/link'
 import QRCode from 'qrcode'
 import { RefreshCw } from 'lucide-react'
@@ -95,6 +97,7 @@ export default async function InstanceDetail({
   const canCreateRecords = canCreateInCollection(user, context)
   const canEditRecords = canEditInCollection(user, context)
   const canManageRecords = canManageCollection(user, context)
+  if (canCreateRecords) await ensureStarterWorkflowTemplates(prisma, collection.id)
   const preferences = user
     ? await prisma.emailPreference.findUnique({ where: { userId: user.id } })
     : null
@@ -159,6 +162,17 @@ export default async function InstanceDetail({
       take: 5,
     }),
   ])
+  const [workflowTemplates, activeWorkflowRuns] = canCreateRecords
+    ? await Promise.all([
+        prisma.workflowTemplate.findMany({ where: { collectionId: collection.id, isArchived: false }, orderBy: [{ isBuiltIn: 'desc' }, { name: 'asc' }] }),
+        prisma.workflowRun.findMany({
+          where: { collectionId: collection.id, status: 'ACTIVE', plants: { some: { plantInstanceId: id } } },
+          include: { steps: true, assignedTo: { select: { email: true } } },
+          orderBy: { startedAt: 'desc' },
+          take: 6,
+        }),
+      ])
+    : [[], []]
   const isInQuarantineLocation = isQuarantineLocation(i.currentLocation)
   const quarantineChecklist = Array.isArray(activeQuarantine?.checklistJson)
     ? activeQuarantine.checklistJson.filter((item): item is { label: string; done?: boolean } => Boolean(item && typeof item === 'object' && 'label' in item))
@@ -900,6 +914,34 @@ export default async function InstanceDetail({
         </div>
 
         <div className="xl:col-span-2">{quarantineCard}</div>
+
+        {canCreateRecords && (
+          <Card className="xl:col-span-2">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h3 className="font-bold">Active workflows</h3>
+                <p className="mt-1 text-sm text-stone-600">Start or continue greenhouse procedures involving this specimen.</p>
+              </div>
+              <form action={startWorkflowRun} className="flex flex-wrap items-end gap-2">
+                <input type="hidden" name="collectionSlug" value={collection.slug} />
+                <input type="hidden" name="scopeType" value="PLANTS" />
+                <input type="hidden" name="plantInstanceId" value={id} />
+                <select name="templateId" className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm">
+                  {workflowTemplates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}
+                </select>
+                <Button>Start workflow</Button>
+              </form>
+            </div>
+            <div className="mt-3 grid gap-2">
+              {activeWorkflowRuns.length === 0 && <p className="text-sm text-stone-600">No active workflow runs include this plant.</p>}
+              {activeWorkflowRuns.map((run) => (
+                <Link key={run.id} href={collectionPath(collection.slug, `/workflows/runs/${run.id}`)} className="rounded-lg border border-stone-200 bg-white/55 p-3 text-sm underline">
+                  {run.title} · {run.steps.filter((step) => step.status !== 'PENDING').length}/{run.steps.length} steps · assigned to {run.assignedTo?.email || 'no one'}
+                </Link>
+              ))}
+            </div>
+          </Card>
+        )}
 
         <div className="xl:col-span-2">{careCard}</div>
 

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Bell, Bug, CheckCircle2, Droplets, Flower2, HeartPulse, Sprout } from 'lucide-react'
 import { completeCareTask, markPropagationEstablished, snoozeCareTask } from '@/app/actions'
+import { startWorkflowRun } from '@/app/workflow-actions'
 import { PlantIdPreviewLink } from '@/components/PlantIdPreviewLink'
 import { PlantImage } from '@/components/PlantImage'
 import { Button, Card, TextArea } from '@/components/ui'
@@ -8,6 +9,7 @@ import { canCreateInCollection, collectionPath, requireCollectionViewer } from '
 import { careQueueSummary, careTaskLabel, filterCareQueue, getCareQueue, type CareQueueItem } from '@/lib/care-queue'
 import { prisma } from '@/lib/prisma'
 import { formatDate } from '@/lib/time'
+import { ensureStarterWorkflowTemplates } from '@/lib/workflows'
 
 const filters = [
   ['today', 'Today'],
@@ -46,6 +48,7 @@ export default async function CareQueuePage({ searchParams }: { searchParams: Pr
   const params = await searchParams
   const context = await requireCollectionViewer()
   const canAct = canCreateInCollection(context.user, context)
+  if (canAct) await ensureStarterWorkflowTemplates(prisma, context.collection.id)
   const preferences = context.user
     ? await prisma.emailPreference.findUnique({ where: { userId: context.user.id } })
     : null
@@ -61,6 +64,21 @@ export default async function CareQueuePage({ searchParams }: { searchParams: Pr
   })
   const summary = careQueueSummary(allItems, new Date(), timezone)
   const items = filterCareQueue(allItems, filter, new Date(), timezone)
+  const workflowTemplates = canAct
+    ? await prisma.workflowTemplate.findMany({
+        where: {
+          collectionId: context.collection.id,
+          isArchived: false,
+          OR: [
+            { name: { contains: 'Round' } },
+            { name: { contains: 'Pest' } },
+            { name: { contains: 'Propagation' } },
+            { name: { contains: 'Bloom' } },
+          ],
+        },
+        orderBy: [{ isBuiltIn: 'desc' }, { name: 'asc' }],
+      })
+    : []
 
   return (
     <div className="space-y-5">
@@ -102,6 +120,25 @@ export default async function CareQueuePage({ searchParams }: { searchParams: Pr
           </Link>
         ))}
       </div>
+
+      {canAct && workflowTemplates.length > 0 && (
+        <Card>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="font-serif text-xl font-semibold">Start a workflow from the queue</h3>
+              <p className="mt-1 text-sm text-stone-600">Use workflows for repeatable rounds that go beyond one care task.</p>
+            </div>
+            <form action={startWorkflowRun} className="flex flex-wrap items-end gap-2">
+              <input type="hidden" name="collectionSlug" value={context.collection.slug} />
+              <input type="hidden" name="scopeType" value="COLLECTION" />
+              <select name="templateId" className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm">
+                {workflowTemplates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}
+              </select>
+              <Button>Start workflow</Button>
+            </form>
+          </div>
+        </Card>
+      )}
 
       {items.length === 0 ? (
         <Card className="py-10 text-center">

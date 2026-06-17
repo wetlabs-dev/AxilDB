@@ -403,6 +403,7 @@ Core models:
 - `Reminder` and `ReminderDelivery`: reminder scheduling metadata and delivery history.
 - `Follow` and `FollowNotification`: event-based subscriptions and delivery history for followed specimens, plant types, and lineages.
 - `CareSheet`, `CareSheetPlant`, `CareSheetTask`, and `CareSheetAccessLog`: generated care sheets, weekly checklists, limited sitter sessions, token access logs, and interactive checklist task state.
+- `WorkflowTemplate`, `WorkflowStep`, `WorkflowRun`, `WorkflowRunPlant`, and `WorkflowRunStep`: collection-scoped greenhouse workflow templates, typed procedure blocks, active/completed manual runs, scoped plants, and step completion output.
 - `ServerMetricSnapshot`: rolling 36-hour best-effort server metrics and storage estimates.
 - `ServerIncident`, `ServerIncidentNote`, and `ServerIncidentNotification`: durable server incident history, notes/postmortems, graph markers, resolution state, and server-health alert traceability.
 - `BackupRun`: sitewide backup request, worker status, output path, logs, and manifest metadata.
@@ -411,6 +412,16 @@ Core models:
 Validated Plant Definitions are site-level `PlantDefinition` records with `collectionId = null` and `isValidated = true`. They are not owned by the collection that nominated them, so deleting or archiving a collection does not delete approved validated definitions or break plant instances linked to them. Collection managers can nominate a local definition for validation, server admins review nominations under Server Management, and approval creates a site-level validated definition with copied taxonomy, aliases, husbandry, type-image metadata, and governing body metadata. Managers can dispute validated definitions or create a local copy for selected specimens when they need to detach from future validated updates. Specimen-level husbandry overrides remain available, so collections do not need to detach solely for local care differences.
 
 Most domain records carry `collectionId`, including local plant definitions, aliases, plant instances, locations, location types, plant location moves, propagations, blooms, notes, photos, reminders, follows, sunshine, governing bodies, and audit logs. Suggestions/autocomplete, search, gallery, lineage graphs, labels, dashboard activity, follow counts, and sunshine counts are scoped per collection. Validated plant definitions, their aliases, husbandry guides, and type-image metadata intentionally remain site-level.
+
+## Greenhouse Workflows
+
+Open **Workflows** from the collection sidebar to manage repeatable greenhouse operating procedures. AxilDB provides starter templates for new-arrival quarantine, weekly greenhouse rounds, pest response, seasonal moves, bloom review, and propagation checks. Collection managers can create custom templates, copy starter templates, edit ordered typed steps, and archive templates that should no longer be used.
+
+Workflow runs are manual in v1 and can be scoped to the whole collection, a location, or selected plant instances. Gardeners can start and cancel/complete runs; loggers can complete steps when the step creates records they are already allowed to create. Viewers and public visitors cannot run workflows. A whole run can be assigned to a user, while per-step assignment is intentionally deferred.
+
+Typed workflow steps can create real AxilDB records: care events, notes, reminders, plant location moves, quarantine records, quarantine releases, and condition records. Photo steps are included as procedure steps, but photo uploads continue to use the existing plant/location photo tools. Workflow-created care events and move/quarantine records appear in Plant Health Timeline, and timeline entries also show workflow start/completion events for involved plants.
+
+Workflow templates include trigger placeholder fields (`triggerType`, `triggerConfigJson`, and `isTriggerEnabled`) so future schedule/season/weather/location-condition automation can be added without replacing the v1 schema. Automatic triggers are not enabled yet.
 
 ## Location Mapping
 
