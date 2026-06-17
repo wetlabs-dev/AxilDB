@@ -83,14 +83,14 @@ export default async function WorkflowsPage({ searchParams }: { searchParams: Pr
           <div className="mt-4 grid gap-3">
             {templates.map((template) => (
               <div key={template.id} className="rounded-lg border border-stone-200 bg-white/60 p-3">
-                <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
                   <div className="min-w-0">
                     <p className="text-xs font-semibold uppercase tracking-wide text-[#2f6b45]">{template.category || 'Workflow'}{template.isBuiltIn ? ' · Starter' : ''}</p>
                     <Link href={collectionPath(collection.slug, `/workflows/templates/${template.id}`)} className="font-serif text-xl font-semibold underline">{template.name}</Link>
                     {template.description && <p className="mt-1 text-sm text-stone-600">{template.description}</p>}
                     <p className="mt-2 text-xs text-stone-500">{template._count.steps} step{template._count.steps === 1 ? '' : 's'} · {template._count.runs} run{template._count.runs === 1 ? '' : 's'}</p>
                   </div>
-                  <LinkButton href={collectionPath(collection.slug, `/workflows/templates/${template.id}`)} className="px-3 py-1.5">Open</LinkButton>
+                  <LinkButton href={collectionPath(collection.slug, `/workflows/templates/${template.id}`)} className="justify-self-start px-3 py-1.5 sm:justify-self-end">Open</LinkButton>
                 </div>
               </div>
             ))}
