@@ -12,6 +12,11 @@ import { parseDateLocal, timeZoneForPreference } from '@/lib/time'
 
 const val = (fd: FormData, key: string) => String(fd.get(key) || '').trim()
 const optional = (fd: FormData, key: string) => val(fd, key) || null
+const checked = (fd: FormData, key: string, defaultValue = false) => {
+  const values = fd.getAll(key)
+  if (values.length === 0) return defaultValue
+  return values.some((value) => ['on', '1', 'true'].includes(String(value)))
+}
 const boundedInt = (value: string, fallback: number, min: number, max: number) => {
   const parsed = Number(value)
   if (!Number.isFinite(parsed)) return fallback
@@ -88,9 +93,9 @@ export async function applyCareScheduleSync(fd: FormData) {
   const plantIds = Array.from(new Set(fd.getAll('plantInstanceId').map((value) => String(value || '')).filter(Boolean)))
   const definitionId = optional(fd, 'definitionId')
   const locationId = optional(fd, 'locationId')
-  const includeNested = fd.get('includeNested') === 'on' || fd.get('includeNested') === '1'
-  const createMissing = fd.get('createMissing') !== 'off'
-  const syncCadence = fd.get('syncCadence') === 'on'
+  const includeNested = checked(fd, 'includeNested', true)
+  const createMissing = checked(fd, 'createMissing', true)
+  const syncCadence = checked(fd, 'syncCadence', false)
   const rawCadenceDays = Number(val(fd, 'cadenceDays') || '7')
   const cadenceDays = Number.isFinite(rawCadenceDays) ? Math.max(1, Math.min(365, Math.floor(rawCadenceDays))) : 7
   if (!plantIds.length || !careTypes.length) redirect(collectionPath(context.collection.slug, '/care/sync?error=missing-selection'))

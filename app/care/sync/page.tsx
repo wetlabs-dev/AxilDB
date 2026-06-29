@@ -19,6 +19,12 @@ function allParams(value?: string | string[]) {
   return Array.isArray(value) ? value : value ? [value] : []
 }
 
+function checkedParam(value: string | string[] | undefined, defaultValue = false) {
+  const values = allParams(value)
+  if (values.length === 0) return defaultValue
+  return values.some((item) => item === 'on' || item === '1' || item === 'true')
+}
+
 export default async function CareScheduleSyncPage({
   searchParams,
 }: {
@@ -31,12 +37,12 @@ export default async function CareScheduleSyncPage({
   const timezone = timeZoneForPreference(preferences)
   const definitionId = firstParam(params.definitionId)
   const locationId = firstParam(params.locationId)
-  const includeNested = firstParam(params.includeNested) !== '0'
+  const includeNested = checkedParam(params.includeNested, true)
   const targetDate = firstParam(params.targetDate) || new Date().toISOString().slice(0, 10)
   const targetTime = firstParam(params.targetTime) || '09:00'
   const review = firstParam(params.review) === '1'
-  const createMissing = firstParam(params.createMissing) !== 'off'
-  const syncCadence = firstParam(params.syncCadence) === 'on'
+  const createMissing = checkedParam(params.createMissing, true)
+  const syncCadence = checkedParam(params.syncCadence, false)
   const rawCadenceDays = Number(firstParam(params.cadenceDays) || '7')
   const cadenceDays = Number.isFinite(rawCadenceDays) ? Math.max(1, Math.min(365, Math.floor(rawCadenceDays))) : 7
   const selectedCareTypes = normalizeCareTypes(allParams(params.careType)).filter((type) => syncCareTypes.includes(type as any))
@@ -140,7 +146,6 @@ export default async function CareScheduleSyncPage({
       ) : (
         <Card>
           <form method="get" action={collectionPath(context.collection.slug, '/care/sync')} className="grid gap-4">
-            <input type="hidden" name="review" value="1" />
             <div className="grid gap-3 lg:grid-cols-5">
               <Select label="Definition filter" name="definitionId" defaultValue={selectedDefinition?.id || ''}>
                 <option value="">All active definitions</option>
@@ -212,7 +217,12 @@ export default async function CareScheduleSyncPage({
               <input type="checkbox" name="createMissing" value="on" defaultChecked={createMissing} />
               Create missing schedule overrides for selected care types
             </label>
-            <Button className="w-fit">Review schedule sync</Button>
+            <div className="flex flex-wrap gap-2">
+              <button name="review" value="0" className="rounded-md border border-stone-300 bg-white/70 px-4 py-2 text-sm font-semibold text-stone-800 shadow-sm hover:bg-[#f5f0e2]">
+                Apply filters
+              </button>
+              <Button name="review" value="1">Review schedule sync</Button>
+            </div>
           </form>
         </Card>
       )}
