@@ -270,6 +270,7 @@ App route: `/care`
 - Complete or snooze generated care tasks from the queue.
 - Use Bulk care by location to record one care event per selected plant in a location, with direct-only or nested-location scope and a required review step before submit.
 - Open Bulk care from a location detail page when you want the location preselected.
+- Use Care Schedule Sync from the Care Queue, Plant Instances, or a location detail page to align selected plants and care types to a new next-due date without recording completed care.
 - Use per-plant overrides for individual notes, results, or skip reasons while keeping shared task details on the batch.
 - Open Weekly checklist to group overdue, due, and upcoming care by location for a printable work session.
 - Open a specimen to log watering, add conditions such as wilting or pests, resolve conditions, and review recent care history.
@@ -280,6 +281,8 @@ App route: `/care`
 
 - Generated care tasks are dynamic; completed care is stored as care events.
 - Bulk care completes only matching due or overdue care queue items for the selected plants; unrelated queue items are left alone.
+- Care Schedule Sync changes future next-due dates only. It creates an auditable batch and item record, but it does not create care events or remove historical care.
+- Collection managers can define Quiet Days from Collection Settings. The Care Queue and Care Schedule Sync shift affected due dates earlier, later, or by smart defaults according to per-care-type rules.
 - Manual reminders continue to send email and are also merged into the queue when due.
 - Green Thumb requests are limited per specimen and per collection to control AI usage.
 

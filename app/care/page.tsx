@@ -94,6 +94,14 @@ export default async function CareQueuePage({ searchParams }: { searchParams: Pr
           >
             Bulk care by location
           </Link>
+          {canAct && (
+            <Link
+              href={collectionPath(context.collection.slug, '/care/sync')}
+              className="rounded-md border border-[#c7d8bd] bg-white/70 px-3 py-2 text-sm font-semibold text-[#2f6b45] shadow-sm hover:bg-[#f5fbf0]"
+            >
+              Sync care schedules
+            </Link>
+          )}
           <Link
             href={collectionPath(context.collection.slug, '/care/checklist')}
             className="rounded-md border border-[#c7d8bd] bg-white/70 px-3 py-2 text-sm font-semibold text-[#2f6b45] shadow-sm hover:bg-[#f5fbf0]"
@@ -173,6 +181,11 @@ export default async function CareQueuePage({ searchParams }: { searchParams: Pr
                   {item.location && <p className="text-xs text-stone-500">{item.location}</p>}
                 </div>
                 <p className="text-sm text-stone-700">{item.reason}</p>
+                {item.quietDayReason && (
+                  <p className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-900">
+                    {item.quietDayReason}
+                  </p>
+                )}
                 {canAct && !item.completedAt && (
                   <div className="grid gap-2 border-t border-stone-200 pt-3">
                     <form action={completeCareTask} className="grid gap-2">

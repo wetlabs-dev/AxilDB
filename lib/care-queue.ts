@@ -1,5 +1,6 @@
 import type { PrismaClient } from '@prisma/client'
 import type { PlantImageFrame } from '@/components/PlantImage'
+import { resolveQuietDayShift } from '@/lib/care-scheduling'
 import { collectionPath } from '@/lib/collections'
 import { nextOccurrence, reminderCategoryLabel } from '@/lib/reminders'
 import { addCalendarDays, calendarDayIndexInTimeZone, endOfDayInTimeZone, startOfDayInTimeZone } from '@/lib/time'
@@ -38,6 +39,10 @@ export type CareQueueItem = {
   bloomEventId?: string
   completedAt?: Date | null
   snoozedUntil?: Date | null
+  originalDueAt?: Date | null
+  quietDayName?: string | null
+  quietDayReason?: string | null
+  quietDayShiftDirection?: string | null
   propagationAgeDays?: number
 }
 
@@ -145,7 +150,7 @@ export async function getCareQueue(
     timezone?: string
   },
 ) {
-  const [instances, careEvents, conditions, adjustments, photos, openBlooms, activeQuarantines, reminders] = await Promise.all([
+  const [instances, careEvents, conditions, adjustments, photos, openBlooms, activeQuarantines, reminders, quietDays, quietRules] = await Promise.all([
     prisma.plantInstance.findMany({
       where: { collectionId, status: 'ACTIVE' },
       include: {
@@ -197,6 +202,11 @@ export async function getCareQueue(
           orderBy: [{ completedAt: 'desc' }, { nextSendAt: 'asc' }, { dueAt: 'asc' }],
         })
       : Promise.resolve([]),
+    prisma.collectionQuietDay.findMany({
+      where: { collectionId, active: true },
+      orderBy: [{ quietType: 'asc' }, { date: 'asc' }, { dayOfWeek: 'asc' }],
+    }),
+    prisma.collectionQuietDayShiftRule.findMany({ where: { collectionId, active: true } }),
   ])
 
   const photosByInstance = imageLookup(photos)
@@ -211,13 +221,35 @@ export async function getCareQueue(
   for (const adjustment of adjustments) {
     adjustmentMap.set(`${adjustment.plantInstanceId}:${adjustment.taskType}`, adjustment)
   }
+  const quietRuleMap = new Map(quietRules.map((rule) => [rule.careType, rule]))
+
+  const quietAdjusted = (dueAt: Date, careType: string, plantInstanceId?: string) => {
+    const shift = resolveQuietDayShift({
+      dueAt,
+      careType,
+      quietDays,
+      rule: quietRuleMap.get(careType),
+      timezone: timezone || undefined || '',
+      now,
+    })
+    if (!shift || shift.adjustedDueAt.getTime() === dueAt.getTime()) return { dueAt }
+    return {
+      dueAt: shift.adjustedDueAt,
+      originalDueAt: dueAt,
+      quietDayName: shift.quietDay.name,
+      quietDayReason: shift.reason,
+      quietDayShiftDirection: shift.shiftDirection,
+    }
+  }
 
   const items: CareQueueItem[] = []
 
   const pushDerived = (item: Omit<CareQueueItem, 'source' | 'href' | 'overdueDays' | 'priority'> & { basePriority: number }) => {
     const adjustment = item.plantInstanceId ? adjustmentMap.get(`${item.plantInstanceId}:${item.taskType}`) : null
     if (isSuppressed(adjustment, now)) return
-    const dueAt = dayStart(item.dueAt, timezone)
+    const rawDueAt = item.plantInstanceId ? adjustment?.nextDueAt || item.dueAt : item.dueAt
+    const adjusted = quietAdjusted(dayStart(rawDueAt, timezone), item.taskType, item.plantInstanceId)
+    const dueAt = adjusted.dueAt
     const overdueDays = Math.max(0, daysBetween(now, dueAt, timezone))
     items.push({
       ...item,
@@ -227,6 +259,10 @@ export async function getCareQueue(
       overdueDays,
       priority: clampPriority(item.basePriority + overdueDays * 9),
       snoozedUntil: adjustment?.snoozedUntil || null,
+      originalDueAt: adjusted.originalDueAt || null,
+      quietDayName: adjusted.quietDayName || null,
+      quietDayReason: adjusted.quietDayReason || null,
+      quietDayShiftDirection: adjusted.quietDayShiftDirection || null,
     })
   }
 
@@ -356,8 +392,14 @@ export async function getCareQueue(
   }
 
   for (const reminder of reminders) {
-    const reminderDueAt = reminder.nextSendAt || reminder.dueAt
-    const overdueDays = Math.max(0, daysBetween(now, reminderDueAt, timezone))
+    const reminderAdjustment = reminder.entityType === 'PLANT_INSTANCE' && reminder.entityId
+      ? adjustmentMap.get(`${reminder.entityId}:REMINDER`)
+      : null
+    if (isSuppressed(reminderAdjustment, now)) continue
+    const reminderDueAt = reminderAdjustment?.nextDueAt || reminder.nextSendAt || reminder.dueAt
+    const adjusted = quietAdjusted(reminderDueAt, 'REMINDER', reminder.entityType === 'PLANT_INSTANCE' ? reminder.entityId || undefined : undefined)
+    const adjustedDueAt = adjusted.dueAt
+    const overdueDays = Math.max(0, daysBetween(now, adjustedDueAt, timezone))
     const reminderInstance = reminder.entityType === 'PLANT_INSTANCE' && reminder.entityId
       ? instanceById.get(reminder.entityId)
       : reminder.entityType === 'BLOOM_EVENT' && reminder.entityId
@@ -374,7 +416,7 @@ export async function getCareQueue(
       source: 'reminder',
       title: reminder.title,
       reason: `${reminderCategoryLabel(reminder.category)}${reminder.body ? `: ${reminder.body}` : ''}`,
-      dueAt: reminderDueAt,
+      dueAt: adjustedDueAt,
       priority: reminder.completedAt ? 0 : clampPriority(60 + overdueDays * 8),
       overdueDays,
       href: path,
@@ -385,6 +427,11 @@ export async function getCareQueue(
       location: reminderInstance?.location,
       image: reminderInstance ? photosByInstance[reminderInstance.id] : undefined,
       completedAt: reminder.completedAt,
+      snoozedUntil: reminderAdjustment?.snoozedUntil || null,
+      originalDueAt: adjusted.originalDueAt || null,
+      quietDayName: adjusted.quietDayName || null,
+      quietDayReason: adjusted.quietDayReason || null,
+      quietDayShiftDirection: adjusted.quietDayShiftDirection || null,
     })
   }
 

@@ -1,21 +1,55 @@
 import { requestAiAccess } from '@/app/collection-actions'
-import { Button, Card, Field, Select, TextArea } from '@/components/ui'
+import { createQuietDay, deleteQuietDay, updateQuietDayShiftRule } from '@/app/care-schedule-actions'
+import { Button, Card, DangerButton, Field, Select, TextArea } from '@/components/ui'
 import { requireCollectionManager } from '@/lib/collections'
+import { careScheduleLabel, ensureQuietDayShiftRules, schedulableCareTypes } from '@/lib/care-scheduling'
 import { prisma } from '@/lib/prisma'
-import { formatDate } from '@/lib/time'
+import { formatDate, timeZoneForPreference } from '@/lib/time'
+
+function quietDaySummary(quietDay: {
+  quietType: string
+  date: Date | null
+  startDate: Date | null
+  endDate: Date | null
+  dayOfWeek: number | null
+  timezone: string
+}) {
+  if (quietDay.quietType === 'ONE_TIME' && quietDay.date) return formatDate(quietDay.date, quietDay.timezone)
+  if (quietDay.quietType === 'DATE_RANGE' && quietDay.startDate && quietDay.endDate) {
+    return `${formatDate(quietDay.startDate, quietDay.timezone)} through ${formatDate(quietDay.endDate, quietDay.timezone)}`
+  }
+  if (quietDay.quietType === 'WEEKLY_RECURRING' && quietDay.dayOfWeek !== null) {
+    return `Every ${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][quietDay.dayOfWeek] || 'week'}`
+  }
+  return 'Schedule needs details'
+}
 
 export default async function CollectionSettingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ aiAccess?: string }>
+  searchParams: Promise<{ aiAccess?: string; quiet?: string }>
 }) {
-  const { collection } = await requireCollectionManager()
+  const { collection, user } = await requireCollectionManager()
   const sp = await searchParams
-  const pendingAiRequest = await prisma.aiAccessRequest.findFirst({
-    where: { collectionId: collection.id, status: 'PENDING' },
-    orderBy: { createdAt: 'desc' },
-    select: { createdAt: true, rationale: true },
-  })
+  await ensureQuietDayShiftRules(prisma, collection.id)
+  const [pendingAiRequest, quietDays, quietRules, preferences] = await Promise.all([
+    prisma.aiAccessRequest.findFirst({
+      where: { collectionId: collection.id, status: 'PENDING' },
+      orderBy: { createdAt: 'desc' },
+      select: { createdAt: true, rationale: true },
+    }),
+    prisma.collectionQuietDay.findMany({
+      where: { collectionId: collection.id },
+      orderBy: [{ active: 'desc' }, { createdAt: 'desc' }],
+    }),
+    prisma.collectionQuietDayShiftRule.findMany({
+      where: { collectionId: collection.id },
+      orderBy: { careType: 'asc' },
+    }),
+    prisma.emailPreference.findUnique({ where: { userId: user.id } }),
+  ])
+  const timezone = timeZoneForPreference(preferences)
+  const quietRuleByType = new Map(quietRules.map((rule) => [rule.careType, rule]))
 
   return (
     <div className="space-y-6">
@@ -89,6 +123,99 @@ export default async function CollectionSettingsPage({
               </span>
             </span>
           </label>
+        </div>
+      </Card>
+
+      <Card>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="font-serif text-xl font-semibold">Quiet Days</h3>
+            <p className="mt-1 max-w-3xl text-sm text-stone-600">
+              Define collection-level days when routine care should not be scheduled. Care Queue and Care Schedule Sync shift affected due dates using the rules below.
+            </p>
+          </div>
+          <span className="rounded-full border border-[#c7d8bd] bg-[#f5fbf0] px-3 py-1 text-sm font-semibold text-[#2f6b45]">
+            {quietDays.filter((quietDay) => quietDay.active).length} active
+          </span>
+        </div>
+        {sp.quiet === 'created' && <p className="mt-3 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900">Quiet day created.</p>}
+        {sp.quiet === 'deleted' && <p className="mt-3 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900">Quiet day deleted.</p>}
+        {sp.quiet === 'rule-updated' && <p className="mt-3 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900">Quiet-day shift rule updated.</p>}
+
+        <div className="mt-4 grid gap-3">
+          {quietDays.length === 0 ? (
+            <p className="rounded-lg border border-stone-200 bg-white/55 p-3 text-sm text-stone-600">No quiet days have been defined yet.</p>
+          ) : quietDays.map((quietDay) => (
+            <div key={quietDay.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-stone-200 bg-white/55 p-3">
+              <div>
+                <p className="font-semibold">{quietDay.name}</p>
+                <p className="text-sm text-stone-600">{quietDaySummary(quietDay)} · {quietDay.active ? 'active' : 'inactive'}</p>
+                {quietDay.description && <p className="mt-1 text-sm text-stone-600">{quietDay.description}</p>}
+              </div>
+              <form action={deleteQuietDay}>
+                <input type="hidden" name="collectionSlug" value={collection.slug} />
+                <input type="hidden" name="quietDayId" value={quietDay.id} />
+                <DangerButton className="px-3 py-1.5">Delete</DangerButton>
+              </form>
+            </div>
+          ))}
+        </div>
+
+        <form action={createQuietDay} className="mt-5 grid gap-3 rounded-lg border border-stone-200 bg-white/50 p-3 lg:grid-cols-3">
+          <input type="hidden" name="collectionSlug" value={collection.slug} />
+          <Field label="Name" name="name" required />
+          <Select label="Quiet day type" name="quietType" defaultValue="ONE_TIME">
+            <option value="ONE_TIME">One-time date</option>
+            <option value="WEEKLY_RECURRING">Weekly recurring</option>
+            <option value="DATE_RANGE">Date range</option>
+          </Select>
+          <Field label="Timezone" name="timezone" defaultValue={timezone} />
+          <Field label="One-time date" name="date" type="date" />
+          <Field label="Range start" name="startDate" type="date" />
+          <Field label="Range end" name="endDate" type="date" />
+          <Select label="Weekly day" name="dayOfWeek" defaultValue="0">
+            {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day, index) => <option key={day} value={index}>{day}</option>)}
+          </Select>
+          <TextArea label="Description" name="description" wrapperClassName="lg:col-span-2" />
+          <label className="flex items-center gap-2 text-sm">
+            <input type="hidden" name="active" value="off" />
+            <input type="checkbox" name="active" value="on" defaultChecked />
+            Active
+          </label>
+          <div className="lg:col-span-3">
+            <Button>Create quiet day</Button>
+          </div>
+        </form>
+
+        <div className="mt-5">
+          <h4 className="text-sm font-bold uppercase tracking-[0.14em] text-stone-500">Shift rules</h4>
+          <div className="mt-3 grid gap-3 lg:grid-cols-2">
+            {schedulableCareTypes.map((careType) => {
+              const rule = quietRuleByType.get(careType)
+              return (
+                <form key={careType} action={updateQuietDayShiftRule} className="grid gap-3 rounded-lg border border-stone-200 bg-white/55 p-3 sm:grid-cols-2">
+                  <input type="hidden" name="collectionSlug" value={collection.slug} />
+                  <input type="hidden" name="careType" value={careType} />
+                  <p className="font-semibold sm:col-span-2">{careScheduleLabel(careType)}</p>
+                  <Select label="Default shift" name="defaultShiftDirection" defaultValue={rule?.defaultShiftDirection || 'LATER'}>
+                    <option value="EARLIER">Earlier</option>
+                    <option value="LATER">Later</option>
+                    <option value="SMART">Smart</option>
+                  </Select>
+                  <Field label="Max days before" name="maxShiftDaysBefore" type="number" min="0" max="14" defaultValue={rule?.maxShiftDaysBefore ?? 2} />
+                  <Field label="Max days after" name="maxShiftDaysAfter" type="number" min="0" max="14" defaultValue={rule?.maxShiftDaysAfter ?? 2} />
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="hidden" name="active" value="off" />
+                    <input type="checkbox" name="active" value="on" defaultChecked={rule?.active ?? true} />
+                    Active
+                  </label>
+                  <div className="sm:col-span-2">
+                    <Button className="px-3 py-1.5">Save rule</Button>
+                  </div>
+                </form>
+              )
+            })}
+          </div>
         </div>
       </Card>
     </div>

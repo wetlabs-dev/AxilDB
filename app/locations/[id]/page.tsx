@@ -130,6 +130,7 @@ export default async function LocationDetail({ params }: { params: Promise<{ id:
         <div className="flex flex-wrap gap-2">
           <LinkButton href={collectionPath(collection.slug, '/locations')}>All Locations</LinkButton>
           {canBulkCare && <LinkButton href={collectionPath(collection.slug, `/care/bulk?locationId=${encodeURIComponent(location.id)}&includeNested=1`)}>Bulk care</LinkButton>}
+          {canBulkCare && <LinkButton href={collectionPath(collection.slug, `/care/sync?locationId=${encodeURIComponent(location.id)}&includeNested=1`)}>Sync care</LinkButton>}
           <LinkButton href={`/api/labels/bulk?collectionSlug=${encodeURIComponent(collection.slug)}&target=locations&id=${encodeURIComponent(location.id)}`}>QR label</LinkButton>
         </div>
       </div>

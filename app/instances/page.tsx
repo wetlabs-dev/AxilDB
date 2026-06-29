@@ -100,6 +100,12 @@ export default async function Instances({
   if (locationFilter) filterParams.set('location', locationFilter)
   filterParams.set('includeNested', includeNestedLocations ? '1' : '0')
   const instancesBackPath = collectionPath(collection.slug, `/instances${filterParams.toString() ? `?${filterParams}` : ''}`)
+  const careSyncParams = new URLSearchParams()
+  if (locationFilter) {
+    careSyncParams.set('locationId', locationFilter)
+    careSyncParams.set('includeNested', includeNestedLocations ? '1' : '0')
+  }
+  const careSyncPath = collectionPath(collection.slug, `/care/sync${careSyncParams.toString() ? `?${careSyncParams}` : ''}`)
 
   const photos = await prisma.photo.findMany({
     where: { ...collectionWhere, entityType: 'PLANT_INSTANCE', entityId: { in: instances.map((item) => item.id) } },
@@ -145,13 +151,20 @@ export default async function Instances({
             </p>
           )}
         </div>
-        <SortControl
-          section="instances"
-          value={sortKey}
-          options={instanceSortOptions}
-          back={instancesBackPath}
-          disabled={!user}
-        />
+        <div className="flex flex-wrap items-end gap-2">
+          {canCreateInCollection(user, context) && (
+            <Link className="rounded-md border border-[#c7d8bd] bg-white/70 px-3 py-2 text-sm font-semibold text-[#2f6b45] shadow-sm hover:bg-[#f5fbf0]" href={careSyncPath}>
+              Sync care schedules
+            </Link>
+          )}
+          <SortControl
+            section="instances"
+            value={sortKey}
+            options={instanceSortOptions}
+            back={instancesBackPath}
+            disabled={!user}
+          />
+        </div>
       </div>
 
       <Card>

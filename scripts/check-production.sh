@@ -7,6 +7,9 @@ npx tsc --noEmit --pretty false
 echo "==> Checking workflow invariants"
 npm run check:workflows
 
+echo "==> Checking care scheduling invariants"
+npm run check:care-scheduling
+
 echo "==> Checking collection-scoped query guardrail"
 npm run check:collection-scope
 

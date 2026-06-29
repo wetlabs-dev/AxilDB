@@ -147,6 +147,8 @@ model User {
   startedWorkflowRuns WorkflowRun[] @relation("WorkflowRunStartedBy")
   assignedWorkflowRuns WorkflowRun[] @relation("WorkflowRunAssignedTo")
   completedWorkflowRunSteps WorkflowRunStep[] @relation("WorkflowRunStepCompletedBy")
+  createdCareScheduleSyncBatches CareScheduleSyncBatch[] @relation("CareScheduleSyncBatchCreatedBy")
+  createdQuietDays CollectionQuietDay[] @relation("CollectionQuietDayCreatedBy")
 
   @@index([role])
   @@index([emailVerifiedAt])
@@ -200,6 +202,11 @@ model Collection {
   plantCareEvents     PlantCareEvent[]
   plantConditions     PlantCondition[]
   plantCareAdjustments PlantCareAdjustment[]
+  careScheduleSyncBatches CareScheduleSyncBatch[]
+  careScheduleSyncItems CareScheduleSyncItem[]
+  quietDays           CollectionQuietDay[]
+  quietDayShiftRules  CollectionQuietDayShiftRule[]
+  quietDayAdjustments CareQuietDayAdjustment[]
   governingBodies     GoverningBody[]
   plantHusbandryGuides PlantHusbandryGuide[]
   plantHusbandryOverrides PlantHusbandryOverride[]
@@ -1301,6 +1308,8 @@ model PlantInstance {
   careSheetTasks  CareSheetTask[]
   exhibitPlants   CollectionExhibitPlant[]
   workflowRunPlants WorkflowRunPlant[]
+  careScheduleSyncItems CareScheduleSyncItem[]
+  quietDayAdjustments CareQuietDayAdjustment[]
 
   @@index([collectionId])
   @@unique([collectionId, plantId])
@@ -1356,6 +1365,7 @@ model Location {
   movesTo        PlantLocationMove[] @relation("PlantLocationMoveTo")
   quarantineRecords PlantQuarantine[]
   workflowRuns   WorkflowRun[]
+  careScheduleSyncBatches CareScheduleSyncBatch[]
 
   @@unique([collectionId, code])
   @@index([collectionId])
@@ -1563,6 +1573,7 @@ model PlantCareAdjustment {
   userId              String?
   taskType            String
   cadenceOverrideDays Int?
+  nextDueAt           DateTime?
   snoozedUntil        DateTime?
   disabled            Boolean   @default(false)
   notes               String?
@@ -1578,8 +1589,134 @@ model PlantCareAdjustment {
   @@index([plantInstanceId])
   @@index([userId])
   @@index([taskType])
+  @@index([nextDueAt])
   @@index([snoozedUntil])
   @@index([disabled])
+}
+
+model CareScheduleSyncBatch {
+  id                    String   @id @default(cuid())
+  collectionId          String
+  createdByUserId       String?
+  locationId            String?
+  includeNested         Boolean  @default(false)
+  targetDueAt           DateTime
+  timezone              String
+  selectedCareTypesJson Json
+  mode                  String   @default("ALIGN_NEXT_DUE")
+  createMissing         Boolean  @default(true)
+  notes                 String?
+  createdAt             DateTime @default(now())
+
+  collection    Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  createdByUser User?      @relation("CareScheduleSyncBatchCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  location      Location?  @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  items         CareScheduleSyncItem[]
+
+  @@index([collectionId])
+  @@index([createdByUserId])
+  @@index([locationId])
+  @@index([targetDueAt])
+  @@index([createdAt])
+}
+
+model CareScheduleSyncItem {
+  id                 String   @id @default(cuid())
+  batchId            String
+  collectionId       String
+  plantInstanceId    String
+  careType           String
+  previousDueAt      DateTime?
+  newDueAt           DateTime?
+  previousCadenceJson Json?
+  newCadenceJson     Json?
+  action             String
+  skipReason         String?
+  createdAt          DateTime @default(now())
+
+  batch         CareScheduleSyncBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  collection    Collection            @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  plantInstance PlantInstance         @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
+
+  @@index([batchId])
+  @@index([collectionId])
+  @@index([plantInstanceId])
+  @@index([careType])
+  @@index([action])
+}
+
+model CollectionQuietDay {
+  id              String   @id @default(cuid())
+  collectionId    String
+  name            String
+  description     String?
+  quietType       String
+  date            DateTime?
+  startDate       DateTime?
+  endDate         DateTime?
+  dayOfWeek       Int?
+  timezone        String
+  active          Boolean  @default(true)
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  collection    Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  createdByUser User?      @relation("CollectionQuietDayCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  adjustments   CareQuietDayAdjustment[]
+
+  @@index([collectionId])
+  @@index([createdByUserId])
+  @@index([quietType])
+  @@index([date])
+  @@index([startDate])
+  @@index([endDate])
+  @@index([dayOfWeek])
+  @@index([active])
+}
+
+model CollectionQuietDayShiftRule {
+  id                    String   @id @default(cuid())
+  collectionId          String
+  careType              String
+  defaultShiftDirection String   @default("LATER")
+  maxShiftDaysBefore    Int      @default(2)
+  maxShiftDaysAfter     Int      @default(2)
+  active                Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, careType])
+  @@index([collectionId])
+  @@index([careType])
+  @@index([active])
+}
+
+model CareQuietDayAdjustment {
+  id              String   @id @default(cuid())
+  collectionId    String
+  quietDayId      String?
+  plantInstanceId String?
+  careType        String
+  originalDueAt   DateTime
+  adjustedDueAt   DateTime
+  shiftDirection  String
+  ruleUsed        String
+  reason          String
+  createdAt       DateTime @default(now())
+
+  collection    Collection        @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  quietDay      CollectionQuietDay? @relation(fields: [quietDayId], references: [id], onDelete: SetNull)
+  plantInstance PlantInstance?    @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
+
+  @@index([collectionId])
+  @@index([quietDayId])
+  @@index([plantInstanceId])
+  @@index([careType])
+  @@index([originalDueAt])
+  @@index([adjustedDueAt])
 }
 
 model CareSheet {

@@ -27,6 +27,7 @@
     "check:collection-integrity": "prisma generate && tsx scripts/check-collection-integrity.ts",
     "check:mobile-overflow": "node scripts/check-mobile-overflow.mjs",
     "check:production": "sh scripts/check-production.sh",
+    "check:care-scheduling": "tsx scripts/check-care-scheduling.ts",
     "check:workflows": "tsx scripts/check-workflows.ts",
     "check:timezone": "tsx scripts/check-timezone.ts"
   },
