@@ -2224,6 +2224,12 @@ export async function completeCareTask(fd: FormData) {
         ? { dueAt: nextSendAt, nextSendAt, completedAt: null }
         : { completedAt, nextSendAt: null },
     })
+    if (reminder.entityType === 'PLANT_INSTANCE' && reminder.entityId) {
+      await prisma.plantCareAdjustment.updateMany({
+        where: { collectionId: context.collection.id, plantInstanceId: reminder.entityId, taskType: 'REMINDER' },
+        data: { snoozedUntil: null, nextDueAt: null },
+      })
+    }
     await audit(context.user, 'COMPLETE', 'REMINDER', reminderId, `Completed care reminder ${reminder.title}`, undefined, context.collection.id)
     revalidateDestination(destination)
     redirect(destination)
@@ -2253,7 +2259,7 @@ export async function completeCareTask(fd: FormData) {
 
   await prisma.plantCareAdjustment.updateMany({
     where: { collectionId: context.collection.id, plantInstanceId, taskType },
-    data: { snoozedUntil: null },
+    data: { snoozedUntil: null, nextDueAt: null },
   })
   await audit(context.user, 'CREATE', 'PLANT_CARE_EVENT', event.id, `Completed ${taskType.toLowerCase().replaceAll('_', ' ')} for ${plant.plantId}`, undefined, context.collection.id)
   revalidateDestination(destination)

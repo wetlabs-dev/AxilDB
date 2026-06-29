@@ -101,6 +101,7 @@ export default async function Instances({
   filterParams.set('includeNested', includeNestedLocations ? '1' : '0')
   const instancesBackPath = collectionPath(collection.slug, `/instances${filterParams.toString() ? `?${filterParams}` : ''}`)
   const careSyncParams = new URLSearchParams()
+  if (definitionFilter) careSyncParams.set('definitionId', definitionFilter)
   if (locationFilter) {
     careSyncParams.set('locationId', locationFilter)
     careSyncParams.set('includeNested', includeNestedLocations ? '1' : '0')

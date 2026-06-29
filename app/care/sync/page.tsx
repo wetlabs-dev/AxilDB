@@ -29,6 +29,7 @@ export default async function CareScheduleSyncPage({
   const params = await searchParams
   const preferences = context.user ? await prisma.emailPreference.findUnique({ where: { userId: context.user.id } }) : null
   const timezone = timeZoneForPreference(preferences)
+  const definitionId = firstParam(params.definitionId)
   const locationId = firstParam(params.locationId)
   const includeNested = firstParam(params.includeNested) !== '0'
   const targetDate = firstParam(params.targetDate) || new Date().toISOString().slice(0, 10)
@@ -41,7 +42,11 @@ export default async function CareScheduleSyncPage({
   const selectedCareTypes = normalizeCareTypes(allParams(params.careType)).filter((type) => syncCareTypes.includes(type as any))
   const selectedPlantIds = new Set(allParams(params.plantInstanceId))
 
-  const [locations, quietDays, quietRules, allItems] = await Promise.all([
+  const [definitions, locations, quietDays, quietRules, allItems] = await Promise.all([
+    prisma.plantDefinition.findMany({
+      where: { OR: [{ collectionId: context.collection.id }, { collectionId: null, isValidated: true }] },
+      orderBy: [{ isValidated: 'desc' }, { genus: 'asc' }, { species: 'asc' }, { cultivarName: 'asc' }],
+    }),
     prisma.location.findMany({ where: { collectionId: context.collection.id, status: 'ACTIVE' }, include: { locationType: true }, orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }] }),
     prisma.collectionQuietDay.findMany({ where: { collectionId: context.collection.id, active: true } }),
     prisma.collectionQuietDayShiftRule.findMany({ where: { collectionId: context.collection.id, active: true } }),
@@ -57,12 +62,14 @@ export default async function CareScheduleSyncPage({
     locationType: location.locationType,
   }))
   const selectedLocation = locationId ? locationNodes.find((location) => location.id === locationId) : null
+  const selectedDefinition = definitionId ? definitions.find((definition) => definition.id === definitionId) : null
   const descendantIds = selectedLocation && includeNested ? Array.from(descendantLocationIds(selectedLocation.id, locationNodes)) : []
   const locationIds = selectedLocation ? [selectedLocation.id, ...descendantIds] : []
   const plants = await prisma.plantInstance.findMany({
     where: {
       collectionId: context.collection.id,
       status: 'ACTIVE',
+      ...(selectedDefinition ? { plantDefinitionId: selectedDefinition.id } : {}),
       ...(locationIds.length ? { currentLocationId: { in: locationIds } } : {}),
     },
     include: { plantDefinition: true, currentLocation: { include: { locationType: true } }, quarantines: { where: { status: 'ACTIVE' }, take: 1 } },
@@ -88,6 +95,7 @@ export default async function CareScheduleSyncPage({
   const targetDueAt = parseTargetDueAt(targetDate, targetTime, timezone)
 
   const selectedPlants = plants.filter((plant) => selectedPlantIds.has(plant.id))
+  const defaultSelectFilteredPlants = selectedPlantIds.size === 0 && !review && Boolean(selectedDefinition || selectedLocation)
   const proposedRows = review
       ? selectedPlants.flatMap((plant) => selectedCareTypes.map((careType) => {
         const current = dueByPlantType.get(`${plant.id}:${careType}`)
@@ -133,7 +141,11 @@ export default async function CareScheduleSyncPage({
         <Card>
           <form method="get" action={collectionPath(context.collection.slug, '/care/sync')} className="grid gap-4">
             <input type="hidden" name="review" value="1" />
-            <div className="grid gap-3 lg:grid-cols-4">
+            <div className="grid gap-3 lg:grid-cols-5">
+              <Select label="Definition filter" name="definitionId" defaultValue={selectedDefinition?.id || ''}>
+                <option value="">All active definitions</option>
+                {definitions.map((definition) => <option key={definition.id} value={definition.id}>{plantName(definition)}</option>)}
+              </Select>
               <Select label="Location filter" name="locationId" defaultValue={locationId}>
                 <option value="">All active plants</option>
                 {locationNodes.map((location) => <option key={location.id} value={location.id}>{locationPathWithCodes(location.id, locationNodes)}</option>)}
@@ -173,11 +185,17 @@ export default async function CareScheduleSyncPage({
 
             <fieldset className="rounded-lg border border-stone-200 bg-white/50 p-3">
               <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-stone-500">Plants</legend>
-              <p className="mb-2 text-sm text-stone-600">{plants.length} active plant{plants.length === 1 ? '' : 's'} in scope. Select the specimens to synchronize.</p>
+              <p className="mb-2 text-sm text-stone-600">
+                {plants.length} active plant{plants.length === 1 ? '' : 's'} in scope
+                {selectedDefinition ? ` for ${plantName(selectedDefinition)}` : ''}
+                {selectedLocation ? ` at ${locationPathWithCodes(selectedLocation.id, locationNodes)}` : ''}.
+                {' '}
+                Select the specimens to synchronize.
+              </p>
               <div className="grid max-h-[34rem] gap-2 overflow-auto pr-1">
                 {plants.map((plant) => (
                   <label key={plant.id} className="grid gap-1 rounded-md border border-stone-200 bg-white/65 p-2 text-sm sm:grid-cols-[auto_minmax(0,1fr)_minmax(10rem,0.7fr)]">
-                    <input className="mt-1" type="checkbox" name="plantInstanceId" value={plant.id} defaultChecked={selectedPlantIds.has(plant.id)} />
+                    <input className="mt-1" type="checkbox" name="plantInstanceId" value={plant.id} defaultChecked={selectedPlantIds.has(plant.id) || defaultSelectFilteredPlants} />
                     <span>
                       <span className="block font-mono text-xs font-semibold text-[#2f6b45]">{plant.plantId}</span>
                       <span className="block font-medium">{plantName(plant.plantDefinition)}</span>
@@ -241,6 +259,7 @@ export default async function CareScheduleSyncPage({
           </div>
           <form action={applyCareScheduleSync} className="mt-4 grid gap-3">
             <input type="hidden" name="collectionSlug" value={context.collection.slug} />
+            <input type="hidden" name="definitionId" value={selectedDefinition?.id || ''} />
             <input type="hidden" name="locationId" value={locationId} />
             <input type="hidden" name="includeNested" value={includeNested ? '1' : '0'} />
             <input type="hidden" name="targetDate" value={targetDate} />

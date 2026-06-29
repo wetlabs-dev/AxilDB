@@ -86,6 +86,7 @@ export async function applyCareScheduleSync(fd: FormData) {
   const targetDueAt = parseTargetDueAt(val(fd, 'targetDate'), optional(fd, 'targetTime'), timezone)
   const careTypes = normalizeCareTypes(fd.getAll('careType')).filter((type) => ['WATER', 'PEST_CHECK', 'HEALTH_CHECK', 'PROPAGATION_CHECK', 'BLOOM_CHECK', 'REMINDER'].includes(type))
   const plantIds = Array.from(new Set(fd.getAll('plantInstanceId').map((value) => String(value || '')).filter(Boolean)))
+  const definitionId = optional(fd, 'definitionId')
   const locationId = optional(fd, 'locationId')
   const includeNested = fd.get('includeNested') === 'on' || fd.get('includeNested') === '1'
   const createMissing = fd.get('createMissing') !== 'off'
@@ -105,6 +106,7 @@ export async function applyCareScheduleSync(fd: FormData) {
       id: { in: plantIds },
       collectionId: context.collection.id,
       status: 'ACTIVE',
+      ...(definitionId ? { plantDefinitionId: definitionId } : {}),
       ...(allowedLocationIds.length ? { currentLocationId: { in: allowedLocationIds } } : {}),
     },
     select: { id: true, plantId: true },
