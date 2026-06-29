@@ -1605,6 +1605,8 @@ model CareScheduleSyncBatch {
   selectedCareTypesJson Json
   mode                  String   @default("ALIGN_NEXT_DUE")
   createMissing         Boolean  @default(true)
+  syncCadence           Boolean  @default(false)
+  cadenceDays           Int?
   notes                 String?
   createdAt             DateTime @default(now())
 

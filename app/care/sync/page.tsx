@@ -35,6 +35,9 @@ export default async function CareScheduleSyncPage({
   const targetTime = firstParam(params.targetTime) || '09:00'
   const review = firstParam(params.review) === '1'
   const createMissing = firstParam(params.createMissing) !== 'off'
+  const syncCadence = firstParam(params.syncCadence) === 'on'
+  const rawCadenceDays = Number(firstParam(params.cadenceDays) || '7')
+  const cadenceDays = Number.isFinite(rawCadenceDays) ? Math.max(1, Math.min(365, Math.floor(rawCadenceDays))) : 7
   const selectedCareTypes = normalizeCareTypes(allParams(params.careType)).filter((type) => syncCareTypes.includes(type as any))
   const selectedPlantIds = new Set(allParams(params.plantInstanceId))
 
@@ -66,6 +69,14 @@ export default async function CareScheduleSyncPage({
     orderBy: { plantId: 'asc' },
     take: 500,
   })
+  const existingAdjustments = await prisma.plantCareAdjustment.findMany({
+    where: {
+      collectionId: context.collection.id,
+      plantInstanceId: { in: plants.map((plant) => plant.id) },
+      taskType: { in: syncCareTypes as unknown as string[] },
+    },
+  })
+  const adjustmentByPlantType = new Map(existingAdjustments.map((adjustment) => [`${adjustment.plantInstanceId}:${adjustment.taskType}`, adjustment]))
   const dueByPlantType = new Map<string, (typeof allItems)[number]>()
   for (const item of allItems) {
     if (!item.plantInstanceId) continue
@@ -78,8 +89,9 @@ export default async function CareScheduleSyncPage({
 
   const selectedPlants = plants.filter((plant) => selectedPlantIds.has(plant.id))
   const proposedRows = review
-    ? selectedPlants.flatMap((plant) => selectedCareTypes.map((careType) => {
+      ? selectedPlants.flatMap((plant) => selectedCareTypes.map((careType) => {
         const current = dueByPlantType.get(`${plant.id}:${careType}`)
+        const adjustment = adjustmentByPlantType.get(`${plant.id}:${careType}`)
         const shift = resolveQuietDayShift({
           dueAt: targetDueAt,
           careType,
@@ -92,6 +104,8 @@ export default async function CareScheduleSyncPage({
           careType,
           current,
           proposed: shift?.adjustedDueAt || targetDueAt,
+          currentCadence: adjustment?.cadenceOverrideDays || null,
+          proposedCadence: syncCadence ? cadenceDays : null,
           quietReason: shift?.adjustedDueAt.getTime() !== targetDueAt.getTime() ? shift?.reason : null,
           action: current ? 'UPDATED' : 'CREATED',
         }
@@ -131,6 +145,18 @@ export default async function CareScheduleSyncPage({
               </label>
               <Field label="Target date" name="targetDate" type="date" defaultValue={targetDate} />
               <Field label="Optional time" name="targetTime" type="time" defaultValue={targetTime} />
+            </div>
+
+            <div className="grid gap-3 rounded-lg border border-stone-200 bg-white/50 p-3 sm:grid-cols-[minmax(0,1fr)_12rem] sm:items-end">
+              <label className="flex items-start gap-2 text-sm">
+                <input type="hidden" name="syncCadence" value="off" />
+                <input className="mt-1" type="checkbox" name="syncCadence" value="on" defaultChecked={syncCadence} />
+                <span>
+                  <span className="font-medium">Sync cadence as well</span>
+                  <span className="block text-stone-600">Set the selected care types to repeat on the same interval. Leave off to align only the next due date.</span>
+                </span>
+              </label>
+              <Field label="Cadence days" name="cadenceDays" type="number" min="1" max="365" defaultValue={String(cadenceDays)} />
             </div>
 
             <fieldset className="rounded-lg border border-stone-200 bg-white/50 p-3">
@@ -187,6 +213,7 @@ export default async function CareScheduleSyncPage({
                   <th className="border-b border-stone-200 px-3 py-2">Care type</th>
                   <th className="border-b border-stone-200 px-3 py-2">Current next due</th>
                   <th className="border-b border-stone-200 px-3 py-2">Proposed next due</th>
+                  {syncCadence && <th className="border-b border-stone-200 px-3 py-2">Cadence</th>}
                   <th className="border-b border-stone-200 px-3 py-2">Action</th>
                 </tr>
               </thead>
@@ -200,6 +227,12 @@ export default async function CareScheduleSyncPage({
                       {formatDateTime(row.proposed, timezone)}
                       {row.quietReason && <span className="mt-1 block rounded border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-900">{row.quietReason}</span>}
                     </td>
+                    {syncCadence && (
+                      <td className="border-b border-stone-200 px-3 py-2">
+                        {row.currentCadence ? `${row.currentCadence}d` : 'Inferred/default'}
+                        <span className="block font-semibold text-[#2f6b45]">→ {row.proposedCadence}d</span>
+                      </td>
+                    )}
                     <td className="border-b border-stone-200 px-3 py-2">{row.action.toLowerCase()}</td>
                   </tr>
                 ))}
@@ -213,6 +246,8 @@ export default async function CareScheduleSyncPage({
             <input type="hidden" name="targetDate" value={targetDate} />
             <input type="hidden" name="targetTime" value={targetTime} />
             <input type="hidden" name="timezone" value={timezone} />
+            <input type="hidden" name="syncCadence" value={syncCadence ? 'on' : 'off'} />
+            <input type="hidden" name="cadenceDays" value={String(cadenceDays)} />
             {selectedCareTypes.map((type) => <input key={type} type="hidden" name="careType" value={type} />)}
             {selectedPlants.map((plant) => <input key={plant.id} type="hidden" name="plantInstanceId" value={plant.id} />)}
             <input type="hidden" name="createMissing" value={createMissing ? 'on' : 'off'} />

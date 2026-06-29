@@ -89,6 +89,9 @@ export async function applyCareScheduleSync(fd: FormData) {
   const locationId = optional(fd, 'locationId')
   const includeNested = fd.get('includeNested') === 'on' || fd.get('includeNested') === '1'
   const createMissing = fd.get('createMissing') !== 'off'
+  const syncCadence = fd.get('syncCadence') === 'on'
+  const rawCadenceDays = Number(val(fd, 'cadenceDays') || '7')
+  const cadenceDays = Number.isFinite(rawCadenceDays) ? Math.max(1, Math.min(365, Math.floor(rawCadenceDays))) : 7
   if (!plantIds.length || !careTypes.length) redirect(collectionPath(context.collection.slug, '/care/sync?error=missing-selection'))
 
   const locations = locationId
@@ -128,8 +131,10 @@ export async function applyCareScheduleSync(fd: FormData) {
         targetDueAt,
         timezone,
         selectedCareTypesJson: careTypes as unknown as Prisma.InputJsonValue,
-        mode: 'ALIGN_NEXT_DUE',
+        mode: syncCadence ? 'ALIGN_NEXT_DUE_AND_CADENCE' : 'ALIGN_NEXT_DUE',
         createMissing,
+        syncCadence,
+        cadenceDays: syncCadence ? cadenceDays : null,
         notes: optional(fd, 'notes'),
       },
     })
@@ -165,12 +170,14 @@ export async function applyCareScheduleSync(fd: FormData) {
             userId: context.user.id,
             taskType: careType,
             nextDueAt: adjustedDueAt,
+            cadenceOverrideDays: syncCadence ? cadenceDays : null,
             disabled: false,
             notes: `Care schedule synced by ${context.user.email}.`,
           },
           update: {
             userId: context.user.id,
             nextDueAt: adjustedDueAt,
+            ...(syncCadence ? { cadenceOverrideDays: cadenceDays } : {}),
             disabled: false,
             snoozedUntil: null,
           },
@@ -184,6 +191,7 @@ export async function applyCareScheduleSync(fd: FormData) {
             previousDueAt: existing?.nextDueAt || null,
             newDueAt: adjustedDueAt,
             previousCadenceJson: existing?.cadenceOverrideDays ? { cadenceOverrideDays: existing.cadenceOverrideDays } : Prisma.JsonNull,
+            newCadenceJson: syncCadence ? { cadenceOverrideDays: cadenceDays } : Prisma.JsonNull,
             action: existing ? 'UPDATED' : 'CREATED',
           },
         })
@@ -211,8 +219,10 @@ export async function applyCareScheduleSync(fd: FormData) {
     plantCount: plants.length,
     careTypes,
     targetDueAt,
-    mode: 'ALIGN_NEXT_DUE',
+    mode: syncCadence ? 'ALIGN_NEXT_DUE_AND_CADENCE' : 'ALIGN_NEXT_DUE',
     createMissing,
+    syncCadence,
+    cadenceDays: syncCadence ? cadenceDays : null,
   }, context.collection.id)
   revalidatePath(collectionPath(context.collection.slug, '/care'))
   revalidatePath(collectionPath(context.collection.slug, '/care/sync'))
