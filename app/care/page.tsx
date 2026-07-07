@@ -1,14 +1,21 @@
 import Link from 'next/link'
 import { Bell, Bug, CheckCircle2, Droplets, Flower2, HeartPulse, Sprout } from 'lucide-react'
-import { completeCareTask, markPropagationEstablished, snoozeCareTask } from '@/app/actions'
+import {
+  completeCareTask,
+  conditionStillNeedsAttentionFromCareQueue,
+  markPropagationEstablished,
+  resolveConditionFromCareQueue,
+  snoozeCareTask,
+  updateConditionFromCareQueue,
+} from '@/app/actions'
 import { startWorkflowRun } from '@/app/workflow-actions'
 import { PlantIdPreviewLink } from '@/components/PlantIdPreviewLink'
 import { PlantImage } from '@/components/PlantImage'
-import { Button, Card, TextArea } from '@/components/ui'
+import { Button, Card, Field, Select, TextArea } from '@/components/ui'
 import { canCreateInCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { careQueueSummary, careTaskLabel, filterCareQueue, getCareQueue, type CareQueueItem } from '@/lib/care-queue'
 import { prisma } from '@/lib/prisma'
-import { formatDate } from '@/lib/time'
+import { dateInputValue, formatDate } from '@/lib/time'
 import { ensureStarterWorkflowTemplates } from '@/lib/workflows'
 
 const filters = [
@@ -22,6 +29,9 @@ const filters = [
   ['custom', 'Custom'],
   ['completed', 'Completed'],
 ] as const
+
+const conditionSeverityOptions = ['LOW', 'MODERATE', 'HIGH', 'CRITICAL'] as const
+const conditionStatusOptions = ['OPEN', 'IMPROVING', 'RESOLVED'] as const
 
 function taskIcon(task: CareQueueItem) {
   const className = 'h-4 w-4'
@@ -42,6 +52,24 @@ function priorityLabel(priority: number) {
 
 function dateLabel(date: Date, timezone?: string | null) {
   return formatDate(date, timezone || undefined)
+}
+
+function labelize(value?: string | null) {
+  return (value || '')
+    .replaceAll('_', ' ')
+    .toLowerCase()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase())
+}
+
+function ConditionHiddenFields({ item, collectionSlug, back }: { item: CareQueueItem; collectionSlug: string; back: string }) {
+  return (
+    <>
+      <input type="hidden" name="collectionSlug" value={collectionSlug} />
+      <input type="hidden" name="back" value={back} />
+      <input type="hidden" name="taskType" value={item.taskType} />
+      {item.conditionId && <input type="hidden" name="conditionId" value={item.conditionId} />}
+    </>
+  )
 }
 
 export default async function CareQueuePage({ searchParams }: { searchParams: Promise<{ filter?: string }> }) {
@@ -188,30 +216,92 @@ export default async function CareQueuePage({ searchParams }: { searchParams: Pr
                 )}
                 {canAct && !item.completedAt && (
                   <div className="grid gap-2 border-t border-stone-200 pt-3">
-                    <form action={completeCareTask} className="grid gap-2">
-                      <input type="hidden" name="collectionSlug" value={context.collection.slug} />
-                      <input type="hidden" name="back" value={back} />
-                      <input type="hidden" name="taskType" value={item.taskType} />
-                      {item.plantInstanceId && <input type="hidden" name="plantInstanceId" value={item.plantInstanceId} />}
-                      {item.reminderId && <input type="hidden" name="reminderId" value={item.reminderId} />}
-                      {item.conditionId && <input type="hidden" name="conditionId" value={item.conditionId} />}
-                      {item.bloomEventId && <input type="hidden" name="bloomEventId" value={item.bloomEventId} />}
-                      {item.source === 'derived' && <TextArea label="Quick note" name="notes" className="min-h-14" />}
-                      <Button className="w-full">Complete</Button>
-                    </form>
-                    {item.plantInstanceId && item.source === 'derived' && (
-                      <div className="flex flex-wrap gap-2">
-                        {[1, 3, 7].map((days) => (
-                          <form key={days} action={snoozeCareTask}>
-                            <input type="hidden" name="collectionSlug" value={context.collection.slug} />
-                            <input type="hidden" name="back" value={back} />
-                            <input type="hidden" name="plantInstanceId" value={item.plantInstanceId} />
-                            <input type="hidden" name="taskType" value={item.taskType} />
-                            <input type="hidden" name="days" value={days} />
-                            <button className="rounded-md border border-stone-200 bg-white/70 px-2.5 py-1 text-xs font-medium text-stone-700">Snooze {days}d</button>
-                          </form>
-                        ))}
+                    {item.condition ? (
+                      <div className="grid gap-3 rounded-lg border border-[#c7d8bd] bg-[#f5fbf0]/70 p-3">
+                        <div className="grid gap-1 text-xs text-stone-700 sm:grid-cols-2">
+                          <p><span className="font-semibold">Condition:</span> {labelize(item.condition.category)}</p>
+                          <p><span className="font-semibold">Severity:</span> {labelize(item.condition.severity)}</p>
+                          <p><span className="font-semibold">Status:</span> {labelize(item.condition.status)}</p>
+                          <p><span className="font-semibold">Opened:</span> {dateLabel(item.condition.observedAt, timezone)}</p>
+                          <p><span className="font-semibold">Updated:</span> {dateLabel(item.condition.updatedAt, timezone)}</p>
+                          <p><span className="font-semibold">Follow-up:</span> {item.condition.followUpAt ? dateLabel(item.condition.followUpAt, timezone) : 'No date set'}</p>
+                        </div>
+
+                        <details className="rounded-md border border-stone-200 bg-white/75 p-3" open>
+                          <summary className="cursor-pointer text-sm font-semibold text-stone-800">Condition actions</summary>
+                          <div className="mt-3 grid gap-3">
+                            <form action={resolveConditionFromCareQueue} className="grid gap-2">
+                              <ConditionHiddenFields item={item} collectionSlug={context.collection.slug} back={back} />
+                              <TextArea label="Resolution note" name="resolutionNote" className="min-h-14" />
+                              <Button className="w-full bg-[#2f6b45] hover:bg-[#28593b]">Resolve condition</Button>
+                            </form>
+
+                            <form action={updateConditionFromCareQueue} className="grid gap-2 border-t border-stone-200 pt-3">
+                              <ConditionHiddenFields item={item} collectionSlug={context.collection.slug} back={back} />
+                              <div className="grid gap-2 sm:grid-cols-3">
+                                <Select label="Severity" name="severity" defaultValue={item.condition.severity}>
+                                  {conditionSeverityOptions.map((severity) => (
+                                    <option key={severity} value={severity}>{labelize(severity)}</option>
+                                  ))}
+                                </Select>
+                                <Select label="Status" name="status" defaultValue={item.condition.status}>
+                                  {conditionStatusOptions.map((status) => (
+                                    <option key={status} value={status}>{labelize(status)}</option>
+                                  ))}
+                                </Select>
+                                <Field
+                                  label="Follow-up date"
+                                  name="followUpAt"
+                                  type="date"
+                                  defaultValue={item.condition.followUpAt ? dateInputValue(item.condition.followUpAt, timezone || undefined) : ''}
+                                />
+                              </div>
+                              <TextArea label="Update note" name="updateNote" className="min-h-14" />
+                              <button className="rounded-md border border-[#c7d8bd] bg-white px-3 py-2 text-sm font-semibold text-[#2f6b45] shadow-sm hover:bg-[#f5fbf0]">Update condition</button>
+                            </form>
+
+                            <form action={conditionStillNeedsAttentionFromCareQueue} className="grid gap-2 border-t border-stone-200 pt-3">
+                              <ConditionHiddenFields item={item} collectionSlug={context.collection.slug} back={back} />
+                              <Field
+                                label="Next follow-up"
+                                name="followUpAt"
+                                type="date"
+                                help="Leave blank to keep this item active in the queue."
+                                defaultValue={item.condition.followUpAt ? dateInputValue(item.condition.followUpAt, timezone || undefined) : ''}
+                              />
+                              <TextArea label="Attention note" name="attentionNote" className="min-h-14" />
+                              <button className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900 shadow-sm hover:bg-amber-100">Still needs attention</button>
+                            </form>
+                          </div>
+                        </details>
                       </div>
+                    ) : (
+                      <>
+                        <form action={completeCareTask} className="grid gap-2">
+                          <input type="hidden" name="collectionSlug" value={context.collection.slug} />
+                          <input type="hidden" name="back" value={back} />
+                          <input type="hidden" name="taskType" value={item.taskType} />
+                          {item.plantInstanceId && <input type="hidden" name="plantInstanceId" value={item.plantInstanceId} />}
+                          {item.reminderId && <input type="hidden" name="reminderId" value={item.reminderId} />}
+                          {item.bloomEventId && <input type="hidden" name="bloomEventId" value={item.bloomEventId} />}
+                          {item.source === 'derived' && <TextArea label="Quick note" name="notes" className="min-h-14" />}
+                          <Button className="w-full">Complete</Button>
+                        </form>
+                        {item.plantInstanceId && item.source === 'derived' && (
+                          <div className="flex flex-wrap gap-2">
+                            {[1, 3, 7].map((days) => (
+                              <form key={days} action={snoozeCareTask}>
+                                <input type="hidden" name="collectionSlug" value={context.collection.slug} />
+                                <input type="hidden" name="back" value={back} />
+                                <input type="hidden" name="plantInstanceId" value={item.plantInstanceId} />
+                                <input type="hidden" name="taskType" value={item.taskType} />
+                                <input type="hidden" name="days" value={days} />
+                                <button className="rounded-md border border-stone-200 bg-white/70 px-2.5 py-1 text-xs font-medium text-stone-700">Snooze {days}d</button>
+                              </form>
+                            ))}
+                          </div>
+                        )}
+                      </>
                     )}
                     {item.taskType === 'PROPAGATION_CHECK' && item.plantInstanceId && (item.propagationAgeDays || 0) >= 14 && (
                       <form action={markPropagationEstablished}>

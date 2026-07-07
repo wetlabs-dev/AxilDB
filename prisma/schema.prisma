@@ -1548,6 +1548,7 @@ model PlantCondition {
   severity        String    @default("MODERATE")
   status          String    @default("OPEN")
   observedAt      DateTime  @default(now())
+  followUpAt      DateTime?
   resolvedAt      DateTime?
   notes           String?
   createdAt       DateTime  @default(now())
@@ -1564,6 +1565,7 @@ model PlantCondition {
   @@index([severity])
   @@index([status])
   @@index([observedAt])
+  @@index([followUpAt])
 }
 
 model PlantCareAdjustment {

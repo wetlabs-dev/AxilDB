@@ -99,6 +99,18 @@ const queueTaskForBulkCare = (careType?: string | null) => {
   if (careType === 'OTHER') return 'REMINDER'
   return null
 }
+const conditionSeverityValue = (value?: string | null) =>
+  ['LOW', 'MODERATE', 'HIGH', 'CRITICAL'].includes(value || '') ? value! : 'MODERATE'
+const conditionStatusValue = (value?: string | null) =>
+  ['OPEN', 'IMPROVING', 'RESOLVED'].includes(value || '') ? value! : 'OPEN'
+const conditionQueueTaskType = (category?: string | null, taskType?: string | null) =>
+  taskType === 'PEST_CHECK' || category === 'PESTS' ? 'PEST_CHECK' : 'HEALTH_CHECK'
+
+function appendConditionNote(existing: string | null | undefined, note: string | undefined, label: string) {
+  if (!note) return existing || null
+  const entry = `[${new Date().toISOString()}] ${label}: ${note}`
+  return [existing, entry].filter(Boolean).join('\n\n')
+}
 
 function aliasRows(fd: FormData) {
   const names = fd.getAll('aliasName').map((value) => String(value || '').trim())
@@ -2454,6 +2466,167 @@ export async function snoozeCareTask(fd: FormData) {
   redirect(destination)
 }
 
+export async function resolveConditionFromCareQueue(fd: FormData) {
+  const destination = back(fd)
+  const context = await requireCollectionLogger(await collectionSlug(fd))
+  const conditionId = val(fd, 'conditionId')!
+  const condition = await prisma.plantCondition.findFirstOrThrow({
+    where: { id: conditionId, collectionId: context.collection.id, status: { in: ['OPEN', 'IMPROVING'] } },
+    include: { plantInstance: { select: { id: true, plantId: true } } },
+  })
+  const taskType = conditionQueueTaskType(condition.category, val(fd, 'taskType'))
+  const performedAt = new Date()
+  const note = val(fd, 'resolutionNote') || val(fd, 'notes')
+
+  await prisma.$transaction(async (tx) => {
+    await tx.plantCondition.update({
+      where: { id: condition.id },
+      data: {
+        status: 'RESOLVED',
+        resolvedAt: performedAt,
+        followUpAt: null,
+        notes: appendConditionNote(condition.notes, note, 'Resolved from care queue'),
+      },
+    })
+    await tx.plantCareEvent.create({
+      data: {
+        collectionId: context.collection.id,
+        plantInstanceId: condition.plantInstanceId,
+        userId: context.user.id,
+        eventType: careEventForTask(taskType),
+        performedAt,
+        notes: note || `Resolved ${condition.category.toLowerCase().replaceAll('_', ' ')} condition.`,
+        metadata: {
+          source: 'CARE_QUEUE_CONDITION_RESOLVE',
+          taskType,
+          conditionId: condition.id,
+        },
+      },
+    })
+    await tx.plantCareAdjustment.updateMany({
+      where: { collectionId: context.collection.id, plantInstanceId: condition.plantInstanceId, taskType },
+      data: { snoozedUntil: null, nextDueAt: null },
+    })
+  })
+
+  await audit(context.user, 'RESOLVE', 'PLANT_CONDITION', condition.id, `Resolved ${condition.category.toLowerCase().replaceAll('_', ' ')} for ${condition.plantInstance.plantId}`, { source: 'CARE_QUEUE' }, context.collection.id)
+  revalidateDestination(destination)
+  redirect(destination)
+}
+
+export async function updateConditionFromCareQueue(fd: FormData) {
+  const destination = back(fd)
+  const context = await requireCollectionLogger(await collectionSlug(fd))
+  const preferences = await prisma.emailPreference.findUnique({ where: { userId: context.user.id } })
+  const timezone = timeZoneForPreference(preferences)
+  const conditionId = val(fd, 'conditionId')!
+  const condition = await prisma.plantCondition.findFirstOrThrow({
+    where: { id: conditionId, collectionId: context.collection.id, status: { in: ['OPEN', 'IMPROVING'] } },
+    include: { plantInstance: { select: { id: true, plantId: true } } },
+  })
+  const taskType = conditionQueueTaskType(condition.category, val(fd, 'taskType'))
+  const status = conditionStatusValue(val(fd, 'status'))
+  const followUpAt = parseDateLocal(val(fd, 'followUpAt'), timezone) || null
+  const note = val(fd, 'updateNote') || val(fd, 'notes')
+  const performedAt = new Date()
+
+  await prisma.$transaction(async (tx) => {
+    await tx.plantCondition.update({
+      where: { id: condition.id },
+      data: {
+        severity: conditionSeverityValue(val(fd, 'severity') || condition.severity),
+        status,
+        followUpAt: status === 'RESOLVED' ? null : followUpAt,
+        resolvedAt: status === 'RESOLVED' ? (condition.resolvedAt || performedAt) : null,
+        notes: appendConditionNote(condition.notes, note, 'Updated from care queue'),
+      },
+    })
+    await tx.plantCareEvent.create({
+      data: {
+        collectionId: context.collection.id,
+        plantInstanceId: condition.plantInstanceId,
+        userId: context.user.id,
+        eventType: careEventForTask(taskType),
+        performedAt,
+        notes: [
+          `Condition updated to ${status.toLowerCase()} / ${conditionSeverityValue(val(fd, 'severity') || condition.severity).toLowerCase()}.`,
+          followUpAt && status !== 'RESOLVED' ? `Follow up ${formatDate(followUpAt, timezone)}.` : '',
+          note || '',
+        ].filter(Boolean).join('\n'),
+        metadata: {
+          source: 'CARE_QUEUE_CONDITION_UPDATE',
+          taskType,
+          conditionId: condition.id,
+          conditionStatus: status,
+        },
+      },
+    })
+    await tx.plantCareAdjustment.updateMany({
+      where: { collectionId: context.collection.id, plantInstanceId: condition.plantInstanceId, taskType },
+      data: { snoozedUntil: null, nextDueAt: null },
+    })
+  })
+
+  await audit(context.user, 'UPDATE', 'PLANT_CONDITION', condition.id, `Updated ${condition.category.toLowerCase().replaceAll('_', ' ')} from care queue for ${condition.plantInstance.plantId}`, { source: 'CARE_QUEUE', status, followUpAt }, context.collection.id)
+  revalidateDestination(destination)
+  redirect(destination)
+}
+
+export async function conditionStillNeedsAttentionFromCareQueue(fd: FormData) {
+  const destination = back(fd)
+  const context = await requireCollectionLogger(await collectionSlug(fd))
+  const preferences = await prisma.emailPreference.findUnique({ where: { userId: context.user.id } })
+  const timezone = timeZoneForPreference(preferences)
+  const conditionId = val(fd, 'conditionId')!
+  const condition = await prisma.plantCondition.findFirstOrThrow({
+    where: { id: conditionId, collectionId: context.collection.id, status: { in: ['OPEN', 'IMPROVING'] } },
+    include: { plantInstance: { select: { id: true, plantId: true } } },
+  })
+  const taskType = conditionQueueTaskType(condition.category, val(fd, 'taskType'))
+  const followUpAt = parseDateLocal(val(fd, 'followUpAt'), timezone) || null
+  const note = val(fd, 'attentionNote') || val(fd, 'notes')
+  const performedAt = new Date()
+
+  await prisma.$transaction(async (tx) => {
+    await tx.plantCondition.update({
+      where: { id: condition.id },
+      data: {
+        status: condition.status === 'IMPROVING' ? 'IMPROVING' : 'OPEN',
+        followUpAt,
+        resolvedAt: null,
+        notes: appendConditionNote(condition.notes, note, 'Still needs attention from care queue'),
+      },
+    })
+    await tx.plantCareEvent.create({
+      data: {
+        collectionId: context.collection.id,
+        plantInstanceId: condition.plantInstanceId,
+        userId: context.user.id,
+        eventType: careEventForTask(taskType),
+        performedAt,
+        notes: [
+          `Condition still needs attention.`,
+          followUpAt ? `Follow up ${formatDate(followUpAt, timezone)}.` : '',
+          note || '',
+        ].filter(Boolean).join('\n'),
+        metadata: {
+          source: 'CARE_QUEUE_CONDITION_STILL_NEEDS_ATTENTION',
+          taskType,
+          conditionId: condition.id,
+        },
+      },
+    })
+    await tx.plantCareAdjustment.updateMany({
+      where: { collectionId: context.collection.id, plantInstanceId: condition.plantInstanceId, taskType },
+      data: { snoozedUntil: null, nextDueAt: null },
+    })
+  })
+
+  await audit(context.user, 'UPDATE', 'PLANT_CONDITION', condition.id, `Kept ${condition.category.toLowerCase().replaceAll('_', ' ')} open from care queue for ${condition.plantInstance.plantId}`, { source: 'CARE_QUEUE', followUpAt }, context.collection.id)
+  revalidateDestination(destination)
+  redirect(destination)
+}
+
 export async function markPropagationEstablished(fd: FormData) {
   const destination = back(fd)
   const context = await requireCollectionLogger(await collectionSlug(fd))
@@ -2499,6 +2672,8 @@ export async function markPropagationEstablished(fd: FormData) {
 export async function createPlantCondition(fd: FormData) {
   const destination = back(fd)
   const context = await requireCollectionLogger(await collectionSlug(fd))
+  const preferences = await prisma.emailPreference.findUnique({ where: { userId: context.user.id } })
+  const timezone = timeZoneForPreference(preferences)
   const plantInstanceId = val(fd, 'plantInstanceId')!
   const plant = await prisma.plantInstance.findFirstOrThrow({
     where: { id: plantInstanceId, collectionId: context.collection.id },
@@ -2514,6 +2689,7 @@ export async function createPlantCondition(fd: FormData) {
       severity: val(fd, 'severity') || 'MODERATE',
       status: val(fd, 'status') || 'OPEN',
       observedAt: date(val(fd, 'observedAt')) || new Date(),
+      followUpAt: parseDateLocal(val(fd, 'followUpAt'), timezone),
       notes: val(fd, 'notes'),
     },
   })
@@ -2526,6 +2702,8 @@ export async function createPlantCondition(fd: FormData) {
 export async function updatePlantCondition(fd: FormData) {
   const destination = back(fd)
   const context = await requireCollectionLogger(await collectionSlug(fd))
+  const preferences = await prisma.emailPreference.findUnique({ where: { userId: context.user.id } })
+  const timezone = timeZoneForPreference(preferences)
   const id = val(fd, 'id')!
   const existing = await prisma.plantCondition.findFirstOrThrow({
     where: { id, collectionId: context.collection.id },
@@ -2537,6 +2715,7 @@ export async function updatePlantCondition(fd: FormData) {
     data: {
       severity: val(fd, 'severity') || 'MODERATE',
       status,
+      followUpAt: status === 'RESOLVED' ? null : parseDateLocal(val(fd, 'followUpAt'), timezone),
       resolvedAt: status === 'RESOLVED' ? new Date() : null,
       notes: clearableVal(fd, 'notes'),
     },

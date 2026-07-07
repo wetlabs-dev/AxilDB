@@ -268,6 +268,7 @@ App route: `/care`
 
 - Open Care Queue from the sidebar to review today’s tasks, overdue work, watering, propagation checks, health issues, pest checks, bloom follow-ups, custom reminders, and completed care.
 - Complete or snooze generated care tasks from the queue.
+- For condition-related queue items, use the condition actions to resolve the condition, update severity/status/follow-up details, or mark that it still needs attention with a follow-up date.
 - Use Bulk care by location to record one care event per selected plant in a location, with direct-only or nested-location scope and a required review step before submit.
 - Open Bulk care from a location detail page when you want the location preselected.
 - Use Care Schedule Sync from the Care Queue, Plant Instances, or a location detail page to align selected plants and care types to a new next-due date without recording completed care. Optionally sync cadence days at the same time when a group should share the same interval.
@@ -280,6 +281,7 @@ App route: `/care`
 ### Notes
 
 - Generated care tasks are dynamic; completed care is stored as care events.
+- Condition actions update the linked condition record and add care-event history. Ordinary care completion does not silently resolve an open condition.
 - Bulk care completes only matching due or overdue care queue items for the selected plants; unrelated queue items are left alone.
 - Care Schedule Sync changes future scheduling only. By default it aligns next-due dates; when Sync cadence as well is selected, it also writes a cadence override for the selected care types. It creates an auditable batch and item record, but it does not create care events or remove historical care.
 - Collection managers can define Quiet Days from Collection Settings. The Care Queue and Care Schedule Sync shift affected due dates earlier, later, or by smart defaults according to per-care-type rules.

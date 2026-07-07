@@ -36,6 +36,17 @@ export type CareQueueItem = {
   href: string
   reminderId?: string
   conditionId?: string
+  condition?: {
+    id: string
+    category: string
+    severity: string
+    status: string
+    observedAt: Date
+    updatedAt: Date
+    followUpAt?: Date | null
+    resolvedAt?: Date | null
+    notes?: string | null
+  }
   bloomEventId?: string
   completedAt?: Date | null
   snoozedUntil?: Date | null
@@ -217,6 +228,11 @@ export async function getCareQueue(
   const latestHealthCheck = latestBy(careEvents as any, 'HEALTH_CHECK')
   const latestPropagationCheck = latestBy(careEvents as any, 'PROPAGATION_CHECK')
   const latestBloomCheck = latestBy(careEvents as any, 'BLOOM_CHECK')
+  const openPestConditionPlantIds = new Set(
+    conditions
+      .filter((condition) => condition.category === 'PESTS')
+      .map((condition) => condition.plantInstanceId),
+  )
   const adjustmentMap = new Map<string, any>()
   for (const adjustment of adjustments) {
     adjustmentMap.set(`${adjustment.plantInstanceId}:${adjustment.taskType}`, adjustment)
@@ -247,7 +263,7 @@ export async function getCareQueue(
   const pushDerived = (item: Omit<CareQueueItem, 'source' | 'href' | 'overdueDays' | 'priority'> & { basePriority: number }) => {
     const adjustment = item.plantInstanceId ? adjustmentMap.get(`${item.plantInstanceId}:${item.taskType}`) : null
     if (isSuppressed(adjustment, now)) return
-    const rawDueAt = item.plantInstanceId ? adjustment?.nextDueAt || item.dueAt : item.dueAt
+    const rawDueAt = item.plantInstanceId && !item.conditionId ? adjustment?.nextDueAt || item.dueAt : item.dueAt
     const adjusted = quietAdjusted(dayStart(rawDueAt, timezone), item.taskType, item.plantInstanceId)
     const dueAt = adjusted.dueAt
     const overdueDays = Math.max(0, daysBetween(now, dueAt, timezone))
@@ -316,34 +332,39 @@ export async function getCareQueue(
       }
     }
 
-    const pestAdjustment = adjustmentMap.get(`${instance.id}:PEST_CHECK`)
-    const pestDays = pestCadenceDays(guide, pestAdjustment)
-    const pestBaseline = latestPestCheck.get(instance.id)?.performedAt || baseDate
-    pushDerived({
-      key: `PEST_CHECK:${instance.id}`,
-      taskType: 'PEST_CHECK',
-      title: `Pest check ${instance.plantId}`,
-      reason: `Pest check cadence is about ${pestDays} days${guide.susceptibilityLevel ? ` based on ${guide.susceptibilityLevel.toLowerCase()} susceptibility` : ''}.`,
-      dueAt: addDays(pestBaseline, pestDays, timezone),
-      basePriority: pestDays <= 14 ? 80 : 45,
-      plantInstanceId: instance.id,
-      plantId: instance.plantId,
-      plantName: plantDisplayName,
-      location: instance.location,
-      image,
-    })
+    if (!openPestConditionPlantIds.has(instance.id)) {
+      const pestAdjustment = adjustmentMap.get(`${instance.id}:PEST_CHECK`)
+      const pestDays = pestCadenceDays(guide, pestAdjustment)
+      const pestBaseline = latestPestCheck.get(instance.id)?.performedAt || baseDate
+      pushDerived({
+        key: `PEST_CHECK:${instance.id}`,
+        taskType: 'PEST_CHECK',
+        title: `Pest check ${instance.plantId}`,
+        reason: `Pest check cadence is about ${pestDays} days${guide.susceptibilityLevel ? ` based on ${guide.susceptibilityLevel.toLowerCase()} susceptibility` : ''}.`,
+        dueAt: addDays(pestBaseline, pestDays, timezone),
+        basePriority: pestDays <= 14 ? 80 : 45,
+        plantInstanceId: instance.id,
+        plantId: instance.plantId,
+        plantName: plantDisplayName,
+        location: instance.location,
+        image,
+      })
+    }
 
     const instanceConditions = conditions.filter((condition) => condition.plantInstanceId === instance.id)
-    const lastHealth = latestHealthCheck.get(instance.id)?.performedAt
     for (const condition of instanceConditions) {
       const severityDays = condition.severity === 'CRITICAL' ? 1 : condition.severity === 'HIGH' ? 2 : condition.severity === 'MODERATE' ? 4 : 7
-      const baseline = lastHealth && lastHealth > condition.observedAt ? lastHealth : condition.observedAt
+      const conditionTaskType = condition.category === 'PESTS' ? 'PEST_CHECK' : 'HEALTH_CHECK'
+      const lastConditionCheck = conditionTaskType === 'PEST_CHECK'
+        ? latestPestCheck.get(instance.id)?.performedAt
+        : latestHealthCheck.get(instance.id)?.performedAt
+      const baseline = lastConditionCheck && lastConditionCheck > condition.observedAt ? lastConditionCheck : condition.observedAt
       pushDerived({
-        key: `HEALTH_CHECK:${condition.id}`,
-        taskType: 'HEALTH_CHECK',
+        key: `${conditionTaskType}:${condition.id}`,
+        taskType: conditionTaskType,
         title: `Follow up: ${condition.category.replaceAll('_', ' ').toLowerCase()}`,
         reason: `${condition.severity.toLowerCase()} ${condition.category.replaceAll('_', ' ').toLowerCase()} is ${condition.status.toLowerCase()}.`,
-        dueAt: addDays(baseline, severityDays, timezone),
+        dueAt: condition.followUpAt || addDays(baseline, severityDays, timezone),
         basePriority: conditionPriority(condition.severity),
         plantInstanceId: instance.id,
         plantId: instance.plantId,
@@ -351,6 +372,17 @@ export async function getCareQueue(
         location: instance.location,
         image,
         conditionId: condition.id,
+        condition: {
+          id: condition.id,
+          category: condition.category,
+          severity: condition.severity,
+          status: condition.status,
+          observedAt: condition.observedAt,
+          updatedAt: condition.updatedAt,
+          followUpAt: condition.followUpAt,
+          resolvedAt: condition.resolvedAt,
+          notes: condition.notes,
+        },
       })
     }
   }
