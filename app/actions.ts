@@ -273,6 +273,51 @@ function recipeProductRows(fd: FormData) {
     .filter((row) => row.productId)
 }
 
+const fertilizerNutrientFields = [
+  'nitrogen',
+  'phosphorus',
+  'potassium',
+  'calcium',
+  'magnesium',
+  'sulfur',
+  'iron',
+  'manganese',
+  'zinc',
+  'copper',
+  'boron',
+  'molybdenum',
+  'chlorine',
+  'nickel',
+  'silicon',
+] as const
+
+function fertilizerProductMutationData(fd: FormData, fallbackName?: string) {
+  const nutrientData = Object.fromEntries(fertilizerNutrientFields.map((field) => [field, clearableDec(fd, field) as any]))
+  return {
+    name: val(fd, 'name') || fallbackName,
+    brand: val(fd, 'brand') || null,
+    productType: val(fd, 'productType') || 'OTHER',
+    ...nutrientData,
+    guaranteedAnalysisNotes: val(fd, 'guaranteedAnalysisNotes') || null,
+    concentrationNotes: val(fd, 'usageNotes') || val(fd, 'concentrationNotes') || null,
+    defaultDilution: val(fd, 'manufacturerRecommendedDilution') || val(fd, 'defaultDilution') || null,
+    manufacturerFeedAmount: val(fd, 'manufacturerFeedAmount') || null,
+    manufacturerFeedUnit: val(fd, 'manufacturerFeedUnit') || null,
+    manufacturerFeedWaterVolume: val(fd, 'manufacturerFeedWaterVolume') || null,
+    manufacturerFeedWaterUnit: val(fd, 'manufacturerFeedWaterUnit') || null,
+    manufacturerFeedNotes: val(fd, 'manufacturerFeedNotes') || null,
+    sourceUrl: val(fd, 'sourceUrl') || null,
+    sourceName: val(fd, 'sourceName') || null,
+    dataConfidence: ['USER_ENTERED', 'AI_DRAFT', 'VERIFIED', 'UNCERTAIN'].includes(val(fd, 'dataConfidence') || '')
+      ? val(fd, 'dataConfidence')
+      : 'USER_ENTERED',
+    aiModel: val(fd, 'aiModel') || null,
+    aiFilledAt: val(fd, 'aiFilledAt') ? new Date(val(fd, 'aiFilledAt')!) : null,
+    notes: val(fd, 'notes') || null,
+    active: checkedValue(fd, 'active', true),
+  }
+}
+
 async function cleanupPlantInstanceDependents(collectionId: string, id: string) {
   const blooms = await prisma.bloomEvent.findMany({
     where: { collectionId, plantInstanceId: id },
@@ -1720,18 +1765,8 @@ export async function createFertilizerProduct(fd: FormData) {
   const product = await prisma.fertilizerProduct.create({
     data: {
       collectionId: collection.id,
-      name,
-      brand: val(fd, 'brand') || null,
-      productType: val(fd, 'productType') || 'OTHER',
-      nitrogen: clearableDec(fd, 'nitrogen') as any,
-      phosphorus: clearableDec(fd, 'phosphorus') as any,
-      potassium: clearableDec(fd, 'potassium') as any,
-      micronutrients: val(fd, 'micronutrients') || null,
-      concentrationNotes: val(fd, 'concentrationNotes') || null,
-      defaultDilution: val(fd, 'defaultDilution') || null,
-      notes: val(fd, 'notes') || null,
-      active: checkedValue(fd, 'active', true),
-    },
+      ...fertilizerProductMutationData(fd, name),
+    } as any,
   })
   await audit(user, 'CREATE', 'FERTILIZER_PRODUCT', product.id, `Created fertilizer product ${product.name}`, undefined, collection.id)
   revalidatePath(collectionPath(collection.slug, '/fertilizers'))
@@ -1744,19 +1779,7 @@ export async function updateFertilizerProduct(fd: FormData) {
   const product = await prisma.fertilizerProduct.findFirstOrThrow({ where: { id, collectionId: collection.id } })
   const updated = await prisma.fertilizerProduct.update({
     where: { id },
-    data: {
-      name: val(fd, 'name') || product.name,
-      brand: val(fd, 'brand') || null,
-      productType: val(fd, 'productType') || 'OTHER',
-      nitrogen: clearableDec(fd, 'nitrogen') as any,
-      phosphorus: clearableDec(fd, 'phosphorus') as any,
-      potassium: clearableDec(fd, 'potassium') as any,
-      micronutrients: val(fd, 'micronutrients') || null,
-      concentrationNotes: val(fd, 'concentrationNotes') || null,
-      defaultDilution: val(fd, 'defaultDilution') || null,
-      notes: val(fd, 'notes') || null,
-      active: checkedValue(fd, 'active', true),
-    },
+    data: fertilizerProductMutationData(fd, product.name) as any,
   })
   await audit(user, 'UPDATE', 'FERTILIZER_PRODUCT', id, `Updated fertilizer product ${updated.name}`, undefined, collection.id)
   revalidatePath(collectionPath(collection.slug, '/fertilizers'))
@@ -1772,6 +1795,23 @@ export async function archiveFertilizerProduct(fd: FormData) {
   await audit(user, 'UPDATE', 'FERTILIZER_PRODUCT', id, `${active ? 'Restored' : 'Archived'} fertilizer product ${product.name}`, undefined, collection.id)
   revalidatePath(collectionPath(collection.slug, '/fertilizers'))
   redirect(collectionPath(collection.slug, `/fertilizers?product=${active ? 'restored' : 'archived'}`))
+}
+
+export async function markFertilizerProductReviewed(fd: FormData) {
+  const { user, collection } = await requireCollectionGardener(await collectionSlug(fd))
+  const id = val(fd, 'fertilizerProductId')!
+  const product = await prisma.fertilizerProduct.findFirstOrThrow({ where: { id, collectionId: collection.id } })
+  await prisma.fertilizerProduct.update({
+    where: { id },
+    data: {
+      dataConfidence: 'VERIFIED',
+      dataReviewedAt: new Date(),
+      dataReviewedByUserId: user.id,
+    },
+  })
+  await audit(user, 'UPDATE', 'FERTILIZER_PRODUCT', id, `Marked fertilizer product ${product.name} reviewed`, undefined, collection.id)
+  revalidatePath(collectionPath(collection.slug, '/fertilizers'))
+  redirect(collectionPath(collection.slug, '/fertilizers?product=reviewed'))
 }
 
 export async function createFertilizerRecipe(fd: FormData) {

@@ -244,6 +244,8 @@ App route: `/plants`
 - Use Magic Fill husbandry to draft the structured care guide with one AI call when AI is enabled.
 - Edit individual husbandry fields inline with the edit controls next to each field instead of working through one large form.
 - Use Fertilizers from the Admin sidebar to define collection-scoped fertilizer products and recipes, then assign a recipe and cadence from the plant definition husbandry panel.
+- On fertilizer products, record structured guaranteed-analysis percentages for NPK, secondary nutrients, and micronutrients. Use guaranteed-analysis notes for chelated forms, unusual nutrients, or label text that does not fit a numeric field.
+- Record manufacturer feed rate on the product, then use recipe dilution/strength fields for the collection’s actual mix. Product label rate and recipe strength are intentionally separate.
 - Link a definition to another definition’s guide when care is identical, or make a local copy when it diverges.
 - On a specimen detail page, use override controls next to inherited husbandry values for local adjustments, including specimen-level fertilizer recipe, cadence, or disabled fertilizing.
 
@@ -252,6 +254,7 @@ App route: `/plants`
 - Quick summary fields are standardized for consistent water, light, and toxicity badges.
 - Summary badges use standardized colors and icons for watering, light, and toxicity.
 - Full guides are grouped by care sections so future care sheets can include only selected topics.
+- Magic Fill product data can draft guaranteed analysis, label feed rate, source URL/name, and confidence from public product-label or manufacturer information. It does not save automatically; apply the draft, review it, then save.
 - Magic Fill husbandry can recommend an existing active fertilizer recipe or queue a new fertilizer recipe draft, but the recommendation is not applied until you choose it and save.
 
 ### Warnings

@@ -1254,9 +1254,33 @@ model FertilizerProduct {
   nitrogen           Decimal?
   phosphorus         Decimal?
   potassium          Decimal?
-  micronutrients     String?
+  calcium            Decimal?
+  magnesium          Decimal?
+  sulfur             Decimal?
+  iron               Decimal?
+  manganese          Decimal?
+  zinc               Decimal?
+  copper             Decimal?
+  boron              Decimal?
+  molybdenum         Decimal?
+  chlorine           Decimal?
+  nickel             Decimal?
+  silicon            Decimal?
+  guaranteedAnalysisNotes String?
   concentrationNotes String?
   defaultDilution    String?
+  manufacturerFeedAmount String?
+  manufacturerFeedUnit String?
+  manufacturerFeedWaterVolume String?
+  manufacturerFeedWaterUnit String?
+  manufacturerFeedNotes String?
+  sourceUrl          String?
+  sourceName         String?
+  dataConfidence     String   @default("USER_ENTERED")
+  dataReviewedAt     DateTime?
+  dataReviewedByUserId String?
+  aiModel            String?
+  aiFilledAt         DateTime?
   notes              String?
   active             Boolean  @default(true)
   createdAt          DateTime @default(now())
@@ -1268,6 +1292,8 @@ model FertilizerProduct {
   @@unique([collectionId, name, brand])
   @@index([collectionId])
   @@index([productType])
+  @@index([dataConfidence])
+  @@index([dataReviewedByUserId])
   @@index([active])
 }
 
