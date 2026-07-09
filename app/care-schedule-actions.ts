@@ -89,7 +89,7 @@ export async function applyCareScheduleSync(fd: FormData) {
   const preferences = await prisma.emailPreference.findUnique({ where: { userId: context.user.id } })
   const timezone = val(fd, 'timezone') || timeZoneForPreference(preferences)
   const targetDueAt = parseTargetDueAt(val(fd, 'targetDate'), optional(fd, 'targetTime'), timezone)
-  const careTypes = normalizeCareTypes(fd.getAll('careType')).filter((type) => ['WATER', 'PEST_CHECK', 'HEALTH_CHECK', 'PROPAGATION_CHECK', 'BLOOM_CHECK', 'REMINDER'].includes(type))
+  const careTypes = normalizeCareTypes(fd.getAll('careType')).filter((type) => ['WATER', 'FERTILIZE', 'PEST_CHECK', 'HEALTH_CHECK', 'PROPAGATION_CHECK', 'BLOOM_CHECK', 'REMINDER'].includes(type))
   const plantIds = Array.from(new Set(fd.getAll('plantInstanceId').map((value) => String(value || '')).filter(Boolean)))
   const definitionId = optional(fd, 'definitionId')
   const locationId = optional(fd, 'locationId')

@@ -28,6 +28,63 @@ const summaryIcons = {
   summaryToxicity: Skull,
 }
 
+type FertilizerRecipeOption = {
+  id: string
+  name: string
+  declaredNpk?: string | null
+  calculatedNpk?: string | null
+  strengthLabel?: string | null
+  frequencyDays?: number | null
+  draft?: boolean
+}
+
+function FertilizerAssignmentFields({
+  values,
+  recipes = [],
+  override = false,
+}: {
+  values?: any
+  recipes?: FertilizerRecipeOption[]
+  override?: boolean
+}) {
+  return (
+    <div className="rounded-lg border border-[#d6dfc9] bg-[#f7f4e8]/75 p-3">
+      <h4 className="font-serif text-lg font-semibold">Structured fertilizer schedule</h4>
+      <p className="mt-1 text-sm text-stone-600">
+        {override
+          ? 'Leave blank to inherit the definition recipe, or set local fertilizer handling for this specimen.'
+          : 'Assign an active fertilizer recipe so fertilizing can appear in the care queue.'}
+      </p>
+      <div className="mt-3 grid gap-3 md:grid-cols-3">
+        <label className="grid gap-1 text-sm font-medium text-stone-800 md:col-span-2">
+          Fertilizer recipe
+          <select name="fertilizerRecipeId" defaultValue={values?.fertilizerRecipeId || ''} className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-2 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30">
+            <option value="">{override ? 'Inherit / no local recipe' : 'No structured recipe'}</option>
+            {recipes.map((recipe) => (
+              <option key={recipe.id} value={recipe.id}>
+                {recipe.name}{recipe.declaredNpk || recipe.calculatedNpk ? ` · ${recipe.declaredNpk || recipe.calculatedNpk}` : ''}{recipe.draft ? ' (draft)' : ''}
+              </option>
+            ))}
+          </select>
+        </label>
+        <Field
+          label="Cadence days"
+          name="fertilizationCadenceDays"
+          type="number"
+          min="1"
+          max="365"
+          defaultValue={values?.fertilizationCadenceDays ? String(values.fertilizationCadenceDays) : ''}
+          help="Overrides recipe frequency when set."
+        />
+        <label className="inline-flex items-center gap-2 text-sm font-medium text-stone-800 md:col-span-3">
+          <input type="checkbox" name="fertilizationPaused" defaultChecked={Boolean(values?.fertilizationPaused)} />
+          {override ? 'Disable fertilizing for this specimen' : 'Pause fertilizing for this definition'}
+        </label>
+      </div>
+    </div>
+  )
+}
+
 function HusbandrySummaryControl({
   field,
   label,
@@ -222,6 +279,7 @@ export function HusbandryGuideForm({
   action,
   submitLabel,
   includeMagicFill = false,
+  fertilizerRecipes = [],
 }: {
   values?: HusbandryValues | null
   plant?: any
@@ -229,6 +287,7 @@ export function HusbandryGuideForm({
   action: any
   submitLabel: string
   includeMagicFill?: boolean
+  fertilizerRecipes?: FertilizerRecipeOption[]
 }) {
   return (
     <form action={action} className="grid gap-4">
@@ -241,6 +300,7 @@ export function HusbandryGuideForm({
           <HusbandryMagicFillButton plant={plant} />
         </div>
       )}
+      <FertilizerAssignmentFields values={values as any} recipes={fertilizerRecipes} />
       <div className="grid gap-4">
         {husbandrySections.map((section) => (
           <div key={section.key} className="rounded-lg border border-stone-200 bg-white/50 p-3">
@@ -285,11 +345,13 @@ export function HusbandryOverrideForm({
   collectionSlug,
   plantInstanceId,
   action,
+  fertilizerRecipes = [],
 }: {
   values?: HusbandryValues | null
   collectionSlug: string
   plantInstanceId: string
   action: any
+  fertilizerRecipes?: FertilizerRecipeOption[]
 }) {
   return (
     <form action={action} className="grid gap-4">
@@ -298,6 +360,7 @@ export function HusbandryOverrideForm({
       <div className="rounded-lg border border-[#d6dfc9] bg-[#f7f4e8]/80 px-3 py-2 text-sm text-stone-700">
         Fill only fields that are different for this specific specimen. Blank fields inherit from the plant definition guide.
       </div>
+      <FertilizerAssignmentFields values={values as any} recipes={fertilizerRecipes} override />
       <div className="grid gap-4">
         {husbandrySections.map((section) => (
           <div key={section.key} className="rounded-lg border border-stone-200 bg-white/50 p-3">

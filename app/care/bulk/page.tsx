@@ -34,6 +34,7 @@ function allParams(value?: string | string[]) {
 
 function queueTaskForCareType(careType: string) {
   if (careType === 'WATERING') return 'WATER'
+  if (careType === 'FERTILIZING') return 'FERTILIZE'
   if (['PEST_CHECK', 'HEALTH_CHECK', 'PROPAGATION_CHECK', 'BLOOM_CHECK'].includes(careType)) return careType
   if (careType === 'OTHER') return 'REMINDER'
   return null
@@ -52,11 +53,17 @@ export default async function BulkCarePage({
 }) {
   const params = await searchParams
   const context = await requireCollectionLogger()
-  const locations = await prisma.location.findMany({
-    where: { collectionId: context.collection.id, status: 'ACTIVE' },
-    include: { locationType: true },
-    orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
-  })
+  const [locations, fertilizerRecipes] = await Promise.all([
+    prisma.location.findMany({
+      where: { collectionId: context.collection.id, status: 'ACTIVE' },
+      include: { locationType: true },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+    }),
+    prisma.fertilizerRecipe.findMany({
+      where: { collectionId: context.collection.id, active: true },
+      orderBy: [{ draft: 'asc' }, { name: 'asc' }],
+    }),
+  ])
   const locationId = firstParam(params.locationId) || locations[0]?.id || ''
   const includeNested = firstParam(params.includeNested) === '1' || firstParam(params.includeNested) === 'on'
   const includeArchived = firstParam(params.includeArchived) === '1' || firstParam(params.includeArchived) === 'on'
@@ -133,6 +140,10 @@ export default async function BulkCarePage({
   const selectedMatchingQueueItems = selectedPlants.flatMap((plant) => dueByPlant.get(plant.id) || [])
   const sharedNote = firstParam(params.sharedNote) || ''
   const sharedResult = firstParam(params.sharedResult) || ''
+  const fertilizerRecipeId = firstParam(params.fertilizerRecipeId)
+  const fertilizerStrength = firstParam(params.fertilizerStrength)
+  const fertilizerDose = firstParam(params.fertilizerDose)
+  const fertilizerWaterVolume = firstParam(params.fertilizerWaterVolume)
   const performedAt = firstParam(params.performedAt) || inputDateTimeValue()
   const success = firstParam(params.bulk) === 'success'
   const duplicate = firstParam(params.bulk) === 'duplicate'
@@ -193,6 +204,10 @@ export default async function BulkCarePage({
         <input type="hidden" name="collectionSlug" value={context.collection.slug} />
         <input type="hidden" name="locationId" value={locationId} />
         <input type="hidden" name="careType" value={careType} />
+        {review && fertilizerRecipeId && <input type="hidden" name="fertilizerRecipeId" value={fertilizerRecipeId} />}
+        {review && fertilizerStrength && <input type="hidden" name="fertilizerStrength" value={fertilizerStrength} />}
+        {review && fertilizerDose && <input type="hidden" name="fertilizerDose" value={fertilizerDose} />}
+        {review && fertilizerWaterVolume && <input type="hidden" name="fertilizerWaterVolume" value={fertilizerWaterVolume} />}
         <input type="hidden" name="q" value={firstParam(params.q) || ''} />
         <input type="hidden" name="bulkCareBatchId" value={firstParam(params.bulkCareBatchId) || randomUUID()} />
         {includeNested && <input type="hidden" name="includeNested" value="on" />}
@@ -205,6 +220,20 @@ export default async function BulkCarePage({
         <Card className="grid gap-3 md:grid-cols-2">
           <Field label="Performed date/time" name="performedAt" type="datetime-local" defaultValue={performedAt} required />
           <Field label="Shared result/status" name="sharedResult" defaultValue={sharedResult} placeholder="Optional, e.g. completed, clear, monitor" />
+          {careType === 'FERTILIZING' && (
+            <>
+              <label className="grid gap-1 text-sm font-medium text-stone-800">
+                Fertilizer recipe
+                <select className={selectClass} name="fertilizerRecipeId" defaultValue={fertilizerRecipeId}>
+                  <option value="">No recipe / ad hoc</option>
+                  {fertilizerRecipes.map((recipe) => <option key={recipe.id} value={recipe.id}>{recipe.name}{recipe.draft ? ' (draft)' : ''}</option>)}
+                </select>
+              </label>
+              <Field label="Strength" name="fertilizerStrength" defaultValue={fertilizerStrength} placeholder="e.g. quarter strength" />
+              <Field label="Dose" name="fertilizerDose" defaultValue={fertilizerDose} placeholder="e.g. 2 ml" />
+              <Field label="Water volume" name="fertilizerWaterVolume" defaultValue={fertilizerWaterVolume} placeholder="e.g. 1 L" />
+            </>
+          )}
           <TextArea label="Shared note" name="sharedNote" defaultValue={sharedNote} wrapperClassName="md:col-span-2" className="min-h-20" />
         </Card>
 
@@ -220,6 +249,11 @@ export default async function BulkCarePage({
             </p>
             {sharedNote && <p className="whitespace-pre-wrap text-sm text-stone-700">Shared note: {sharedNote}</p>}
             {sharedResult && <p className="text-sm text-stone-700">Shared result: {sharedResult}</p>}
+            {careType === 'FERTILIZING' && (
+              <p className="text-sm text-stone-700">
+                Recipe: {fertilizerRecipes.find((recipe) => recipe.id === fertilizerRecipeId)?.name || 'Ad hoc'}{fertilizerStrength ? ` · ${fertilizerStrength}` : ''}{fertilizerDose ? ` · ${fertilizerDose}` : ''}{fertilizerWaterVolume ? ` in ${fertilizerWaterVolume}` : ''}
+              </p>
+            )}
             <div className="grid gap-2">
               {selectedPlants.map((plant) => {
                 const skipped = firstParam(params[`skip:${plant.id}`]) === 'on'

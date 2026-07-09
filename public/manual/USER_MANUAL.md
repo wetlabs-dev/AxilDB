@@ -243,14 +243,16 @@ App route: `/plants`
 - Open a plant definition and use the Husbandry panel to create, link, fork, edit, or delete a guide.
 - Use Magic Fill husbandry to draft the structured care guide with one AI call when AI is enabled.
 - Edit individual husbandry fields inline with the edit controls next to each field instead of working through one large form.
+- Use Fertilizers from the Admin sidebar to define collection-scoped fertilizer products and recipes, then assign a recipe and cadence from the plant definition husbandry panel.
 - Link a definition to another definition’s guide when care is identical, or make a local copy when it diverges.
-- On a specimen detail page, use override controls next to inherited husbandry values for local adjustments.
+- On a specimen detail page, use override controls next to inherited husbandry values for local adjustments, including specimen-level fertilizer recipe, cadence, or disabled fertilizing.
 
 ### Notes
 
 - Quick summary fields are standardized for consistent water, light, and toxicity badges.
 - Summary badges use standardized colors and icons for watering, light, and toxicity.
 - Full guides are grouped by care sections so future care sheets can include only selected topics.
+- Magic Fill husbandry can recommend an existing active fertilizer recipe or queue a new fertilizer recipe draft, but the recommendation is not applied until you choose it and save.
 
 ### Warnings
 
@@ -266,12 +268,12 @@ App route: `/care`
 
 ### How It Is Used
 
-- Open Care Queue from the sidebar to review today’s tasks, overdue work, watering, propagation checks, health issues, pest checks, bloom follow-ups, custom reminders, and completed care.
+- Open Care Queue from the sidebar to review today’s tasks, overdue work, watering, fertilizing, propagation checks, health issues, pest checks, bloom follow-ups, custom reminders, and completed care.
 - Complete or snooze generated care tasks from the queue.
 - For condition-related queue items, use the condition actions to resolve the condition, update severity/status/follow-up details, or mark that it still needs attention with a follow-up date.
-- Use Bulk care by location to record one care event per selected plant in a location, with direct-only or nested-location scope and a required review step before submit.
+- Use Bulk care by location to record one care event per selected plant in a location, with direct-only or nested-location scope and a required review step before submit. Fertilizing bulk care can include a recipe, strength, dose, and water volume.
 - Open Bulk care from a location detail page when you want the location preselected.
-- Use Care Schedule Sync from the Care Queue, Plant Instances, or a location detail page to align selected plants and care types to a new next-due date without recording completed care. Optionally sync cadence days at the same time when a group should share the same interval.
+- Use Care Schedule Sync from the Care Queue, Plant Instances, or a location detail page to align selected plants and care types, including fertilizing, to a new next-due date without recording completed care. Optionally sync cadence days at the same time when a group should share the same interval.
 - Use per-plant overrides for individual notes, results, or skip reasons while keeping shared task details on the batch.
 - Open Weekly checklist to group overdue, due, and upcoming care by location for a printable work session.
 - Open a specimen to log watering, add conditions such as wilting or pests, resolve conditions, and review recent care history.

@@ -51,6 +51,19 @@ const clearableDate = (fd: FormData, k: string) =>
   fd.has(k) ? date(val(fd, k)) || null : undefined
 const clearableDec = (fd: FormData, k: string) =>
   fd.has(k) ? dec(val(fd, k)) || null : undefined
+const checkedValue = (fd: FormData, k: string, defaultValue = false) => {
+  const values = fd.getAll(k)
+  if (values.length === 0) return defaultValue
+  return values.some((value) => ['on', '1', 'true'].includes(String(value)))
+}
+const clearableInt = (fd: FormData, k: string, min = 1, max = 365) => {
+  if (!fd.has(k)) return undefined
+  const value = val(fd, k)
+  if (!value) return null
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return null
+  return Math.max(min, Math.min(max, Math.floor(parsed)))
+}
 const back = (fd: FormData) => val(fd, 'back') || '/'
 const collectionSlug = async (fd: FormData) => val(fd, 'collectionSlug') || await getCurrentCollectionSlug()
 const revalidateDestination = (destination: string) => revalidatePath(destination.split('#')[0] || '/')
@@ -77,6 +90,7 @@ const isSportLine = (status?: string | null) =>
   !!status && !['NONE', 'UNSTABLE', 'REVERTED'].includes(status)
 const careEventForTask = (taskType?: string | null) => {
   if (taskType === 'WATER') return 'WATERED'
+  if (taskType === 'FERTILIZE') return 'FERTILIZED'
   if (taskType === 'PROPAGATION_CHECK') return 'PROPAGATION_CHECK'
   if (taskType === 'PEST_CHECK') return 'PEST_CHECK'
   if (taskType === 'HEALTH_CHECK') return 'HEALTH_CHECK'
@@ -95,6 +109,7 @@ const careEventForBulkCare = (careType?: string | null) => {
 }
 const queueTaskForBulkCare = (careType?: string | null) => {
   if (careType === 'WATERING') return 'WATER'
+  if (careType === 'FERTILIZING') return 'FERTILIZE'
   if (['PEST_CHECK', 'HEALTH_CHECK', 'PROPAGATION_CHECK', 'BLOOM_CHECK'].includes(careType || '')) return careType
   if (careType === 'OTHER') return 'REMINDER'
   return null
@@ -186,6 +201,76 @@ function husbandryMutationData(fd: FormData) {
   values.aiModel = val(fd, 'aiModel') || null
   if (values.aiModel && !val(fd, 'existingAiGeneratedAt')) values.aiGeneratedAt = new Date()
   return values
+}
+
+async function verifiedFertilizerRecipeId(collectionId: string, recipeId?: string | null) {
+  if (!recipeId) return null
+  const recipe = await prisma.fertilizerRecipe.findFirst({ where: { id: recipeId, collectionId }, select: { id: true } })
+  if (!recipe) throw new Error('Fertilizer recipe not found in this collection.')
+  return recipe.id
+}
+
+async function maybeCreateMagicFertilizerRecipe(collectionId: string, fd: FormData) {
+  if (fd.get('createFertilizerRecipeDraft') !== 'on') return null
+  const name = val(fd, 'newFertilizerRecipeName')
+  if (!name) return null
+  const recipe = await prisma.fertilizerRecipe.upsert({
+    where: { collectionId_name: { collectionId, name } },
+    update: {
+      description: val(fd, 'newFertilizerRecipeDescription') || 'Magic Fill suggested fertilizer recipe draft.',
+      declaredNpk: val(fd, 'newFertilizerRecipeNpk') || null,
+      applicationMethod: val(fd, 'newFertilizerRecipeApplicationMethod') || 'OTHER',
+      dilutionInstructions: val(fd, 'newFertilizerRecipeDilution') || null,
+      strengthLabel: val(fd, 'newFertilizerRecipeStrength') || null,
+      frequencyNotes: val(fd, 'newFertilizerRecipeFrequency') || null,
+      seasonalNotes: val(fd, 'newFertilizerRecipeSeasonalNotes') || null,
+      safetyNotes: val(fd, 'newFertilizerRecipeCautionNotes') || null,
+      notes: val(fd, 'newFertilizerRecipeProductSuggestions') ? `Product suggestions: ${val(fd, 'newFertilizerRecipeProductSuggestions')}` : null,
+      draft: true,
+      active: true,
+    },
+    create: {
+      collectionId,
+      name,
+      description: val(fd, 'newFertilizerRecipeDescription') || 'Magic Fill suggested fertilizer recipe draft.',
+      declaredNpk: val(fd, 'newFertilizerRecipeNpk') || null,
+      applicationMethod: val(fd, 'newFertilizerRecipeApplicationMethod') || 'OTHER',
+      dilutionInstructions: val(fd, 'newFertilizerRecipeDilution') || null,
+      strengthLabel: val(fd, 'newFertilizerRecipeStrength') || null,
+      frequencyNotes: val(fd, 'newFertilizerRecipeFrequency') || null,
+      seasonalNotes: val(fd, 'newFertilizerRecipeSeasonalNotes') || null,
+      safetyNotes: val(fd, 'newFertilizerRecipeCautionNotes') || null,
+      notes: val(fd, 'newFertilizerRecipeProductSuggestions') ? `Product suggestions: ${val(fd, 'newFertilizerRecipeProductSuggestions')}` : null,
+      draft: true,
+      active: true,
+    },
+  })
+  return recipe.id
+}
+
+async function structuredHusbandryMutationData(fd: FormData, collectionId: string) {
+  const draftRecipeId = await maybeCreateMagicFertilizerRecipe(collectionId, fd)
+  return {
+    fertilizerRecipeId: draftRecipeId || await verifiedFertilizerRecipeId(collectionId, val(fd, 'fertilizerRecipeId') || null),
+    fertilizationCadenceDays: clearableInt(fd, 'fertilizationCadenceDays'),
+    fertilizationPaused: checkedValue(fd, 'fertilizationPaused', false),
+  }
+}
+
+function recipeProductRows(fd: FormData) {
+  const productIds = fd.getAll('recipeProductId').map((value) => String(value || '').trim())
+  const amounts = fd.getAll('recipeProductAmount').map((value) => String(value || '').trim())
+  const units = fd.getAll('recipeProductUnit').map((value) => String(value || '').trim())
+  const notes = fd.getAll('recipeProductNotes').map((value) => String(value || '').trim())
+  return productIds
+    .map((productId, index) => ({
+      productId,
+      amount: amounts[index] || null,
+      unit: units[index] || null,
+      notes: notes[index] || null,
+      sortOrder: index,
+    }))
+    .filter((row) => row.productId)
 }
 
 async function cleanupPlantInstanceDependents(collectionId: string, id: string) {
@@ -1578,17 +1663,20 @@ export async function savePlantHusbandryGuide(fd: FormData) {
   const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const plantDefinitionId = val(fd, 'plantDefinitionId')!
   await prisma.plantDefinition.findFirstOrThrow({ where: { id: plantDefinitionId, collectionId: collection.id }, select: { id: true } })
+  const structuredData = await structuredHusbandryMutationData(fd, collection.id)
 
   const guide = await prisma.plantHusbandryGuide.upsert({
     where: { plantDefinitionId },
     update: {
       ...husbandryMutationData(fd),
+      ...structuredData,
       sourcePlantDefinitionId: null,
     } as any,
     create: {
       collectionId: collection.id,
       plantDefinitionId,
       ...husbandryMutationData(fd),
+      ...structuredData,
     } as any,
   })
 
@@ -1623,6 +1711,157 @@ export async function savePlantHusbandryGuideField(fd: FormData) {
 
   await audit(user, 'UPDATE', 'PLANT_HUSBANDRY_GUIDE', guide.id, `Saved plant husbandry guide field`, { fieldName }, collection.id)
   redirect(collectionPath(collection.slug, `/plants/${plantDefinitionId}/edit#husbandry`))
+}
+
+export async function createFertilizerProduct(fd: FormData) {
+  const { user, collection } = await requireCollectionGardener(await collectionSlug(fd))
+  const name = val(fd, 'name')
+  if (!name) throw new Error('Product name is required.')
+  const product = await prisma.fertilizerProduct.create({
+    data: {
+      collectionId: collection.id,
+      name,
+      brand: val(fd, 'brand') || null,
+      productType: val(fd, 'productType') || 'OTHER',
+      nitrogen: clearableDec(fd, 'nitrogen') as any,
+      phosphorus: clearableDec(fd, 'phosphorus') as any,
+      potassium: clearableDec(fd, 'potassium') as any,
+      micronutrients: val(fd, 'micronutrients') || null,
+      concentrationNotes: val(fd, 'concentrationNotes') || null,
+      defaultDilution: val(fd, 'defaultDilution') || null,
+      notes: val(fd, 'notes') || null,
+      active: checkedValue(fd, 'active', true),
+    },
+  })
+  await audit(user, 'CREATE', 'FERTILIZER_PRODUCT', product.id, `Created fertilizer product ${product.name}`, undefined, collection.id)
+  revalidatePath(collectionPath(collection.slug, '/fertilizers'))
+  redirect(collectionPath(collection.slug, '/fertilizers?product=created'))
+}
+
+export async function updateFertilizerProduct(fd: FormData) {
+  const { user, collection } = await requireCollectionGardener(await collectionSlug(fd))
+  const id = val(fd, 'fertilizerProductId')!
+  const product = await prisma.fertilizerProduct.findFirstOrThrow({ where: { id, collectionId: collection.id } })
+  const updated = await prisma.fertilizerProduct.update({
+    where: { id },
+    data: {
+      name: val(fd, 'name') || product.name,
+      brand: val(fd, 'brand') || null,
+      productType: val(fd, 'productType') || 'OTHER',
+      nitrogen: clearableDec(fd, 'nitrogen') as any,
+      phosphorus: clearableDec(fd, 'phosphorus') as any,
+      potassium: clearableDec(fd, 'potassium') as any,
+      micronutrients: val(fd, 'micronutrients') || null,
+      concentrationNotes: val(fd, 'concentrationNotes') || null,
+      defaultDilution: val(fd, 'defaultDilution') || null,
+      notes: val(fd, 'notes') || null,
+      active: checkedValue(fd, 'active', true),
+    },
+  })
+  await audit(user, 'UPDATE', 'FERTILIZER_PRODUCT', id, `Updated fertilizer product ${updated.name}`, undefined, collection.id)
+  revalidatePath(collectionPath(collection.slug, '/fertilizers'))
+  redirect(collectionPath(collection.slug, '/fertilizers?product=updated'))
+}
+
+export async function archiveFertilizerProduct(fd: FormData) {
+  const { user, collection } = await requireCollectionGardener(await collectionSlug(fd))
+  const id = val(fd, 'fertilizerProductId')!
+  const product = await prisma.fertilizerProduct.findFirstOrThrow({ where: { id, collectionId: collection.id } })
+  const active = fd.get('active') === 'on'
+  await prisma.fertilizerProduct.update({ where: { id }, data: { active } })
+  await audit(user, 'UPDATE', 'FERTILIZER_PRODUCT', id, `${active ? 'Restored' : 'Archived'} fertilizer product ${product.name}`, undefined, collection.id)
+  revalidatePath(collectionPath(collection.slug, '/fertilizers'))
+  redirect(collectionPath(collection.slug, `/fertilizers?product=${active ? 'restored' : 'archived'}`))
+}
+
+export async function createFertilizerRecipe(fd: FormData) {
+  const { user, collection } = await requireCollectionGardener(await collectionSlug(fd))
+  const name = val(fd, 'name')
+  if (!name) throw new Error('Recipe name is required.')
+  const productRows = recipeProductRows(fd)
+  const validProductCount = productRows.length
+    ? await prisma.fertilizerProduct.count({ where: { collectionId: collection.id, id: { in: productRows.map((row) => row.productId) } } })
+    : 0
+  if (validProductCount !== productRows.length) throw new Error('One or more fertilizer products are not in this collection.')
+  const recipe = await prisma.fertilizerRecipe.create({
+    data: {
+      collectionId: collection.id,
+      name,
+      description: val(fd, 'description') || null,
+      declaredNpk: val(fd, 'declaredNpk') || null,
+      calculatedNpk: val(fd, 'calculatedNpk') || null,
+      applicationMethod: val(fd, 'applicationMethod') || 'ROOT_DRENCH',
+      dilutionInstructions: val(fd, 'dilutionInstructions') || null,
+      doseAmount: val(fd, 'doseAmount') || null,
+      doseUnit: val(fd, 'doseUnit') || null,
+      waterVolume: val(fd, 'waterVolume') || null,
+      waterVolumeUnit: val(fd, 'waterVolumeUnit') || null,
+      strengthLabel: val(fd, 'strengthLabel') || null,
+      frequencyDays: clearableInt(fd, 'frequencyDays'),
+      frequencyNotes: val(fd, 'frequencyNotes') || null,
+      seasonalNotes: val(fd, 'seasonalNotes') || null,
+      safetyNotes: val(fd, 'safetyNotes') || null,
+      notes: val(fd, 'notes') || null,
+      active: checkedValue(fd, 'active', true),
+      draft: checkedValue(fd, 'draft', false),
+      products: { create: productRows },
+    } as any,
+  })
+  await audit(user, 'CREATE', 'FERTILIZER_RECIPE', recipe.id, `Created fertilizer recipe ${recipe.name}`, undefined, collection.id)
+  revalidatePath(collectionPath(collection.slug, '/fertilizers'))
+  redirect(collectionPath(collection.slug, '/fertilizers?recipe=created'))
+}
+
+export async function updateFertilizerRecipe(fd: FormData) {
+  const { user, collection } = await requireCollectionGardener(await collectionSlug(fd))
+  const id = val(fd, 'fertilizerRecipeId')!
+  const recipe = await prisma.fertilizerRecipe.findFirstOrThrow({ where: { id, collectionId: collection.id } })
+  const productRows = recipeProductRows(fd)
+  const validProductCount = productRows.length
+    ? await prisma.fertilizerProduct.count({ where: { collectionId: collection.id, id: { in: productRows.map((row) => row.productId) } } })
+    : 0
+  if (validProductCount !== productRows.length) throw new Error('One or more fertilizer products are not in this collection.')
+  const updated = await prisma.$transaction(async (tx) => {
+    await tx.fertilizerRecipeProduct.deleteMany({ where: { recipeId: id } })
+    return tx.fertilizerRecipe.update({
+      where: { id },
+      data: {
+        name: val(fd, 'name') || recipe.name,
+        description: val(fd, 'description') || null,
+        declaredNpk: val(fd, 'declaredNpk') || null,
+        calculatedNpk: val(fd, 'calculatedNpk') || null,
+        applicationMethod: val(fd, 'applicationMethod') || 'ROOT_DRENCH',
+        dilutionInstructions: val(fd, 'dilutionInstructions') || null,
+        doseAmount: val(fd, 'doseAmount') || null,
+        doseUnit: val(fd, 'doseUnit') || null,
+        waterVolume: val(fd, 'waterVolume') || null,
+        waterVolumeUnit: val(fd, 'waterVolumeUnit') || null,
+        strengthLabel: val(fd, 'strengthLabel') || null,
+        frequencyDays: clearableInt(fd, 'frequencyDays'),
+        frequencyNotes: val(fd, 'frequencyNotes') || null,
+        seasonalNotes: val(fd, 'seasonalNotes') || null,
+        safetyNotes: val(fd, 'safetyNotes') || null,
+        notes: val(fd, 'notes') || null,
+        active: checkedValue(fd, 'active', true),
+        draft: checkedValue(fd, 'draft', false),
+        products: { create: productRows },
+      } as any,
+    })
+  })
+  await audit(user, 'UPDATE', 'FERTILIZER_RECIPE', id, `Updated fertilizer recipe ${updated.name}`, undefined, collection.id)
+  revalidatePath(collectionPath(collection.slug, '/fertilizers'))
+  redirect(collectionPath(collection.slug, '/fertilizers?recipe=updated'))
+}
+
+export async function archiveFertilizerRecipe(fd: FormData) {
+  const { user, collection } = await requireCollectionGardener(await collectionSlug(fd))
+  const id = val(fd, 'fertilizerRecipeId')!
+  const recipe = await prisma.fertilizerRecipe.findFirstOrThrow({ where: { id, collectionId: collection.id } })
+  const active = fd.get('active') === 'on'
+  await prisma.fertilizerRecipe.update({ where: { id }, data: { active } })
+  await audit(user, 'UPDATE', 'FERTILIZER_RECIPE', id, `${active ? 'Restored' : 'Archived'} fertilizer recipe ${recipe.name}`, undefined, collection.id)
+  revalidatePath(collectionPath(collection.slug, '/fertilizers'))
+  redirect(collectionPath(collection.slug, `/fertilizers?recipe=${active ? 'restored' : 'archived'}`))
 }
 
 export async function linkPlantHusbandryGuide(fd: FormData) {
@@ -1855,8 +2094,10 @@ export async function savePlantHusbandryOverride(fd: FormData) {
   const plantInstanceId = val(fd, 'plantInstanceId')!
   await prisma.plantInstance.findFirstOrThrow({ where: { id: plantInstanceId, collectionId: collection.id }, select: { id: true } })
   const values = husbandryFormValues(fd)
+  const structuredData = await structuredHusbandryMutationData(fd, collection.id)
   const overrideNotes = val(fd, 'overrideNotes') || null
-  const hasData = Object.values(values).some(Boolean) || Boolean(overrideNotes)
+  const hasStructuredData = Boolean(structuredData.fertilizerRecipeId || structuredData.fertilizationCadenceDays || structuredData.fertilizationPaused)
+  const hasData = Object.values(values).some(Boolean) || Boolean(overrideNotes) || hasStructuredData
 
   if (!hasData) {
     await prisma.plantHusbandryOverride.deleteMany({ where: { collectionId: collection.id, plantInstanceId } })
@@ -1866,8 +2107,8 @@ export async function savePlantHusbandryOverride(fd: FormData) {
 
   const override = await prisma.plantHusbandryOverride.upsert({
     where: { plantInstanceId },
-    update: { ...values, overrideNotes } as any,
-    create: { collectionId: collection.id, plantInstanceId, ...values, overrideNotes } as any,
+    update: { ...values, ...structuredData, overrideNotes } as any,
+    create: { collectionId: collection.id, plantInstanceId, ...values, ...structuredData, overrideNotes } as any,
   })
 
   await audit(user, 'UPDATE', 'PLANT_HUSBANDRY_OVERRIDE', override.id, `Saved local plant husbandry adjustments`, undefined, collection.id)
@@ -2252,6 +2493,9 @@ export async function completeCareTask(fd: FormData) {
     where: { id: plantInstanceId, collectionId: context.collection.id },
     select: { id: true, plantId: true },
   })
+  const fertilizerRecipeId = taskType === 'FERTILIZE'
+    ? await verifiedFertilizerRecipeId(context.collection.id, val(fd, 'fertilizerRecipeId') || null)
+    : null
 
   const event = await prisma.plantCareEvent.create({
     data: {
@@ -2261,10 +2505,15 @@ export async function completeCareTask(fd: FormData) {
       eventType: careEventForTask(taskType),
       performedAt: parseDateLocal(val(fd, 'performedAt'), timezone) || new Date(),
       notes: val(fd, 'notes'),
+      fertilizerRecipeId,
       metadata: {
         taskType,
         conditionId: val(fd, 'conditionId') || null,
         bloomEventId: val(fd, 'bloomEventId') || null,
+        fertilizerRecipeId,
+        fertilizerStrength: val(fd, 'fertilizerStrength') || null,
+        fertilizerDose: val(fd, 'fertilizerDose') || null,
+        fertilizerWaterVolume: val(fd, 'fertilizerWaterVolume') || null,
       },
     },
   })
@@ -2289,6 +2538,9 @@ export async function completeBulkCare(fd: FormData) {
   const careType = val(fd, 'careType') || 'OTHER'
   const sharedNote = val(fd, 'sharedNote') || ''
   const sharedResult = val(fd, 'sharedResult') || ''
+  const fertilizerRecipeId = careType === 'FERTILIZING'
+    ? await verifiedFertilizerRecipeId(context.collection.id, val(fd, 'fertilizerRecipeId') || null)
+    : null
   const performedAt = parseDateLocal(val(fd, 'performedAt'), timezone) || new Date()
   const selectedIds = fd.getAll('plantInstanceId').map((item) => String(item)).filter(Boolean)
   const batchId = val(fd, 'bulkCareBatchId') || randomUUID()
@@ -2374,12 +2626,17 @@ export async function completeBulkCare(fd: FormData) {
           eventType: careEventForBulkCare(careType),
           performedAt,
           notes,
+          fertilizerRecipeId,
           metadata: {
             source: 'BULK_CARE',
             bulkCareBatchId: batchId,
             locationId,
             includeNested,
             careType,
+            fertilizerRecipeId,
+            fertilizerStrength: val(fd, 'fertilizerStrength') || null,
+            fertilizerDose: val(fd, 'fertilizerDose') || null,
+            fertilizerWaterVolume: val(fd, 'fertilizerWaterVolume') || null,
             sharedResult: sharedResult || null,
             noteOverride: noteOverride || null,
             resultOverride: resultOverride || null,

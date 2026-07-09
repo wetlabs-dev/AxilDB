@@ -2,12 +2,14 @@ import type { PrismaClient } from '@prisma/client'
 import type { PlantImageFrame } from '@/components/PlantImage'
 import { resolveQuietDayShift } from '@/lib/care-scheduling'
 import { collectionPath } from '@/lib/collections'
+import { effectiveFertilizerAssignment, fertilizerRecipeSummary } from '@/lib/fertilizers'
 import { nextOccurrence, reminderCategoryLabel } from '@/lib/reminders'
 import { addCalendarDays, calendarDayIndexInTimeZone, endOfDayInTimeZone, startOfDayInTimeZone } from '@/lib/time'
 import { plantName } from '@/lib/utils'
 
 export const careTaskTypes = [
   'WATER',
+  'FERTILIZE',
   'PROPAGATION_CHECK',
   'PEST_CHECK',
   'HEALTH_CHECK',
@@ -17,7 +19,7 @@ export const careTaskTypes = [
 ] as const
 
 export type CareTaskType = (typeof careTaskTypes)[number]
-export type CareQueueFilter = 'today' | 'overdue' | 'water' | 'propagation' | 'health' | 'pest' | 'bloom' | 'custom' | 'completed'
+export type CareQueueFilter = 'today' | 'overdue' | 'water' | 'fertilize' | 'propagation' | 'health' | 'pest' | 'bloom' | 'custom' | 'completed'
 
 export type CareQueueItem = {
   key: string
@@ -55,6 +57,11 @@ export type CareQueueItem = {
   quietDayReason?: string | null
   quietDayShiftDirection?: string | null
   propagationAgeDays?: number
+  fertilizerRecipeId?: string | null
+  fertilizerRecipeName?: string | null
+  fertilizerRecipeSummary?: string | null
+  fertilizerStrength?: string | null
+  fertilizerSource?: 'definition' | 'override'
 }
 
 function addDays(date: Date, days: number, timezone?: string) {
@@ -106,6 +113,7 @@ function conditionPriority(severity?: string | null) {
 
 export function careTaskLabel(type: CareTaskType) {
   if (type === 'WATER') return 'Water'
+  if (type === 'FERTILIZE') return 'Fertilize'
   if (type === 'PROPAGATION_CHECK') return 'Propagation check'
   if (type === 'PEST_CHECK') return 'Pest check'
   if (type === 'HEALTH_CHECK') return 'Health check'
@@ -165,8 +173,8 @@ export async function getCareQueue(
     prisma.plantInstance.findMany({
       where: { collectionId, status: 'ACTIVE' },
       include: {
-        plantDefinition: { include: { husbandryGuide: true } },
-        husbandryOverride: true,
+        plantDefinition: { include: { husbandryGuide: { include: { fertilizerRecipe: { include: { products: { include: { product: true }, orderBy: { sortOrder: 'asc' } } } } } } } },
+        husbandryOverride: { include: { fertilizerRecipe: { include: { products: { include: { product: true }, orderBy: { sortOrder: 'asc' } } } } } },
       },
     }),
     prisma.plantCareEvent.findMany({
@@ -224,6 +232,7 @@ export async function getCareQueue(
   const instanceById = new Map(instances.map((instance) => [instance.id, instance]))
   const openBloomById = new Map(openBlooms.map((bloom) => [bloom.id, bloom]))
   const latestWater = latestBy(careEvents as any, 'WATERED')
+  const latestFertilized = latestBy(careEvents as any, 'FERTILIZED')
   const latestPestCheck = latestBy(careEvents as any, 'PEST_CHECK')
   const latestHealthCheck = latestBy(careEvents as any, 'HEALTH_CHECK')
   const latestPropagationCheck = latestBy(careEvents as any, 'PROPAGATION_CHECK')
@@ -307,6 +316,36 @@ export async function getCareQueue(
       location: instance.location,
       image,
     })
+
+    const fertilizerAdjustment = adjustmentMap.get(`${instance.id}:FERTILIZE`)
+    const fertilizer = effectiveFertilizerAssignment(instance.plantDefinition.husbandryGuide, instance.husbandryOverride)
+    if (!fertilizer.paused && fertilizer.cadenceDays && (fertilizer.recipe || guide.fertilizationType || guide.fertilizationFrequency)) {
+      const lastFertilized = latestFertilized.get(instance.id)?.performedAt || baseDate
+      const recipeName = fertilizer.recipe?.name || 'fertilizer'
+      const cadence = fertilizerAdjustment?.cadenceOverrideDays && fertilizerAdjustment.cadenceOverrideDays > 0
+        ? fertilizerAdjustment.cadenceOverrideDays
+        : fertilizer.cadenceDays
+      pushDerived({
+        key: `FERTILIZE:${instance.id}`,
+        taskType: 'FERTILIZE',
+        title: `Fertilize ${instance.plantId}`,
+        reason: latestFertilized.has(instance.id)
+          ? `Last fertilized ${daysBetween(now, lastFertilized, timezone)} day${daysBetween(now, lastFertilized, timezone) === 1 ? '' : 's'} ago; cadence is about ${cadence} days.`
+          : `No fertilizing logged yet; planned cadence is about ${cadence} days.`,
+        dueAt: addDays(lastFertilized, cadence, timezone),
+        basePriority: 42,
+        plantInstanceId: instance.id,
+        plantId: instance.plantId,
+        plantName: plantDisplayName,
+        location: instance.location,
+        image,
+        fertilizerRecipeId: fertilizer.recipe?.id || null,
+        fertilizerRecipeName: recipeName,
+        fertilizerRecipeSummary: fertilizer.recipe ? fertilizerRecipeSummary(fertilizer.recipe) : guide.fertilizationType || null,
+        fertilizerStrength: guide.fertilizationStrength || fertilizer.recipe?.strengthLabel || null,
+        fertilizerSource: fertilizer.source,
+      })
+    }
 
     if (['PROPAGATION', 'ACQUIRED_PROPAGATION'].includes(instance.instanceType) && !instance.propagationEstablishedAt) {
       const start = instance.propagationDate || instance.acquisitionDate || instance.createdAt
@@ -480,6 +519,7 @@ export function filterCareQueue(items: CareQueueItem[], filter?: string | null, 
   if (filter === 'overdue') return items.filter((item) => !item.completedAt && item.dueAt < startOfDayInTimeZone(now, timezone))
   if (filter === 'completed') return items.filter((item) => item.completedAt)
   if (filter === 'water') return items.filter((item) => !item.completedAt && item.taskType === 'WATER')
+  if (filter === 'fertilize') return items.filter((item) => !item.completedAt && item.taskType === 'FERTILIZE')
   if (filter === 'propagation') return items.filter((item) => !item.completedAt && item.taskType === 'PROPAGATION_CHECK')
   if (filter === 'health') return items.filter((item) => !item.completedAt && ['HEALTH_CHECK', 'QUARANTINE_REVIEW'].includes(item.taskType))
   if (filter === 'pest') return items.filter((item) => !item.completedAt && item.taskType === 'PEST_CHECK')

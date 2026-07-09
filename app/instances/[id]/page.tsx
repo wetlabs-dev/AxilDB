@@ -27,6 +27,7 @@ import {
   cancelPlantQuarantine,
   updatePlantCondition,
   unfollowEntity,
+  savePlantHusbandryOverride,
 } from '@/app/actions'
 import { startWorkflowRun } from '@/app/workflow-actions'
 import { createPlantTransferRequest } from '@/app/transfer-actions'
@@ -46,7 +47,7 @@ import { isQuarantineLocation, quarantineChecklistItems } from '@/lib/locations'
 import { expectedPlantIdForInstance } from '@/lib/plant-id'
 import { prisma } from '@/lib/prisma'
 import { recurrenceLabel, reminderCategories, reminderCategoryLabel, reminderRecurrences } from '@/lib/reminders'
-import { hasHusbandryData, mergeHusbandryValues } from '@/lib/husbandry'
+import { hasHusbandryData, husbandryFieldNames, mergeHusbandryValues } from '@/lib/husbandry'
 import { isServerAdminRole } from '@/lib/roles'
 import { sunshineCounts, sunshineKey, sunshineStateForUser } from '@/lib/sunshine'
 import { addCalendarDays, formatDateTime, startOfDayInTimeZone } from '@/lib/time'
@@ -106,7 +107,7 @@ export default async function InstanceDetail({
   const i = await prisma.plantInstance.findFirstOrThrow({
     where: { id, ...collectionWhere },
     include: {
-      plantDefinition: { include: { aliases: { orderBy: { name: 'asc' } }, husbandryGuide: true } },
+      plantDefinition: { include: { aliases: { orderBy: { name: 'asc' } }, husbandryGuide: { include: { fertilizerRecipe: true } } } },
       blooms: {
         orderBy: { bloomStartDate: 'desc' },
       },
@@ -145,7 +146,7 @@ export default async function InstanceDetail({
         },
       },
       sportRecords: { include: { propagationEvent: true }, orderBy: { generationNumber: 'desc' } },
-      husbandryOverride: true,
+      husbandryOverride: { include: { fertilizerRecipe: true } },
       currentLocation: { include: { locationType: true } },
     },
   })
@@ -173,6 +174,9 @@ export default async function InstanceDetail({
         }),
       ])
     : [[], []]
+  const fertilizerRecipes = canCreateRecords
+    ? await prisma.fertilizerRecipe.findMany({ where: { collectionId: collection.id, active: true }, orderBy: [{ draft: 'asc' }, { name: 'asc' }] })
+    : []
   const isInQuarantineLocation = isQuarantineLocation(i.currentLocation)
   const quarantineChecklist = Array.isArray(activeQuarantine?.checklistJson)
     ? activeQuarantine.checklistJson.filter((item): item is { label: string; done?: boolean } => Boolean(item && typeof item === 'object' && 'label' in item))
@@ -183,7 +187,7 @@ export default async function InstanceDetail({
   const sourceHusbandryGuide = i.plantDefinition.husbandryGuide?.sourcePlantDefinitionId
     ? await prisma.plantHusbandryGuide.findFirst({
         where: { collectionId: collection.id, plantDefinitionId: i.plantDefinition.husbandryGuide.sourcePlantDefinitionId },
-        include: { plantDefinition: true },
+        include: { plantDefinition: true, fertilizerRecipe: true },
       })
     : null
   const expectedPlantId = canEditRecords
@@ -955,6 +959,38 @@ export default async function InstanceDetail({
               </p>
               <HusbandryBadges values={effectiveHusbandry} />
               {effectiveHusbandry.summaryCare && <p className="mt-2 text-sm text-stone-700">{effectiveHusbandry.summaryCare}</p>}
+              {canCreateRecords && (
+                <details className="group mt-4 rounded-lg border border-[#d6dfc9] bg-[#f7f4e8]/70">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-semibold">
+                    <span>Specimen fertilizer override</span>
+                    <span className="rounded-md border border-stone-300 bg-white/70 px-2 py-1 text-xs group-open:hidden">Open</span>
+                    <span className="hidden rounded-md border border-stone-300 bg-white/70 px-2 py-1 text-xs group-open:inline-block">Hide</span>
+                  </summary>
+                  <form action={savePlantHusbandryOverride} className="grid gap-3 border-t border-[#d6dfc9] p-3 md:grid-cols-3">
+                    <input type="hidden" name="collectionSlug" value={collection.slug} />
+                    <input type="hidden" name="plantInstanceId" value={i.id} />
+                    {husbandryFieldNames.map((field) => (
+                      <input key={field} type="hidden" name={field} defaultValue={(i.husbandryOverride as any)?.[field] || ''} />
+                    ))}
+                    <input type="hidden" name="overrideNotes" defaultValue={(i.husbandryOverride as any)?.overrideNotes || ''} />
+                    <label className="grid gap-1 text-sm font-medium text-stone-800 md:col-span-2">
+                      Fertilizer recipe
+                      <select name="fertilizerRecipeId" className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-2 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30" defaultValue={(i.husbandryOverride as any)?.fertilizerRecipeId || ''}>
+                        <option value="">Inherit / no local recipe</option>
+                        {fertilizerRecipes.map((recipe) => (
+                          <option key={recipe.id} value={recipe.id}>{recipe.name}{recipe.declaredNpk || recipe.calculatedNpk ? ` · ${recipe.declaredNpk || recipe.calculatedNpk}` : ''}{recipe.draft ? ' (draft)' : ''}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <Field label="Cadence days" name="fertilizationCadenceDays" type="number" min="1" max="365" defaultValue={(i.husbandryOverride as any)?.fertilizationCadenceDays || ''} />
+                    <label className="inline-flex items-center gap-2 text-sm font-medium text-stone-800 md:col-span-3">
+                      <input type="checkbox" name="fertilizationPaused" defaultChecked={Boolean((i.husbandryOverride as any)?.fertilizationPaused)} />
+                      Disable fertilizing for this specimen
+                    </label>
+                    <Button className="w-fit md:col-span-3">Save specimen fertilizer override</Button>
+                  </form>
+                </details>
+              )}
               <details className="group mt-4 rounded-lg border border-stone-200 bg-white/50">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-semibold">
                   <span>Full husbandry guide</span>

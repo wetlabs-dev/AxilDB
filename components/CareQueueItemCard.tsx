@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
-import { Bell, Bug, ChevronDown, Droplets, Flower2, HeartPulse, Sprout } from 'lucide-react'
+import { Bell, Bug, ChevronDown, Droplets, FlaskConical, Flower2, HeartPulse, Sprout } from 'lucide-react'
 import {
   completeCareTask,
   conditionStillNeedsAttentionFromCareQueue,
@@ -24,6 +24,7 @@ const conditionStatusOptions = ['OPEN', 'IMPROVING', 'RESOLVED'] as const
 function taskIcon(task: CareQueueItem) {
   const className = 'h-4 w-4'
   if (task.taskType === 'WATER') return <Droplets className={className} />
+  if (task.taskType === 'FERTILIZE') return <FlaskConical className={className} />
   if (task.taskType === 'PROPAGATION_CHECK') return <Sprout className={className} />
   if (task.taskType === 'PEST_CHECK') return <Bug className={className} />
   if (task.taskType === 'HEALTH_CHECK') return <HeartPulse className={className} />
@@ -33,6 +34,7 @@ function taskIcon(task: CareQueueItem) {
 
 function careTaskLabel(type: CareQueueItem['taskType']) {
   if (type === 'WATER') return 'Water'
+  if (type === 'FERTILIZE') return 'Fertilize'
   if (type === 'PROPAGATION_CHECK') return 'Propagation check'
   if (type === 'PEST_CHECK') return 'Pest check'
   if (type === 'HEALTH_CHECK') return 'Health check'
@@ -88,6 +90,7 @@ function CompleteCareHiddenFields({ item, collectionSlug, back }: { item: CareQu
       {item.plantInstanceId && <input type="hidden" name="plantInstanceId" value={item.plantInstanceId} />}
       {item.reminderId && <input type="hidden" name="reminderId" value={item.reminderId} />}
       {item.bloomEventId && <input type="hidden" name="bloomEventId" value={item.bloomEventId} />}
+      {item.fertilizerRecipeId && <input type="hidden" name="fertilizerRecipeId" value={item.fertilizerRecipeId} />}
     </>
   )
 }
@@ -216,6 +219,18 @@ function NormalCareDetails({
     <>
       <form action={completeCareTask} className="grid gap-2">
         <CompleteCareHiddenFields item={item} collectionSlug={collectionSlug} back={back} />
+        {item.taskType === 'FERTILIZE' && (
+          <div className="rounded-md border border-[#d6dfc9] bg-[#f7f4e8]/80 p-3 text-sm text-stone-700">
+            <p className="font-semibold text-stone-800">{item.fertilizerRecipeName || 'Fertilizer recipe'}</p>
+            {item.fertilizerRecipeSummary && <p className="mt-1">{item.fertilizerRecipeSummary}</p>}
+            {item.fertilizerSource && <p className="mt-1 text-xs uppercase tracking-[0.12em] text-stone-500">{item.fertilizerSource} schedule</p>}
+            <div className="mt-3 grid gap-2 sm:grid-cols-3">
+              <Field label="Strength" name="fertilizerStrength" defaultValue={item.fertilizerStrength || ''} />
+              <Field label="Dose" name="fertilizerDose" placeholder="e.g. 2 ml" />
+              <Field label="Water volume" name="fertilizerWaterVolume" placeholder="e.g. 1 L" />
+            </div>
+          </div>
+        )}
         {item.source === 'derived' && <TextArea label="Quick note" name="notes" className="min-h-14" />}
         <Button className="w-full">Complete</Button>
       </form>

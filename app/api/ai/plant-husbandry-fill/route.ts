@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
 import { audit } from '@/lib/auth'
 import { recordAiUsage, requireAiFeatureAccess, tokenUsage } from '@/lib/ai-usage'
+import { recipeAiContext } from '@/lib/fertilizers'
 import { husbandryFieldNames } from '@/lib/husbandry'
+import { prisma } from '@/lib/prisma'
 
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses'
 const DEFAULT_MODEL = 'gpt-5.4-mini'
@@ -51,6 +53,32 @@ function normalizeFields(raw: any, model: string) {
   return fields
 }
 
+function normalizeFertilizerRecommendation(raw: any, recipeIds: Set<string>) {
+  const allowedTypes = new Set(['USE_EXISTING_RECIPE', 'CREATE_NEW_RECIPE', 'NO_FERTILIZER_RECOMMENDED', 'UNCERTAIN'])
+  const type = allowedTypes.has(raw?.fertilizerRecommendationType) ? raw.fertilizerRecommendationType : 'UNCERTAIN'
+  const recommendedRecipeId = recipeIds.has(String(raw?.recommendedRecipeId || '')) ? String(raw.recommendedRecipeId) : null
+  return {
+    fertilizerRecommendationType: type,
+    recommendedRecipeId: type === 'USE_EXISTING_RECIPE' ? recommendedRecipeId : null,
+    recommendedRecipeName: trimmedString(raw?.recommendedRecipeName, 160) || null,
+    reasoning: trimmedString(raw?.reasoning, 700) || 'Review fertilizer needs before applying.',
+    suggestedFrequency: trimmedString(raw?.suggestedFrequency, 200) || null,
+    suggestedStrength: trimmedString(raw?.suggestedStrength, 200) || null,
+    seasonalNotes: trimmedString(raw?.seasonalNotes, 300) || null,
+    newRecipeDraft: raw?.newRecipeDraft && type === 'CREATE_NEW_RECIPE'
+      ? {
+          name: trimmedString(raw.newRecipeDraft.name, 160),
+          targetNpkOrStyle: trimmedString(raw.newRecipeDraft.targetNpkOrStyle, 160),
+          applicationMethod: trimmedString(raw.newRecipeDraft.applicationMethod, 80) || 'OTHER',
+          dilutionOrStrength: trimmedString(raw.newRecipeDraft.dilutionOrStrength, 220),
+          suggestedFrequency: trimmedString(raw.newRecipeDraft.suggestedFrequency, 220),
+          productTypeSuggestions: trimmedString(raw.newRecipeDraft.productTypeSuggestions, 300),
+          cautionNotes: trimmedString(raw.newRecipeDraft.cautionNotes, 300),
+        }
+      : null,
+  }
+}
+
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}))
   const access = await requireAiFeatureAccess(trimmedString(body.collectionSlug, 80))
@@ -66,6 +94,13 @@ export async function POST(req: Request) {
   const cultivarName = trimmedString(plant.cultivarName, 120)
   const name = `${genus} ${species}${cultivarName ? ` '${cultivarName}'` : ''}`.trim()
   if (!genus || !species) return NextResponse.json({ error: 'Genus and species are required.' }, { status: 400 })
+  const fertilizerRecipes = await prisma.fertilizerRecipe.findMany({
+    where: { collectionId: collection.id, active: true },
+    include: { products: { include: { product: true }, orderBy: { sortOrder: 'asc' } } },
+    orderBy: [{ draft: 'asc' }, { name: 'asc' }],
+    take: 20,
+  })
+  const fertilizerRecipeIds = new Set(fertilizerRecipes.map((recipe) => recipe.id))
 
   const model = process.env.OPENAI_HUSBANDRY_FILL_MODEL || process.env.OPENAI_MAGIC_FILL_MODEL || process.env.OPENAI_DESCRIPTION_MODEL || DEFAULT_MODEL
   const prompt = {
@@ -85,16 +120,38 @@ export async function POST(req: Request) {
       gbifUrl: trimmedString(plant.gbifUrl, 500) || null,
       aliases: Array.isArray(plant.aliases) ? plant.aliases.slice(0, 8).map((alias: any) => trimmedString(alias.name, 160)).filter(Boolean) : [],
     },
+    activeFertilizerRecipes: fertilizerRecipes.map(recipeAiContext),
     rules: [
       'Return only valid JSON, with no markdown.',
       'Attempt to fill every field with concise practical husbandry guidance.',
       'Use short phrases or one short sentence per field; avoid long paragraphs.',
       'If information varies by cultivar, write cautious general guidance and note cultivar variation.',
       'Do not claim certainty for conservation, toxicity, or edibility unless widely established; use cautious wording.',
+      'Evaluate fertilizer cautiously. If the plant is sensitive, slow-growing, dormant, or commonly grown without feeding, choose NO_FERTILIZER_RECOMMENDED or UNCERTAIN.',
+      'If an active collection fertilizer recipe fits, use USE_EXISTING_RECIPE and return its exact id and name. Do not invent recipe ids.',
+      'If no existing recipe fits but fertilizer is useful, choose CREATE_NEW_RECIPE and provide practical draft details without pretending exact chemical calculations are certain.',
       'Use unknown only when no useful inference can be made.',
       'summaryWater, summaryLight, and summaryToxicity must be short badge-friendly phrases.',
     ],
-    jsonShape: Object.fromEntries([...husbandryFieldNames, 'reviewNotes'].map((field) => [field, 'string|null'])),
+    jsonShape: {
+      ...Object.fromEntries([...husbandryFieldNames, 'reviewNotes'].map((field) => [field, 'string|null'])),
+      fertilizerRecommendationType: 'USE_EXISTING_RECIPE|CREATE_NEW_RECIPE|NO_FERTILIZER_RECOMMENDED|UNCERTAIN',
+      recommendedRecipeId: 'string|null',
+      recommendedRecipeName: 'string|null',
+      reasoning: 'string',
+      suggestedFrequency: 'string|null',
+      suggestedStrength: 'string|null',
+      seasonalNotes: 'string|null',
+      newRecipeDraft: {
+        name: 'string|null',
+        targetNpkOrStyle: 'string|null',
+        applicationMethod: 'string|null',
+        dilutionOrStrength: 'string|null',
+        suggestedFrequency: 'string|null',
+        productTypeSuggestions: 'string|null',
+        cautionNotes: 'string|null',
+      },
+    },
   }
 
   try {
@@ -108,7 +165,7 @@ export async function POST(req: Request) {
         model,
         instructions: 'You are a careful horticultural husbandry assistant. Return only machine-parseable JSON. Prefer concise, practical care guidance.',
         input: JSON.stringify(prompt),
-        max_output_tokens: 2200,
+        max_output_tokens: 2800,
         store: false,
       }),
     })
@@ -121,10 +178,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: message }, { status: response.status })
     }
 
-    const fields = normalizeFields(extractJson(outputText(payload)), model)
+    const raw = extractJson(outputText(payload))
+    const fields = normalizeFields(raw, model)
+    const fertilizerRecommendation = normalizeFertilizerRecommendation(raw, fertilizerRecipeIds)
     await recordAiUsage({ collectionId: collection.id, userId: user.id, feature: 'AI_HUSBANDRY_FILL', model, usage: tokenUsage(payload) })
     await audit(user, 'GENERATE', 'AI_HUSBANDRY_FILL', null, `Generated husbandry fill for ${name}`, { model }, collection.id)
-    return NextResponse.json({ fields })
+    return NextResponse.json({ fields, fertilizerRecommendation })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'OpenAI husbandry fill request failed.'
     await recordAiUsage({ collectionId: collection.id, userId: user.id, feature: 'AI_HUSBANDRY_FILL', model, success: false, error: message })

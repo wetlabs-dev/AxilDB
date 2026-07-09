@@ -210,6 +210,8 @@ model Collection {
   governingBodies     GoverningBody[]
   plantHusbandryGuides PlantHusbandryGuide[]
   plantHusbandryOverrides PlantHusbandryOverride[]
+  fertilizerProducts  FertilizerProduct[]
+  fertilizerRecipes   FertilizerRecipe[]
   outgoingTransferConnections CollectionTransferConnection[] @relation("TransferConnectionSource")
   incomingTransferConnections CollectionTransferConnection[] @relation("TransferConnectionTarget")
   outgoingPlantTransferRequests PlantTransferRequest[] @relation("PlantTransferSourceCollection")
@@ -1185,6 +1187,9 @@ model PlantHusbandryGuide {
   fertilizationFrequency  String?
   fertilizationSeasonalSchedule String?
   fertilizationMicronutrientNotes String?
+  fertilizerRecipeId      String?
+  fertilizationCadenceDays Int?
+  fertilizationPaused     Boolean   @default(false)
   repottingInterval       String?
   repottingPotType        String?
   repottingRootSensitivity String?
@@ -1231,11 +1236,96 @@ model PlantHusbandryGuide {
   collection            Collection?      @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   plantDefinition       PlantDefinition @relation(fields: [plantDefinitionId], references: [id], onDelete: Cascade)
   sourcePlantDefinition PlantDefinition? @relation("HusbandrySourceDefinition", fields: [sourcePlantDefinitionId], references: [id], onDelete: SetNull)
+  fertilizerRecipe     FertilizerRecipe? @relation("HusbandryGuideFertilizerRecipe", fields: [fertilizerRecipeId], references: [id], onDelete: SetNull)
 
   @@index([collectionId])
   @@index([plantDefinitionId])
   @@index([sourcePlantDefinitionId])
+  @@index([fertilizerRecipeId])
   @@index([reviewStatus])
+}
+
+model FertilizerProduct {
+  id                 String   @id @default(cuid())
+  collectionId       String
+  name               String
+  brand              String?
+  productType        String   @default("OTHER")
+  nitrogen           Decimal?
+  phosphorus         Decimal?
+  potassium          Decimal?
+  micronutrients     String?
+  concentrationNotes String?
+  defaultDilution    String?
+  notes              String?
+  active             Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  collection     Collection                @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  recipeProducts FertilizerRecipeProduct[]
+
+  @@unique([collectionId, name, brand])
+  @@index([collectionId])
+  @@index([productType])
+  @@index([active])
+}
+
+model FertilizerRecipe {
+  id                   String   @id @default(cuid())
+  collectionId         String
+  name                 String
+  description          String?
+  declaredNpk          String?
+  calculatedNpk        String?
+  applicationMethod    String   @default("ROOT_DRENCH")
+  dilutionInstructions String?
+  doseAmount           String?
+  doseUnit             String?
+  waterVolume          String?
+  waterVolumeUnit      String?
+  strengthLabel        String?
+  frequencyDays        Int?
+  frequencyNotes       String?
+  seasonalNotes        String?
+  safetyNotes          String?
+  notes                String?
+  active               Boolean  @default(true)
+  draft                Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  collection         Collection                @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  products           FertilizerRecipeProduct[]
+  husbandryGuides    PlantHusbandryGuide[]     @relation("HusbandryGuideFertilizerRecipe")
+  husbandryOverrides PlantHusbandryOverride[]  @relation("HusbandryOverrideFertilizerRecipe")
+  careEvents         PlantCareEvent[]          @relation("PlantCareEventFertilizerRecipe")
+
+  @@unique([collectionId, name])
+  @@index([collectionId])
+  @@index([applicationMethod])
+  @@index([active])
+  @@index([draft])
+}
+
+model FertilizerRecipeProduct {
+  id          String   @id @default(cuid())
+  recipeId    String
+  productId   String
+  amount      String?
+  unit        String?
+  notes       String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  recipe  FertilizerRecipe  @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  product FertilizerProduct @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@unique([recipeId, productId])
+  @@index([recipeId])
+  @@index([productId])
+  @@index([sortOrder])
 }
 
 model PlantAlias {
@@ -1470,6 +1560,9 @@ model PlantHusbandryOverride {
   fertilizationFrequency  String?
   fertilizationSeasonalSchedule String?
   fertilizationMicronutrientNotes String?
+  fertilizerRecipeId      String?
+  fertilizationCadenceDays Int?
+  fertilizationPaused     Boolean   @default(false)
   repottingInterval       String?
   repottingPotType        String?
   repottingRootSensitivity String?
@@ -1512,9 +1605,11 @@ model PlantHusbandryOverride {
 
   collection    Collection?    @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   plantInstance PlantInstance @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
+  fertilizerRecipe FertilizerRecipe? @relation("HusbandryOverrideFertilizerRecipe", fields: [fertilizerRecipeId], references: [id], onDelete: SetNull)
 
   @@index([collectionId])
   @@index([plantInstanceId])
+  @@index([fertilizerRecipeId])
 }
 
 model PlantCareEvent {
@@ -1526,16 +1621,19 @@ model PlantCareEvent {
   performedAt     DateTime @default(now())
   notes           String?
   metadata        Json?
+  fertilizerRecipeId String?
   createdAt       DateTime @default(now())
 
   collection    Collection?    @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   plantInstance PlantInstance @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
   user          User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  fertilizerRecipe FertilizerRecipe? @relation("PlantCareEventFertilizerRecipe", fields: [fertilizerRecipeId], references: [id], onDelete: SetNull)
 
   @@index([collectionId])
   @@index([plantInstanceId])
   @@index([userId])
   @@index([eventType])
+  @@index([fertilizerRecipeId])
   @@index([performedAt])
 }
 

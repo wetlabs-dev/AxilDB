@@ -9,7 +9,7 @@ import { prisma } from '@/lib/prisma'
 import { formatDateTime, timeZoneForPreference } from '@/lib/time'
 import { plantName } from '@/lib/utils'
 
-const syncCareTypes = ['WATER', 'PEST_CHECK', 'HEALTH_CHECK', 'PROPAGATION_CHECK', 'BLOOM_CHECK', 'REMINDER'] as const
+const syncCareTypes = ['WATER', 'FERTILIZE', 'PEST_CHECK', 'HEALTH_CHECK', 'PROPAGATION_CHECK', 'BLOOM_CHECK', 'REMINDER'] as const
 
 function firstParam(value?: string | string[]) {
   return Array.isArray(value) ? value[0] || '' : value || ''

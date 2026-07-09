@@ -36,12 +36,12 @@ export default async function EditPlant({
   const canManageImages = isServerAdminRole(user.role) || collectionRoleAtLeast(role, 'MANAGER')
   const { id } = await params
   const { uploadError } = await searchParams
-  const [plant, bodies, typePhotos, definitionSuggestionRows, guideSourceOptions, mergeTargetOptions] = await Promise.all([
+  const [plant, bodies, typePhotos, definitionSuggestionRows, guideSourceOptions, mergeTargetOptions, fertilizerRecipes] = await Promise.all([
     prisma.plantDefinition.findFirstOrThrow({
       where: { id, collectionId: collection.id },
       include: {
         aliases: { orderBy: { name: 'asc' } },
-        husbandryGuide: true,
+        husbandryGuide: { include: { fertilizerRecipe: true } },
         validationCandidates: { orderBy: { createdAt: 'desc' }, take: 5 },
         _count: { select: { instances: true } },
       },
@@ -74,12 +74,16 @@ export default async function EditPlant({
       include: { _count: { select: { instances: true } } },
       orderBy: [{ genus: 'asc' }, { species: 'asc' }, { cultivarName: 'asc' }],
     }),
+    prisma.fertilizerRecipe.findMany({
+      where: { collectionId: collection.id, active: true },
+      orderBy: [{ draft: 'asc' }, { name: 'asc' }],
+    }),
   ])
   const currentTypePhoto = typePhotos[0]
   const sourceDefinition = plant.husbandryGuide?.sourcePlantDefinitionId
     ? await prisma.plantDefinition.findFirst({
         where: { id: plant.husbandryGuide.sourcePlantDefinitionId, collectionId: collection.id },
-        include: { husbandryGuide: true },
+        include: { husbandryGuide: { include: { fertilizerRecipe: true } } },
       })
     : null
   const effectiveGuide = sourceDefinition?.husbandryGuide || plant.husbandryGuide
@@ -203,6 +207,9 @@ export default async function EditPlant({
                 <input type="hidden" name="reviewStatus" defaultValue={(plant.husbandryGuide as any)?.reviewStatus || 'DRAFT'} />
                 <input type="hidden" name="reviewNotes" defaultValue={(plant.husbandryGuide as any)?.reviewNotes || ''} />
                 <input type="hidden" name="aiModel" defaultValue={(plant.husbandryGuide as any)?.aiModel || ''} />
+                <input type="hidden" name="fertilizerRecipeId" defaultValue={(plant.husbandryGuide as any)?.fertilizerRecipeId || ''} />
+                <input type="hidden" name="fertilizationCadenceDays" defaultValue={(plant.husbandryGuide as any)?.fertilizationCadenceDays || ''} />
+                {(plant.husbandryGuide as any)?.fertilizationPaused && <input type="hidden" name="fertilizationPaused" value="on" />}
                 <HusbandryMagicFillButton
                   plant={plant}
                   autoSubmit
@@ -244,6 +251,41 @@ export default async function EditPlant({
               </form>
             </div>
           ) : null}
+
+          {!sourceDefinition && (
+            <details className="group rounded-lg border border-[#d6dfc9] bg-[#f7f4e8]/70">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-semibold">
+                <span>Structured fertilizer schedule</span>
+                <span className="rounded-md border border-stone-300 bg-white/70 px-2 py-1 text-xs group-open:hidden">Open</span>
+                <span className="hidden rounded-md border border-stone-300 bg-white/70 px-2 py-1 text-xs group-open:inline-block">Hide</span>
+              </summary>
+              <form action={savePlantHusbandryGuide} className="grid gap-3 border-t border-[#d6dfc9] p-3 md:grid-cols-3">
+                <input type="hidden" name="collectionSlug" value={collection.slug} />
+                <input type="hidden" name="plantDefinitionId" value={plant.id} />
+                {husbandryFieldNames.map((field) => (
+                  <input key={field} type="hidden" name={field} defaultValue={(plant.husbandryGuide as any)?.[field] || ''} />
+                ))}
+                <input type="hidden" name="reviewStatus" defaultValue={(plant.husbandryGuide as any)?.reviewStatus || 'DRAFT'} />
+                <input type="hidden" name="reviewNotes" defaultValue={(plant.husbandryGuide as any)?.reviewNotes || ''} />
+                <input type="hidden" name="aiModel" defaultValue={(plant.husbandryGuide as any)?.aiModel || ''} />
+                <label className="grid gap-1 text-sm font-medium text-stone-800 md:col-span-2">
+                  Fertilizer recipe
+                  <select name="fertilizerRecipeId" className={selectClass} defaultValue={(plant.husbandryGuide as any)?.fertilizerRecipeId || ''}>
+                    <option value="">No structured recipe</option>
+                    {fertilizerRecipes.map((recipe) => (
+                      <option key={recipe.id} value={recipe.id}>{recipe.name}{recipe.declaredNpk || recipe.calculatedNpk ? ` · ${recipe.declaredNpk || recipe.calculatedNpk}` : ''}{recipe.draft ? ' (draft)' : ''}</option>
+                    ))}
+                  </select>
+                </label>
+                <Field label="Cadence days" name="fertilizationCadenceDays" type="number" min="1" max="365" defaultValue={(plant.husbandryGuide as any)?.fertilizationCadenceDays || ''} />
+                <label className="inline-flex items-center gap-2 text-sm font-medium text-stone-800 md:col-span-3">
+                  <input type="checkbox" name="fertilizationPaused" defaultChecked={Boolean((plant.husbandryGuide as any)?.fertilizationPaused)} />
+                  Pause fertilizing for this definition
+                </label>
+                <Button className="w-fit md:col-span-3">Save fertilizer schedule</Button>
+              </form>
+            </details>
+          )}
 
           <details className="group rounded-lg border border-stone-200 bg-white/50">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-semibold">

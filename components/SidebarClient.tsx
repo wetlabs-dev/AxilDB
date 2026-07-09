@@ -93,6 +93,7 @@ const collectionAdminItems = [
   ['/collection-settings', 'Collection Settings', Settings, 'MANAGER'],
   ['/members', 'Collection Members', Users, 'MANAGER'],
   ['/settings', 'Governing Bodies', Settings, 'GARDENER'],
+  ['/fertilizers', 'Fertilizers', FlaskConical, 'GARDENER'],
   ['/exhibits', 'Collection Exhibits', GalleryHorizontalEnd, 'GARDENER'],
   ['/transfers', 'Collection Transfers', ArrowRightLeft, 'GARDENER'],
   ['/admin-tools', 'Collection Tools', FlaskConical, 'GARDENER'],
