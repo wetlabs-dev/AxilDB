@@ -273,6 +273,7 @@ export default async function ServerDashboard({
         <div className="flex flex-wrap gap-2">
           <LinkButton href="/server/validated-definitions">Validated Definitions</LinkButton>
           <LinkButton href="/server/incidents">Incident History</LinkButton>
+          <LinkButton href="/server/events">Event Processing</LinkButton>
           <LinkButton href="/server/image-moderation">Image Moderation</LinkButton>
           <LinkButton href="/server/orphaned-images">Orphaned Images</LinkButton>
           <LinkButton href="/server/collections">Collections</LinkButton>

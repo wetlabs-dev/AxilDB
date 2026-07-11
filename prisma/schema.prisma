@@ -140,6 +140,8 @@ model User {
   cancelledPlantQuarantines PlantQuarantine[] @relation("PlantQuarantineCancelledBy")
   careSheets          CareSheet[]
   completedCareSheetTasks CareSheetTask[] @relation("CareSheetTaskCompletedBy")
+  domainEvents        DomainEvent[] @relation("DomainEventActor")
+  ignoredDomainEvents DomainEvent[] @relation("DomainEventIgnoredBy")
   createdCollectionExhibits CollectionExhibit[] @relation("CollectionExhibitCreatedBy")
   publishedCollectionExhibits CollectionExhibit[] @relation("CollectionExhibitPublishedBy")
   createdCollectionExhibitUpdates CollectionExhibitUpdate[] @relation("CollectionExhibitUpdateCreatedBy")
@@ -228,6 +230,7 @@ model Collection {
   workflowRuns        WorkflowRun[]
   workflowRunPlants   WorkflowRunPlant[]
   workflowRunSteps    WorkflowRunStep[]
+  domainEvents        DomainEvent[]
 
   @@index([visibility])
   @@index([status])
@@ -572,6 +575,72 @@ model ServerWorkerRun {
   @@index([workerName])
   @@index([status])
   @@index([startedAt])
+}
+
+model DomainEvent {
+  id                  String    @id @default(cuid())
+  eventType           String
+  eventVersion        Int       @default(1)
+  collectionId        String?
+  aggregateType       String
+  aggregateId         String
+  actorUserId         String?
+  actorRole           String?
+  source              String    @default("APPLICATION")
+  visibility          String
+  occurredAt          DateTime
+  recordedAt          DateTime  @default(now())
+  payloadJson         Json
+  summaryJson         Json?
+  metadataJson        Json?
+  idempotencyKey      String    @unique
+  correlationId       String?
+  causationId         String?
+  reconstructed       Boolean   @default(false)
+  redactedAt          DateTime?
+  supersededByEventId String?
+  processingStatus    String    @default("PENDING")
+  processingAttempts  Int       @default(0)
+  nextAttemptAt       DateTime?
+  lastProcessingError String?
+  processedAt         DateTime?
+  ignoredAt           DateTime?
+  ignoredByUserId     String?
+  ignoreReason        String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  collection        Collection?                    @relation(fields: [collectionId], references: [id], onDelete: SetNull)
+  actor             User?                          @relation("DomainEventActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  ignoredBy         User?                          @relation("DomainEventIgnoredBy", fields: [ignoredByUserId], references: [id], onDelete: SetNull)
+  supersededByEvent DomainEvent?                   @relation("DomainEventSupersession", fields: [supersededByEventId], references: [id], onDelete: SetNull)
+  supersedes        DomainEvent[]                  @relation("DomainEventSupersession")
+  processingHistory DomainEventProcessingAttempt[]
+
+  @@index([collectionId, occurredAt])
+  @@index([aggregateType, aggregateId, occurredAt])
+  @@index([eventType, occurredAt])
+  @@index([processingStatus, nextAttemptAt])
+  @@index([actorUserId, occurredAt])
+  @@index([correlationId])
+  @@index([occurredAt])
+}
+
+model DomainEventProcessingAttempt {
+  id           String    @id @default(cuid())
+  eventId      String
+  attempt      Int
+  status       String
+  consumer     String?
+  error        String?
+  startedAt    DateTime  @default(now())
+  finishedAt   DateTime?
+  metadataJson Json?
+
+  event DomainEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId, startedAt])
+  @@index([status, startedAt])
 }
 
 model BackupRun {
@@ -997,7 +1066,6 @@ model FollowNotification {
   @@index([status])
   @@index([sentAt])
 }
-
 model PlantDefinition {
   id                         String   @id @default(cuid())
   collectionId               String?

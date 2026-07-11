@@ -1,5 +1,6 @@
 import type { PrismaClient } from '@prisma/client'
 import { collectionPath } from '@/lib/collections'
+import type { EventVisibility } from '@/lib/events/event-types'
 
 export type PlantTimelineCategory = 'accession' | 'care' | 'health' | 'growth' | 'documentation' | 'lineage' | 'archive'
 export type PlantTimelineColor = 'green' | 'sage' | 'amber' | 'rust' | 'mauve' | 'gray'
@@ -103,12 +104,37 @@ function addEvent(events: PlantTimelineEvent[], event: PlantTimelineEvent) {
   events.push(event)
 }
 
+function objectValue(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
+}
+
+function domainEventPresentation(type: string): Pick<PlantTimelineEvent, 'category' | 'icon' | 'colorVariant'> {
+  if (type.startsWith('care.')) return { category: 'care', icon: '✅', colorVariant: 'sage' }
+  if (type.startsWith('condition.') || type.startsWith('quarantine.')) return { category: 'health', icon: type.endsWith('resolved') || type.endsWith('released') ? '✅' : '⚠️', colorVariant: type.endsWith('resolved') || type.endsWith('released') ? 'green' : 'amber' }
+  if (type.startsWith('bloom.')) return { category: 'growth', icon: '🌸', colorVariant: 'mauve' }
+  if (type.startsWith('propagation.')) return { category: 'lineage', icon: '🌿', colorVariant: 'mauve' }
+  if (type.startsWith('workflow.')) return { category: 'documentation', icon: '📋', colorVariant: type.endsWith('completed') ? 'green' : 'sage' }
+  if (type === 'plant.archived') return { category: 'archive', icon: '📁', colorVariant: 'gray' }
+  return { category: 'accession', icon: '🌱', colorVariant: 'green' }
+}
+
+function semanticType(type: string) {
+  const map: Record<string, string> = {
+    WATERED: 'care.watered', FERTILIZED: 'care.fertilized', REPOTTED: 'care.repotting_completed', PEST_CHECK: 'care.pest_checked', HEALTH_CHECK: 'care.health_checked',
+    CONDITION_OBSERVED: 'condition.opened', CONDITION_RESOLVED: 'condition.resolved', BLOOM_STARTED: 'bloom.started', BLOOM_PEAK: 'bloom.peaked', BLOOM_ENDED: 'bloom.closed',
+    LOCATION_MOVE: 'plant.location_moved', QUARANTINE_STARTED: 'quarantine.started', QUARANTINE_UPDATED: 'quarantine.updated', QUARANTINE_RELEASED: 'quarantine.released', QUARANTINE_CANCELLED: 'quarantine.cancelled',
+    WORKFLOW_STARTED: 'workflow.run_started', WORKFLOW_COMPLETED: 'workflow.run_completed', ARCHIVE: 'plant.archived',
+  }
+  return map[type] || type
+}
+
 export async function collectPlantTimelineEvents(
   prisma: PrismaClient,
   input: {
     collectionId: string
     collectionSlug: string
     plantInstanceId: string
+    visibleEventVisibilities?: EventVisibility[]
   },
 ) {
   const instance = await prisma.plantInstance.findFirstOrThrow({
@@ -141,7 +167,7 @@ export async function collectPlantTimelineEvents(
   })
   const bloomIds = blooms.map((bloom) => bloom.id)
 
-  const [careEvents, conditions, photos, notes, propagationEvents, reminders, sportRecords, locationMoves, quarantines, workflowRuns] = await Promise.all([
+  const [careEvents, conditions, photos, notes, propagationEvents, reminders, sportRecords, locationMoves, quarantines, workflowRuns, domainEvents] = await Promise.all([
     prisma.plantCareEvent.findMany({
       where: { collectionId: input.collectionId, plantInstanceId: input.plantInstanceId },
       orderBy: { performedAt: 'asc' },
@@ -218,6 +244,19 @@ export async function collectPlantTimelineEvents(
       where: { collectionId: input.collectionId, plants: { some: { plantInstanceId: input.plantInstanceId } } },
       include: { template: true },
       orderBy: { startedAt: 'asc' },
+    }),
+    prisma.domainEvent.findMany({
+      where: {
+        collectionId: input.collectionId,
+        visibility: { in: input.visibleEventVisibilities || ['PUBLIC', 'COLLECTION_MEMBER'] },
+        redactedAt: null,
+        OR: [
+          { aggregateType: 'PlantInstance', aggregateId: input.plantInstanceId },
+          { payloadJson: { path: ['plantInstanceId'], equals: input.plantInstanceId } },
+        ],
+      },
+      orderBy: { occurredAt: 'asc' },
+      take: 500,
     }),
   ])
 
@@ -634,7 +673,25 @@ export async function collectPlantTimelineEvents(
     })
   }
 
-  return events.sort((left, right) => left.date.getTime() - right.date.getTime() || left.title.localeCompare(right.title))
+  const represented = new Set<string>()
+  const domainTimelineEvents: PlantTimelineEvent[] = domainEvents.map((event) => {
+    const payload = objectValue(event.payloadJson)
+    const summary = objectValue(event.summaryJson)
+    const presentation = domainEventPresentation(event.eventType)
+    const recordType = String(payload.recordType || event.aggregateType)
+    const recordId = String(payload.recordId || payload.subjectId || event.aggregateId)
+    represented.add(`${recordType}:${recordId}:${event.eventType}`)
+    const indicators = [event.reconstructed ? 'Reconstructed' : null, event.source === 'MANUAL' ? 'Manual historical entry' : null].filter(Boolean)
+    return {
+      id: `domain-event-${event.id}`, type: event.eventType, ...presentation, date: event.occurredAt,
+      title: String(summary.title || event.eventType.replaceAll('.', ' · ').replaceAll('_', ' ')),
+      summary: [String(summary.summary || payload.summary || payload.displayName || ''), ...indicators].filter(Boolean).join(' · '),
+      href: eventHref(input.collectionSlug, input.plantInstanceId), sourceModel: recordType, sourceId: recordId,
+      metadata: { reconstructed: event.reconstructed, manual: event.source === 'MANUAL', eventVersion: event.eventVersion },
+    }
+  })
+  const legacyFallback = events.filter((event) => !represented.has(`${event.sourceModel}:${event.sourceId}:${semanticType(event.type)}`))
+  return [...legacyFallback, ...domainTimelineEvents].sort((left, right) => left.date.getTime() - right.date.getTime() || left.title.localeCompare(right.title))
 }
 
 export function getPlantTimelineMetrics(events: PlantTimelineEvent[], instance: PlantTimelineInstance, now = new Date()): PlantTimelineMetrics {
@@ -642,18 +699,19 @@ export function getPlantTimelineMetrics(events: PlantTimelineEvent[], instance: 
   const firstDate = instance.acquisitionDate || instance.propagationDate || sorted[0]?.date || instance.createdAt
   const latestObservation = [...sorted].reverse().find((event) => ['care', 'health', 'growth', 'documentation'].includes(event.category))
   const latestCare = [...sorted].reverse().find((event) => event.category === 'care')
-  const latestWater = [...sorted].reverse().find((event) => event.type === 'WATERED')
-  const latestPhoto = [...sorted].reverse().find((event) => event.type === 'PHOTO_ADDED')
-  const latestBloom = [...sorted].reverse().find((event) => event.type.startsWith('BLOOM_'))
-  const openIssues = sorted.filter((event) => event.sourceModel === 'PlantCondition' && event.type === 'CONDITION_OBSERVED' && event.status !== 'RESOLVED')
+  const latestWater = [...sorted].reverse().find((event) => ['WATERED', 'care.watered'].includes(event.type))
+  const latestPhoto = [...sorted].reverse().find((event) => ['PHOTO_ADDED', 'plant.photo_added', 'bloom.photo_added'].includes(event.type))
+  const latestBloom = [...sorted].reverse().find((event) => event.type.startsWith('BLOOM_') || event.type.startsWith('bloom.'))
+  const resolvedConditionIds = new Set(sorted.filter((event) => ['CONDITION_RESOLVED', 'condition.resolved'].includes(event.type)).map((event) => event.sourceId))
+  const openIssues = sorted.filter((event) => event.sourceModel === 'PlantCondition' && ['CONDITION_OBSERVED', 'condition.opened', 'condition.reopened'].includes(event.type) && !resolvedConditionIds.has(event.sourceId) && event.status !== 'RESOLVED')
   const activeWatchItems = openIssues.filter((event) => event.severity === 'LOW' || event.status === 'IMPROVING').length
-  const activeBlooming = sorted.some((event) => event.type === 'BLOOM_STARTED' && !sorted.some((other) => other.sourceId === event.sourceId && other.type === 'BLOOM_ENDED'))
+  const activeBlooming = sorted.some((event) => ['BLOOM_STARTED', 'bloom.started'].includes(event.type) && !sorted.some((other) => other.sourceId === event.sourceId && ['BLOOM_ENDED', 'bloom.closed'].includes(other.type)))
   const gaps = sorted.slice(1).map((event, index) => daysBetween(sorted[index].date, event.date))
   const longestQuietPeriodDays = gaps.length ? Math.max(...gaps) : null
   const daysSince = (date?: Date | null) => date ? daysBetween(date, now) : null
   const unresolvedHealthIssues = openIssues.length
   const recentlyActive = latestObservation && daysBetween(latestObservation.date, now) <= 14
-  const recovering = sorted.slice(-5).some((event) => event.type === 'CONDITION_RESOLVED')
+  const recovering = sorted.slice(-5).some((event) => ['CONDITION_RESOLVED', 'condition.resolved'].includes(event.type))
 
   return {
     ageDays: firstDate ? daysBetween(firstDate, now) : null,

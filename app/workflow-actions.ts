@@ -12,6 +12,7 @@ import { descendantLocationIds, normalizeQuarantineRiskLevel, quarantineChecklis
 import { queueTaskForWorkflowStep, workflowStepTypes } from '@/lib/workflows'
 import { getCareQueue } from '@/lib/care-queue'
 import { nextOccurrence } from '@/lib/reminders'
+import { emitDomainEvent } from '@/lib/events/emit'
 
 const val = (fd: FormData, key: string) => String(fd.get(key) || '').trim()
 const optional = (fd: FormData, key: string) => val(fd, key) || null
@@ -269,8 +270,8 @@ export async function startWorkflowRun(fd: FormData) {
     : locationId
       ? await prisma.plantInstance.findMany({ where: { collectionId: context.collection.id, currentLocationId: { in: locationIds }, status: 'ACTIVE' }, select: { id: true } })
       : []
-  const run = await prisma.workflowRun.create({
-    data: {
+  const run = await prisma.$transaction(async (tx) => {
+    const created = await tx.workflowRun.create({ data: {
       collectionId: context.collection.id,
       templateId: template.id,
       title: val(fd, 'title') || template.name,
@@ -294,7 +295,13 @@ export async function startWorkflowRun(fd: FormData) {
           configJson: step.configJson as any,
         })),
       },
-    },
+    } })
+    await emitDomainEvent(tx, {
+      eventType: 'workflow.run_started', collectionId: context.collection.id, aggregateId: created.id, occurredAt: created.startedAt,
+      actor: { id: context.user.id, role: context.user.role }, idempotencyKey: `workflow:${created.id}:started`,
+      payload: { subjectId: created.id, recordId: created.id, recordType: 'WorkflowRun', plantInstanceId: plants[0]?.id, displayName: created.title, title: 'Workflow started', scopeType, locationId, plantInstanceIds: plants.map((plant) => plant.id) },
+    })
+    return created
   })
   await audit(context.user, 'START', 'WORKFLOW_RUN', run.id, `Started workflow ${run.title}`, { templateId: template.id, scopeType, locationId, includeNested, plantCount: plants.length }, context.collection.id)
   redirect(collectionPath(context.collection.slug, `/workflows/runs/${run.id}`))
@@ -493,17 +500,22 @@ export async function completeWorkflowRunStep(fd: FormData) {
     }
   }
 
-  await prisma.workflowRunStep.update({
-    where: { id: step.id },
-    data: {
+  const completedAt = new Date()
+  await prisma.$transaction(async (tx) => {
+    await tx.workflowRunStep.update({ where: { id: step.id }, data: {
       status: 'COMPLETED',
       completedByUserId: context.user.id,
-      completedAt: new Date(),
+      completedAt,
       notes,
       outputJson: { result: optional(fd, 'result'), createdRecords, queueItemsCompleted, reminderIds: matchingReminderIds } as any,
       createdRecordType: createdRecords[0]?.type || null,
       createdRecordId: createdRecords[0]?.id || null,
-    },
+    } })
+    await emitDomainEvent(tx, {
+      eventType: 'workflow.step_completed', collectionId: context.collection.id, aggregateId: step.runId, occurredAt: completedAt,
+      actor: { id: context.user.id, role: context.user.role }, correlationId: step.runId,
+      idempotencyKey: `workflow-step:${step.id}:completed`, payload: { subjectId: step.id, recordId: step.id, recordType: 'WorkflowRunStep', plantInstanceId: plants[0]?.id, displayName: step.title, workflowRunId: step.runId, stepType: step.stepType, createdRecords },
+    })
   })
   await audit(context.user, 'COMPLETE', 'WORKFLOW_RUN_STEP', step.id, `Completed workflow step ${step.title}`, { workflowRunId: step.runId, createdRecords }, context.collection.id)
   revalidatePath(collectionPath(context.collection.slug, `/workflows/runs/${step.runId}`))
@@ -535,7 +547,15 @@ export async function completeWorkflowRun(fd: FormData) {
   const run = await workflowRunWithSteps(id, context.collection.id)
   const requiredPending = run.steps.some((step) => step.required && !['COMPLETED', 'SKIPPED'].includes(step.status))
   if (requiredPending) redirect(`${back(fd)}?workflow=required-pending`)
-  await prisma.workflowRun.update({ where: { id }, data: { status: 'COMPLETED', completedAt: new Date(), summary: optional(fd, 'summary') } })
+  const completedAt = new Date()
+  await prisma.$transaction(async (tx) => {
+    const updated = await tx.workflowRun.update({ where: { id }, data: { status: 'COMPLETED', completedAt, summary: optional(fd, 'summary') } })
+    await emitDomainEvent(tx, {
+      eventType: 'workflow.run_completed', collectionId: context.collection.id, aggregateId: id, occurredAt: completedAt,
+      actor: { id: context.user.id, role: context.user.role }, correlationId: id,
+      idempotencyKey: `workflow:${id}:completed`, payload: { subjectId: id, recordId: id, recordType: 'WorkflowRun', plantInstanceId: run.plants[0]?.plantInstanceId, displayName: run.title, summary: updated.summary || undefined },
+    })
+  })
   await audit(context.user, 'COMPLETE', 'WORKFLOW_RUN', id, `Completed workflow ${run.title}`, undefined, context.collection.id)
   redirect(collectionPath(context.collection.slug, '/workflows?run=completed'))
 }
@@ -544,7 +564,15 @@ export async function cancelWorkflowRun(fd: FormData) {
   const context = await requireCollectionGardener(val(fd, 'collectionSlug'))
   const id = val(fd, 'runId')
   const run = await prisma.workflowRun.findFirstOrThrow({ where: { id, collectionId: context.collection.id } })
-  await prisma.workflowRun.update({ where: { id }, data: { status: 'CANCELLED', cancelledAt: new Date(), summary: optional(fd, 'summary') } })
+  const cancelledAt = new Date()
+  await prisma.$transaction(async (tx) => {
+    const updated = await tx.workflowRun.update({ where: { id }, data: { status: 'CANCELLED', cancelledAt, summary: optional(fd, 'summary') } })
+    await emitDomainEvent(tx, {
+      eventType: 'workflow.run_cancelled', collectionId: context.collection.id, aggregateId: id, occurredAt: cancelledAt,
+      actor: { id: context.user.id, role: context.user.role }, correlationId: id,
+      idempotencyKey: `workflow:${id}:cancelled`, payload: { subjectId: id, recordId: id, recordType: 'WorkflowRun', displayName: run.title, summary: updated.summary || undefined },
+    })
+  })
   await audit(context.user, 'CANCEL', 'WORKFLOW_RUN', id, `Cancelled workflow ${run.title}`, undefined, context.collection.id)
   redirect(collectionPath(context.collection.slug, '/workflows?run=cancelled'))
 }

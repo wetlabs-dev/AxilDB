@@ -30,6 +30,7 @@ AXILDB_DOCS_BASE_URL=https://app.axildb.com AXILDB_DOCS_COLLECTION_SLUG=axildb n
 - [QR Labels and Bulk Tags](#labels)
 - [Collection Transfers and Definition Sharing](#transfers)
 - [Collection Tools, Governing Bodies, and Audit Log](#collection-tools)
+- [Collection Activity and Historical Events](#collection-activity)
 - [Server Management](#server-management)
 
 ## Getting Started
@@ -550,9 +551,33 @@ App route: `/admin-tools`
 
 - Demo data tools should be used intentionally. They create realistic sample records in the current collection.
 
+## Collection Activity and Historical Events
+
+Collection Activity is the structured, collection-scoped history produced by the Unified Event Engine. Current plant, care, and workflow records remain authoritative; AxilDB is not event-sourced.
+
+App route: `/activity`
+
+### How It Is Used
+
+- Open Collection Activity from the Dashboard to filter durable events by type, source, visibility, date, plant, actor, or correlation ID.
+- Open an event to inspect its versioned summary and structured payload. Redacted payloads remain hidden while the immutable event envelope stays visible.
+- Gardeners and managers can add a manual historical observation for a specimen. Choose the date, category, context, and visibility; the entry is always labeled Manual historical entry and does not change current plant state.
+- Managers can record a correction from an event detail page. The original remains stored and links to the superseding correction.
+
+### Notes
+
+- Plant Health Timeline and Dashboard activity prefer domain events for new activity and keep de-duplicated legacy history during migration.
+- Reconstructed events come from trustworthy timestamps in existing records and are labeled Reconstructed.
+- Event visibility is explicit. A public collection does not make collection-member or staff events public.
+- Audit Log remains a separate record of security-sensitive and administrative actions.
+
+### Warnings
+
+- Manual historical entries are observations only. Use normal edit and care workflows to change authoritative current state.
+
 ## Server Management
 
-Server Management is restricted to server admins and covers sitewide users, collection creation and archival, validated definition review, image moderation, AI availability, AI access requests, collection requests, maintenance mode, backups, restore planning, health metrics, incident history, and usage statistics.
+Server Management is restricted to server admins and covers sitewide users, collection creation and archival, validated definition review, image moderation, event processing, AI availability, AI access requests, collection requests, maintenance mode, backups, restore planning, health metrics, incident history, and usage statistics.
 
 App route: `/server`
 
@@ -567,6 +592,7 @@ App route: `/server`
 - Use Validated Definitions to review nominations and disputes, edit approved site-level reference definitions, and preserve reusable taxonomy outside any one collection.
 - Use Image Moderation to review censored uploads, override false alarms, remove images, or remove an image and block the uploader.
 - Use Incident History to search/filter open or resolved incidents, inspect clustered memory/disk graph markers, create manual incidents, and attach notes or postmortem details.
+- Use Event Processing to review pending, processing, failed, and dead-letter counts; inspect processing attempts and safe payload details; retry failures; or mark an event ignored with a required reason.
 - Use Maintenance Mode before planned downtime so public visitors and normal users see a maintenance screen while server admins retain access.
 - Use Backup Management to initiate sitewide backups, review recent runs and readable backup folders in one list, inspect manifests/artifact sizes/git commits, validate restore readiness, and generate the SSH-only restore command.
 - Use backup deletion tools only when intentionally pruning server storage: individual deletion requires the exact folder name, and older-than cleanup starts with a dry-run preview before confirmation. Active and incomplete backups are skipped by default, and restore request history is retained.
@@ -580,6 +606,7 @@ App route: `/server`
 - Image moderation is two-layered when enabled: unsafe-content moderation runs before plant-content vision analysis.
 - AI availability can be toggled per collection by server admins, and collection managers can request AI access.
 - Incidents are durable operational records. Memory incidents open after three consecutive samples above warning or critical thresholds; disk incidents open on threshold crossing; metric incidents resolve automatically after three clear samples. Worker, SMTP, email backlog, AI, and moderation incidents are detected from durable worker/delivery records. Manual incidents remain until a server admin resolves them.
+- Domain events are immutable domain history, while Audit Log remains the security and administrative accountability record. Server-admin redaction records a new redaction event and hides the original payload without silently rewriting it.
 - Orphaned Image Cleanup only scans the upload image directory and re-checks database references immediately before deleting selected files.
 - Backup manifests record deployment commit metadata from GIT_COMMIT, SOURCE_COMMIT, common provider commit variables, or git rev-parse when repository metadata is available.
 

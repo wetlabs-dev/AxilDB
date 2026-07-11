@@ -38,6 +38,7 @@ import { definitionData, findMatchingValidatedDefinition, globalGoverningBodyId,
 import { recordValidatedDefinitionChange, snapshotValidatedDefinition, validatedDefinitionInclude } from '@/lib/collection-updates'
 import { collectionRoleAtLeast, isServerAdminRole } from '@/lib/roles'
 import { assertLocationParentAllowed, descendantLocationIds, isQuarantineLocation, nextLocationCode, normalizeQuarantineRiskLevel, quarantineChecklistItems } from '@/lib/locations'
+import { emitDomainEvent } from '@/lib/events/emit'
 
 const val = (fd: FormData, k: string) =>
   String(fd.get(k) || '').trim() || undefined
@@ -106,6 +107,13 @@ const careEventForBulkCare = (careType?: string | null) => {
   if (careType === 'PROPAGATION_CHECK') return 'PROPAGATION_CHECK'
   if (careType === 'BLOOM_CHECK') return 'BLOOM_CHECK'
   return 'OTHER'
+}
+const domainEventForCare = (eventType: string) => {
+  if (eventType === 'WATERED') return 'care.watered' as const
+  if (eventType === 'FERTILIZED') return 'care.fertilized' as const
+  if (eventType === 'REPOTTED') return 'care.repotting_completed' as const
+  if (eventType === 'PEST_CHECK') return 'care.pest_checked' as const
+  return 'care.health_checked' as const
 }
 const queueTaskForBulkCare = (careType?: string | null) => {
   if (careType === 'WATERING') return 'WATER'
@@ -658,8 +666,8 @@ export async function createLocation(fd: FormData) {
     prisma.locationType.findFirstOrThrow({ where: { id: locationTypeId, collectionId: collection.id, status: 'ACTIVE' } }),
     parentLocationId ? prisma.location.findFirstOrThrow({ where: { id: parentLocationId, collectionId: collection.id, status: 'ACTIVE' } }) : null,
   ])
-  const location = await prisma.location.create({
-    data: {
+  const location = await prisma.$transaction(async (tx) => {
+    const created = await tx.location.create({ data: {
       collectionId: collection.id,
       locationTypeId: type.id,
       parentLocationId: parent?.id || null,
@@ -667,7 +675,13 @@ export async function createLocation(fd: FormData) {
       code: await nextLocationCode(prisma, collection.id, type.abbreviation),
       description: clearableVal(fd, 'description'),
       sortOrder: boundedInt(val(fd, 'sortOrder'), 0, 0, 9999),
-    },
+    } })
+    await emitDomainEvent(tx, {
+      eventType: 'location.created', collectionId: collection.id, aggregateId: created.id,
+      actor: { id: user.id, role: user.role }, idempotencyKey: `location:${created.id}:created`,
+      payload: { subjectId: created.id, displayName: created.name, code: created.code, parentLocationId: created.parentLocationId },
+    })
+    return created
   })
   await audit(user, 'CREATE', 'LOCATION', location.id, `Created location ${location.code} ${location.name}`, undefined, collection.id)
   redirect(back(fd) || collectionPath(collection.slug, `/locations/${location.id}`))
@@ -692,16 +706,24 @@ export async function updateLocation(fd: FormData) {
     ])
     if (plantCount > 0 || childCount > 0) throw new Error('Move plants and child locations before archiving this location.')
   }
-  const updated = await prisma.location.update({
-    where: { id },
-    data: {
+  const updated = await prisma.$transaction(async (tx) => {
+    const result = await tx.location.update({ where: { id }, data: {
       locationTypeId,
       parentLocationId,
       name: val(fd, 'name')!,
       description: clearableVal(fd, 'description'),
       sortOrder: boundedInt(val(fd, 'sortOrder'), location.sortOrder, 0, 9999),
       status,
-    },
+    } })
+    const eventType = status === 'ARCHIVED' && location.status !== 'ARCHIVED'
+      ? 'location.archived' as const
+      : parentLocationId !== location.parentLocationId ? 'location.reparented' as const : 'location.updated' as const
+    await emitDomainEvent(tx, {
+      eventType, collectionId: collection.id, aggregateId: id, actor: { id: user.id, role: user.role },
+      idempotencyKey: `location:${id}:${eventType}:${result.updatedAt.toISOString()}`,
+      payload: { subjectId: id, displayName: result.name, code: result.code, fromParentLocationId: location.parentLocationId, toParentLocationId: result.parentLocationId },
+    })
+    return result
   })
   await audit(user, 'UPDATE', 'LOCATION', id, `Updated location ${updated.code} ${updated.name}`, undefined, collection.id)
   redirect(back(fd) || collectionPath(collection.slug, `/locations/${id}`))
@@ -741,7 +763,13 @@ export async function archiveLocation(fd: FormData) {
     prisma.location.count({ where: { collectionId: collection.id, parentLocationId: id, status: 'ACTIVE' } }),
   ])
   if (plantCount > 0 || childCount > 0) throw new Error('Move plants and child locations before archiving this location.')
-  await prisma.location.update({ where: { id }, data: { status: 'ARCHIVED' } })
+  await prisma.$transaction(async (tx) => {
+    await tx.location.update({ where: { id }, data: { status: 'ARCHIVED' } })
+    await emitDomainEvent(tx, {
+      eventType: 'location.archived', collectionId: collection.id, aggregateId: id, actor: { id: user.id, role: user.role },
+      payload: { subjectId: id, displayName: location.name, code: location.code }, idempotencyKey: `location:${id}:archived`,
+    })
+  })
   await audit(user, 'ARCHIVE', 'LOCATION', id, `Archived location ${location.code} ${location.name}`, undefined, collection.id)
   redirect(collectionPath(collection.slug, '/locations'))
 }
@@ -757,16 +785,16 @@ export async function movePlantInstanceLocation(fd: FormData) {
   ])
   const fromLocationId = instance.currentLocationId
   if (fromLocationId === (target?.id || null)) redirect(back(fd))
-  await prisma.$transaction([
-    prisma.plantInstance.update({
+  await prisma.$transaction(async (tx) => {
+    await tx.plantInstance.update({
       where: { id: plantInstanceId },
       data: {
         currentLocationId: target?.id || null,
         location: target?.name || null,
         legacyLocationText: instance.legacyLocationText || instance.location,
       },
-    }),
-    prisma.plantLocationMove.create({
+    })
+    const move = await tx.plantLocationMove.create({
       data: {
         collectionId: collection.id,
         plantInstanceId,
@@ -775,8 +803,14 @@ export async function movePlantInstanceLocation(fd: FormData) {
         movedByUserId: user.id,
         notes,
       },
-    }),
-  ])
+    })
+    const from = fromLocationId ? await tx.location.findUnique({ where: { id: fromLocationId } }) : null
+    await emitDomainEvent(tx, {
+      eventType: 'plant.location_moved', collectionId: collection.id, aggregateId: plantInstanceId,
+      actor: { id: user.id, role: user.role }, idempotencyKey: `location-move:${move.id}`,
+      payload: { subjectId: move.id, recordType: 'PlantLocationMove', recordId: move.id, plantInstanceId, plantId: instance.plantId, displayName: instance.plantId, fromLocation: from ? { id: from.id, name: from.name, code: from.code } : null, toLocation: target ? { id: target.id, name: target.name, code: target.code } : null, summary: notes || undefined },
+    })
+  })
   await audit(user, 'MOVE', 'PLANT_INSTANCE_LOCATION', plantInstanceId, `Moved ${instance.plantId} to ${target?.code || 'no location'}`, { fromLocationId, toLocationId: target?.id || null, notes }, collection.id)
   redirect(back(fd) || collectionPath(collection.slug, `/instances/${plantInstanceId}`))
 }
@@ -811,16 +845,18 @@ export async function batchMovePlantLocations(fd: FormData) {
     orderBy: { plantId: 'asc' },
   })
   if (!plants.length) throw new Error('No eligible active plants remain for this batch move.')
-  await prisma.$transaction([
-    ...plants.map((plant) => prisma.plantInstance.update({
+  const correlationId = randomUUID()
+  await prisma.$transaction(async (tx) => {
+    for (const plant of plants) {
+      await tx.plantInstance.update({
       where: { id: plant.id },
       data: {
         currentLocationId: target.id,
         location: target.name,
         legacyLocationText: plant.legacyLocationText || plant.location,
       },
-    })),
-    ...plants.map((plant) => prisma.plantLocationMove.create({
+      })
+      const move = await tx.plantLocationMove.create({
       data: {
         collectionId: collection.id,
         plantInstanceId: plant.id,
@@ -828,9 +864,17 @@ export async function batchMovePlantLocations(fd: FormData) {
         toLocationId: target.id,
         movedByUserId: user.id,
         notes: notes ? `Batch move: ${notes}` : `Batch move from ${source.name} to ${target.name}.`,
-      },
-    })),
-  ])
+      } })
+      await emitDomainEvent(tx, {
+        eventType: 'plant.location_moved', collectionId: collection.id, aggregateId: plant.id, actor: { id: user.id, role: user.role }, correlationId,
+        idempotencyKey: `location-move:${move.id}`, payload: { subjectId: move.id, recordId: move.id, recordType: 'PlantLocationMove', plantInstanceId: plant.id, plantId: plant.plantId, displayName: plant.plantId, fromLocation: { id: plant.currentLocationId, name: source.name, code: source.code }, toLocation: { id: target.id, name: target.name, code: target.code }, summary: notes || undefined },
+      })
+    }
+    await emitDomainEvent(tx, {
+      eventType: 'location.batch_move_completed', collectionId: collection.id, aggregateId: target.id, actor: { id: user.id, role: user.role }, correlationId,
+      idempotencyKey: `location-batch:${correlationId}`, payload: { subjectId: target.id, displayName: target.name, plantInstanceIds: plants.map((plant) => plant.id), count: plants.length, fromLocationId: source.id, toLocationId: target.id },
+    })
+  })
   await audit(
     user,
     'MOVE',
@@ -874,12 +918,16 @@ export async function moveLocation(input: {
   if ((plantCount > 0 || childCount > 0) && !input.confirmContained) {
     throw new Error('Confirm moving this location because it contains plants or child locations.')
   }
-  await prisma.location.update({
-    where: { id: location.id },
-    data: {
+  await prisma.$transaction(async (tx) => {
+    const updated = await tx.location.update({ where: { id: location.id }, data: {
       parentLocationId: parent?.id || null,
       sortOrder: Number.isFinite(input.newSortOrder) ? Math.max(0, Math.floor(input.newSortOrder || 0)) : location.sortOrder,
-    },
+    } })
+    await emitDomainEvent(tx, {
+      eventType: 'location.reparented', collectionId: collection.id, aggregateId: location.id, actor: { id: user.id, role: user.role },
+      idempotencyKey: `location:${location.id}:reparented:${updated.updatedAt.toISOString()}`,
+      payload: { subjectId: location.id, displayName: location.name, code: location.code, fromParentLocationId: location.parentLocationId, toParentLocationId: parent?.id || null },
+    })
   })
   await Promise.all([
     normalizeLocationSiblingSort(collection.id, location.parentLocationId),
@@ -971,44 +1019,46 @@ export async function batchMovePlantsToLocation(input: {
     : []
   const alreadyQuarantined = new Set(existingQuarantines.map((entry) => entry.plantInstanceId))
   const targetReleaseDate = date(input.quarantineTargetReleaseDate || undefined) || addCalendarDays(new Date(), 14)
-  await prisma.$transaction([
-    ...plants.map((plant) => prisma.plantInstance.update({
-      where: { id: plant.id },
-      data: {
+  const correlationId = randomUUID()
+  await prisma.$transaction(async (tx) => {
+    for (const plant of plants) {
+      await tx.plantInstance.update({ where: { id: plant.id }, data: {
         currentLocationId: target?.id || null,
         location: target?.name || null,
         legacyLocationText: plant.legacyLocationText || plant.location,
-      },
-    })),
-    ...plants.map((plant) => prisma.plantLocationMove.create({
-      data: {
+      } })
+      const move = await tx.plantLocationMove.create({ data: {
         collectionId: collection.id,
         plantInstanceId: plant.id,
         fromLocationId: plant.currentLocationId,
         toLocationId: target?.id || null,
         movedByUserId: user.id,
         notes: input.note || null,
-      },
-    })),
-    ...(input.startQuarantine && target
-      ? plants
-          .filter((plant) => !alreadyQuarantined.has(plant.id))
-          .map((plant) => prisma.plantQuarantine.create({
-            data: {
-              collectionId: collection.id,
-              plantInstanceId: plant.id,
-              quarantineLocationId: target.id,
-              reason: input.quarantineReason || 'Quarantine after location move',
-              riskLevel: normalizeQuarantineRiskLevel(input.quarantineRiskLevel),
-              startDate: new Date(),
-              targetReleaseDate,
-              notes: input.note || null,
-              checklistJson: quarantineChecklistItems.map((label) => ({ label, done: false })) as any,
-              createdByUserId: user.id,
-            },
-          }))
-      : []),
-  ])
+      } })
+      const from = plant.currentLocationId ? await tx.location.findUnique({ where: { id: plant.currentLocationId } }) : null
+      await emitDomainEvent(tx, {
+        eventType: 'plant.location_moved', collectionId: collection.id, aggregateId: plant.id, actor: { id: user.id, role: user.role }, correlationId,
+        idempotencyKey: `location-move:${move.id}`, payload: { subjectId: move.id, recordId: move.id, recordType: 'PlantLocationMove', plantInstanceId: plant.id, plantId: plant.plantId, displayName: plant.plantId, fromLocation: from ? { id: from.id, name: from.name, code: from.code } : null, toLocation: target ? { id: target.id, name: target.name, code: target.code } : null, summary: input.note || undefined },
+      })
+      if (input.startQuarantine && target && !alreadyQuarantined.has(plant.id)) {
+        const quarantine = await tx.plantQuarantine.create({ data: {
+          collectionId: collection.id, plantInstanceId: plant.id, quarantineLocationId: target.id,
+          reason: input.quarantineReason || 'Quarantine after location move', riskLevel: normalizeQuarantineRiskLevel(input.quarantineRiskLevel),
+          startDate: new Date(), targetReleaseDate, notes: input.note || null,
+          checklistJson: quarantineChecklistItems.map((label) => ({ label, done: false })) as any, createdByUserId: user.id,
+        } })
+        await emitDomainEvent(tx, {
+          eventType: 'quarantine.started', collectionId: collection.id, aggregateId: quarantine.id, occurredAt: quarantine.startDate,
+          actor: { id: user.id, role: user.role }, correlationId, causationId: move.id, idempotencyKey: `quarantine:${quarantine.id}:started`,
+          payload: { subjectId: quarantine.id, recordId: quarantine.id, recordType: 'PlantQuarantine', plantInstanceId: plant.id, plantId: plant.plantId, displayName: plant.plantId, riskLevel: quarantine.riskLevel, location: { id: target.id, name: target.name, code: target.code }, summary: quarantine.reason },
+        })
+      }
+    }
+    if (plants.length > 1) await emitDomainEvent(tx, {
+      eventType: 'location.batch_move_completed', collectionId: collection.id, aggregateId: target?.id || collection.id, actor: { id: user.id, role: user.role }, correlationId,
+      idempotencyKey: `location-batch:${correlationId}`, payload: { subjectId: correlationId, displayName: target?.name || 'No location', plantInstanceIds: plants.map((plant) => plant.id), count: plants.length, toLocationId: target?.id || null },
+    })
+  })
   await audit(
     user,
     'MOVE',
@@ -1038,8 +1088,8 @@ export async function startPlantQuarantine(fd: FormData) {
     prisma.plantQuarantine.findFirst({ where: { collectionId: collection.id, plantInstanceId, status: 'ACTIVE' } }),
   ])
   if (existing) throw new Error('This plant already has an active quarantine record.')
-  const quarantine = await prisma.plantQuarantine.create({
-    data: {
+  const quarantine = await prisma.$transaction(async (tx) => {
+    const created = await tx.plantQuarantine.create({ data: {
       collectionId: collection.id,
       plantInstanceId,
       quarantineLocationId: location?.id || null,
@@ -1050,7 +1100,13 @@ export async function startPlantQuarantine(fd: FormData) {
       notes: clearableVal(fd, 'notes'),
       checklistJson: quarantineChecklistFromForm(fd) as any,
       createdByUserId: user.id,
-    },
+    } })
+    await emitDomainEvent(tx, {
+      eventType: 'quarantine.started', collectionId: collection.id, aggregateId: created.id, occurredAt: created.startDate,
+      actor: { id: user.id, role: user.role }, idempotencyKey: `quarantine:${created.id}:started`,
+      payload: { subjectId: created.id, recordId: created.id, recordType: 'PlantQuarantine', plantInstanceId, plantId: plant.plantId, displayName: plant.plantId, riskLevel: created.riskLevel, location: location ? { id: location.id, name: location.name, code: location.code } : null, summary: created.reason },
+    })
+    return created
   })
   await audit(user, 'CREATE', 'PLANT_QUARANTINE', quarantine.id, `Started quarantine for ${plant.plantId}`, undefined, collection.id)
   redirect(back(fd) || collectionPath(collection.slug, `/instances/${plantInstanceId}`))
@@ -1060,15 +1116,20 @@ export async function updatePlantQuarantine(fd: FormData) {
   const { user, collection } = await requireCollectionGardener(await collectionSlug(fd))
   const id = val(fd, 'id')!
   const quarantine = await prisma.plantQuarantine.findFirstOrThrow({ where: { id, collectionId: collection.id, status: 'ACTIVE' } })
-  const updated = await prisma.plantQuarantine.update({
-    where: { id },
-    data: {
+  const updated = await prisma.$transaction(async (tx) => {
+    const result = await tx.plantQuarantine.update({ where: { id }, data: {
       reason: val(fd, 'reason') || quarantine.reason,
       riskLevel: normalizeQuarantineRiskLevel(val(fd, 'riskLevel') || quarantine.riskLevel),
       targetReleaseDate: date(val(fd, 'targetReleaseDate')) || quarantine.targetReleaseDate,
       notes: clearableVal(fd, 'notes'),
       checklistJson: quarantineChecklistFromForm(fd) as any,
-    },
+    } })
+    await emitDomainEvent(tx, {
+      eventType: 'quarantine.updated', collectionId: collection.id, aggregateId: id, actor: { id: user.id, role: user.role },
+      idempotencyKey: `quarantine:${id}:updated:${result.updatedAt.toISOString()}`,
+      payload: { subjectId: id, recordId: id, recordType: 'PlantQuarantine', plantInstanceId: quarantine.plantInstanceId, displayName: quarantine.plantInstanceId, riskLevel: result.riskLevel, targetReleaseDate: result.targetReleaseDate.toISOString(), summary: result.reason },
+    })
+    return result
   })
   await audit(user, 'UPDATE', 'PLANT_QUARANTINE', id, `Updated quarantine target for ${quarantine.plantInstanceId}`, { targetReleaseDate: updated.targetReleaseDate }, collection.id)
   redirect(back(fd) || collectionPath(collection.slug, `/instances/${quarantine.plantInstanceId}`))
@@ -1078,15 +1139,20 @@ export async function releasePlantQuarantine(fd: FormData) {
   const { user, collection } = await requireCollectionGardener(await collectionSlug(fd))
   const id = val(fd, 'id')!
   const quarantine = await prisma.plantQuarantine.findFirstOrThrow({ where: { id, collectionId: collection.id, status: 'ACTIVE' } })
-  await prisma.plantQuarantine.update({
-    where: { id },
-    data: {
+  const releasedAt = new Date()
+  await prisma.$transaction(async (tx) => {
+    await tx.plantQuarantine.update({ where: { id }, data: {
       status: 'RELEASED',
-      releasedAt: new Date(),
+      releasedAt,
       releasedByUserId: user.id,
       notes: clearableVal(fd, 'notes') || quarantine.notes,
       checklistJson: quarantineChecklistFromForm(fd) as any,
-    },
+    } })
+    await emitDomainEvent(tx, {
+      eventType: 'quarantine.released', collectionId: collection.id, aggregateId: id, occurredAt: releasedAt,
+      actor: { id: user.id, role: user.role }, idempotencyKey: `quarantine:${id}:released:${releasedAt.toISOString()}`,
+      payload: { subjectId: id, recordId: id, recordType: 'PlantQuarantine', plantInstanceId: quarantine.plantInstanceId, displayName: quarantine.plantInstanceId, summary: clearableVal(fd, 'notes') || quarantine.notes || undefined },
+    })
   })
   await audit(user, 'UPDATE', 'PLANT_QUARANTINE', id, `Released quarantine for ${quarantine.plantInstanceId}`, undefined, collection.id)
   redirect(back(fd) || collectionPath(collection.slug, `/instances/${quarantine.plantInstanceId}`))
@@ -1096,15 +1162,20 @@ export async function cancelPlantQuarantine(fd: FormData) {
   const { user, collection } = await requireCollectionGardener(await collectionSlug(fd))
   const id = val(fd, 'id')!
   const quarantine = await prisma.plantQuarantine.findFirstOrThrow({ where: { id, collectionId: collection.id, status: 'ACTIVE' } })
-  await prisma.plantQuarantine.update({
-    where: { id },
-    data: {
+  const cancelledAt = new Date()
+  await prisma.$transaction(async (tx) => {
+    await tx.plantQuarantine.update({ where: { id }, data: {
       status: 'CANCELLED',
-      cancelledAt: new Date(),
+      cancelledAt,
       cancelledByUserId: user.id,
       notes: clearableVal(fd, 'notes') || quarantine.notes,
       checklistJson: quarantineChecklistFromForm(fd) as any,
-    },
+    } })
+    await emitDomainEvent(tx, {
+      eventType: 'quarantine.cancelled', collectionId: collection.id, aggregateId: id, occurredAt: cancelledAt,
+      actor: { id: user.id, role: user.role }, idempotencyKey: `quarantine:${id}:cancelled:${cancelledAt.toISOString()}`,
+      payload: { subjectId: id, recordId: id, recordType: 'PlantQuarantine', plantInstanceId: quarantine.plantInstanceId, displayName: quarantine.plantInstanceId, summary: clearableVal(fd, 'notes') || quarantine.notes || undefined },
+    })
   })
   await audit(user, 'UPDATE', 'PLANT_QUARANTINE', id, `Cancelled quarantine for ${quarantine.plantInstanceId}`, undefined, collection.id)
   redirect(back(fd) || collectionPath(collection.slug, `/instances/${quarantine.plantInstanceId}`))
@@ -1186,6 +1257,10 @@ export async function createPlantDefinition(fd: FormData) {
         })
       }
     }
+    await emitDomainEvent(tx, {
+      eventType: 'definition.created', collectionId: collection.id, aggregateId: created.id, actor: { id: user.id, role: user.role },
+      idempotencyKey: `definition:${created.id}:created`, payload: { subjectId: created.id, recordId: created.id, recordType: 'PlantDefinition', displayName: plantName(created), genus: created.genus, species: created.species, cultivarName: created.cultivarName, confidence: created.confidence },
+    })
     return created
   })
   await audit(user, 'CREATE', 'PLANT_DEFINITION', definition.id, `Created plant definition ${definition.genus} ${definition.species}`, undefined, collection.id)
@@ -1762,11 +1837,16 @@ export async function createFertilizerProduct(fd: FormData) {
   const { user, collection } = await requireCollectionGardener(await collectionSlug(fd))
   const name = val(fd, 'name')
   if (!name) throw new Error('Product name is required.')
-  const product = await prisma.fertilizerProduct.create({
-    data: {
+  const product = await prisma.$transaction(async (tx) => {
+    const created = await tx.fertilizerProduct.create({ data: {
       collectionId: collection.id,
       ...fertilizerProductMutationData(fd, name),
-    } as any,
+    } as any })
+    await emitDomainEvent(tx, {
+      eventType: 'fertilizer.product_created', collectionId: collection.id, aggregateId: created.id, actor: { id: user.id, role: user.role },
+      idempotencyKey: `fertilizer-product:${created.id}:created`, payload: { subjectId: created.id, recordId: created.id, recordType: 'FertilizerProduct', displayName: created.name, brand: created.brand, guaranteedAnalysis: { nitrogen: created.nitrogen?.toString(), phosphorus: created.phosphorus?.toString(), potassium: created.potassium?.toString() } },
+    })
+    return created
   })
   await audit(user, 'CREATE', 'FERTILIZER_PRODUCT', product.id, `Created fertilizer product ${product.name}`, undefined, collection.id)
   revalidatePath(collectionPath(collection.slug, '/fertilizers'))
@@ -1777,9 +1857,13 @@ export async function updateFertilizerProduct(fd: FormData) {
   const { user, collection } = await requireCollectionGardener(await collectionSlug(fd))
   const id = val(fd, 'fertilizerProductId')!
   const product = await prisma.fertilizerProduct.findFirstOrThrow({ where: { id, collectionId: collection.id } })
-  const updated = await prisma.fertilizerProduct.update({
-    where: { id },
-    data: fertilizerProductMutationData(fd, product.name) as any,
+  const updated = await prisma.$transaction(async (tx) => {
+    const result = await tx.fertilizerProduct.update({ where: { id }, data: fertilizerProductMutationData(fd, product.name) as any })
+    await emitDomainEvent(tx, {
+      eventType: 'fertilizer.product_updated', collectionId: collection.id, aggregateId: id, actor: { id: user.id, role: user.role },
+      idempotencyKey: `fertilizer-product:${id}:updated:${result.updatedAt.toISOString()}`, payload: { subjectId: id, recordId: id, recordType: 'FertilizerProduct', displayName: result.name, brand: result.brand, guaranteedAnalysis: { nitrogen: result.nitrogen?.toString(), phosphorus: result.phosphorus?.toString(), potassium: result.potassium?.toString() } },
+    })
+    return result
   })
   await audit(user, 'UPDATE', 'FERTILIZER_PRODUCT', id, `Updated fertilizer product ${updated.name}`, undefined, collection.id)
   revalidatePath(collectionPath(collection.slug, '/fertilizers'))
@@ -1823,8 +1907,8 @@ export async function createFertilizerRecipe(fd: FormData) {
     ? await prisma.fertilizerProduct.count({ where: { collectionId: collection.id, id: { in: productRows.map((row) => row.productId) } } })
     : 0
   if (validProductCount !== productRows.length) throw new Error('One or more fertilizer products are not in this collection.')
-  const recipe = await prisma.fertilizerRecipe.create({
-    data: {
+  const recipe = await prisma.$transaction(async (tx) => {
+    const created = await tx.fertilizerRecipe.create({ data: {
       collectionId: collection.id,
       name,
       description: val(fd, 'description') || null,
@@ -1845,7 +1929,12 @@ export async function createFertilizerRecipe(fd: FormData) {
       active: checkedValue(fd, 'active', true),
       draft: checkedValue(fd, 'draft', false),
       products: { create: productRows },
-    } as any,
+    } as any })
+    await emitDomainEvent(tx, {
+      eventType: 'fertilizer.recipe_created', collectionId: collection.id, aggregateId: created.id, actor: { id: user.id, role: user.role },
+      idempotencyKey: `fertilizer-recipe:${created.id}:created`, payload: { subjectId: created.id, recordId: created.id, recordType: 'FertilizerRecipe', displayName: created.name, applicationMethod: created.applicationMethod, strengthLabel: created.strengthLabel },
+    })
+    return created
   })
   await audit(user, 'CREATE', 'FERTILIZER_RECIPE', recipe.id, `Created fertilizer recipe ${recipe.name}`, undefined, collection.id)
   revalidatePath(collectionPath(collection.slug, '/fertilizers'))
@@ -1863,7 +1952,7 @@ export async function updateFertilizerRecipe(fd: FormData) {
   if (validProductCount !== productRows.length) throw new Error('One or more fertilizer products are not in this collection.')
   const updated = await prisma.$transaction(async (tx) => {
     await tx.fertilizerRecipeProduct.deleteMany({ where: { recipeId: id } })
-    return tx.fertilizerRecipe.update({
+    const result = await tx.fertilizerRecipe.update({
       where: { id },
       data: {
         name: val(fd, 'name') || recipe.name,
@@ -1887,6 +1976,11 @@ export async function updateFertilizerRecipe(fd: FormData) {
         products: { create: productRows },
       } as any,
     })
+    await emitDomainEvent(tx, {
+      eventType: 'fertilizer.recipe_updated', collectionId: collection.id, aggregateId: id, actor: { id: user.id, role: user.role },
+      idempotencyKey: `fertilizer-recipe:${id}:updated:${result.updatedAt.toISOString()}`, payload: { subjectId: id, recordId: id, recordType: 'FertilizerRecipe', displayName: result.name, applicationMethod: result.applicationMethod, strengthLabel: result.strengthLabel },
+    })
+    return result
   })
   await audit(user, 'UPDATE', 'FERTILIZER_RECIPE', id, `Updated fertilizer recipe ${updated.name}`, undefined, collection.id)
   revalidatePath(collectionPath(collection.slug, '/fertilizers'))
@@ -1994,8 +2088,8 @@ export async function createPlantInstance(fd: FormData) {
     date: propagationDate || acquisitionDate,
   })
 
-  const instance = await prisma.plantInstance.create({
-    data: {
+  const instance = await prisma.$transaction(async (tx) => {
+    const created = await tx.plantInstance.create({ data: {
       collectionId: collection.id,
       plantDefinitionId,
       plantId,
@@ -2009,15 +2103,18 @@ export async function createPlantInstance(fd: FormData) {
       distributor: val(fd, 'distributor'),
       stockNumber: val(fd, 'stockNumber'),
       purchasePrice: dec(val(fd, 'purchasePrice')) as any,
-    },
-  })
-
-  const note = val(fd, 'note')
-  if (note) {
-    await prisma.note.create({
-      data: { collectionId: collection.id, entityType: 'PLANT_INSTANCE', entityId: instance.id, note },
+    } })
+    const note = val(fd, 'note')
+    if (note) await tx.note.create({
+      data: { collectionId: collection.id, entityType: 'PLANT_INSTANCE', entityId: created.id, note },
     })
-  }
+    await emitDomainEvent(tx, {
+      eventType: 'plant.created', collectionId: collection.id, aggregateId: created.id,
+      actor: { id: user.id, role: user.role }, occurredAt: created.acquisitionDate || created.createdAt,
+      idempotencyKey: `plant:${created.id}:created`, payload: { subjectId: created.id, plantInstanceId: created.id, plantId: created.plantId, displayName: plantName(definition), instanceType: created.instanceType, source: created.source, distributor: created.distributor, location: currentLocation ? { id: currentLocation.id, name: currentLocation.name, code: currentLocation.code } : null, summary: note || undefined },
+    })
+    return created
+  })
 
   await audit(user, 'CREATE', 'PLANT_INSTANCE', instance.id, `Created plant instance ${instance.plantId}`, undefined, collection.id)
   await notifyFollowers(prisma, {
@@ -2037,7 +2134,7 @@ export async function createPlantInstance(fd: FormData) {
 export async function updatePlantInstance(fd: FormData) {
   const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const id = val(fd, 'id')!
-  const before = await prisma.plantInstance.findFirstOrThrow({ where: { id, collectionId: collection.id }, select: { id: true, currentLocationId: true } })
+  const before = await prisma.plantInstance.findFirstOrThrow({ where: { id, collectionId: collection.id }, select: { id: true, plantId: true, currentLocationId: true } })
   const plantDefinitionId = val(fd, 'plantDefinitionId')!
   await prisma.plantDefinition.findFirstOrThrow({
     where: {
@@ -2051,9 +2148,8 @@ export async function updatePlantInstance(fd: FormData) {
   const currentLocation = currentLocationId
     ? await prisma.location.findFirstOrThrow({ where: { id: currentLocationId, collectionId: collection.id, status: 'ACTIVE' } })
     : null
-  const instance = await prisma.plantInstance.update({
-    where: { id },
-    data: {
+  const instance = await prisma.$transaction(async (tx) => {
+    const updated = await tx.plantInstance.update({ where: { id }, data: {
       plantDefinitionId,
       instanceType: val(fd, 'instanceType')!,
       status: val(fd, 'status') || 'ACTIVE',
@@ -2068,10 +2164,14 @@ export async function updatePlantInstance(fd: FormData) {
       purchasePrice: clearableDec(fd, 'purchasePrice') as any,
       archiveReason: clearableVal(fd, 'archiveReason'),
       archiveNotes: clearableVal(fd, 'archiveNotes'),
-    },
-  })
-  if (before.currentLocationId !== (currentLocation?.id || null)) {
-    await prisma.plantLocationMove.create({
+    } })
+    await emitDomainEvent(tx, {
+      eventType: 'plant.updated', collectionId: collection.id, aggregateId: id, actor: { id: user.id, role: user.role },
+      idempotencyKey: `plant:${id}:updated:${updated.updatedAt.toISOString()}`,
+      payload: { subjectId: id, plantInstanceId: id, plantId: updated.plantId, displayName: updated.plantId, status: updated.status },
+    })
+    if (before.currentLocationId !== (currentLocation?.id || null)) {
+      const move = await tx.plantLocationMove.create({
       data: {
         collectionId: collection.id,
         plantInstanceId: id,
@@ -2079,9 +2179,15 @@ export async function updatePlantInstance(fd: FormData) {
         toLocationId: currentLocation?.id || null,
         movedByUserId: user.id,
         notes: 'Updated from plant edit form.',
-      },
-    })
-  }
+      } })
+      const from = before.currentLocationId ? await tx.location.findUnique({ where: { id: before.currentLocationId } }) : null
+      await emitDomainEvent(tx, {
+        eventType: 'plant.location_moved', collectionId: collection.id, aggregateId: id, actor: { id: user.id, role: user.role }, idempotencyKey: `location-move:${move.id}`,
+        payload: { subjectId: move.id, recordId: move.id, recordType: 'PlantLocationMove', plantInstanceId: id, plantId: updated.plantId, displayName: updated.plantId, fromLocation: from ? { id: from.id, name: from.name, code: from.code } : null, toLocation: currentLocation ? { id: currentLocation.id, name: currentLocation.name, code: currentLocation.code } : null, summary: 'Updated from plant edit form.' },
+      })
+    }
+    return updated
+  })
   await audit(user, 'UPDATE', 'PLANT_INSTANCE', id, `Updated plant instance ${instance.plantId}`, undefined, collection.id)
 
   redirect(collectionPath(collection.slug, `/instances/${id}`))
@@ -2200,14 +2306,20 @@ export async function archivePlantInstance(fd: FormData) {
   const id = val(fd, 'id')!
   await prisma.plantInstance.findFirstOrThrow({ where: { id, collectionId: collection.id }, select: { id: true } })
 
-  const instance = await prisma.plantInstance.update({
-    where: { id },
-    data: {
+  const archivedAt = new Date()
+  const instance = await prisma.$transaction(async (tx) => {
+    const updated = await tx.plantInstance.update({ where: { id }, data: {
       status: 'ARCHIVED',
-      archiveDate: new Date(),
+      archiveDate: archivedAt,
       archiveReason: clearableVal(fd, 'archiveReason'),
       archiveNotes: clearableVal(fd, 'archiveNotes'),
-    },
+    } })
+    await emitDomainEvent(tx, {
+      eventType: 'plant.archived', collectionId: collection.id, aggregateId: id, actor: { id: user.id, role: user.role }, occurredAt: archivedAt,
+      idempotencyKey: `plant:${id}:archived:${archivedAt.toISOString()}`,
+      payload: { subjectId: id, plantInstanceId: id, plantId: updated.plantId, displayName: updated.plantId, summary: updated.archiveReason || updated.archiveNotes || undefined },
+    })
+    return updated
   })
   await audit(user, 'ARCHIVE', 'PLANT_INSTANCE', id, `Archived plant instance ${instance.plantId}`, undefined, collection.id)
   await notifyFollowers(prisma, {
@@ -2228,9 +2340,15 @@ export async function restorePlantInstance(fd: FormData) {
   const id = val(fd, 'id')!
   await prisma.plantInstance.findFirstOrThrow({ where: { id, collectionId: collection.id }, select: { id: true } })
 
-  const instance = await prisma.plantInstance.update({
-    where: { id },
-    data: { status: 'ACTIVE', archiveDate: null, archiveReason: null, archiveNotes: null },
+  const restoredAt = new Date()
+  const instance = await prisma.$transaction(async (tx) => {
+    const updated = await tx.plantInstance.update({ where: { id }, data: { status: 'ACTIVE', archiveDate: null, archiveReason: null, archiveNotes: null } })
+    await emitDomainEvent(tx, {
+      eventType: 'plant.restored', collectionId: collection.id, aggregateId: id, actor: { id: user.id, role: user.role }, occurredAt: restoredAt,
+      idempotencyKey: `plant:${id}:restored:${restoredAt.toISOString()}`,
+      payload: { subjectId: id, plantInstanceId: id, plantId: updated.plantId, displayName: updated.plantId },
+    })
+    return updated
   })
   await audit(user, 'RESTORE', 'PLANT_INSTANCE', id, `Restored plant instance ${instance.plantId}`, undefined, collection.id)
 
@@ -2537,8 +2655,8 @@ export async function completeCareTask(fd: FormData) {
     ? await verifiedFertilizerRecipeId(context.collection.id, val(fd, 'fertilizerRecipeId') || null)
     : null
 
-  const event = await prisma.plantCareEvent.create({
-    data: {
+  const event = await prisma.$transaction(async (tx) => {
+    const created = await tx.plantCareEvent.create({ data: {
       collectionId: context.collection.id,
       plantInstanceId,
       userId: context.user.id,
@@ -2555,12 +2673,17 @@ export async function completeCareTask(fd: FormData) {
         fertilizerDose: val(fd, 'fertilizerDose') || null,
         fertilizerWaterVolume: val(fd, 'fertilizerWaterVolume') || null,
       },
-    },
-  })
-
-  await prisma.plantCareAdjustment.updateMany({
+    } })
+    await tx.plantCareAdjustment.updateMany({
     where: { collectionId: context.collection.id, plantInstanceId, taskType },
     data: { snoozedUntil: null, nextDueAt: null },
+    })
+    await emitDomainEvent(tx, {
+      eventType: domainEventForCare(created.eventType), collectionId: context.collection.id, aggregateId: created.id,
+      actor: { id: context.user.id, role: context.user.role }, occurredAt: created.performedAt,
+      idempotencyKey: `care:${created.id}:created`, payload: { subjectId: created.id, recordId: created.id, recordType: 'PlantCareEvent', plantInstanceId, plantId: plant.plantId, displayName: plant.plantId, taskType, summary: created.notes || undefined, fertilizerRecipeId },
+    })
+    return created
   })
   await audit(context.user, 'CREATE', 'PLANT_CARE_EVENT', event.id, `Completed ${taskType.toLowerCase().replaceAll('_', ' ')} for ${plant.plantId}`, undefined, context.collection.id)
   revalidateDestination(destination)
@@ -2683,6 +2806,11 @@ export async function completeBulkCare(fd: FormData) {
           },
         },
       })
+      await emitDomainEvent(tx, {
+        eventType: domainEventForCare(event.eventType), collectionId: context.collection.id, aggregateId: event.id,
+        actor: { id: context.user.id, role: context.user.role }, occurredAt: event.performedAt, correlationId: batchId,
+        idempotencyKey: `care:${event.id}:created`, payload: { subjectId: event.id, recordId: event.id, recordType: 'PlantCareEvent', plantInstanceId: plant.id, plantId: plant.plantId, displayName: plant.plantId, careType, summary: notes || undefined, bulkCareBatchId: batchId, fertilizerRecipeId },
+      })
       created.push(event)
     }
 
@@ -2707,6 +2835,11 @@ export async function completeBulkCare(fd: FormData) {
       })
     }
 
+    await emitDomainEvent(tx, {
+      eventType: 'care.bulk_batch_completed', collectionId: context.collection.id, aggregateId: batchId,
+      actor: { id: context.user.id, role: context.user.role }, occurredAt: performedAt, correlationId: batchId,
+      idempotencyKey: `care-batch:${batchId}:completed`, payload: { subjectId: batchId, displayName: `${location.code} ${location.name}`, careType, count: created.length, plantInstanceIds: eventPlants.map((plant) => plant.id), skipped: skippedDetails },
+    })
     return created
   })
 
@@ -2977,8 +3110,8 @@ export async function createPlantCondition(fd: FormData) {
     select: { id: true, plantId: true },
   })
 
-  const condition = await prisma.plantCondition.create({
-    data: {
+  const condition = await prisma.$transaction(async (tx) => {
+    const created = await tx.plantCondition.create({ data: {
       collectionId: context.collection.id,
       plantInstanceId,
       userId: context.user.id,
@@ -2988,7 +3121,13 @@ export async function createPlantCondition(fd: FormData) {
       observedAt: date(val(fd, 'observedAt')) || new Date(),
       followUpAt: parseDateLocal(val(fd, 'followUpAt'), timezone),
       notes: val(fd, 'notes'),
-    },
+    } })
+    await emitDomainEvent(tx, {
+      eventType: 'condition.opened', collectionId: context.collection.id, aggregateId: created.id, occurredAt: created.observedAt,
+      actor: { id: context.user.id, role: context.user.role }, idempotencyKey: `condition:${created.id}:opened`,
+      payload: { subjectId: created.id, recordId: created.id, recordType: 'PlantCondition', plantInstanceId, plantId: plant.plantId, displayName: plant.plantId, category: created.category, severity: created.severity, status: created.status, summary: created.notes || undefined },
+    })
+    return created
   })
 
   await audit(context.user, 'CREATE', 'PLANT_CONDITION', condition.id, `Logged ${condition.category.toLowerCase().replaceAll('_', ' ')} for ${plant.plantId}`, undefined, context.collection.id)
@@ -3004,18 +3143,26 @@ export async function updatePlantCondition(fd: FormData) {
   const id = val(fd, 'id')!
   const existing = await prisma.plantCondition.findFirstOrThrow({
     where: { id, collectionId: context.collection.id },
-    select: { id: true, category: true },
+    include: { plantInstance: { select: { plantId: true } } },
   })
   const status = val(fd, 'status') || 'OPEN'
-  await prisma.plantCondition.update({
-    where: { id },
-    data: {
+  const changedAt = new Date()
+  await prisma.$transaction(async (tx) => {
+    const updated = await tx.plantCondition.update({ where: { id }, data: {
       severity: val(fd, 'severity') || 'MODERATE',
       status,
       followUpAt: status === 'RESOLVED' ? null : parseDateLocal(val(fd, 'followUpAt'), timezone),
-      resolvedAt: status === 'RESOLVED' ? new Date() : null,
+      resolvedAt: status === 'RESOLVED' ? changedAt : null,
       notes: clearableVal(fd, 'notes'),
-    },
+    } })
+    const eventType = status === 'RESOLVED' && existing.status !== 'RESOLVED'
+      ? 'condition.resolved' as const
+      : existing.status === 'RESOLVED' && status !== 'RESOLVED' ? 'condition.reopened' as const : 'condition.updated' as const
+    await emitDomainEvent(tx, {
+      eventType, collectionId: context.collection.id, aggregateId: id, actor: { id: context.user.id, role: context.user.role }, occurredAt: changedAt,
+      idempotencyKey: `condition:${id}:${eventType}:${changedAt.toISOString()}`,
+      payload: { subjectId: id, recordId: id, recordType: 'PlantCondition', plantInstanceId: updated.plantInstanceId, plantId: existing.plantInstance.plantId, displayName: existing.plantInstance.plantId, category: updated.category, severity: updated.severity, status: updated.status, summary: updated.notes || undefined },
+    })
   })
   await audit(context.user, 'UPDATE', 'PLANT_CONDITION', id, `Updated condition ${existing.category.toLowerCase().replaceAll('_', ' ')}`, undefined, context.collection.id)
   revalidateDestination(destination)
@@ -3401,17 +3548,24 @@ export async function openBloomEvent(fd: FormData) {
   const plantInstanceId = val(fd, 'plantInstanceId')!
   await prisma.plantInstance.findFirstOrThrow({ where: { id: plantInstanceId, collectionId: collection.id }, select: { id: true } })
 
-  const bloom = await prisma.bloomEvent.create({
-    data: {
+  const plant = await prisma.plantInstance.findFirstOrThrow({ where: { id: plantInstanceId, collectionId: collection.id } })
+  const bloom = await prisma.$transaction(async (tx) => {
+    const created = await tx.bloomEvent.create({ data: {
       collectionId: collection.id,
       plantInstanceId,
       bloomStartDate: date(val(fd, 'bloomStartDate'))!,
       firstBloom: !!fd.get('firstBloom'),
       notes: val(fd, 'notes'),
-    },
+    } })
+    await emitDomainEvent(tx, {
+      eventType: 'bloom.started', collectionId: collection.id, aggregateId: created.id, occurredAt: created.bloomStartDate,
+      actor: { id: user.id, role: user.role }, visibility: 'PUBLIC', idempotencyKey: `bloom:${created.id}:started`,
+      payload: { subjectId: created.id, recordId: created.id, recordType: 'BloomEvent', plantInstanceId, plantId: plant.plantId, displayName: plant.plantId, firstBloom: created.firstBloom, flowerCount: created.flowerCount, summary: created.notes || undefined },
+    })
+    return created
   })
   await audit(user, 'CREATE', 'BLOOM_EVENT', bloom.id, `Opened bloom event for plant instance ${plantInstanceId}`, undefined, collection.id)
-  const instance = await prisma.plantInstance.findFirst({ where: { id: plantInstanceId, collectionId: collection.id } })
+  const instance = plant
   if (instance) {
     await notifyFollowers(prisma, {
       collectionId: collection.id,
@@ -3434,13 +3588,19 @@ export async function updateBloomPeak(fd: FormData) {
   const id = val(fd, 'id')!
   const plantInstanceId = val(fd, 'plantInstanceId')!
 
-  await prisma.bloomEvent.update({
-    where: { id },
-    data: {
-      peakBloomDate: date(val(fd, 'peakBloomDate')) ?? null,
+  const plant = await prisma.plantInstance.findFirstOrThrow({ where: { id: plantInstanceId, collectionId: collection.id } })
+  const peakAt = date(val(fd, 'peakBloomDate')) ?? null
+  await prisma.$transaction(async (tx) => {
+    const updated = await tx.bloomEvent.update({ where: { id }, data: {
+      peakBloomDate: peakAt,
       flowerCount: val(fd, 'flowerCount') ? Number(val(fd, 'flowerCount')) : null,
       notes: clearableVal(fd, 'notes'),
-    },
+    } })
+    if (peakAt) await emitDomainEvent(tx, {
+      eventType: 'bloom.peaked', collectionId: collection.id, aggregateId: id, occurredAt: peakAt,
+      actor: { id: user.id, role: user.role }, visibility: 'PUBLIC', idempotencyKey: `bloom:${id}:peaked:${peakAt.toISOString()}`,
+      payload: { subjectId: id, recordId: id, recordType: 'BloomEvent', plantInstanceId, plantId: plant.plantId, displayName: plant.plantId, flowerCount: updated.flowerCount, summary: updated.notes || undefined },
+    })
   })
   await audit(user, 'UPDATE', 'BLOOM_EVENT', id, `Updated bloom peak for plant instance ${plantInstanceId}`, undefined, collection.id)
   const instance = await prisma.plantInstance.findFirst({ where: { id: plantInstanceId, collectionId: collection.id } })
@@ -3466,9 +3626,15 @@ export async function closeBloomEvent(fd: FormData) {
   const id = val(fd, 'id')!
   const plantInstanceId = val(fd, 'plantInstanceId')!
 
-  await prisma.bloomEvent.update({
-    where: { id },
-    data: { bloomEndDate: date(val(fd, 'bloomEndDate'))!, notes: clearableVal(fd, 'notes') },
+  const plant = await prisma.plantInstance.findFirstOrThrow({ where: { id: plantInstanceId, collectionId: collection.id } })
+  const closedAt = date(val(fd, 'bloomEndDate'))!
+  await prisma.$transaction(async (tx) => {
+    const updated = await tx.bloomEvent.update({ where: { id }, data: { bloomEndDate: closedAt, notes: clearableVal(fd, 'notes') } })
+    await emitDomainEvent(tx, {
+      eventType: 'bloom.closed', collectionId: collection.id, aggregateId: id, occurredAt: closedAt,
+      actor: { id: user.id, role: user.role }, idempotencyKey: `bloom:${id}:closed:${closedAt.toISOString()}`,
+      payload: { subjectId: id, recordId: id, recordType: 'BloomEvent', plantInstanceId, plantId: plant.plantId, displayName: plant.plantId, flowerCount: updated.flowerCount, summary: updated.notes || undefined },
+    })
   })
   await audit(user, 'UPDATE', 'BLOOM_EVENT', id, `Closed bloom event for plant instance ${plantInstanceId}`, undefined, collection.id)
   const instance = await prisma.plantInstance.findFirst({ where: { id: plantInstanceId, collectionId: collection.id } })
@@ -3549,8 +3715,11 @@ export async function createPropagationEvent(fd: FormData) {
     ? `Derived from sport line ${parentPlant.plantId}. Confirm whether the trait propagates true.`
     : undefined
 
-  const event = await prisma.propagationEvent.create({
-    data: {
+  const childCodes: string[] = []
+  const childIds: string[] = []
+  const correlationId = randomUUID()
+  const event = await prisma.$transaction(async (tx) => {
+    const createdEvent = await tx.propagationEvent.create({ data: {
       collectionId: collection.id,
       method,
       date: eventDate,
@@ -3562,23 +3731,23 @@ export async function createPropagationEvent(fd: FormData) {
           ...(parent2 ? [{ parentPlantInstanceId: parent2, parentRole: 'POLLEN_PARENT' }] : []),
         ],
       },
-    },
-  })
-
-  const childCodes: string[] = []
-  const childIds: string[] = []
-
-  for (let index = 0; index < childCount; index += 1) {
-    const plantId = await generatePlantId(prisma, {
+    } })
+    await emitDomainEvent(tx, {
+      eventType: 'propagation.started', collectionId: collection.id, aggregateId: createdEvent.id, occurredAt: eventDate,
+      actor: { id: user.id, role: user.role }, correlationId, idempotencyKey: `propagation:${createdEvent.id}:started`,
+      payload: { subjectId: createdEvent.id, recordId: createdEvent.id, recordType: 'PropagationEvent', plantInstanceId: parent1, plantId: parentPlant.plantId, displayName: parentPlant.plantId, method, status: createdEvent.successStatus, summary: createdEvent.notes || undefined },
+    })
+    for (let index = 0; index < childCount; index += 1) {
+      const plantId = await generatePlantId(tx, {
       collectionId: collection.id,
       plantDefinitionId: parentPlant.plantDefinitionId,
       date: eventDate,
       instanceType: 'PROPAGATION',
       method,
     })
-    childCodes.push(plantId)
+      childCodes.push(plantId)
 
-    const child = await prisma.plantInstance.create({
+      const child = await tx.plantInstance.create({
       data: {
         collectionId: collection.id,
         plantDefinitionId: parentPlant.plantDefinitionId,
@@ -3591,12 +3760,22 @@ export async function createPropagationEvent(fd: FormData) {
         sportDescription: childSportDescription,
       },
     })
-    childIds.push(child.id)
+      childIds.push(child.id)
 
-    await prisma.propagationChild.create({
-      data: { propagationEventId: event.id, childPlantInstanceId: child.id },
-    })
-  }
+      await tx.propagationChild.create({ data: { propagationEventId: createdEvent.id, childPlantInstanceId: child.id } })
+      await emitDomainEvent(tx, {
+        eventType: 'propagation.child_created', collectionId: collection.id, aggregateId: createdEvent.id, occurredAt: child.createdAt,
+        actor: { id: user.id, role: user.role }, correlationId, causationId: createdEvent.id,
+        idempotencyKey: `propagation:${createdEvent.id}:child:${child.id}`, payload: { subjectId: child.id, recordId: createdEvent.id, recordType: 'PropagationEvent', plantInstanceId: child.id, plantId: child.plantId, displayName: child.plantId, parentPlantInstanceId: parent1, parentPlantId: parentPlant.plantId, method },
+      })
+      await emitDomainEvent(tx, {
+        eventType: 'plant.created', collectionId: collection.id, aggregateId: child.id, occurredAt: child.createdAt,
+        actor: { id: user.id, role: user.role }, correlationId, causationId: createdEvent.id,
+        idempotencyKey: `plant:${child.id}:created`, payload: { subjectId: child.id, plantInstanceId: child.id, plantId: child.plantId, displayName: child.plantId, instanceType: child.instanceType, propagationEventId: createdEvent.id },
+      })
+    }
+    return createdEvent
+  })
   await audit(user, 'CREATE', 'PROPAGATION_EVENT', event.id, `Created ${method} propagation event`, { childCodes }, collection.id)
   await notifyFollowers(prisma, {
     collectionId: collection.id,
@@ -3615,16 +3794,24 @@ export async function createPropagationEvent(fd: FormData) {
 export async function updatePropagationEvent(fd: FormData) {
   const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const id = val(fd, 'id')!
-  await prisma.propagationEvent.findFirstOrThrow({ where: { id, collectionId: collection.id }, select: { id: true } })
-
-  const event = await prisma.propagationEvent.update({
-    where: { id },
-    data: {
+  const before = await prisma.propagationEvent.findFirstOrThrow({ where: { id, collectionId: collection.id } })
+  const event = await prisma.$transaction(async (tx) => {
+    const updated = await tx.propagationEvent.update({ where: { id }, data: {
       method: val(fd, 'method')!,
       date: date(val(fd, 'date'))!,
       successStatus: val(fd, 'successStatus') || 'PENDING',
       notes: clearableVal(fd, 'notes'),
-    },
+    } })
+    const eventType = updated.successStatus === 'FAILED' && before.successStatus !== 'FAILED'
+      ? 'propagation.failed' as const
+      : ['SUCCESS', 'SUCCEEDED'].includes(updated.successStatus) && !['SUCCESS', 'SUCCEEDED'].includes(before.successStatus)
+        ? 'propagation.succeeded' as const : 'propagation.updated' as const
+    await emitDomainEvent(tx, {
+      eventType, collectionId: collection.id, aggregateId: id, actor: { id: user.id, role: user.role },
+      idempotencyKey: `propagation:${id}:${eventType}:${updated.updatedAt.toISOString()}`,
+      payload: { subjectId: id, recordId: id, recordType: 'PropagationEvent', displayName: updated.method, method: updated.method, status: updated.successStatus, summary: updated.notes || undefined },
+    })
+    return updated
   })
   await audit(user, 'UPDATE', 'PROPAGATION_EVENT', id, `Updated ${event.method} propagation event`, undefined, collection.id)
 

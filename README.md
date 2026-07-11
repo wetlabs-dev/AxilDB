@@ -31,6 +31,7 @@ It is designed for real collection work: messy taxonomy, acquisition names, alia
 - Collection-scoped Location mapping with customizable location types, stable generated codes, direct/nested plant views, batch moves, move history, quarantine workflow records, and QR labels.
 - Sunshine appreciation for plant instances only, as a quiet appreciation/bookmark marker with private giver identity, public counts on plant records, subtle Well Loved treatment at five sunshine, My Sunshine history, dashboard activity, and optional email/push alerts that default off.
 - Plant Health Timeline on specimen pages, combining existing accession, propagation, care, condition, bloom, photo, note, reminder, archive, and sport records into a compact horizontal history with deterministic insights and a Life Story list.
+- Unified Event Engine with durable, versioned, collection-aware domain events, transactional outbox writes, retryable asynchronous processing, manual historical entries, collection activity browsing, and server-admin monitoring. AxilDB remains state-based, not event-sourced.
 - Automatic plant ID generation based on plant definition, date, context, and sequence number.
 - Propagation events with parent/child links, method, date, success status, and generated child plant IDs.
 - Bloom tracker with bloom start, peak, closure, first-bloom marker, flower counts, notes, and bloom photos.
@@ -66,7 +67,7 @@ It is designed for real collection work: messy taxonomy, acquisition names, alia
 - Demo data generator for populating realistic test records.
 - Web-based Help page and generated Markdown user manual, with repeatable Playwright screenshot capture for documentation.
 
-Plant Health Timeline v1 derives history from records AxilDB already stores, including plant location moves recorded through the structured location workflow. Explicit label-change events, restore events, and fine-grained sport status transitions remain future enhancements unless they are represented by existing notes, audit records, or current instance state.
+Plant Health Timeline now prefers authorized Unified Event Engine records and retains legacy source adapters for historical records not yet represented in the event stream.
 
 ## Collections And Roles
 
@@ -140,6 +141,7 @@ Production is managed with Docker Compose:
 - `app`: Next.js production server exposed internally on port 3000.
 - `reminders`: scheduled worker that checks for due reminders, sends opt-out-aware care queue digest emails, and sends email through the configured SMTP provider.
 - `image-moderation`: scheduled worker that checks newly uploaded images with OpenAI Moderation first, hides unsafe images pending server-admin review, and runs a separate plant-content vision check only for images that pass the safety layer.
+- `events`: scheduled worker that atomically claims queued domain events, invokes registered consumers, retries failures with bounded exponential backoff, recovers stale claims, and dead-letters events after the configured attempt limit.
 - `metrics`: scheduled worker that samples best-effort server metrics and collection storage estimates for the server dashboard, opens/resolves lightweight server incidents when thresholds are crossed, and sends rate-limited server health emails to verified server admins when health is degraded.
 - `backups`: scheduled worker that processes server-admin sitewide backup requests into timestamped backup folders.
 
@@ -521,6 +523,11 @@ AXILDB_DEFAULT_TIMEZONE=America/New_York
 REMINDER_WORKER_INTERVAL_SECONDS=300
 METRICS_WORKER_INTERVAL_SECONDS=300
 IMAGE_MODERATION_WORKER_INTERVAL_SECONDS=180
+AXILDB_EVENT_ENGINE_ENABLED=true
+EVENT_WORKER_INTERVAL_SECONDS=15
+EVENT_WORKER_BATCH_SIZE=50
+EVENT_WORKER_MAX_ATTEMPTS=8
+EVENT_WORKER_STALE_MINUTES=15
 SERVER_HEALTH_ALERT_COOLDOWN_HOURS=6
 NEXT_PUBLIC_ENABLE_WEB_PUSH=false
 NEXT_PUBLIC_VAPID_PUBLIC_KEY=
@@ -546,6 +553,23 @@ AXILDB_IMAGE_MODERATION_ENABLED=false
 OPENAI_IMAGE_MODERATION_MODEL=omni-moderation-latest
 OPENAI_PLANT_IMAGE_CHECK_MODEL=gpt-5.4-mini
 ```
+
+## Unified Event Engine
+
+AxilDB is not event-sourced. Plant, care, collection, workflow, and other domain tables remain authoritative. The event engine records compact immutable facts beside those mutations in the same Prisma transaction. The `DomainEvent` row is also the transactional outbox: user mutations do not wait for consumers, failed delivery remains queued, and the `events` worker records attempts, retries transient failures, and dead-letters exhausted events.
+
+Events use stable namespaced types, explicit payload versions, deterministic idempotency keys, correlation/causation IDs, compact display snapshots, and one of `PUBLIC`, `COLLECTION_MEMBER`, `STAFF`, `SERVER_ADMIN`, or `INTERNAL` visibility. Public collection access alone never exposes a member/staff event. AuditLog remains separate for security and administrative accountability.
+
+The Plant Health Timeline and dashboard recent activity prefer new domain events and retain de-duplicated legacy adapters for older records. Gardeners can add clearly labeled manual historical entries from Collection Activity. Managers can record correction events; server admins can record redactions without silently rewriting history. Server Management → Event Processing exposes queue counts, recent failures, attempts, retries, ignored events, and dead-letter details.
+
+Historical backfill is explicit, repeatable, and never runs at startup:
+
+```bash
+npm run events:backfill -- --dry-run
+npm run events:backfill
+```
+
+See [docs/EVENT_ENGINE.md](docs/EVENT_ENGINE.md) for the event registry, emission API, consumer pattern, backfill rules, and future migration targets.
 
 Set `TOTP_ENCRYPTION_KEY` to a long random secret in production. It encrypts authenticator app secrets before they are stored in the database. On Ubuntu, a good value can be generated with:
 

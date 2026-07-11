@@ -632,9 +632,8 @@ async function main() {
 
   const findings: string[] = []
 
-  for (const [label, delegateName] of requiredCollectionModels) {
-    const delegate = (prisma as unknown as Record<string, { count: (args: unknown) => Promise<number> }>)[delegateName]
-    const count = await delegate.count({ where: { collectionId: null } })
+  for (const [label] of requiredCollectionModels) {
+    const count = await rawCount(`SELECT COUNT(*)::int AS count FROM "${label}" WHERE "collectionId" IS NULL`)
     if (count > 0) findings.push(`${label}: ${count} row(s) with null collectionId`)
   }
 

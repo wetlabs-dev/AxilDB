@@ -10,16 +10,17 @@ import { canCreateInCollection, canEditInCollection, collectionPath, requireColl
 import { recentCollectionUpdates } from '@/lib/collection-updates'
 import { prisma } from '@/lib/prisma'
 import { isServerAdminRole } from '@/lib/roles'
+import { allowedEventVisibilities } from '@/lib/events/visibility'
 import { resolveSunshineTarget, sunshineCountLabel, sunshineCounts, sunshineKey } from '@/lib/sunshine'
 import { ensureStarterWorkflowTemplates, workflowProgress, workflowScopeLabel } from '@/lib/workflows'
 import { cn, fmtDate, plantName } from '@/lib/utils'
-import { Archive, ClipboardCheck, Flower2, GitBranch, Leaf, Sparkles, Sprout, Sun } from 'lucide-react'
+import { Archive, ClipboardCheck, Flower2, GalleryHorizontal, GitBranch, Leaf, ListChecks, MapPin, ShieldCheck, Sparkles, Sprout, Sun } from 'lucide-react'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 
 type PhotoLookup = Record<string, PlantImageFrame | undefined>
 type BriefingPlantLink = { plantId: string; href: string; aliases: string[] }
-type ActivityKind = 'propagation' | 'bloom' | 'sport' | 'acquired' | 'archive' | 'sunshine'
+type ActivityKind = 'propagation' | 'bloom' | 'sport' | 'acquired' | 'archive' | 'sunshine' | 'location' | 'condition' | 'workflow' | 'exhibit'
 type ActivityItem = {
   id: string
   kind: ActivityKind
@@ -72,6 +73,10 @@ const activityStyles: Record<ActivityKind, { label: string; className: string; i
     className: 'activity-sunshine-card border-[#ead486] bg-[#fff9df]',
     imageClassName: 'activity-sunshine-image bg-[#f4e7aa]/55 text-[#7a5a00]',
   },
+  location: { label: 'Location move', icon: MapPin, className: 'border-sky-200 bg-sky-50', imageClassName: 'bg-sky-100 text-sky-800' },
+  condition: { label: 'Condition resolved', icon: ShieldCheck, className: 'border-emerald-200 bg-emerald-50', imageClassName: 'bg-emerald-100 text-emerald-800' },
+  workflow: { label: 'Workflow', icon: ListChecks, className: 'border-indigo-200 bg-indigo-50', imageClassName: 'bg-indigo-100 text-indigo-800' },
+  exhibit: { label: 'Exhibit', icon: GalleryHorizontal, className: 'border-rose-200 bg-rose-50', imageClassName: 'bg-rose-100 text-rose-800' },
 }
 const activityKinds = Object.keys(activityStyles) as ActivityKind[]
 
@@ -344,6 +349,7 @@ export default async function Dashboard({
     recentSunshine,
     workflowTemplates,
     activeWorkflowRuns,
+    domainActivityEvents,
   ] = await Promise.all([
     prisma.plantInstance.count({ where: { ...collectionWhere, status: 'ACTIVE' } }),
     prisma.propagationEvent.count({ where: collectionWhere }),
@@ -401,10 +407,25 @@ export default async function Dashboard({
       orderBy: { startedAt: 'desc' },
       take: 4,
     }),
+    prisma.domainEvent.findMany({
+      where: {
+        collectionId: collection.id,
+        visibility: { in: allowedEventVisibilities({ siteRole: context.user?.role, collectionRole: context.membership?.role, publicCollection: collection.visibility === 'PUBLIC' }) },
+        redactedAt: null,
+        eventType: { in: ['plant.created', 'plant.archived', 'plant.restored', 'plant.location_moved', 'condition.resolved', 'bloom.started', 'bloom.peaked', 'propagation.started', 'propagation.succeeded', 'workflow.run_completed', 'exhibit.published'] },
+      },
+      orderBy: { occurredAt: 'desc' },
+      take: queryTake,
+    }),
   ])
   const care = careQueueSummary(careItems, new Date(), preferences?.timezone)
 
+  const domainActivityPlantIds = domainActivityEvents.map((event) => {
+    const payload = event.payloadJson && typeof event.payloadJson === 'object' && !Array.isArray(event.payloadJson) ? event.payloadJson as Record<string, unknown> : {}
+    return typeof payload.plantInstanceId === 'string' ? payload.plantInstanceId : null
+  }).filter((id): id is string => Boolean(id))
   const instanceIds = Array.from(new Set([
+    ...domainActivityPlantIds,
     ...recentProps.flatMap((event) => [
       ...event.children.map((child) => child.childPlantInstanceId),
       ...event.parents.map((parent) => parent.parentPlantInstanceId),
@@ -462,8 +483,36 @@ export default async function Dashboard({
     return target ? { ...item, target, count: recentSunshineCounts.get(sunshineKey(item.targetType, item.targetId)) || 0 } : null
   }))).filter((item): item is NonNullable<typeof item> => item !== null)
 
+  const representedRecords = new Set(domainActivityEvents.map((event) => {
+    const payload = event.payloadJson && typeof event.payloadJson === 'object' && !Array.isArray(event.payloadJson) ? event.payloadJson as Record<string, unknown> : {}
+    return `${String(payload.recordType || event.aggregateType)}:${String(payload.recordId || payload.subjectId || event.aggregateId)}`
+  }))
+  const domainActivity: ActivityItem[] = domainActivityEvents.map((event) => {
+    const payload = event.payloadJson && typeof event.payloadJson === 'object' && !Array.isArray(event.payloadJson) ? event.payloadJson as Record<string, unknown> : {}
+    const summary = event.summaryJson && typeof event.summaryJson === 'object' && !Array.isArray(event.summaryJson) ? event.summaryJson as Record<string, unknown> : {}
+    const plantInstanceId = typeof payload.plantInstanceId === 'string' ? payload.plantInstanceId : null
+    const kind: ActivityKind = event.eventType.startsWith('bloom.') ? 'bloom'
+      : event.eventType.startsWith('propagation.') ? 'propagation'
+        : event.eventType === 'plant.location_moved' ? 'location'
+          : event.eventType === 'condition.resolved' ? 'condition'
+            : event.eventType.startsWith('workflow.') ? 'workflow'
+              : event.eventType.startsWith('exhibit.') ? 'exhibit'
+                : event.eventType === 'plant.archived' ? 'archive' : 'acquired'
+    const href = plantInstanceId ? collectionPath(collection.slug, `/instances/${plantInstanceId}`)
+      : kind === 'workflow' ? collectionPath(collection.slug, `/workflows/runs/${event.aggregateId}`)
+        : kind === 'exhibit' ? collectionPath(collection.slug, `/exhibits/${event.aggregateId}`) : collectionPath(collection.slug)
+    return {
+      id: event.id, kind, href, date: event.occurredAt,
+      title: String(payload.plantId || summary.displayName || summary.title || event.eventType),
+      subtitle: String(summary.title || event.eventType.replaceAll('.', ' · ').replaceAll('_', ' ')),
+      detail: [String(summary.summary || payload.summary || ''), event.reconstructed ? 'Reconstructed' : ''].filter(Boolean).join(' · '),
+      image: coverFor(coverPhotosByInstance, plantInstanceId),
+    }
+  })
+
   const activity: ActivityItem[] = [
-    ...recentProps.map((event) => {
+    ...domainActivity,
+    ...recentProps.filter((event) => !representedRecords.has(`PropagationEvent:${event.id}`)).map((event) => {
       const firstChild = event.children[0]?.childPlantInstance
       const firstParent = event.parents[0]?.parentPlantInstance
       const children = event.children.map((child) => child.childPlantInstance.plantId)
@@ -479,7 +528,7 @@ export default async function Dashboard({
         image: coverFor(coverPhotosByInstance, firstChild?.id) || coverFor(coverPhotosByInstance, firstParent?.id),
       }
     }),
-    ...blooms.map((bloom) => ({
+    ...blooms.filter((bloom) => !representedRecords.has(`BloomEvent:${bloom.id}`)).map((bloom) => ({
       id: bloom.id,
       kind: 'bloom' as const,
       href: collectionPath(collection.slug, `/instances/${bloom.plantInstanceId}`),
@@ -499,7 +548,7 @@ export default async function Dashboard({
       detail: sport.sportDescription,
       image: coverFor(coverPhotosByInstance, sport.id),
     })),
-    ...acquired.map((item) => {
+    ...acquired.filter((item) => !representedRecords.has(`PlantInstance:${item.id}`)).map((item) => {
       const isAcquiredPropagation = item.instanceType === 'ACQUIRED_PROPAGATION'
       return {
         id: item.id,
@@ -512,7 +561,7 @@ export default async function Dashboard({
         image: coverFor(coverPhotosByInstance, item.id),
       }
     }),
-    ...archived.map((item) => ({
+    ...archived.filter((item) => !representedRecords.has(`PlantInstance:${item.id}`)).map((item) => ({
       id: item.id,
       kind: 'archive' as const,
       href: collectionPath(collection.slug, `/instances/${item.id}`),
@@ -549,9 +598,10 @@ export default async function Dashboard({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold">Dashboard</h2>
-        <p className="mt-1 text-sm text-stone-600">Welcome back. Here&apos;s what&apos;s growing on.</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div><h2 className="text-3xl font-bold">Dashboard</h2>
+        <p className="mt-1 text-sm text-stone-600">Welcome back. Here&apos;s what&apos;s growing on.</p></div>
+        <Link className="rounded-md border border-stone-300 bg-white/70 px-3 py-2 text-sm font-semibold" href={collectionPath(collection.slug, '/activity')}>Collection Activity</Link>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
@@ -707,7 +757,7 @@ export default async function Dashboard({
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h3 className="font-bold">Recent activity</h3>
-            <p className="mt-1 text-sm text-stone-600">The latest propagations, blooms, sport notes, acquisitions, sunshine, and archive actions in one stream.</p>
+            <p className="mt-1 text-sm text-stone-600">The event stream for acquisitions, propagation, blooms, moves, resolved conditions, workflows, exhibits, sunshine, and archives.</p>
           </div>
           <div className="flex flex-wrap gap-2 text-xs">
             {includedActivityKinds.length !== activityKinds.length && (

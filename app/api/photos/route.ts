@@ -6,6 +6,7 @@ import { notifyFollowers } from '@/lib/follows'
 import { mkdir, writeFile } from 'fs/promises'
 import path from 'path'
 import sharp from 'sharp'
+import { emitDomainEvent } from '@/lib/events/emit'
 
 const MAX_PHOTO_DIMENSION = 2000
 const SUPPORTED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/tiff', 'image/avif'])
@@ -112,12 +113,23 @@ export async function POST(req: Request) {
       isType: entityType === 'PLANT_DEFINITION',
       ...framingFromForm(form),
     }
-    const photo = entityType === 'PLANT_DEFINITION'
-      ? (await prisma.$transaction([
-          prisma.photo.updateMany({ where: { collectionId: collection.id, entityType: 'PLANT_DEFINITION', entityId }, data: { isType: false } }),
-          prisma.photo.create({ data }),
-        ]))[1]
-      : await prisma.photo.create({ data })
+    const plantSnapshot = entityType === 'PLANT_INSTANCE'
+      ? await prisma.plantInstance.findFirst({ where: { id: entityId, collectionId: collection.id }, select: { id: true, plantId: true } })
+      : entityType === 'BLOOM_EVENT'
+        ? await prisma.bloomEvent.findFirst({ where: { id: entityId, collectionId: collection.id }, select: { plantInstance: { select: { id: true, plantId: true } } } })
+        : null
+    const plant = plantSnapshot && 'plantInstance' in plantSnapshot ? plantSnapshot.plantInstance : plantSnapshot
+    const photo = await prisma.$transaction(async (tx) => {
+      if (entityType === 'PLANT_DEFINITION') await tx.photo.updateMany({ where: { collectionId: collection.id, entityType: 'PLANT_DEFINITION', entityId }, data: { isType: false } })
+      const created = await tx.photo.create({ data })
+      if (plant) await emitDomainEvent(tx, {
+        eventType: entityType === 'BLOOM_EVENT' ? 'bloom.photo_added' : 'plant.photo_added',
+        collectionId: collection.id, aggregateId: entityId, actor: { id: user.id, role: user.role }, occurredAt: created.createdAt,
+        visibility: 'COLLECTION_MEMBER', idempotencyKey: `photo:${created.id}:added`,
+        payload: { subjectId: created.id, recordId: created.id, recordType: 'Photo', plantInstanceId: plant.id, plantId: plant.plantId, displayName: plant.plantId, photoId: created.id, caption: created.caption || undefined },
+      })
+      return created
+    })
     await audit(user, 'CREATE', 'PHOTO', photo.id, `Uploaded photo for ${entityType} ${entityId}`, { filename, originalBytes: original.length, storedBytes: bytes.length, maxDimension: MAX_PHOTO_DIMENSION, source, sourceUrl, framing: framingFromForm(form) }, collection.id)
     if (workflowStep) {
       await prisma.workflowRunStep.update({

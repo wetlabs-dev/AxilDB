@@ -10,6 +10,7 @@ import { renderBrandedEmail } from '@/lib/email-templates'
 import { prisma } from '@/lib/prisma'
 import { collectionRoles, normalizeCollectionRole } from '@/lib/roles'
 import { getOrCreateTodaysCollectionBriefing } from '@/lib/briefing'
+import { emitDomainEvent } from '@/lib/events/emit'
 
 const val = (fd: FormData, key: string) => String(fd.get(key) || '').trim()
 const validRoles = new Set<string>(collectionRoles)
@@ -57,15 +58,20 @@ export async function createCollection(fd: FormData) {
   if (!name) throw new Error('Collection name is required.')
   const slug = await uniqueSlug(val(fd, 'slug') || name)
 
-  const collection = await prisma.collection.create({
-    data: {
+  const collection = await prisma.$transaction(async (tx) => {
+    const created = await tx.collection.create({ data: {
       name,
       slug,
       visibility: val(fd, 'visibility') === 'PUBLIC' ? 'PUBLIC' : 'PRIVATE',
       status: 'ACTIVE',
       description: val(fd, 'description'),
       memberships: { create: { userId: user.id, role: 'MANAGER', status: 'ACTIVE' } },
-    },
+    } })
+    await emitDomainEvent(tx, {
+      eventType: 'collection.created', collectionId: created.id, aggregateId: created.id, actor: { id: user.id, role: user.role },
+      idempotencyKey: `collection:${created.id}:created`, payload: { subjectId: created.id, displayName: created.name, slug: created.slug, visibility: created.visibility },
+    })
+    return created
   })
 
   await audit(user, 'CREATE', 'COLLECTION', collection.id, `Created collection ${collection.name}`, collection, collection.id)
@@ -82,15 +88,19 @@ export async function saveCollectionSettings(fd: FormData) {
   })
   if (duplicate) throw new Error('That collection slug is already in use.')
 
-  const updated = await prisma.collection.update({
-    where: { id: collection.id },
-    data: {
+  const updated = await prisma.$transaction(async (tx) => {
+    const result = await tx.collection.update({ where: { id: collection.id }, data: {
       name: val(fd, 'name') || collection.name,
       slug: requestedSlug,
       visibility: val(fd, 'visibility') === 'PUBLIC' ? 'PUBLIC' : 'PRIVATE',
       description: val(fd, 'description'),
       aiBriefingEnabled: collection.aiFeaturesEnabled && val(fd, 'aiBriefingEnabled') === 'on',
-    },
+    } })
+    await emitDomainEvent(tx, {
+      eventType: 'collection.updated', collectionId: collection.id, aggregateId: collection.id, actor: { id: user.id, role: user.role },
+      idempotencyKey: `collection:${collection.id}:updated:${result.updatedAt.toISOString()}`, payload: { subjectId: collection.id, displayName: result.name, slug: result.slug, visibility: result.visibility },
+    })
+    return result
   })
   await audit(user, 'UPDATE', 'COLLECTION', collection.id, `Updated collection ${updated.name}`, updated, collection.id)
   revalidatePath('/collections')
@@ -132,10 +142,12 @@ export async function requestMembership(fd: FormData) {
   const user = await requireUser()
   const slug = val(fd, 'collectionSlug')
   const collection = await prisma.collection.findUniqueOrThrow({ where: { slug } })
-  await prisma.collectionMembership.upsert({
-    where: { collectionId_userId: { collectionId: collection.id, userId: user.id } },
-    update: { status: 'PENDING' },
-    create: { collectionId: collection.id, userId: user.id, role: 'VIEWER', status: 'PENDING' },
+  await prisma.$transaction(async (tx) => {
+    const membership = await tx.collectionMembership.upsert({ where: { collectionId_userId: { collectionId: collection.id, userId: user.id } }, update: { status: 'PENDING' }, create: { collectionId: collection.id, userId: user.id, role: 'VIEWER', status: 'PENDING' } })
+    await emitDomainEvent(tx, {
+      eventType: 'membership.requested', collectionId: collection.id, aggregateId: membership.id, actor: { id: user.id, role: user.role },
+      idempotencyKey: `membership:${membership.id}:requested:${membership.updatedAt.toISOString()}`, payload: { subjectId: membership.id, displayName: collection.name, memberUserId: membership.userId, role: membership.role },
+    })
   })
   await audit(user, 'REQUEST', 'COLLECTION_MEMBERSHIP', collection.id, `Requested membership in ${collection.name}`, undefined, collection.id)
   redirect('/collections')
@@ -228,6 +240,10 @@ export async function approveCollectionRequest(fd: FormData) {
         collectionId: created.id,
         reviewNote: val(fd, 'reviewNote'),
       },
+    })
+    await emitDomainEvent(tx, {
+      eventType: 'collection.created', collectionId: created.id, aggregateId: created.id, actor: { id: user.id, role: user.role },
+      idempotencyKey: `collection:${created.id}:created`, payload: { subjectId: created.id, displayName: created.name, slug: created.slug, visibility: created.visibility, requestId: request.id },
     })
     return created
   })
@@ -437,7 +453,13 @@ export async function approveMembership(fd: FormData) {
   const { user, collection } = await requireCollectionManager(val(fd, 'collectionSlug'))
   const membershipId = val(fd, 'membershipId')
   const membership = await prisma.collectionMembership.findFirstOrThrow({ where: { id: membershipId, collectionId: collection.id } })
-  await prisma.collectionMembership.update({ where: { id: membership.id }, data: { status: 'ACTIVE' } })
+  await prisma.$transaction(async (tx) => {
+    const updated = await tx.collectionMembership.update({ where: { id: membership.id }, data: { status: 'ACTIVE' } })
+    await emitDomainEvent(tx, {
+      eventType: 'membership.approved', collectionId: collection.id, aggregateId: updated.id, actor: { id: user.id, role: user.role },
+      idempotencyKey: `membership:${updated.id}:approved:${updated.updatedAt.toISOString()}`, payload: { subjectId: updated.id, displayName: collection.name, memberUserId: updated.userId, role: updated.role },
+    })
+  })
   await audit(user, 'APPROVE', 'COLLECTION_MEMBERSHIP', membership.id, `Approved collection membership`, membership, collection.id)
   redirect(collectionPath(collection.slug, '/members'))
 }
@@ -476,7 +498,13 @@ export async function updateMembershipRole(fd: FormData) {
   const role = roleFromForm(fd)
   const membership = await prisma.collectionMembership.findFirstOrThrow({ where: { id: membershipId, collectionId: collection.id } })
   if (normalizeCollectionRole(membership.role) === 'MANAGER' && role !== 'MANAGER') await assertHasOtherManager(collection.id, membership.userId)
-  await prisma.collectionMembership.update({ where: { id: membership.id }, data: { role } })
+  await prisma.$transaction(async (tx) => {
+    const updated = await tx.collectionMembership.update({ where: { id: membership.id }, data: { role } })
+    await emitDomainEvent(tx, {
+      eventType: 'membership.role_changed', collectionId: collection.id, aggregateId: updated.id, actor: { id: user.id, role: user.role },
+      idempotencyKey: `membership:${updated.id}:role:${updated.updatedAt.toISOString()}`, payload: { subjectId: updated.id, displayName: collection.name, memberUserId: updated.userId, fromRole: membership.role, toRole: role },
+    })
+  })
   await audit(user, 'UPDATE', 'COLLECTION_MEMBERSHIP', membership.id, `Changed collection role to ${role}`, membership, collection.id)
   redirect(collectionPath(collection.slug, '/members'))
 }
@@ -486,7 +514,13 @@ export async function removeMembership(fd: FormData) {
   const membershipId = val(fd, 'membershipId')
   const membership = await prisma.collectionMembership.findFirstOrThrow({ where: { id: membershipId, collectionId: collection.id } })
   if (normalizeCollectionRole(membership.role) === 'MANAGER') await assertHasOtherManager(collection.id, membership.userId)
-  await prisma.collectionMembership.delete({ where: { id: membership.id } })
+  await prisma.$transaction(async (tx) => {
+    await emitDomainEvent(tx, {
+      eventType: 'membership.removed', collectionId: collection.id, aggregateId: membership.id, actor: { id: user.id, role: user.role },
+      idempotencyKey: `membership:${membership.id}:removed`, payload: { subjectId: membership.id, displayName: collection.name, memberUserId: membership.userId, role: membership.role },
+    })
+    await tx.collectionMembership.delete({ where: { id: membership.id } })
+  })
   await audit(user, 'DELETE', 'COLLECTION_MEMBERSHIP', membership.id, `Removed collection member`, membership, collection.id)
   redirect(collectionPath(collection.slug, '/members'))
 }
@@ -540,9 +574,13 @@ export async function archiveCollection(fd: FormData) {
   const collectionId = val(fd, 'collectionId')
   const collection = await prisma.collection.findUniqueOrThrow({ where: { id: collectionId } })
   if (collection.isDefault) throw new Error('The default collection cannot be archived.')
-  await prisma.collection.update({
-    where: { id: collection.id },
-    data: { status: 'ARCHIVED', archivedAt: new Date(), archivedById: user.id },
+  const archivedAt = new Date()
+  await prisma.$transaction(async (tx) => {
+    await tx.collection.update({ where: { id: collection.id }, data: { status: 'ARCHIVED', archivedAt, archivedById: user.id } })
+    await emitDomainEvent(tx, {
+      eventType: 'collection.archived', collectionId: collection.id, aggregateId: collection.id, actor: { id: user.id, role: user.role }, occurredAt: archivedAt,
+      idempotencyKey: `collection:${collection.id}:archived:${archivedAt.toISOString()}`, payload: { subjectId: collection.id, displayName: collection.name, slug: collection.slug },
+    })
   })
   await audit(user, 'ARCHIVE', 'COLLECTION', collection.id, `Archived collection ${collection.name}`, collection, collection.id)
   redirect('/server/collections')

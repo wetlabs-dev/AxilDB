@@ -113,6 +113,29 @@ services:
     volumes:
       - ./public/uploads:/app/public/uploads
     command: sh -c "while true; do npm run images:moderate; sleep $${IMAGE_MODERATION_WORKER_INTERVAL_SECONDS:-180}; done"
+  events:
+    build:
+      context: .
+      target: builder
+    restart: unless-stopped
+    env_file:
+      - path: ./.env
+        required: false
+      - path: /etc/axildb/axildb.env
+        required: false
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      TZ: ${TZ:-America/New_York}
+      DATABASE_URL: postgresql://plants:plants@db:5432/axildb?schema=public
+      AXILDB_EVENT_ENGINE_ENABLED: ${AXILDB_EVENT_ENGINE_ENABLED:-true}
+      EVENT_WORKER_BATCH_SIZE: ${EVENT_WORKER_BATCH_SIZE:-50}
+      EVENT_WORKER_MAX_ATTEMPTS: ${EVENT_WORKER_MAX_ATTEMPTS:-8}
+      EVENT_WORKER_STALE_MINUTES: ${EVENT_WORKER_STALE_MINUTES:-15}
+    command: sh -c "while true; do npm run events:process; sleep $${EVENT_WORKER_INTERVAL_SECONDS:-15}; done"
   metrics:
     build:
       context: .

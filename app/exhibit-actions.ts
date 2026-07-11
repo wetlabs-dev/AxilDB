@@ -20,6 +20,7 @@ import {
   updateChangeLabels,
 } from '@/lib/exhibits'
 import { prisma } from '@/lib/prisma'
+import { emitDomainEvent } from '@/lib/events/emit'
 
 function value(fd: FormData, key: string) {
   return String(fd.get(key) || '').trim()
@@ -84,8 +85,8 @@ export async function createCollectionExhibit(fd: FormData) {
   const slug = await nextExhibitSlug(prisma, title)
   const accessMode = value(fd, 'accessMode') === 'PUBLIC' ? CollectionExhibitAccessMode.PUBLIC : CollectionExhibitAccessMode.UNLISTED
   const token = secureToken()
-  const exhibit = await prisma.collectionExhibit.create({
-    data: {
+  const exhibit = await prisma.$transaction(async (tx) => {
+    const created = await tx.collectionExhibit.create({ data: {
       collectionId: context.collection.id,
       title,
       slug,
@@ -97,7 +98,13 @@ export async function createCollectionExhibit(fd: FormData) {
       createdByUserId: context.user.id,
       settingsJson: defaultExhibitSettings,
       updateSettingsJson: defaultExhibitUpdateSettings,
-    },
+    } })
+    await emitDomainEvent(tx, {
+      eventType: 'exhibit.created', collectionId: context.collection.id, aggregateId: created.id, occurredAt: created.createdAt,
+      actor: { id: context.user.id, role: context.user.role }, idempotencyKey: `exhibit:${created.id}:created`,
+      payload: { subjectId: created.id, recordId: created.id, recordType: 'CollectionExhibit', displayName: created.title, slug: created.slug, accessMode: created.accessMode, summary: created.description || undefined },
+    })
+    return created
   })
   await audit(context.user, 'CREATE', 'COLLECTION_EXHIBIT', exhibit.id, `Created exhibit ${title}`, { slug, accessMode }, context.collection.id)
   redirect(collectionPath(context.collection.slug, `/exhibits/${exhibit.id}`))
@@ -257,15 +264,20 @@ export async function publishCollectionExhibit(fd: FormData) {
   const context = await requireCollectionManager(value(fd, 'collectionSlug'))
   const id = value(fd, 'id')
   const exhibit = await assertExhibitInCollection(id, context.collection.id)
-  await prisma.collectionExhibit.update({
-    where: { id },
-    data: {
+  const publishedAt = new Date()
+  await prisma.$transaction(async (tx) => {
+    await tx.collectionExhibit.update({ where: { id }, data: {
       status: CollectionExhibitStatus.PUBLISHED,
-      publishedAt: new Date(),
+      publishedAt,
       publishedByUserId: context.user.id,
       revokedAt: null,
       token: exhibit.token || secureToken(),
-    },
+    } })
+    await emitDomainEvent(tx, {
+      eventType: 'exhibit.published', collectionId: context.collection.id, aggregateId: id, occurredAt: publishedAt,
+      actor: { id: context.user.id, role: context.user.role }, visibility: 'PUBLIC', idempotencyKey: `exhibit:${id}:published:${publishedAt.toISOString()}`,
+      payload: { subjectId: id, recordId: id, recordType: 'CollectionExhibit', displayName: exhibit.title, slug: exhibit.slug, accessMode: exhibit.accessMode, summary: exhibit.description || undefined },
+    })
   })
   await audit(context.user, 'PUBLISH', 'COLLECTION_EXHIBIT', id, `Published exhibit ${exhibit.title}`, undefined, context.collection.id)
   redirect(collectionPath(context.collection.slug, `/exhibits/${id}?published=1`))
@@ -275,12 +287,17 @@ export async function unpublishCollectionExhibit(fd: FormData) {
   const context = await requireCollectionManager(value(fd, 'collectionSlug'))
   const id = value(fd, 'id')
   const exhibit = await assertExhibitInCollection(id, context.collection.id)
-  await prisma.collectionExhibit.update({
-    where: { id },
-    data: {
+  const unpublishedAt = new Date()
+  await prisma.$transaction(async (tx) => {
+    await tx.collectionExhibit.update({ where: { id }, data: {
       status: CollectionExhibitStatus.UNPUBLISHED,
-      revokedAt: new Date(),
-    },
+      revokedAt: unpublishedAt,
+    } })
+    await emitDomainEvent(tx, {
+      eventType: 'exhibit.unpublished', collectionId: context.collection.id, aggregateId: id, occurredAt: unpublishedAt,
+      actor: { id: context.user.id, role: context.user.role }, idempotencyKey: `exhibit:${id}:unpublished:${unpublishedAt.toISOString()}`,
+      payload: { subjectId: id, recordId: id, recordType: 'CollectionExhibit', displayName: exhibit.title, slug: exhibit.slug },
+    })
   })
   await audit(context.user, 'UNPUBLISH', 'COLLECTION_EXHIBIT', id, `Unpublished exhibit ${exhibit.title}`, undefined, context.collection.id)
   redirect(collectionPath(context.collection.slug, `/exhibits/${id}?unpublished=1`))

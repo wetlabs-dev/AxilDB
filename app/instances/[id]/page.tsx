@@ -52,6 +52,7 @@ import { isServerAdminRole } from '@/lib/roles'
 import { sunshineCounts, sunshineKey, sunshineStateForUser } from '@/lib/sunshine'
 import { addCalendarDays, formatDateTime, startOfDayInTimeZone } from '@/lib/time'
 import { collectPlantTimelineEvents, getPlantTimelineMetrics } from '@/lib/timeline/plantTimeline'
+import { allowedEventVisibilities } from '@/lib/events/visibility'
 import { dateInput, fmtDate, plantName, taxonomyLabel } from '@/lib/utils'
 import { ensureStarterWorkflowTemplates } from '@/lib/workflows'
 import Link from 'next/link'
@@ -276,6 +277,7 @@ export default async function InstanceDetail({
     collectionId: collection.id,
     collectionSlug: collection.slug,
     plantInstanceId: id,
+    visibleEventVisibilities: allowedEventVisibilities({ siteRole: user?.role, collectionRole: context.membership?.role, publicCollection: collection.visibility === 'PUBLIC' }),
   })
   const timelineMetrics = getPlantTimelineMetrics(timelineEvents, i)
 

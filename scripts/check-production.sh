@@ -10,6 +10,9 @@ npm run check:workflows
 echo "==> Checking care scheduling invariants"
 npm run check:care-scheduling
 
+echo "==> Checking event engine invariants"
+npm run check:events
+
 echo "==> Checking collection-scoped query guardrail"
 npm run check:collection-scope
 

@@ -26,6 +26,12 @@ const collectionModels = [
 const readOps = ['findMany', 'findFirst', 'findUnique', 'findUniqueOrThrow', 'count']
 
 const reviewedAllowlist = [
+  ...['plantLocationMove', 'plantQuarantine', 'propagationEvent', 'bloomEvent'].map((model) => ({
+    file: 'scripts/backfill-domain-events.ts',
+    model,
+    op: 'findMany',
+    reason: 'Explicit event backfill command intentionally scans trustworthy historical records across collections and preserves each source collectionId.',
+  })),
   {
     file: 'scripts/send-reminders.ts',
     model: 'reminder',
