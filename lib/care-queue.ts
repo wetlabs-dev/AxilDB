@@ -18,6 +18,15 @@ export const careTaskTypes = [
   'REMINDER',
 ] as const
 
+const latestCareEventTypes = [
+  'WATERED',
+  'FERTILIZED',
+  'PEST_CHECK',
+  'HEALTH_CHECK',
+  'PROPAGATION_CHECK',
+  'BLOOM_CHECK',
+] as const
+
 export type CareTaskType = (typeof careTaskTypes)[number]
 export type CareQueueFilter = 'today' | 'overdue' | 'water' | 'fertilize' | 'propagation' | 'health' | 'pest' | 'bloom' | 'custom' | 'completed'
 
@@ -137,6 +146,91 @@ function latestBy<T extends { plantInstanceId: string; eventType?: string; perfo
   return map
 }
 
+async function latestCareEvents(prisma: PrismaClient, collectionId: string, plantInstanceIds: string[]) {
+  if (plantInstanceIds.length === 0) return []
+
+  const latest = await prisma.plantCareEvent.groupBy({
+    by: ['plantInstanceId', 'eventType'],
+    where: {
+      collectionId,
+      plantInstanceId: { in: plantInstanceIds },
+      eventType: { in: [...latestCareEventTypes] },
+    },
+    _max: { performedAt: true },
+  })
+
+  const latestKeys = latest
+    .map((event) => event._max.performedAt ? {
+      plantInstanceId: event.plantInstanceId,
+      eventType: event.eventType,
+      performedAt: event._max.performedAt,
+    } : null)
+    .filter((event): event is { plantInstanceId: string; eventType: string; performedAt: Date } => Boolean(event))
+
+  if (latestKeys.length === 0) return []
+
+  return prisma.plantCareEvent.findMany({
+    where: {
+      collectionId,
+      OR: latestKeys,
+    },
+    orderBy: { performedAt: 'desc' },
+  })
+}
+
+async function latestInstancePhotos(prisma: PrismaClient, collectionId: string, plantInstanceIds: string[]) {
+  if (plantInstanceIds.length === 0) return []
+
+  const [latestCoverPhotos, latestPhotos] = await Promise.all([
+    prisma.photo.groupBy({
+      by: ['entityId'],
+      where: {
+        collectionId,
+        entityType: 'PLANT_INSTANCE',
+        entityId: { in: plantInstanceIds },
+        isCover: true,
+      },
+      _max: { createdAt: true },
+    }),
+    prisma.photo.groupBy({
+      by: ['entityId'],
+      where: {
+        collectionId,
+        entityType: 'PLANT_INSTANCE',
+        entityId: { in: plantInstanceIds },
+      },
+      _max: { createdAt: true },
+    }),
+  ])
+  const latestKeys = [...latestCoverPhotos, ...latestPhotos]
+    .map((photo) => photo._max.createdAt ? {
+      entityType: 'PLANT_INSTANCE',
+      entityId: photo.entityId,
+      createdAt: photo._max.createdAt,
+    } : null)
+    .filter((photo): photo is { entityType: string; entityId: string; createdAt: Date } => Boolean(photo))
+
+  if (latestKeys.length === 0) return []
+
+  return prisma.photo.findMany({
+    where: {
+      collectionId,
+      OR: latestKeys,
+    },
+    orderBy: [{ isCover: 'desc' }, { createdAt: 'desc' }],
+    select: {
+      entityId: true,
+      path: true,
+      cropX: true,
+      cropY: true,
+      cropWidth: true,
+      cropHeight: true,
+      focalX: true,
+      focalY: true,
+    },
+  })
+}
+
 function imageLookup(photos: Array<{ entityId: string } & PlantImageFrame>) {
   return photos.reduce<Record<string, PlantImageFrame>>((acc, photo) => {
     if (!acc[photo.entityId]) acc[photo.entityId] = photo
@@ -169,37 +263,22 @@ export async function getCareQueue(
     timezone?: string
   },
 ) {
-  const [instances, careEvents, conditions, adjustments, photos, openBlooms, activeQuarantines, reminders, quietDays, quietRules] = await Promise.all([
-    prisma.plantInstance.findMany({
-      where: { collectionId, status: 'ACTIVE' },
-      include: {
-        plantDefinition: { include: { husbandryGuide: { include: { fertilizerRecipe: { include: { products: { include: { product: true }, orderBy: { sortOrder: 'asc' } } } } } } } },
-        husbandryOverride: { include: { fertilizerRecipe: { include: { products: { include: { product: true }, orderBy: { sortOrder: 'asc' } } } } } },
-      },
-    }),
-    prisma.plantCareEvent.findMany({
-      where: { collectionId, plantInstance: { status: 'ACTIVE' } },
-      orderBy: { performedAt: 'desc' },
-    }),
+  const instances = await prisma.plantInstance.findMany({
+    where: { collectionId, status: 'ACTIVE' },
+    include: {
+      plantDefinition: { include: { husbandryGuide: { include: { fertilizerRecipe: { include: { products: { include: { product: true }, orderBy: { sortOrder: 'asc' } } } } } } } },
+      husbandryOverride: { include: { fertilizerRecipe: { include: { products: { include: { product: true }, orderBy: { sortOrder: 'asc' } } } } } },
+    },
+  })
+  const activePlantInstanceIds = instances.map((instance) => instance.id)
+  const [careEvents, conditions, adjustments, photos, openBlooms, activeQuarantines, reminders, quietDays, quietRules] = await Promise.all([
+    latestCareEvents(prisma, collectionId, activePlantInstanceIds),
     prisma.plantCondition.findMany({
-      where: { collectionId, plantInstance: { status: 'ACTIVE' }, status: { in: ['OPEN', 'IMPROVING'] } },
+      where: { collectionId, plantInstanceId: { in: activePlantInstanceIds }, status: { in: ['OPEN', 'IMPROVING'] } },
       orderBy: [{ severity: 'desc' }, { observedAt: 'desc' }],
     }),
-    prisma.plantCareAdjustment.findMany({ where: { collectionId, plantInstance: { status: 'ACTIVE' } } }),
-    prisma.photo.findMany({
-      where: { collectionId, entityType: 'PLANT_INSTANCE' },
-      orderBy: [{ isCover: 'desc' }, { createdAt: 'desc' }],
-      select: {
-        entityId: true,
-        path: true,
-        cropX: true,
-        cropY: true,
-        cropWidth: true,
-        cropHeight: true,
-        focalX: true,
-        focalY: true,
-      },
-    }),
+    prisma.plantCareAdjustment.findMany({ where: { collectionId, plantInstanceId: { in: activePlantInstanceIds } } }),
+    latestInstancePhotos(prisma, collectionId, activePlantInstanceIds),
     prisma.bloomEvent.findMany({
       where: { collectionId, bloomEndDate: null, plantInstance: { status: 'ACTIVE' } },
       include: { plantInstance: { include: { plantDefinition: true } } },

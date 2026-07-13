@@ -1729,6 +1729,7 @@ model PlantCareEvent {
   @@index([eventType])
   @@index([fertilizerRecipeId])
   @@index([performedAt])
+  @@index([collectionId, plantInstanceId, eventType, performedAt])
 }
 
 model PlantCondition {
@@ -2116,6 +2117,7 @@ model Photo {
   @@index([collectionId])
   @@index([uploadedByUserId])
   @@index([entityType, entityId])
+  @@index([collectionId, entityType, entityId, isCover, createdAt])
   @@index([isCover])
   @@index([isType])
   @@index([moderationStatus])
