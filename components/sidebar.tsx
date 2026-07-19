@@ -15,6 +15,7 @@ async function buildSidebarBadges(collection: { id: string; slug: string }, user
   const [
     careItems,
     plantDefinitions,
+    acquisitionTargets,
     activeInstances,
     locations,
     acquiredPropagations,
@@ -36,6 +37,12 @@ async function buildSidebarBadges(collection: { id: string; slug: string }, user
   ] = await Promise.all([
     getCareQueue(prisma, { collectionId, collectionSlug: collection.slug, userId: user?.id, timezone }),
     prisma.plantDefinition.count({ where: { collectionId } }),
+    prisma.plantDefinition.count({
+      where: {
+        collectionId,
+        acquisitionStatus: { in: ['RESEARCHING', 'WISHLIST', 'ACTIVELY_SEEKING', 'ON_HOLD'] },
+      },
+    }),
     prisma.plantInstance.count({ where: { collectionId, status: { not: 'ARCHIVED' } } }),
     prisma.location.count({ where: { collectionId, status: 'ACTIVE' } }),
     prisma.plantInstance.count({ where: { collectionId, status: { not: 'ARCHIVED' }, instanceType: 'ACQUIRED_PROPAGATION' } }),
@@ -96,6 +103,7 @@ async function buildSidebarBadges(collection: { id: string; slug: string }, user
     '/care-sheets': careSheets,
     '/exhibits': exhibits,
     '/plants': plantDefinitions,
+    '/acquisitions': acquisitionTargets,
     '/instances': activeInstances,
     '/locations': locations,
     '/propagations': propagationEvents + acquiredPropagations,

@@ -69,6 +69,11 @@ export default async function CollectionSettingsPage({
             <option value="PRIVATE">Private</option>
             <option value="PUBLIC">Public</option>
           </Select>
+          <Select label="Acquisition visibility" name="acquisitionVisibility" defaultValue={(collection as any).acquisitionVisibility || 'PRIVATE'}>
+            <option value="PRIVATE">Private</option>
+            <option value="MEMBERS">Collection members</option>
+            <option value="PUBLIC">Public when collection is public</option>
+          </Select>
           <TextArea label="Description" name="description" defaultValue={collection.description} wrapperClassName="lg:col-span-3" />
           <div className="lg:col-span-3">
             <Button>Save collection settings</Button>

@@ -14,6 +14,7 @@ AXILDB_DOCS_BASE_URL=https://app.axildb.com AXILDB_DOCS_COLLECTION_SLUG=axildb n
 - [Accounts, Email, and Security](#accounts-security)
 - [Collections and Membership](#collections)
 - [Plant Definitions](#plant-definitions)
+- [Acquisition Pipeline](#acquisition-pipeline)
 - [Plant Instances](#plant-instances)
 - [Locations](#locations)
 - [Photos and Gallery](#photos-gallery)
@@ -133,6 +134,31 @@ App route: `/plants`
 
 - AI output is a draft. Review reference URLs, aliases, conservation notes, and toxicity before relying on them.
 - ID My Plant sends only the description, known names, and selected image to OpenAI. It does not send member emails or unrelated records, and it does not save the suggested definition automatically. The result is saved to private user and collection-manager history.
+
+## Acquisition Pipeline
+
+The Acquisition Pipeline tracks pre-accession research, wishlist intent, nursery sightings, price history, and purchases on plant definitions before or alongside owned plant specimens.
+
+App route: `/acquisitions`
+
+![Acquisition Pipeline](../public/manual/screenshots/acquisitions.png)
+
+### How It Is Used
+
+- Open Acquisitions from the sidebar.
+- Use Add acquisition target to create a research or wishlist definition with status, priority, target price, desired specimen size, desired location, preferred vendors, interest notes, and research summary.
+- Filter by status, search researched plants, and sort by priority, recent observations, price, or name when shopping or planning.
+- Add Research Journal entries for chronological notes, URLs, citations, and the reasoning behind the target.
+- Use Seen at... to record vendor/location sightings, observed price, size, condition, availability, and notes.
+- Use Acquire to create a permanent acquisition record and optionally create one or more Plant Instances with generated IDs, source/distributor data, acquisition date, purchase price, and desired-location prefill.
+- Choose whether an acquisition fulfills the intent, keeps it active, or marks it as a repeat-purchase target.
+
+### Notes
+
+- Acquisition status is stored on the Plant Definition and remains editable even after specimens exist, so owning one plant does not automatically remove future acquisition intent.
+- Acquisition Records are permanent historical records and can represent one plant, many plants, or a purchase/reservation that does not create Plant Instances yet.
+- Collection Settings includes Acquisition visibility. It defaults to Private; public collection visitors only see the pipeline when managers explicitly set it to Public.
+- Plant ID hover previews include acquisition status and target details when the linked plant definition has acquisition intent.
 
 ## Plant Instances
 

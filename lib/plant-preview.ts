@@ -20,6 +20,11 @@ export type PlantInstancePreview = {
   lastObservedAt: string | null
   lastPhotoAt: string | null
   lastCareAt: string | null
+  acquisitionStatus: string | null
+  acquisitionPriority: number | null
+  desiredLocationPath: string | null
+  idealPurchasePrice: string | null
+  maximumPurchasePrice: string | null
 }
 
 function mostRecentDate(dates: Array<Date | null | undefined>) {
@@ -129,5 +134,12 @@ export async function getPlantInstancePreview(
     lastObservedAt: lastObservedAt?.toISOString() || null,
     lastPhotoAt: lastPhoto?.createdAt.toISOString() || null,
     lastCareAt: instance.careEvents[0]?.performedAt.toISOString() || null,
+    acquisitionStatus: instance.plantDefinition.acquisitionStatus || null,
+    acquisitionPriority: instance.plantDefinition.acquisitionPriority || null,
+    desiredLocationPath: instance.plantDefinition.desiredLocationId
+      ? locationPathWithCodes(instance.plantDefinition.desiredLocationId, locationNodes)
+      : null,
+    idealPurchasePrice: instance.plantDefinition.idealPurchasePrice ? String(instance.plantDefinition.idealPurchasePrice) : null,
+    maximumPurchasePrice: instance.plantDefinition.maximumPurchasePrice ? String(instance.plantDefinition.maximumPurchasePrice) : null,
   }
 }

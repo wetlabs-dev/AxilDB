@@ -60,6 +60,29 @@ enum CollectionExhibitUpdateDeliveryStatus {
   SKIPPED
 }
 
+enum AcquisitionStatus {
+  RESEARCHING
+  WISHLIST
+  ACTIVELY_SEEKING
+  ON_HOLD
+  FULFILLED
+  NO_LONGER_INTERESTED
+}
+
+enum AcquisitionAvailability {
+  PLENTY
+  LIMITED
+  LAST_ONE
+  SOLD_OUT
+  UNKNOWN
+}
+
+enum AcquisitionFulfillmentChoice {
+  FULFILLED
+  KEEP_ACTIVE
+  REPEAT_PURCHASE
+}
+
 model GoverningBody {
   collectionId     String?
   id               String            @id @default(cuid())
@@ -151,6 +174,9 @@ model User {
   completedWorkflowRunSteps WorkflowRunStep[] @relation("WorkflowRunStepCompletedBy")
   createdCareScheduleSyncBatches CareScheduleSyncBatch[] @relation("CareScheduleSyncBatchCreatedBy")
   createdQuietDays CollectionQuietDay[] @relation("CollectionQuietDayCreatedBy")
+  createdAcquisitionResearchEntries AcquisitionResearchEntry[] @relation("AcquisitionResearchEntryCreatedBy")
+  createdPlantObservations PlantObservation[] @relation("PlantObservationCreatedBy")
+  createdPlantAcquisitionRecords PlantAcquisitionRecord[] @relation("PlantAcquisitionRecordCreatedBy")
 
   @@index([role])
   @@index([emailVerifiedAt])
@@ -166,6 +192,7 @@ model Collection {
   isDefault           Boolean                @default(false)
   aiFeaturesEnabled   Boolean                @default(true)
   aiBriefingEnabled   Boolean                @default(false)
+  acquisitionVisibility String                @default("PRIVATE")
   description         String?
   archivedAt          DateTime?
   archivedById        String?
@@ -214,6 +241,9 @@ model Collection {
   plantHusbandryOverrides PlantHusbandryOverride[]
   fertilizerProducts  FertilizerProduct[]
   fertilizerRecipes   FertilizerRecipe[]
+  acquisitionResearchEntries AcquisitionResearchEntry[]
+  plantObservations   PlantObservation[]
+  plantAcquisitionRecords PlantAcquisitionRecord[]
   outgoingTransferConnections CollectionTransferConnection[] @relation("TransferConnectionSource")
   incomingTransferConnections CollectionTransferConnection[] @relation("TransferConnectionTarget")
   outgoingPlantTransferRequests PlantTransferRequest[] @relation("PlantTransferSourceCollection")
@@ -237,6 +267,7 @@ model Collection {
   @@index([isDefault])
   @@index([aiFeaturesEnabled])
   @@index([aiBriefingEnabled])
+  @@index([acquisitionVisibility])
 }
 
 model CollectionBriefing {
@@ -1085,6 +1116,15 @@ model PlantDefinition {
   gbifUrl                    String?
   description                String?
   notes                      String?
+  acquisitionStatus          AcquisitionStatus?
+  acquisitionPriority        Int?
+  acquisitionInterestNotes   String?
+  desiredSpecimenSize        String?
+  idealPurchasePrice         Decimal?
+  maximumPurchasePrice       Decimal?
+  desiredLocationId          String?
+  preferredVendorsJson       Json?
+  acquisitionResearchSummary String?
   isValidated                Boolean  @default(false)
   validatedAt                DateTime?
   validatedByUserId          String?
@@ -1097,6 +1137,7 @@ model PlantDefinition {
 
   collection    Collection?      @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   governingBody GoverningBody?  @relation(fields: [governingBodyId], references: [id], onDelete: SetNull)
+  desiredLocation Location?     @relation("PlantDefinitionDesiredLocation", fields: [desiredLocationId], references: [id], onDelete: SetNull)
   validatedBy   User?           @relation("PlantDefinitionValidatedBy", fields: [validatedByUserId], references: [id], onDelete: SetNull)
   validatedSourceCollection Collection? @relation("ValidatedPlantDefinitionSourceCollection", fields: [validatedSourceCollectionId], references: [id], onDelete: SetNull)
   validatedPlantDefinition PlantDefinition? @relation("LocalValidatedDefinitionLink", fields: [validatedPlantDefinitionId], references: [id], onDelete: SetNull)
@@ -1114,6 +1155,9 @@ model PlantDefinition {
   matchedIdentificationLogs PlantIdentificationLog[] @relation("PlantIdentificationLogMatchedDefinition")
   appliedIdentificationLogs PlantIdentificationLog[] @relation("PlantIdentificationLogAppliedDefinition")
   createdIdentificationLogs PlantIdentificationLog[] @relation("PlantIdentificationLogCreatedDefinition")
+  acquisitionResearchEntries AcquisitionResearchEntry[]
+  plantObservations PlantObservation[]
+  acquisitionRecords PlantAcquisitionRecord[]
 
   @@index([collectionId])
   @@index([governingBodyId])
@@ -1123,6 +1167,107 @@ model PlantDefinition {
   @@index([validatedSourceCollectionId])
   @@index([validatedSourceDefinitionId])
   @@index([validatedPlantDefinitionId])
+  @@index([acquisitionStatus])
+  @@index([acquisitionPriority])
+  @@index([desiredLocationId])
+}
+
+model AcquisitionResearchEntry {
+  id                String   @id @default(cuid())
+  collectionId      String
+  plantDefinitionId String
+  createdByUserId   String?
+  title             String
+  body              String
+  urlsJson          Json?
+  sourceCitation    String?
+  occurredAt        DateTime @default(now())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  collection      Collection      @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  plantDefinition PlantDefinition @relation(fields: [plantDefinitionId], references: [id], onDelete: Cascade)
+  createdBy       User?           @relation("AcquisitionResearchEntryCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([collectionId])
+  @@index([plantDefinitionId])
+  @@index([createdByUserId])
+  @@index([occurredAt])
+}
+
+model PlantObservation {
+  id                String   @id @default(cuid())
+  collectionId      String
+  plantDefinitionId String
+  createdByUserId   String?
+  vendor            String?
+  observedAt        DateTime @default(now())
+  observedPrice     Decimal?
+  currency          String   @default("USD")
+  specimenSize      String?
+  condition         String?
+  availability      AcquisitionAvailability @default(UNKNOWN)
+  notes             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  collection      Collection      @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  plantDefinition PlantDefinition @relation(fields: [plantDefinitionId], references: [id], onDelete: Cascade)
+  createdBy       User?           @relation("PlantObservationCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  acquisitionRecords PlantAcquisitionRecord[]
+
+  @@index([collectionId])
+  @@index([plantDefinitionId])
+  @@index([createdByUserId])
+  @@index([observedAt])
+  @@index([availability])
+}
+
+model PlantAcquisitionRecord {
+  id                String   @id @default(cuid())
+  collectionId      String
+  plantDefinitionId String
+  createdByUserId   String?
+  observationId     String?
+  vendor            String?
+  acquiredAt        DateTime @default(now())
+  price             Decimal?
+  currency          String   @default("USD")
+  quantity          Int      @default(1)
+  specimenSize      String?
+  potSize           String?
+  initialLocationId String?
+  notes             String?
+  fulfillmentChoice AcquisitionFulfillmentChoice @default(FULFILLED)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  collection      Collection      @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  plantDefinition PlantDefinition @relation(fields: [plantDefinitionId], references: [id], onDelete: Cascade)
+  createdBy       User?           @relation("PlantAcquisitionRecordCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  observation     PlantObservation? @relation(fields: [observationId], references: [id], onDelete: SetNull)
+  initialLocation Location?       @relation("PlantAcquisitionInitialLocation", fields: [initialLocationId], references: [id], onDelete: SetNull)
+  plantInstances  PlantAcquisitionRecordInstance[]
+
+  @@index([collectionId])
+  @@index([plantDefinitionId])
+  @@index([createdByUserId])
+  @@index([observationId])
+  @@index([initialLocationId])
+  @@index([acquiredAt])
+}
+
+model PlantAcquisitionRecordInstance {
+  id                  String @id @default(cuid())
+  acquisitionRecordId String
+  plantInstanceId     String
+  createdAt           DateTime @default(now())
+
+  acquisitionRecord PlantAcquisitionRecord @relation(fields: [acquisitionRecordId], references: [id], onDelete: Cascade)
+  plantInstance     PlantInstance          @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
+
+  @@unique([acquisitionRecordId, plantInstanceId])
+  @@index([plantInstanceId])
 }
 
 model ValidatedDefinitionChange {
@@ -1493,6 +1638,7 @@ model PlantInstance {
   exhibitPlants   CollectionExhibitPlant[]
   workflowRunPlants WorkflowRunPlant[]
   careScheduleSyncItems CareScheduleSyncItem[]
+  acquisitionRecordLinks PlantAcquisitionRecordInstance[]
   quietDayAdjustments CareQuietDayAdjustment[]
 
   @@index([collectionId])
@@ -1545,6 +1691,8 @@ model Location {
   childLocations Location[]      @relation("LocationHierarchy")
   locationType   LocationType    @relation(fields: [locationTypeId], references: [id], onDelete: Restrict)
   plantInstances PlantInstance[] @relation("CurrentPlantLocation")
+  desiredPlantDefinitions PlantDefinition[] @relation("PlantDefinitionDesiredLocation")
+  acquisitionRecords PlantAcquisitionRecord[] @relation("PlantAcquisitionInitialLocation")
   movesFrom      PlantLocationMove[] @relation("PlantLocationMoveFrom")
   movesTo        PlantLocationMove[] @relation("PlantLocationMoveTo")
   quarantineRecords PlantQuarantine[]

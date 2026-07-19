@@ -20,6 +20,7 @@ export type CollectionContext = {
     status: string
     aiFeaturesEnabled: boolean
     aiBriefingEnabled: boolean
+    acquisitionVisibility: string
     description: string | null
   }
   user: AuthUser | null
@@ -160,7 +161,7 @@ export async function getCollectionContext(slug?: string): Promise<CollectionCon
   const resolvedSlug = slug || (await getCurrentCollectionSlug())
   const collection = await prisma.collection.findUnique({
     where: { slug: resolvedSlug },
-    select: { id: true, name: true, slug: true, visibility: true, status: true, aiFeaturesEnabled: true, aiBriefingEnabled: true, description: true },
+    select: { id: true, name: true, slug: true, visibility: true, status: true, aiFeaturesEnabled: true, aiBriefingEnabled: true, acquisitionVisibility: true, description: true },
   })
 
   if (!collection) {

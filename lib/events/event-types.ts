@@ -9,6 +9,7 @@ export const DOMAIN_EVENT_TYPES = [
   'workflow.run_started', 'workflow.step_completed', 'workflow.run_completed', 'workflow.run_cancelled',
   'exhibit.created', 'exhibit.published', 'exhibit.updated', 'exhibit.unpublished',
   'definition.created', 'definition.updated', 'definition.validated', 'definition.disputed', 'definition.detached', 'definition.husbandry_updated',
+  'acquisition.intent_updated', 'acquisition.research_added', 'acquisition.observation_added', 'acquisition.recorded',
   'fertilizer.product_created', 'fertilizer.product_updated', 'fertilizer.recipe_created', 'fertilizer.recipe_updated', 'fertilizer.assigned',
   'collection.created', 'collection.updated', 'collection.archived',
   'membership.requested', 'membership.approved', 'membership.role_changed', 'membership.removed',
@@ -58,6 +59,7 @@ const aggregateFor = (type: DomainEventType) => {
   if (type.startsWith('workflow.')) return 'WorkflowRun'
   if (type.startsWith('exhibit.')) return 'CollectionExhibit'
   if (type.startsWith('definition.')) return 'PlantDefinition'
+  if (type.startsWith('acquisition.')) return 'PlantDefinition'
   if (type.startsWith('fertilizer.product')) return 'FertilizerProduct'
   if (type.startsWith('fertilizer.recipe') || type === 'fertilizer.assigned') return 'FertilizerRecipe'
   if (type.startsWith('membership.')) return 'CollectionMembership'
@@ -66,7 +68,7 @@ const aggregateFor = (type: DomainEventType) => {
 }
 
 const timelineTypes = new Set<DomainEventType>(DOMAIN_EVENT_TYPES.filter((type) =>
-  /^(plant|care|condition|bloom|propagation|quarantine|workflow)\./.test(type),
+  /^(plant|care|condition|bloom|propagation|quarantine|workflow|acquisition)\./.test(type),
 ))
 const dashboardTypes = new Set<DomainEventType>([
   'plant.created', 'plant.archived', 'plant.restored', 'plant.location_moved',

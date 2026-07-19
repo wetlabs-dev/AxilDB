@@ -44,6 +44,16 @@ function formatRelativeDate(value?: string | null) {
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+function statusLabel(status?: string | null) {
+  if (!status) return null
+  return status.toLowerCase().replaceAll('_', ' ').replace(/\b\w/g, (char) => char.toUpperCase())
+}
+
+function stars(priority?: number | null) {
+  const count = Math.max(0, Math.min(5, Number(priority || 0)))
+  return count ? '★'.repeat(count) : null
+}
+
 function usePreviewPosition(open: boolean, anchorRef: React.RefObject<HTMLElement | null>) {
   const [position, setPosition] = useState<Position>({ top: 0, left: 0 })
 
@@ -143,6 +153,18 @@ function PreviewCard({
               <p className="font-semibold text-[var(--ax-danger)]">{preview.activeConditionCount} open condition{preview.activeConditionCount === 1 ? '' : 's'}</p>
             )}
           </div>
+          {preview.acquisitionStatus && (
+            <div className="rounded-md border border-[color:var(--ax-border)] bg-[var(--ax-primary-wash)] px-2.5 py-2 text-xs text-[var(--ax-muted-strong)]">
+              <p className="font-semibold text-[var(--ax-primary)]">
+                {statusLabel(preview.acquisitionStatus)}
+                {stars(preview.acquisitionPriority) ? ` · ${stars(preview.acquisitionPriority)}` : ''}
+              </p>
+              <p className="mt-1">
+                Desired: {preview.desiredLocationPath || 'No desired location'}
+                {(preview.idealPurchasePrice || preview.maximumPurchasePrice) && ` · target ${preview.idealPurchasePrice || '—'} / max ${preview.maximumPurchasePrice || '—'}`}
+              </p>
+            </div>
+          )}
           <Link href={preview.href || href} className="inline-flex justify-self-start rounded-md border border-[color:var(--ax-border)] bg-[var(--ax-primary-wash)] px-2.5 py-1.5 text-xs font-semibold text-[var(--ax-primary)] underline">
             Open plant
           </Link>

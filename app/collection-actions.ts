@@ -95,6 +95,7 @@ export async function saveCollectionSettings(fd: FormData) {
       visibility: val(fd, 'visibility') === 'PUBLIC' ? 'PUBLIC' : 'PRIVATE',
       description: val(fd, 'description'),
       aiBriefingEnabled: collection.aiFeaturesEnabled && val(fd, 'aiBriefingEnabled') === 'on',
+      acquisitionVisibility: ['PRIVATE', 'MEMBERS', 'PUBLIC'].includes(val(fd, 'acquisitionVisibility') || '') ? val(fd, 'acquisitionVisibility')! : 'PRIVATE',
     } })
     await emitDomainEvent(tx, {
       eventType: 'collection.updated', collectionId: collection.id, aggregateId: collection.id, actor: { id: user.id, role: user.role },

@@ -12,11 +12,25 @@ import { collectionPath, requireCollectionAdmin } from '@/lib/collections'
 import { HusbandryBadges, HusbandryGuideView } from '@/components/Husbandry'
 import { HusbandryMagicFillButton } from '@/components/HusbandryMagicFillButton'
 import { husbandryFieldNames } from '@/lib/husbandry'
+import { locationPath } from '@/lib/locations'
 import { findMatchingValidatedDefinition } from '@/lib/validated-definitions'
 import { plantName } from '@/lib/utils'
 import { collectionRoleAtLeast, isServerAdminRole } from '@/lib/roles'
 
 const selectClass = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
+
+const acquisitionStatuses = [
+  ['RESEARCHING', 'Researching'],
+  ['WISHLIST', 'Wishlist'],
+  ['ACTIVELY_SEEKING', 'Actively seeking'],
+  ['ON_HOLD', 'On hold'],
+  ['FULFILLED', 'Fulfilled'],
+  ['NO_LONGER_INTERESTED', 'No longer interested'],
+] as const
+
+function preferredVendors(value: unknown) {
+  return Array.isArray(value) ? value.map((item) => String(item)).filter(Boolean).join('\n') : ''
+}
 
 const uploadErrorMessages: Record<string, string> = {
   missing_photo: 'Choose an image file before uploading.',
@@ -36,7 +50,7 @@ export default async function EditPlant({
   const canManageImages = isServerAdminRole(user.role) || collectionRoleAtLeast(role, 'MANAGER')
   const { id } = await params
   const { uploadError } = await searchParams
-  const [plant, bodies, typePhotos, definitionSuggestionRows, guideSourceOptions, mergeTargetOptions, fertilizerRecipes] = await Promise.all([
+  const [plant, bodies, typePhotos, definitionSuggestionRows, guideSourceOptions, mergeTargetOptions, fertilizerRecipes, locations] = await Promise.all([
     prisma.plantDefinition.findFirstOrThrow({
       where: { id, collectionId: collection.id },
       include: {
@@ -78,7 +92,21 @@ export default async function EditPlant({
       where: { collectionId: collection.id, active: true },
       orderBy: [{ draft: 'asc' }, { name: 'asc' }],
     }),
+    prisma.location.findMany({
+      where: { collectionId: collection.id, status: 'ACTIVE' },
+      include: { locationType: true },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+    }),
   ])
+  const locationNodes = locations.map((location) => ({
+    id: location.id,
+    parentLocationId: location.parentLocationId,
+    name: location.name,
+    code: location.code,
+    status: location.status,
+    sortOrder: location.sortOrder,
+    locationType: location.locationType,
+  }))
   const currentTypePhoto = typePhotos[0]
   const sourceDefinition = plant.husbandryGuide?.sourcePlantDefinitionId
     ? await prisma.plantDefinition.findFirst({
@@ -151,6 +179,46 @@ export default async function EditPlant({
           <Field label="GBIF URL" help="Optional GBIF link for occurrence records, taxonomy backbone data, and biodiversity references." name="gbifUrl" type="url" defaultValue={plant.gbifUrl} />
           <AIDescriptionField defaultValue={plant.description} wrapperClassName="lg:col-span-2" />
           <TextArea label="Notes" name="notes" defaultValue={plant.notes} wrapperClassName="lg:col-span-2" />
+          <div className="rounded-lg border border-[#d6dfc9] bg-[#f7f4e8]/80 p-3 lg:col-span-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h3 className="font-serif text-xl font-semibold">Acquisition pipeline</h3>
+                <p className="mt-1 text-sm text-stone-600">Track pre-accession intent separately from owned specimens.</p>
+              </div>
+              <a className="text-sm font-semibold text-[#2f6b45] underline" href={collectionPath(collection.slug, `/acquisitions?definition=${plant.id}`)}>Open pipeline</a>
+            </div>
+            <div className="mt-3 grid gap-3 lg:grid-cols-4">
+              <label className="grid gap-1 text-sm font-medium text-stone-800">
+                Acquisition status
+                <select className={selectClass} name="acquisitionStatus" defaultValue={plant.acquisitionStatus || ''}>
+                  <option value="">No acquisition intent</option>
+                  {acquisitionStatuses.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                </select>
+              </label>
+              <label className="grid gap-1 text-sm font-medium text-stone-800">
+                Priority
+                <select className={selectClass} name="acquisitionPriority" defaultValue={String(plant.acquisitionPriority || '')}>
+                  <option value="">—</option>
+                  {[5, 4, 3, 2, 1].map((value) => <option key={value} value={value}>{'★'.repeat(value)}{'☆'.repeat(5 - value)} {value}</option>)}
+                </select>
+              </label>
+              <Field label="Desired specimen size" name="desiredSpecimenSize" defaultValue={plant.desiredSpecimenSize} />
+              <Field label="Ideal purchase price" name="idealPurchasePrice" type="number" step="0.01" defaultValue={plant.idealPurchasePrice ? String(plant.idealPurchasePrice) : ''} />
+              <Field label="Maximum purchase price" name="maximumPurchasePrice" type="number" step="0.01" defaultValue={plant.maximumPurchasePrice ? String(plant.maximumPurchasePrice) : ''} />
+              <label className="grid gap-1 text-sm font-medium text-stone-800 lg:col-span-2">
+                Desired location
+                <select className={selectClass} name="desiredLocationId" defaultValue={plant.desiredLocationId || ''}>
+                  <option value="">No desired location</option>
+                  {locationNodes.map((location) => (
+                    <option key={location.id} value={location.id}>{location.code} · {locationPath(location.id, locationNodes)}</option>
+                  ))}
+                </select>
+              </label>
+              <TextArea label="Preferred vendors" name="preferredVendors" defaultValue={preferredVendors(plant.preferredVendorsJson)} wrapperClassName="lg:col-span-2" />
+              <TextArea label="Personal interest notes" name="acquisitionInterestNotes" defaultValue={plant.acquisitionInterestNotes} wrapperClassName="lg:col-span-2" />
+              <TextArea label="Research summary" name="acquisitionResearchSummary" defaultValue={plant.acquisitionResearchSummary} wrapperClassName="lg:col-span-4" />
+            </div>
+          </div>
           <PlantAliasFields aliases={plant.aliases} submitLabel="Save changes" sourceSuggestions={definitionSuggestions.aliasSource} />
         </form>
       </Card>

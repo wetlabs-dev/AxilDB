@@ -29,6 +29,7 @@ import {
   Menu,
   Search,
   Settings,
+  ShoppingBag,
   ShieldCheck,
   Sprout,
   Tag,
@@ -69,6 +70,7 @@ const navSections = [
     label: 'Collection',
     items: [
       ['/plants', 'Plant Definitions', Leaf],
+      ['/acquisitions', 'Acquisitions', ShoppingBag],
       ['/instances', 'Plant Instances', Sprout],
       ['/locations', 'Locations', MapPinned],
       ['/propagations', 'Propagations', GitBranch],

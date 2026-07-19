@@ -1,0 +1,393 @@
+'use server'
+
+import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
+import { prisma } from '@/lib/prisma'
+import { audit } from '@/lib/auth'
+import { collectionPath, requireCollectionLogger, requireCollectionManager } from '@/lib/collections'
+import { emitDomainEvent } from '@/lib/events/emit'
+import { generatePlantId } from '@/lib/plant-id'
+import { plantName } from '@/lib/utils'
+import type { AcquisitionAvailability, AcquisitionFulfillmentChoice, AcquisitionStatus } from '@prisma/client'
+
+const val = (fd: FormData, key: string) => String(fd.get(key) || '').trim() || undefined
+const clearableVal = (fd: FormData, key: string) => fd.has(key) ? val(fd, key) || null : undefined
+const date = (value?: string) => value ? new Date(value) : undefined
+const dec = (value?: string) => value ? value : undefined
+const boundedInt = (value: string | undefined, fallback: number, min: number, max: number) => {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return fallback
+  return Math.max(min, Math.min(max, Math.floor(parsed)))
+}
+const back = (fd: FormData, fallback: string) => val(fd, 'back') || fallback
+
+const acquisitionStatuses = new Set<AcquisitionStatus>([
+  'RESEARCHING',
+  'WISHLIST',
+  'ACTIVELY_SEEKING',
+  'ON_HOLD',
+  'FULFILLED',
+  'NO_LONGER_INTERESTED',
+])
+const availabilities = new Set<AcquisitionAvailability>(['PLENTY', 'LIMITED', 'LAST_ONE', 'SOLD_OUT', 'UNKNOWN'])
+const fulfillmentChoices = new Set<AcquisitionFulfillmentChoice>(['FULFILLED', 'KEEP_ACTIVE', 'REPEAT_PURCHASE'])
+
+function statusValue(input?: string | null): AcquisitionStatus | null {
+  if (!input) return null
+  const normalized = input.toUpperCase().replaceAll('-', '_') as AcquisitionStatus
+  return acquisitionStatuses.has(normalized) ? normalized : null
+}
+
+function availabilityValue(input?: string | null): AcquisitionAvailability {
+  const normalized = String(input || '').toUpperCase().replaceAll('-', '_') as AcquisitionAvailability
+  return availabilities.has(normalized) ? normalized : 'UNKNOWN'
+}
+
+function fulfillmentValue(input?: string | null): AcquisitionFulfillmentChoice {
+  const normalized = String(input || '').toUpperCase().replaceAll('-', '_') as AcquisitionFulfillmentChoice
+  return fulfillmentChoices.has(normalized) ? normalized : 'FULFILLED'
+}
+
+function jsonList(value?: string | null) {
+  const items = String(value || '')
+    .split(/\r?\n|,/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+  return items.length ? items : undefined
+}
+
+async function scopedDefinition(collectionId: string, id: string) {
+  return prisma.plantDefinition.findFirstOrThrow({
+    where: { id, collectionId },
+    include: { desiredLocation: true },
+  })
+}
+
+export async function createAcquisitionTarget(fd: FormData) {
+  const { user, collection } = await requireCollectionLogger(val(fd, 'collectionSlug'))
+  const genus = val(fd, 'genus')
+  if (!genus) throw new Error('Genus is required.')
+  const species = (val(fd, 'species') || 'sp.').toLowerCase()
+  const status = statusValue(val(fd, 'acquisitionStatus')) || 'WISHLIST'
+  const priority = boundedInt(val(fd, 'acquisitionPriority'), 3, 1, 5)
+  const desiredLocationId = clearableVal(fd, 'desiredLocationId')
+  if (desiredLocationId) {
+    await prisma.location.findFirstOrThrow({ where: { id: desiredLocationId, collectionId: collection.id, status: 'ACTIVE' }, select: { id: true } })
+  }
+
+  const created = await prisma.$transaction(async (tx) => {
+    const definition = await tx.plantDefinition.create({
+      data: {
+        collectionId: collection.id,
+        genus,
+        species,
+        cultivarName: clearableVal(fd, 'cultivarName'),
+        acquisitionLabel: clearableVal(fd, 'acquisitionLabel'),
+        confidence: 'UNCERTAIN',
+        acquisitionStatus: status,
+        acquisitionPriority: priority,
+        acquisitionInterestNotes: clearableVal(fd, 'acquisitionInterestNotes'),
+        desiredSpecimenSize: clearableVal(fd, 'desiredSpecimenSize'),
+        idealPurchasePrice: dec(val(fd, 'idealPurchasePrice')) as any,
+        maximumPurchasePrice: dec(val(fd, 'maximumPurchasePrice')) as any,
+        desiredLocationId,
+        preferredVendorsJson: (jsonList(val(fd, 'preferredVendors')) || null) as any,
+        acquisitionResearchSummary: clearableVal(fd, 'acquisitionResearchSummary'),
+      },
+    })
+    await emitDomainEvent(tx, {
+      eventType: 'acquisition.intent_updated',
+      collectionId: collection.id,
+      aggregateId: definition.id,
+      actor: { id: user.id, role: user.role },
+      idempotencyKey: `acquisition:${definition.id}:created`,
+      payload: {
+        subjectId: definition.id,
+        displayName: plantName(definition),
+        title: 'Added acquisition target',
+        status,
+        priority,
+      },
+    })
+    return definition
+  })
+  await audit(user, 'CREATE', 'PLANT_DEFINITION', created.id, `Added acquisition target ${plantName(created)}`, { acquisitionStatus: status }, collection.id)
+  revalidatePath(collectionPath(collection.slug, '/acquisitions'))
+  redirect(collectionPath(collection.slug, `/acquisitions?definition=${created.id}`))
+}
+
+export async function updateAcquisitionIntent(fd: FormData) {
+  const { user, collection } = await requireCollectionLogger(val(fd, 'collectionSlug'))
+  const id = val(fd, 'plantDefinitionId')!
+  await scopedDefinition(collection.id, id)
+  const status = statusValue(val(fd, 'acquisitionStatus'))
+  const priority = boundedInt(val(fd, 'acquisitionPriority'), 3, 1, 5)
+  const desiredLocationId = clearableVal(fd, 'desiredLocationId')
+  if (desiredLocationId) {
+    await prisma.location.findFirstOrThrow({ where: { id: desiredLocationId, collectionId: collection.id, status: 'ACTIVE' }, select: { id: true } })
+  }
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const definition = await tx.plantDefinition.update({
+      where: { id },
+      data: {
+        acquisitionStatus: status,
+        acquisitionPriority: priority,
+        acquisitionInterestNotes: clearableVal(fd, 'acquisitionInterestNotes'),
+        desiredSpecimenSize: clearableVal(fd, 'desiredSpecimenSize'),
+        idealPurchasePrice: dec(val(fd, 'idealPurchasePrice')) as any,
+        maximumPurchasePrice: dec(val(fd, 'maximumPurchasePrice')) as any,
+        desiredLocationId,
+        preferredVendorsJson: (jsonList(val(fd, 'preferredVendors')) || null) as any,
+        acquisitionResearchSummary: clearableVal(fd, 'acquisitionResearchSummary'),
+      },
+    })
+    await emitDomainEvent(tx, {
+      eventType: 'acquisition.intent_updated',
+      collectionId: collection.id,
+      aggregateId: id,
+      actor: { id: user.id, role: user.role },
+      idempotencyKey: `acquisition:${id}:intent:${definition.updatedAt.toISOString()}`,
+      payload: {
+        subjectId: id,
+        displayName: plantName(definition),
+        title: 'Acquisition intent updated',
+        status,
+        priority,
+      },
+    })
+    return definition
+  })
+  await audit(user, 'UPDATE', 'PLANT_DEFINITION', id, `Updated acquisition intent for ${plantName(updated)}`, { acquisitionStatus: status, priority }, collection.id)
+  revalidatePath(collectionPath(collection.slug, '/acquisitions'))
+  redirect(back(fd, collectionPath(collection.slug, `/acquisitions?definition=${id}`)))
+}
+
+export async function createAcquisitionResearchEntry(fd: FormData) {
+  const { user, collection } = await requireCollectionLogger(val(fd, 'collectionSlug'))
+  const plantDefinitionId = val(fd, 'plantDefinitionId')!
+  const definition = await scopedDefinition(collection.id, plantDefinitionId)
+  const title = val(fd, 'title') || 'Research note'
+  const body = val(fd, 'body')
+  if (!body) throw new Error('Research entry body is required.')
+  const occurredAt = date(val(fd, 'occurredAt')) || new Date()
+  const entry = await prisma.$transaction(async (tx) => {
+    const created = await tx.acquisitionResearchEntry.create({
+      data: {
+        collectionId: collection.id,
+        plantDefinitionId,
+        createdByUserId: user.id,
+        title,
+        body,
+        sourceCitation: clearableVal(fd, 'sourceCitation'),
+        urlsJson: jsonList(val(fd, 'urls')) as any,
+        occurredAt,
+      },
+    })
+    await emitDomainEvent(tx, {
+      eventType: 'acquisition.research_added',
+      collectionId: collection.id,
+      aggregateId: plantDefinitionId,
+      actor: { id: user.id, role: user.role },
+      occurredAt,
+      idempotencyKey: `acquisition:${plantDefinitionId}:research:${created.id}`,
+      payload: {
+        subjectId: plantDefinitionId,
+        recordId: created.id,
+        recordType: 'AcquisitionResearchEntry',
+        displayName: plantName(definition),
+        title,
+        summary: body,
+      },
+    })
+    return created
+  })
+  await audit(user, 'CREATE', 'ACQUISITION_RESEARCH_ENTRY', entry.id, `Added acquisition research for ${plantName(definition)}`, undefined, collection.id)
+  revalidatePath(collectionPath(collection.slug, '/acquisitions'))
+  redirect(back(fd, collectionPath(collection.slug, `/acquisitions?definition=${plantDefinitionId}`)))
+}
+
+export async function createPlantObservation(fd: FormData) {
+  const { user, collection } = await requireCollectionLogger(val(fd, 'collectionSlug'))
+  const plantDefinitionId = val(fd, 'plantDefinitionId')!
+  const definition = await scopedDefinition(collection.id, plantDefinitionId)
+  const observedAt = date(val(fd, 'observedAt')) || new Date()
+  const observation = await prisma.$transaction(async (tx) => {
+    const created = await tx.plantObservation.create({
+      data: {
+        collectionId: collection.id,
+        plantDefinitionId,
+        createdByUserId: user.id,
+        vendor: clearableVal(fd, 'vendor'),
+        observedAt,
+        observedPrice: dec(val(fd, 'observedPrice')) as any,
+        currency: val(fd, 'currency') || 'USD',
+        specimenSize: clearableVal(fd, 'specimenSize'),
+        condition: clearableVal(fd, 'condition'),
+        availability: availabilityValue(val(fd, 'availability')),
+        notes: clearableVal(fd, 'notes'),
+      },
+    })
+    await emitDomainEvent(tx, {
+      eventType: 'acquisition.observation_added',
+      collectionId: collection.id,
+      aggregateId: plantDefinitionId,
+      actor: { id: user.id, role: user.role },
+      occurredAt: observedAt,
+      idempotencyKey: `acquisition:${plantDefinitionId}:observation:${created.id}`,
+      payload: {
+        subjectId: plantDefinitionId,
+        recordId: created.id,
+        recordType: 'PlantObservation',
+        displayName: plantName(definition),
+        title: 'Plant observed',
+        vendor: created.vendor,
+        price: created.observedPrice,
+        summary: created.notes || created.vendor || undefined,
+      },
+    })
+    return created
+  })
+  await audit(user, 'CREATE', 'PLANT_OBSERVATION', observation.id, `Added plant observation for ${plantName(definition)}`, undefined, collection.id)
+  revalidatePath(collectionPath(collection.slug, '/acquisitions'))
+  redirect(back(fd, collectionPath(collection.slug, `/acquisitions?definition=${plantDefinitionId}`)))
+}
+
+export async function createPlantAcquisitionRecord(fd: FormData) {
+  const { user, collection } = await requireCollectionLogger(val(fd, 'collectionSlug'))
+  const plantDefinitionId = val(fd, 'plantDefinitionId')!
+  const definition = await scopedDefinition(collection.id, plantDefinitionId)
+  const acquiredAt = date(val(fd, 'acquiredAt')) || new Date()
+  const quantity = boundedInt(val(fd, 'quantity'), 1, 1, 50)
+  const createInstances = val(fd, 'createInstances') !== '0'
+  const instanceType = val(fd, 'instanceType') || 'MOTHER'
+  const initialLocationId = clearableVal(fd, 'initialLocationId') || definition.desiredLocationId || null
+  const location = initialLocationId
+    ? await prisma.location.findFirstOrThrow({ where: { id: initialLocationId, collectionId: collection.id, status: 'ACTIVE' } })
+    : null
+  const observationId = clearableVal(fd, 'observationId')
+  if (observationId) {
+    await prisma.plantObservation.findFirstOrThrow({ where: { id: observationId, collectionId: collection.id, plantDefinitionId }, select: { id: true } })
+  }
+  const fulfillmentChoice = fulfillmentValue(val(fd, 'fulfillmentChoice'))
+
+  const result = await prisma.$transaction(async (tx) => {
+    const record = await tx.plantAcquisitionRecord.create({
+      data: {
+        collectionId: collection.id,
+        plantDefinitionId,
+        createdByUserId: user.id,
+        observationId,
+        vendor: clearableVal(fd, 'vendor'),
+        acquiredAt,
+        price: dec(val(fd, 'price')) as any,
+        currency: val(fd, 'currency') || 'USD',
+        quantity,
+        specimenSize: clearableVal(fd, 'specimenSize'),
+        potSize: clearableVal(fd, 'potSize'),
+        initialLocationId: location?.id || null,
+        notes: clearableVal(fd, 'notes'),
+        fulfillmentChoice,
+      },
+    })
+
+    const createdInstances = []
+    if (createInstances) {
+      for (let index = 0; index < quantity; index += 1) {
+        const plantId = await generatePlantId(tx as any, {
+          collectionId: collection.id,
+          plantDefinitionId,
+          instanceType,
+          date: acquiredAt,
+        })
+        const instance = await tx.plantInstance.create({
+          data: {
+            collectionId: collection.id,
+            plantDefinitionId,
+            plantId,
+            instanceType,
+            location: location?.name || null,
+            legacyLocationText: location?.name || null,
+            currentLocationId: location?.id || null,
+            acquisitionDate: acquiredAt,
+            source: val(fd, 'source') || val(fd, 'vendor'),
+            distributor: val(fd, 'vendor'),
+            purchasePrice: dec(val(fd, 'price')) as any,
+          },
+        })
+        await tx.plantAcquisitionRecordInstance.create({
+          data: { acquisitionRecordId: record.id, plantInstanceId: instance.id },
+        })
+        await emitDomainEvent(tx, {
+          eventType: 'plant.created',
+          collectionId: collection.id,
+          aggregateId: instance.id,
+          actor: { id: user.id, role: user.role },
+          occurredAt: acquiredAt,
+          idempotencyKey: `plant:${instance.id}:created`,
+          payload: {
+            subjectId: instance.id,
+            plantInstanceId: instance.id,
+            plantId: instance.plantId,
+            displayName: plantName(definition),
+            instanceType,
+            source: instance.source,
+            distributor: instance.distributor,
+            acquisitionRecordId: record.id,
+            location: location ? { id: location.id, name: location.name, code: location.code } : null,
+            summary: val(fd, 'notes') || undefined,
+          },
+        })
+        createdInstances.push(instance)
+      }
+    }
+
+    const nextStatus = fulfillmentChoice === 'FULFILLED'
+      ? 'FULFILLED'
+      : fulfillmentChoice === 'REPEAT_PURCHASE'
+        ? 'ACTIVELY_SEEKING'
+        : definition.acquisitionStatus
+    if (nextStatus !== definition.acquisitionStatus) {
+      await tx.plantDefinition.update({ where: { id: plantDefinitionId }, data: { acquisitionStatus: nextStatus } })
+    }
+
+    await emitDomainEvent(tx, {
+      eventType: 'acquisition.recorded',
+      collectionId: collection.id,
+      aggregateId: plantDefinitionId,
+      actor: { id: user.id, role: user.role },
+      occurredAt: acquiredAt,
+      idempotencyKey: `acquisition:${plantDefinitionId}:record:${record.id}`,
+      payload: {
+        subjectId: plantDefinitionId,
+        recordId: record.id,
+        recordType: 'PlantAcquisitionRecord',
+        displayName: plantName(definition),
+        title: 'Acquisition recorded',
+        quantity,
+        createdPlantInstanceIds: createdInstances.map((instance) => instance.id),
+        summary: val(fd, 'notes') || val(fd, 'vendor') || undefined,
+      },
+    })
+    return { record, createdInstances }
+  })
+
+  await audit(user, 'CREATE', 'PLANT_ACQUISITION_RECORD', result.record.id, `Recorded acquisition for ${plantName(definition)}`, { quantity, createdPlantInstances: result.createdInstances.length }, collection.id)
+  revalidatePath(collectionPath(collection.slug, '/acquisitions'))
+  revalidatePath(collectionPath(collection.slug, '/instances'))
+  redirect(back(fd, collectionPath(collection.slug, `/acquisitions?definition=${plantDefinitionId}`)))
+}
+
+export async function updateAcquisitionVisibility(fd: FormData) {
+  const { user, collection } = await requireCollectionManager(val(fd, 'collectionSlug'))
+  const visibility = ['PRIVATE', 'MEMBERS', 'PUBLIC'].includes(val(fd, 'acquisitionVisibility') || '')
+    ? val(fd, 'acquisitionVisibility')!
+    : 'PRIVATE'
+  const updated = await prisma.collection.update({
+    where: { id: collection.id },
+    data: { acquisitionVisibility: visibility },
+  })
+  await audit(user, 'UPDATE', 'COLLECTION', collection.id, `Updated acquisition pipeline visibility for ${collection.name}`, { acquisitionVisibility: visibility }, collection.id)
+  revalidatePath(collectionPath(updated.slug, '/collection-settings'))
+  redirect(collectionPath(updated.slug, '/collection-settings'))
+}

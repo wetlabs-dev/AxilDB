@@ -65,6 +65,28 @@ const clearableInt = (fd: FormData, k: string, min = 1, max = 365) => {
   if (!Number.isFinite(parsed)) return null
   return Math.max(min, Math.min(max, Math.floor(parsed)))
 }
+const acquisitionStatusValue = (fd: FormData, k = 'acquisitionStatus') => {
+  if (!fd.has(k)) return undefined
+  const value = val(fd, k)
+  if (!value) return null
+  return ['RESEARCHING', 'WISHLIST', 'ACTIVELY_SEEKING', 'ON_HOLD', 'FULFILLED', 'NO_LONGER_INTERESTED'].includes(value) ? value : null
+}
+const acquisitionPriorityValue = (fd: FormData, k = 'acquisitionPriority') => {
+  if (!fd.has(k)) return undefined
+  const value = val(fd, k)
+  if (!value) return null
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return null
+  return Math.max(1, Math.min(5, Math.floor(parsed)))
+}
+const jsonListValue = (fd: FormData, k: string) => {
+  if (!fd.has(k)) return undefined
+  const items = String(fd.get(k) || '')
+    .split(/\r?\n|,/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+  return items.length ? items : null
+}
 const back = (fd: FormData) => val(fd, 'back') || '/'
 const collectionSlug = async (fd: FormData) => val(fd, 'collectionSlug') || await getCurrentCollectionSlug()
 const revalidateDestination = (destination: string) => revalidatePath(destination.split('#')[0] || '/')
@@ -1220,6 +1242,15 @@ export async function createPlantDefinition(fd: FormData) {
         gbifUrl: clearableVal(fd, 'gbifUrl'),
         description: clearableVal(fd, 'description'),
         notes: clearableVal(fd, 'notes'),
+        acquisitionStatus: acquisitionStatusValue(fd) as any,
+        acquisitionPriority: acquisitionPriorityValue(fd),
+        acquisitionInterestNotes: clearableVal(fd, 'acquisitionInterestNotes'),
+        desiredSpecimenSize: clearableVal(fd, 'desiredSpecimenSize'),
+        idealPurchasePrice: clearableDec(fd, 'idealPurchasePrice') as any,
+        maximumPurchasePrice: clearableDec(fd, 'maximumPurchasePrice') as any,
+        desiredLocationId: clearableVal(fd, 'desiredLocationId'),
+        preferredVendorsJson: jsonListValue(fd, 'preferredVendors') as any,
+        acquisitionResearchSummary: clearableVal(fd, 'acquisitionResearchSummary'),
         aliases: { create: aliasRows(fd).map((alias) => ({ ...alias, collectionId: collection.id })) },
       },
     })
@@ -1646,6 +1677,15 @@ export async function updatePlantDefinition(fd: FormData) {
       gbifUrl: clearableVal(fd, 'gbifUrl'),
       description: clearableVal(fd, 'description'),
       notes: clearableVal(fd, 'notes'),
+      acquisitionStatus: acquisitionStatusValue(fd) as any,
+      acquisitionPriority: acquisitionPriorityValue(fd),
+      acquisitionInterestNotes: clearableVal(fd, 'acquisitionInterestNotes'),
+      desiredSpecimenSize: clearableVal(fd, 'desiredSpecimenSize'),
+      idealPurchasePrice: clearableDec(fd, 'idealPurchasePrice') as any,
+      maximumPurchasePrice: clearableDec(fd, 'maximumPurchasePrice') as any,
+      desiredLocationId: clearableVal(fd, 'desiredLocationId'),
+      preferredVendorsJson: jsonListValue(fd, 'preferredVendors') as any,
+      acquisitionResearchSummary: clearableVal(fd, 'acquisitionResearchSummary'),
       aliases: {
         deleteMany: {},
         create: aliasRows(fd).map((alias) => ({ ...alias, collectionId: collection.id })),
