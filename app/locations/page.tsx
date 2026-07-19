@@ -1,10 +1,12 @@
 import Link from 'next/link'
-import { batchMovePlantLocations, createLocation, createLocationType, movePlantInstanceLocation, updateLocationType } from '@/app/actions'
+import { batchMovePlantLocations, createLocation, createLocationType, updateLocationType } from '@/app/actions'
 import { AddPanel, Button, Card, Field, LinkButton, TextArea } from '@/components/ui'
 import { LocationDragDropManager } from '@/components/LocationDragDropManager'
+import { CompatibilityMoveForm } from '@/components/CompatibilityMoveForm'
 import { PlantIdPreviewLink } from '@/components/PlantIdPreviewLink'
 import { canEditInCollection, canManageCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { descendantLocationIds, locationPath, locationPathWithCodes } from '@/lib/locations'
+import { evaluatePlantLocationCompatibility, getEffectiveLocationEnvironment, getEffectivePlantEnvironmentRequirements } from '@/lib/location-compatibility'
 import { prisma } from '@/lib/prisma'
 import { plantName } from '@/lib/utils'
 
@@ -63,6 +65,24 @@ export default async function LocationsPage({
   const batchPreviewPlants = batchSourceLocation && batchDestinationLocation
     ? plants.filter((plant) => plant.currentLocationId && batchSourceIds.includes(plant.currentLocationId) && plant.currentLocationId !== batchDestinationLocation.id)
     : []
+  const batchDestinationEnvironment = batchDestinationLocation
+    ? await getEffectiveLocationEnvironment(prisma, collection.id, batchDestinationLocation.id)
+    : null
+  const batchCompatibility = batchDestinationEnvironment
+    ? await Promise.all(batchPreviewPlants.map(async (plant) => ({
+        plantId: plant.id,
+        result: evaluatePlantLocationCompatibility({
+          plantRequirements: await getEffectivePlantEnvironmentRequirements(prisma, collection.id, { plantInstanceId: plant.id }),
+          locationEnvironment: batchDestinationEnvironment,
+        }),
+      })))
+    : []
+  const batchCompatibilityByPlantId = new Map(batchCompatibility.map((item) => [item.plantId, item.result]))
+  const batchCompatibilityCounts = batchCompatibility.reduce((counts, item) => {
+    counts[item.result.overallStatus] += 1
+    return counts
+  }, { GOOD_MATCH: 0, CAUTION: 0, POOR_MATCH: 0, INSUFFICIENT_DATA: 0 })
+  const batchHasWarnings = batchCompatibilityCounts.CAUTION + batchCompatibilityCounts.POOR_MATCH > 0
   const dragDropLocations = activeLocations.map((location) => {
     const descendantIds = descendantLocationIds(location.id, activeLocations)
     const nestedPlantCount = plants.filter((plant) => plant.currentLocationId && descendantIds.has(plant.currentLocationId)).length
@@ -210,6 +230,12 @@ export default async function LocationsPage({
                 <p><span className="font-semibold">Destination:</span> {locationPathWithCodes(batchDestinationLocation.id, locationNodes)}</p>
                 <p><span className="font-semibold">Preview:</span> {batchPreviewPlants.length} plant{batchPreviewPlants.length === 1 ? '' : 's'}</p>
               </div>
+              <div className="mt-3 grid gap-2 text-sm sm:grid-cols-4">
+                <p className="rounded-md border border-[#a8c49a] bg-[#edf3e6] p-2"><strong>{batchCompatibilityCounts.GOOD_MATCH}</strong> good</p>
+                <p className="rounded-md border border-[#d8bb72] bg-[#fff7dc] p-2"><strong>{batchCompatibilityCounts.CAUTION}</strong> review</p>
+                <p className="rounded-md border border-[#c98b74] bg-[#fff0e8] p-2"><strong>{batchCompatibilityCounts.POOR_MATCH}</strong> poor match</p>
+                <p className="rounded-md border border-stone-300 bg-stone-100 p-2"><strong>{batchCompatibilityCounts.INSUFFICIENT_DATA}</strong> unknown</p>
+              </div>
               <div className="mt-3 grid gap-2">
                 {batchPreviewPlants.length === 0 && <p className="text-sm text-stone-600">No eligible active plants for this move.</p>}
                 {batchPreviewPlants.map((plant) => (
@@ -218,6 +244,7 @@ export default async function LocationsPage({
                     <span>
                       <span className="font-semibold">{plant.plantId}</span> · {plantName(plant.plantDefinition)}
                       <span className="block text-xs text-stone-500">{plant.currentLocation ? `${plant.currentLocation.code} ${plant.currentLocation.name}` : 'No location'}</span>
+                      {batchCompatibilityByPlantId.get(plant.id) && <span className="block text-xs font-semibold text-stone-600">Compatibility: {batchCompatibilityByPlantId.get(plant.id)!.overallStatus.replaceAll('_', ' ').toLowerCase()}</span>}
                     </span>
                   </label>
                 ))}
@@ -229,6 +256,12 @@ export default async function LocationsPage({
                   Confirm move
                 </label>
               </div>
+              {batchHasWarnings && (
+                <label className="mt-3 flex items-start gap-2 rounded-md border border-[#d8bb72] bg-[#fff7dc] px-3 py-2 text-sm font-medium text-[#71551b]">
+                  <input type="checkbox" name="compatibilityConfirm" value="yes" required />
+                  I reviewed the environmental cautions. Move these plants anyway.
+                </label>
+              )}
               <Button className="mt-3 px-3 py-2" disabled={batchPreviewPlants.length === 0}>Move selected plants</Button>
             </form>
           )}
@@ -241,22 +274,15 @@ export default async function LocationsPage({
           <p className="mt-1 text-sm text-stone-600">Gardeners can move plants between existing locations. Managers can restructure the location tree.</p>
           <div className="mt-4 grid gap-2">
             {plants.map((plant) => (
-              <form key={plant.id} action={movePlantInstanceLocation} className="grid gap-2 rounded-lg border border-stone-200 bg-white/50 p-3 md:grid-cols-[minmax(0,1fr)_minmax(12rem,20rem)_auto]">
-                <input type="hidden" name="collectionSlug" value={collection.slug} />
-                <input type="hidden" name="plantInstanceId" value={plant.id} />
-                <input type="hidden" name="back" value={collectionPath(collection.slug, '/locations')} />
+              <div key={plant.id} className="grid gap-2 rounded-lg border border-stone-200 bg-white/50 p-3 md:grid-cols-[minmax(0,1fr)_minmax(16rem,24rem)] md:items-center">
                 <div className="min-w-0">
                   <PlantIdPreviewLink collectionSlug={collection.slug} plantId={plant.plantId} href={collectionPath(collection.slug, `/instances/${plant.id}`)}>
                     {plant.plantId}
                   </PlantIdPreviewLink>
                   <p className="truncate text-sm text-stone-600">{plantName(plant.plantDefinition)} · {plant.currentLocation ? `${plant.currentLocation.code} ${plant.currentLocation.name}` : plant.location || 'No location'}</p>
                 </div>
-                <select className={selectClass} name="toLocationId" defaultValue={plant.currentLocationId || ''}>
-                  <option value="">No structured location</option>
-                  {locationNodes.map((location) => <option key={location.id} value={location.id}>{location.code} · {locationPath(location.id, locationNodes)}</option>)}
-                </select>
-                <Button className="px-3 py-1.5">Move</Button>
-              </form>
+                <CompatibilityMoveForm collectionSlug={collection.slug} plantInstanceId={plant.id} currentLocationId={plant.currentLocationId} locations={locationNodes.map((location) => ({ id: location.id, label: `${location.code} · ${locationPath(location.id, locationNodes)}` }))} />
+              </div>
             ))}
           </div>
         </Card>

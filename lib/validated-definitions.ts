@@ -1,5 +1,5 @@
 import type { Prisma, PrismaClient } from '@prisma/client'
-import { husbandryFieldNames } from '@/lib/husbandry'
+import { environmentalHusbandryFields, husbandryFieldNames } from '@/lib/husbandry'
 
 type DefinitionIdentity = {
   genus?: string | null
@@ -92,6 +92,7 @@ export function definitionData(source: any, overrides: Record<string, unknown> =
 export function husbandryData(source: any, overrides: Record<string, unknown> = {}) {
   return {
     ...Object.fromEntries(husbandryFieldNames.map((field) => [field, source?.[field] ?? null])),
+    ...Object.fromEntries(environmentalHusbandryFields.map((field) => [field, source?.[field] ?? null])),
     aiGeneratedAt: source?.aiGeneratedAt || null,
     aiModel: source?.aiModel || null,
     reviewStatus: source?.reviewStatus || 'DRAFT',

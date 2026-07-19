@@ -33,11 +33,12 @@ import { nextOccurrence } from '@/lib/reminders'
 import { notifySunshineManagers, validateSunshineTarget } from '@/lib/sunshine'
 import { addCalendarDays, calendarDayIndexInTimeZone, formatDate, parseDateLocal, parseDateTimeLocal, timeZoneForPreference } from '@/lib/time'
 import { plantName } from '@/lib/utils'
-import { husbandryFieldNames, husbandryFormValues } from '@/lib/husbandry'
+import { environmentalHusbandryFields, husbandryFieldNames, husbandryFormValues } from '@/lib/husbandry'
 import { definitionData, findMatchingValidatedDefinition, globalGoverningBodyId, husbandryData } from '@/lib/validated-definitions'
 import { recordValidatedDefinitionChange, snapshotValidatedDefinition, validatedDefinitionInclude } from '@/lib/collection-updates'
 import { collectionRoleAtLeast, isServerAdminRole } from '@/lib/roles'
 import { assertLocationParentAllowed, descendantLocationIds, isQuarantineLocation, nextLocationCode, normalizeQuarantineRiskLevel, quarantineChecklistItems } from '@/lib/locations'
+import { evaluatePlantLocationCompatibility, getEffectiveLocationEnvironment, getEffectivePlantEnvironmentRequirements } from '@/lib/location-compatibility'
 import { emitDomainEvent } from '@/lib/events/emit'
 
 const val = (fd: FormData, k: string) =>
@@ -867,6 +868,17 @@ export async function batchMovePlantLocations(fd: FormData) {
     orderBy: { plantId: 'asc' },
   })
   if (!plants.length) throw new Error('No eligible active plants remain for this batch move.')
+  const targetEnvironment = await getEffectiveLocationEnvironment(prisma, collection.id, target.id)
+  const compatibilityResults = await Promise.all(plants.map(async (plant) => ({
+    plant,
+    result: evaluatePlantLocationCompatibility({
+      plantRequirements: await getEffectivePlantEnvironmentRequirements(prisma, collection.id, { plantInstanceId: plant.id }),
+      locationEnvironment: targetEnvironment,
+    }),
+  })))
+  const compatibilityWarnings = compatibilityResults.filter((item) => item.result.overallStatus === 'CAUTION' || item.result.overallStatus === 'POOR_MATCH')
+  if (compatibilityWarnings.length && val(fd, 'compatibilityConfirm') !== 'yes') throw new Error('Review and confirm the location compatibility warnings before moving these plants.')
+  const compatibilityByPlantId = new Map(compatibilityResults.map((item) => [item.plant.id, item.result]))
   const correlationId = randomUUID()
   await prisma.$transaction(async (tx) => {
     for (const plant of plants) {
@@ -886,10 +898,18 @@ export async function batchMovePlantLocations(fd: FormData) {
         toLocationId: target.id,
         movedByUserId: user.id,
         notes: notes ? `Batch move: ${notes}` : `Batch move from ${source.name} to ${target.name}.`,
+        compatibilityStatus: compatibilityByPlantId.get(plant.id)?.overallStatus || null,
+        compatibilityAcknowledgedAt: compatibilityWarnings.some((entry) => entry.plant.id === plant.id) ? new Date() : null,
+        compatibilityNote: compatibilityWarnings.some((entry) => entry.plant.id === plant.id) ? notes || 'Compatibility warning acknowledged during batch move.' : null,
       } })
       await emitDomainEvent(tx, {
         eventType: 'plant.location_moved', collectionId: collection.id, aggregateId: plant.id, actor: { id: user.id, role: user.role }, correlationId,
         idempotencyKey: `location-move:${move.id}`, payload: { subjectId: move.id, recordId: move.id, recordType: 'PlantLocationMove', plantInstanceId: plant.id, plantId: plant.plantId, displayName: plant.plantId, fromLocation: { id: plant.currentLocationId, name: source.name, code: source.code }, toLocation: { id: target.id, name: target.name, code: target.code }, summary: notes || undefined },
+      })
+      if (compatibilityWarnings.some((entry) => entry.plant.id === plant.id)) await emitDomainEvent(tx, {
+        eventType: 'plant.location_compatibility_warning_acknowledged', collectionId: collection.id, aggregateId: plant.id,
+        actor: { id: user.id, role: user.role }, correlationId, causationId: move.id, idempotencyKey: `location-compatibility:${move.id}`,
+        payload: { subjectId: move.id, recordId: move.id, recordType: 'PlantLocationMove', plantInstanceId: plant.id, plantId: plant.plantId, displayName: plant.plantId, compatibilityStatus: compatibilityByPlantId.get(plant.id)?.overallStatus, toLocationId: target.id, summary: notes || undefined },
       })
     }
     await emitDomainEvent(tx, {
@@ -903,7 +923,7 @@ export async function batchMovePlantLocations(fd: FormData) {
     'PLANT_INSTANCE_LOCATION_BATCH',
     source.id,
     `Batch moved ${plants.length} plant${plants.length === 1 ? '' : 's'} from ${source.code} to ${target.code}`,
-    { sourceLocationId: source.id, toLocationId: target.id, scope, plantInstanceIds: plants.map((plant) => plant.id), notes },
+    { sourceLocationId: source.id, toLocationId: target.id, scope, plantInstanceIds: plants.map((plant) => plant.id), compatibilityWarningsAcknowledged: compatibilityWarnings.length, notes },
     collection.id,
   )
   redirect(back(fd) || collectionPath(collection.slug, '/locations'))
@@ -991,12 +1011,16 @@ export async function movePlantToLocation(input: {
   plantInstanceId: string
   destinationLocationId?: string | null
   note?: string | null
+  compatibilityAcknowledged?: boolean
+  compatibilityNote?: string | null
 }) {
   return batchMovePlantsToLocation({
     collectionSlug: input.collectionSlug,
     plantInstanceIds: [input.plantInstanceId],
     destinationLocationId: input.destinationLocationId || null,
     note: input.note || null,
+    compatibilityAcknowledged: input.compatibilityAcknowledged,
+    compatibilityNote: input.compatibilityNote,
   })
 }
 
@@ -1009,6 +1033,8 @@ export async function batchMovePlantsToLocation(input: {
   quarantineReason?: string | null
   quarantineRiskLevel?: string | null
   quarantineTargetReleaseDate?: string | null
+  compatibilityAcknowledged?: boolean
+  compatibilityNote?: string | null
 }) {
   const { user, collection } = await requireCollectionGardener(input.collectionSlug)
   const plantIds = Array.from(new Set(input.plantInstanceIds.filter(Boolean)))
@@ -1033,6 +1059,18 @@ export async function batchMovePlantsToLocation(input: {
     orderBy: { plantId: 'asc' },
   })
   if (!plants.length) throw new Error('No eligible active plants remain for this move.')
+  const targetEnvironment = target && !input.startQuarantine ? await getEffectiveLocationEnvironment(prisma, collection.id, target.id) : null
+  const compatibilityResults = targetEnvironment
+    ? await Promise.all(plants.map(async (plant) => {
+        const requirements = await getEffectivePlantEnvironmentRequirements(prisma, collection.id, { plantInstanceId: plant.id })
+        return { plant, result: evaluatePlantLocationCompatibility({ plantRequirements: requirements, locationEnvironment: targetEnvironment }) }
+      }))
+    : []
+  const warningResults = compatibilityResults.filter(({ result }) => result.overallStatus === 'CAUTION' || result.overallStatus === 'POOR_MATCH')
+  if (warningResults.length && !input.compatibilityAcknowledged) {
+    throw new Error(`${warningResults.length} plant${warningResults.length === 1 ? '' : 's'} need a location compatibility review before this move.`)
+  }
+  const compatibilityByPlantId = new Map(compatibilityResults.map(({ plant, result }) => [plant.id, result]))
   const existingQuarantines = input.startQuarantine
     ? await prisma.plantQuarantine.findMany({
         where: { collectionId: collection.id, plantInstanceId: { in: plants.map((plant) => plant.id) }, status: 'ACTIVE' },
@@ -1056,7 +1094,18 @@ export async function batchMovePlantsToLocation(input: {
         toLocationId: target?.id || null,
         movedByUserId: user.id,
         notes: input.note || null,
+        compatibilityStatus: compatibilityByPlantId.get(plant.id)?.overallStatus || (input.startQuarantine ? 'TEMPORARY_QUARANTINE' : null),
+        compatibilityAcknowledgedAt: warningResults.some((entry) => entry.plant.id === plant.id) ? new Date() : null,
+        compatibilityNote: warningResults.some((entry) => entry.plant.id === plant.id) ? input.compatibilityNote || input.note || null : null,
       } })
+      if (warningResults.some((entry) => entry.plant.id === plant.id)) {
+        await emitDomainEvent(tx, {
+          eventType: 'plant.location_compatibility_warning_acknowledged', collectionId: collection.id, aggregateId: plant.id,
+          actor: { id: user.id, role: user.role }, correlationId, causationId: move.id,
+          idempotencyKey: `location-compatibility:${move.id}`,
+          payload: { subjectId: move.id, recordId: move.id, recordType: 'PlantLocationMove', plantInstanceId: plant.id, plantId: plant.plantId, displayName: plant.plantId, compatibilityStatus: compatibilityByPlantId.get(plant.id)?.overallStatus, toLocationId: target?.id, summary: input.compatibilityNote || input.note || undefined },
+        })
+      }
       const from = plant.currentLocationId ? await tx.location.findUnique({ where: { id: plant.currentLocationId } }) : null
       await emitDomainEvent(tx, {
         eventType: 'plant.location_moved', collectionId: collection.id, aggregateId: plant.id, actor: { id: user.id, role: user.role }, correlationId,
@@ -1087,7 +1136,7 @@ export async function batchMovePlantsToLocation(input: {
     plants.length === 1 ? 'PLANT_INSTANCE_LOCATION' : 'PLANT_INSTANCE_LOCATION_BATCH',
     plants.length === 1 ? plants[0].id : target?.id || collection.id,
     `Moved ${plants.length} plant${plants.length === 1 ? '' : 's'} to ${target?.code || 'no location'}`,
-    { plantInstanceIds: plants.map((plant) => plant.id), toLocationId: target?.id || null, startQuarantine: Boolean(input.startQuarantine), note: input.note || null },
+    { plantInstanceIds: plants.map((plant) => plant.id), toLocationId: target?.id || null, startQuarantine: Boolean(input.startQuarantine), compatibilityWarningsAcknowledged: warningResults.length, compatibilityNote: input.compatibilityNote || null, note: input.note || null },
     collection.id,
   )
   revalidatePath(collectionPath(collection.slug, '/locations'))
@@ -1778,7 +1827,7 @@ export async function mergePlantDefinition(fd: FormData) {
       await tx.plantHusbandryGuide.update({
         where: { id: targetGuide.id },
         data: {
-          ...Object.fromEntries(husbandryFieldNames.map((field) => [field, (sourceGuide as any)[field] ?? null])),
+          ...Object.fromEntries([...husbandryFieldNames, ...environmentalHusbandryFields].map((field) => [field, (sourceGuide as any)[field] ?? null])),
           sourcePlantDefinitionId: sourceGuide.sourcePlantDefinitionId === target.id ? null : sourceGuide.sourcePlantDefinitionId,
           aiGeneratedAt: sourceGuide.aiGeneratedAt,
           aiModel: sourceGuide.aiModel,
@@ -2048,7 +2097,7 @@ export async function linkPlantHusbandryGuide(fd: FormData) {
     where: { plantDefinitionId },
     update: {
       sourcePlantDefinitionId,
-      ...Object.fromEntries(husbandryFieldNames.map((field) => [field, null])),
+      ...Object.fromEntries([...husbandryFieldNames, ...environmentalHusbandryFields].map((field) => [field, null])),
       reviewStatus: 'LINKED',
       reviewNotes: val(fd, 'reviewNotes') || 'Uses live-linked husbandry from another plant definition.',
       aiGeneratedAt: null,
@@ -2076,7 +2125,7 @@ export async function forkPlantHusbandryGuide(fd: FormData) {
     where: { collectionId: collection.id, plantDefinitionId: guide.sourcePlantDefinitionId },
   })
 
-  const data = Object.fromEntries(husbandryFieldNames.map((field) => [field, (source as any)[field] || null]))
+  const data = Object.fromEntries([...husbandryFieldNames, ...environmentalHusbandryFields].map((field) => [field, (source as any)[field] ?? null]))
   const updated = await prisma.plantHusbandryGuide.update({
     where: { id: guide.id },
     data: {

@@ -40,10 +40,14 @@ import { PhotoFramingEditor } from '@/components/PhotoFramingEditor'
 import { SunshineButton } from '@/components/SunshineButton'
 import { Button, Card, Field, Select, TextArea } from '@/components/ui'
 import { HusbandryBadges, HusbandryGuideView } from '@/components/Husbandry'
+import { PlantEnvironmentRequirementsForm } from '@/components/PlantEnvironmentRequirementsForm'
+import { PlantLocationCompatibilityPanel } from '@/components/PlantLocationCompatibilityPanel'
+import { savePlantInstanceEnvironmentRequirements } from '@/app/location-environment-actions'
 import { waterCadenceDays } from '@/lib/care-queue'
 import { getCurrentUser } from '@/lib/auth'
 import { canCreateInCollection, canEditInCollection, canManageCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { isQuarantineLocation, quarantineChecklistItems } from '@/lib/locations'
+import { evaluatePlantLocationCompatibility, getEffectiveLocationEnvironment, getEffectivePlantEnvironmentRequirements } from '@/lib/location-compatibility'
 import { expectedPlantIdForInstance } from '@/lib/plant-id'
 import { prisma } from '@/lib/prisma'
 import { recurrenceLabel, reminderCategories, reminderCategoryLabel, reminderRecurrences } from '@/lib/reminders'
@@ -197,6 +201,12 @@ export default async function InstanceDetail({
   const canRegeneratePlantId = canEditRecords && expectedPlantId !== i.plantId
   const baseHusbandryGuide = sourceHusbandryGuide || i.plantDefinition.husbandryGuide
   const effectiveHusbandry = mergeHusbandryValues(baseHusbandryGuide as any, i.husbandryOverride as any)
+  const locationCompatibility = i.currentLocationId
+    ? evaluatePlantLocationCompatibility({
+        plantRequirements: await getEffectivePlantEnvironmentRequirements(prisma, collection.id, { plantInstanceId: i.id }),
+        locationEnvironment: await getEffectiveLocationEnvironment(prisma, collection.id, i.currentLocationId),
+      })
+    : null
 
   const notes = await prisma.note.findMany({
     where: { ...collectionWhere, entityType: 'PLANT_INSTANCE', entityId: id },
@@ -961,6 +971,27 @@ export default async function InstanceDetail({
               </p>
               <HusbandryBadges values={effectiveHusbandry} />
               {effectiveHusbandry.summaryCare && <p className="mt-2 text-sm text-stone-700">{effectiveHusbandry.summaryCare}</p>}
+              <div id="environment-compatibility" className="mt-4 grid gap-3">
+                {locationCompatibility ? (
+                  <PlantLocationCompatibilityPanel result={locationCompatibility} />
+                ) : (
+                  <div className="rounded-lg border border-stone-300 bg-stone-100/80 p-3 text-sm text-stone-700">Assign a structured location to evaluate environmental compatibility.</div>
+                )}
+                {canCreateRecords && (
+                  <details className="rounded-lg border border-stone-200 bg-white/50 p-3">
+                    <summary className="cursor-pointer font-semibold">Specimen environmental override</summary>
+                    <div className="mt-4">
+                      <PlantEnvironmentRequirementsForm
+                        action={savePlantInstanceEnvironmentRequirements}
+                        collectionSlug={collection.slug}
+                        plantInstanceId={i.id}
+                        values={i.husbandryOverride}
+                        inheritedLabel="the plant definition's structured requirements"
+                      />
+                    </div>
+                  </details>
+                )}
+              </div>
               {canCreateRecords && (
                 <details className="group mt-4 rounded-lg border border-[#d6dfc9] bg-[#f7f4e8]/70">
                   <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-semibold">

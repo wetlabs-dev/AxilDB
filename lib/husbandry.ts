@@ -71,6 +71,14 @@ export type HusbandryValues = Partial<Record<HusbandryFieldName, string | null>>
 export type HusbandrySummaryField = 'summaryWater' | 'summaryLight' | 'summaryToxicity'
 export type HusbandrySummaryTone = 'blue' | 'green' | 'red' | 'yellow'
 
+export const environmentalHusbandryFields = [
+  'environmentTemperatureMinC', 'environmentTemperatureMaxC', 'environmentNightTemperatureMinC',
+  'environmentNightTemperatureMaxC', 'environmentHumidityMinPercent', 'environmentHumidityMaxPercent',
+  'environmentLightLevel', 'environmentLightExposure', 'environmentLightMinLux', 'environmentLightMaxLux',
+  'environmentPhotoperiodMinHours', 'environmentPhotoperiodMaxHours', 'environmentAirflowLevel',
+  'environmentStability', 'environmentAvoidDrafts', 'environmentSeasonalNotes',
+] as const
+
 export const husbandrySummaryChoices: Record<
   HusbandrySummaryField,
   Array<{ value: string; label: string; description: string; tone: HusbandrySummaryTone }>

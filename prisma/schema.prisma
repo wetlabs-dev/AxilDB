@@ -218,6 +218,7 @@ model Collection {
   plantInstances      PlantInstance[]
   locationTypes       LocationType[]
   locations           Location[]
+  locationEnvironmentProfiles LocationEnvironmentProfile[]
   plantLocationMoves  PlantLocationMove[]
   plantQuarantines    PlantQuarantine[]
   propagationEvents   PropagationEvent[]
@@ -1390,6 +1391,22 @@ model PlantHusbandryGuide {
   humidityRange           String?
   humidityDryAirTolerance String?
   humidityMistingNotes    String?
+  environmentTemperatureMinC Float?
+  environmentTemperatureMaxC Float?
+  environmentNightTemperatureMinC Float?
+  environmentNightTemperatureMaxC Float?
+  environmentHumidityMinPercent Float?
+  environmentHumidityMaxPercent Float?
+  environmentLightLevel String?
+  environmentLightExposure String?
+  environmentLightMinLux Int?
+  environmentLightMaxLux Int?
+  environmentPhotoperiodMinHours Float?
+  environmentPhotoperiodMaxHours Float?
+  environmentAirflowLevel String?
+  environmentStability String?
+  environmentAvoidDrafts Boolean?
+  environmentSeasonalNotes String?
   mediumPreferred         String?
   mediumPh                String?
   mediumDrainage          String?
@@ -1698,6 +1715,7 @@ model Location {
   quarantineRecords PlantQuarantine[]
   workflowRuns   WorkflowRun[]
   careScheduleSyncBatches CareScheduleSyncBatch[]
+  environmentProfile LocationEnvironmentProfile?
 
   @@unique([collectionId, code])
   @@index([collectionId])
@@ -1705,6 +1723,48 @@ model Location {
   @@index([locationTypeId])
   @@index([status])
   @@index([sortOrder])
+}
+
+model LocationEnvironmentProfile {
+  id                       String   @id @default(cuid())
+  collectionId             String
+  locationId               String   @unique
+  temperatureMinC          Float?
+  temperatureMaxC          Float?
+  nighttimeTemperatureMinC Float?
+  nighttimeTemperatureMaxC Float?
+  humidityMinPercent       Float?
+  humidityMaxPercent       Float?
+  lightLevel               String?
+  lightExposure            String?
+  lightMinLux              Int?
+  lightMaxLux              Int?
+  photoperiodHours         Float?
+  airflowLevel             String?
+  environmentStability     String?
+  supplementalLight        Boolean?
+  supplementalLightType    String?
+  supplementalHeat         Boolean?
+  humidification           Boolean?
+  dehumidification         Boolean?
+  activeAirflow            Boolean?
+  nearWindow               Boolean?
+  nearHvacVent             Boolean?
+  enclosed                 Boolean?
+  seasonalVariationNotes   String?
+  measurementSource        String?
+  measuredAt               DateTime?
+  confidence               String?
+  notes                    String?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  location   Location   @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@index([collectionId])
+  @@index([measurementSource])
+  @@index([measuredAt])
 }
 
 model PlantLocationMove {
@@ -1716,6 +1776,9 @@ model PlantLocationMove {
   movedByUserId   String?
   movedAt         DateTime @default(now())
   notes           String?
+  compatibilityStatus String?
+  compatibilityAcknowledgedAt DateTime?
+  compatibilityNote String?
 
   collection    Collection    @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   plantInstance PlantInstance @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
@@ -1792,6 +1855,22 @@ model PlantHusbandryOverride {
   humidityRange           String?
   humidityDryAirTolerance String?
   humidityMistingNotes    String?
+  environmentTemperatureMinC Float?
+  environmentTemperatureMaxC Float?
+  environmentNightTemperatureMinC Float?
+  environmentNightTemperatureMaxC Float?
+  environmentHumidityMinPercent Float?
+  environmentHumidityMaxPercent Float?
+  environmentLightLevel String?
+  environmentLightExposure String?
+  environmentLightMinLux Int?
+  environmentLightMaxLux Int?
+  environmentPhotoperiodMinHours Float?
+  environmentPhotoperiodMaxHours Float?
+  environmentAirflowLevel String?
+  environmentStability String?
+  environmentAvoidDrafts Boolean?
+  environmentSeasonalNotes String?
   mediumPreferred         String?
   mediumPh                String?
   mediumDrainage          String?

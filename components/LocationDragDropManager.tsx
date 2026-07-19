@@ -22,6 +22,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { batchMovePlantsToLocation, moveLocation, reorderLocations } from '@/app/actions'
+import { previewPlantLocationCompatibility } from '@/app/location-environment-actions'
 import { descendantLocationIds, isQuarantineLocation, locationPathWithCodes } from '@/lib/locations'
 
 type LocationItem = {
@@ -223,6 +224,26 @@ export function LocationDragDropManager({
   const movePlants = (plantIds: string[], toLocationId: string, startQuarantine = false, quarantine?: { reason: string; riskLevel: string; targetReleaseDate: string }) => {
     startTransition(async () => {
       try {
+        let compatibilityAcknowledged = false
+        let compatibilityNote: string | null = null
+        if (!startQuarantine) {
+          setStatus('Checking location compatibility...')
+          const preview = await previewPlantLocationCompatibility({ collectionSlug, locationId: toLocationId, plantInstanceIds: plantIds })
+          const warnings = preview.results.filter((result) => result.overallStatus === 'CAUTION' || result.overallStatus === 'POOR_MATCH')
+          if (warnings.length) {
+            const details = warnings.slice(0, 5).map((result) => {
+              const mismatches = result.checks.map((check) => check.category).join(', ')
+              return `${result.plantId}: ${result.overallStatus === 'POOR_MATCH' ? 'poor match' : 'review'}${mismatches ? ` (${mismatches})` : ''}`
+            }).join('\n')
+            const proceed = window.confirm(`${warnings.length} plant${warnings.length === 1 ? '' : 's'} need review before moving to ${preview.locationName}:\n\n${details}\n\nCompatibility guidance is advisory. Move anyway?`)
+            if (!proceed) {
+              setStatus('Move cancelled. Choose another location or review the plant requirements.')
+              return
+            }
+            compatibilityAcknowledged = true
+            compatibilityNote = 'Compatibility warning acknowledged during drag/drop move.'
+          }
+        }
         setStatus('Moving plants...')
         await batchMovePlantsToLocation({
           collectionSlug,
@@ -233,6 +254,8 @@ export function LocationDragDropManager({
           quarantineReason: quarantine?.reason,
           quarantineRiskLevel: quarantine?.riskLevel,
           quarantineTargetReleaseDate: quarantine?.targetReleaseDate,
+          compatibilityAcknowledged,
+          compatibilityNote,
         })
         setSelectedPlantIds([])
         setPendingQuarantineMove(null)

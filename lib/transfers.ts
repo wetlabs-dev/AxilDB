@@ -3,7 +3,7 @@ import path from 'path'
 import { randomUUID } from 'crypto'
 import type { Prisma, PrismaClient } from '@prisma/client'
 import { audit, type AuthUser } from '@/lib/auth'
-import { husbandryFieldNames } from '@/lib/husbandry'
+import { environmentalHusbandryFields, husbandryFieldNames } from '@/lib/husbandry'
 import { generatePlantId } from '@/lib/plant-id'
 import { prisma } from '@/lib/prisma'
 import { plantName } from '@/lib/utils'
@@ -47,9 +47,9 @@ async function copyPhotoAsset(photo: { path: string; filename: string }) {
 
 function husbandryData(source: Record<string, unknown> | null | undefined) {
   if (!source) return {}
-  const data: Record<string, string | null> = {}
-  for (const field of husbandryFieldNames) {
-    data[field] = (source[field] as string | null | undefined) || null
+  const data: Record<string, unknown> = {}
+  for (const field of [...husbandryFieldNames, ...environmentalHusbandryFields]) {
+    data[field] = source[field] ?? null
   }
   data.reviewStatus = (source.reviewStatus as string | null | undefined) || 'DRAFT'
   data.reviewNotes = (source.reviewNotes as string | null | undefined) || null

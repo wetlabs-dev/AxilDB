@@ -8,8 +8,11 @@ import {
 } from '@/app/acquisition-actions'
 import { Button, Card, Field, Select, TextArea, AddPanel, LinkButton } from '@/components/ui'
 import { PlantImage } from '@/components/PlantImage'
+import { PlantLocationCompatibilityPanel } from '@/components/PlantLocationCompatibilityPanel'
+import { LocationCompatibilitySelect } from '@/components/LocationCompatibilitySelect'
 import { collectionPath, requireCollectionViewer, canCreateInCollection } from '@/lib/collections'
 import { locationPath } from '@/lib/locations'
+import { evaluatePlantLocationCompatibility, getEffectiveLocationEnvironment, getEffectivePlantEnvironmentRequirements } from '@/lib/location-compatibility'
 import { prisma } from '@/lib/prisma'
 import { formatDate } from '@/lib/time'
 import { cn, plantName } from '@/lib/utils'
@@ -166,6 +169,12 @@ export default async function AcquisitionPipelinePage({
   const activeIntentCount = definitions.filter((definition) => !['FULFILLED', 'NO_LONGER_INTERESTED'].includes(definition.acquisitionStatus || '')).length
   const ownedCount = selected?.instances.filter((instance) => instance.status !== 'ARCHIVED').length || 0
   const selectedBack = collectionPath(collection.slug, `/acquisitions?definition=${selected?.id || ''}`)
+  const desiredLocationCompatibility = selected?.desiredLocationId
+    ? evaluatePlantLocationCompatibility({
+        plantRequirements: await getEffectivePlantEnvironmentRequirements(prisma, collection.id, { plantDefinitionId: selected.id }),
+        locationEnvironment: await getEffectiveLocationEnvironment(prisma, collection.id, selected.desiredLocationId),
+      })
+    : null
 
   return (
     <div className="space-y-6">
@@ -289,6 +298,13 @@ export default async function AcquisitionPipelinePage({
               </div>
             </Card>
 
+            {desiredLocationCompatibility && (
+              <PlantLocationCompatibilityPanel
+                result={desiredLocationCompatibility}
+                title={`Desired location: ${selected.desiredLocation?.code || 'location'}`}
+              />
+            )}
+
             {canEdit && (
               <Card>
                 <details>
@@ -307,10 +323,16 @@ export default async function AcquisitionPipelinePage({
                     <Field label="Desired size" name="desiredSpecimenSize" defaultValue={selected.desiredSpecimenSize} />
                     <Field label="Ideal price" name="idealPurchasePrice" type="number" step="0.01" defaultValue={selected.idealPurchasePrice ? String(selected.idealPurchasePrice) : ''} />
                     <Field label="Maximum price" name="maximumPurchasePrice" type="number" step="0.01" defaultValue={selected.maximumPurchasePrice ? String(selected.maximumPurchasePrice) : ''} />
-                    <Select label="Desired location" name="desiredLocationId" defaultValue={selected.desiredLocationId || ''} wrapperClassName="md:col-span-2">
-                      <option value="">No desired location</option>
-                      {locationNodes.map((location) => <option key={location.id} value={location.id}>{location.code} · {locationPath(location.id, locationNodes)}</option>)}
-                    </Select>
+                    <div className="md:col-span-2">
+                      <LocationCompatibilitySelect
+                        collectionSlug={collection.slug}
+                        name="desiredLocationId"
+                        label="Desired location"
+                        defaultValue={selected.desiredLocationId}
+                        plantDefinitionId={selected.id}
+                        locations={locationNodes.map((location) => ({ id: location.id, label: `${location.code} · ${locationPath(location.id, locationNodes)}` }))}
+                      />
+                    </div>
                     <TextArea label="Preferred vendors" name="preferredVendors" defaultValue={preferredVendors(selected.preferredVendorsJson).join('\n')} wrapperClassName="md:col-span-2" />
                     <TextArea label="Interest notes" name="acquisitionInterestNotes" defaultValue={selected.acquisitionInterestNotes} wrapperClassName="md:col-span-2" />
                     <TextArea label="Research summary" name="acquisitionResearchSummary" defaultValue={selected.acquisitionResearchSummary} wrapperClassName="md:col-span-4" />
@@ -368,10 +390,14 @@ export default async function AcquisitionPipelinePage({
                     <Field label="Quantity" name="quantity" type="number" min="1" max="50" defaultValue="1" />
                     <Field label="Specimen size" name="specimenSize" defaultValue={selected.desiredSpecimenSize || ''} />
                     <Field label="Pot size" name="potSize" />
-                    <Select label="Initial location" name="initialLocationId" defaultValue={selected.desiredLocationId || ''}>
-                      <option value="">No structured location</option>
-                      {locationNodes.map((location) => <option key={location.id} value={location.id}>{location.code} · {locationPath(location.id, locationNodes)}</option>)}
-                    </Select>
+                    <LocationCompatibilitySelect
+                      collectionSlug={collection.slug}
+                      name="initialLocationId"
+                      label="Initial location"
+                      defaultValue={selected.desiredLocationId}
+                      plantDefinitionId={selected.id}
+                      locations={locationNodes.map((location) => ({ id: location.id, label: `${location.code} · ${locationPath(location.id, locationNodes)}` }))}
+                    />
                     <Select label="Create instances" name="createInstances" defaultValue="1">
                       <option value="1">Create Plant Instance(s)</option>
                       <option value="0">Record purchase only</option>

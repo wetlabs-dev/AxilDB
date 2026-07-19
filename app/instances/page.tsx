@@ -1,6 +1,7 @@
 import { createLocation, createPlantInstance } from '@/app/actions'
 import { startWorkflowRun } from '@/app/workflow-actions'
 import { PlantImage } from '@/components/PlantImage'
+import { LocationCompatibilitySelect } from '@/components/LocationCompatibilitySelect'
 import { SortControl } from '@/components/SortControl'
 import { SunshineButton } from '@/components/SunshineButton'
 import { AddPanel, Button, Card, Field, HelpTooltip, SuggestionDatalist, TextArea } from '@/components/ui'
@@ -225,15 +226,12 @@ export default async function Instances({
               Plant ID will be generated automatically from the plant definition, relevant date, and record type.
             </p>
             <Field label="Location" name="location" list="instance-location-suggestions" />
-            <label className="grid gap-1 text-sm font-medium">
-              Structured location
-              <select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="currentLocationId" defaultValue="">
-                <option value="">No structured location</option>
-                {locationNodes.map((location) => (
-                  <option key={location.id} value={location.id}>{location.code} · {locationPath(location.id, locationNodes)}</option>
-                ))}
-              </select>
-            </label>
+            <LocationCompatibilitySelect
+              collectionSlug={collection.slug}
+              name="currentLocationId"
+              locations={locationNodes.map((location) => ({ id: location.id, label: `${location.code} · ${locationPath(location.id, locationNodes)}` }))}
+              definitionSelectName="plantDefinitionId"
+            />
             <Field label="Acquisition date" help="When this physical plant entered your collection." name="acquisitionDate" type="date" />
             <Field label="Propagation date" help="When this plant was propagated, if it was created from another plant." name="propagationDate" type="date" />
             <Field label="Source/propagator" help="Who produced or propagated the plant, or the immediate source of the plant material." name="source" list="instance-source-suggestions" />

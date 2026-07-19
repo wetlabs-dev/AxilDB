@@ -1,5 +1,6 @@
 import { createLocation, deletePlantInstance, restorePlantInstance, updatePlantInstance } from '@/app/actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
+import { LocationCompatibilitySelect } from '@/components/LocationCompatibilitySelect'
 import { Button, Card, Field, SuggestionDatalist, TextArea } from '@/components/ui'
 import { canManageCollection, collectionPath, requireCollectionAdmin } from '@/lib/collections'
 import { locationPath, locationPathWithCodes } from '@/lib/locations'
@@ -89,15 +90,13 @@ export default async function EditInstance({ params }: { params: Promise<{ id: s
             </select>
           </label>
           <Field label="Location" name="location" defaultValue={instance.location} list="instance-location-suggestions" />
-          <label className="grid gap-1 text-sm font-medium text-stone-800">
-            Structured location
-            <select className={selectClass} name="currentLocationId" defaultValue={instance.currentLocationId || ''}>
-              <option value="">No structured location</option>
-              {locationNodes.map((location) => (
-                <option key={location.id} value={location.id}>{location.code} · {locationPath(location.id, locationNodes)}</option>
-              ))}
-            </select>
-          </label>
+          <LocationCompatibilitySelect
+            collectionSlug={collection.slug}
+            name="currentLocationId"
+            defaultValue={instance.currentLocationId}
+            plantInstanceId={instance.id}
+            locations={locationNodes.map((location) => ({ id: location.id, label: `${location.code} · ${locationPath(location.id, locationNodes)}` }))}
+          />
           <Field label="Acquisition date" name="acquisitionDate" type="date" defaultValue={dateInput(instance.acquisitionDate)} />
           <Field label="Propagation date" name="propagationDate" type="date" defaultValue={dateInput(instance.propagationDate)} />
           <Field label="Source/propagator" name="source" defaultValue={instance.source} list="instance-source-suggestions" />

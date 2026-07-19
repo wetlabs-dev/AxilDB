@@ -11,6 +11,8 @@ import { PlantIdentificationAssistant } from '@/components/PlantIdentificationAs
 import { collectionPath, requireCollectionAdmin } from '@/lib/collections'
 import { HusbandryBadges, HusbandryGuideView } from '@/components/Husbandry'
 import { HusbandryMagicFillButton } from '@/components/HusbandryMagicFillButton'
+import { PlantEnvironmentRequirementsForm } from '@/components/PlantEnvironmentRequirementsForm'
+import { savePlantDefinitionEnvironmentRequirements } from '@/app/location-environment-actions'
 import { husbandryFieldNames } from '@/lib/husbandry'
 import { locationPath } from '@/lib/locations'
 import { findMatchingValidatedDefinition } from '@/lib/validated-definitions'
@@ -399,6 +401,22 @@ export default async function EditPlant({
               title="Create husbandry guide"
             />
           )}
+          <details id="environment-requirements" className="rounded-lg border border-[#d6dfc9] bg-[#f7f4e8]/70 p-3">
+            <summary className="cursor-pointer font-serif text-xl font-semibold">Environmental requirements</summary>
+            <p className="mt-1 text-sm text-stone-600">These structured fields power deterministic location compatibility checks. They supplement the readable husbandry guide.</p>
+            {sourceDefinition ? (
+              <p className="mt-3 rounded-md border border-stone-200 bg-white/55 p-3 text-sm">Environmental requirements are inherited from {plantName(sourceDefinition)}. Make a local copy above to override them.</p>
+            ) : (
+              <div className="mt-4">
+                <PlantEnvironmentRequirementsForm
+                  action={savePlantDefinitionEnvironmentRequirements}
+                  collectionSlug={collection.slug}
+                  plantDefinitionId={plant.id}
+                  values={plant.husbandryGuide}
+                />
+              </div>
+            )}
+          </details>
         </div>
       </Card>
       <Card>

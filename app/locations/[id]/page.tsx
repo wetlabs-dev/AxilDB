@@ -1,12 +1,16 @@
 import Link from 'next/link'
 import { RefreshCw } from 'lucide-react'
-import { archiveLocation, movePlantInstanceLocation, regenerateLocationCode, updateLocation } from '@/app/actions'
+import { archiveLocation, regenerateLocationCode, updateLocation } from '@/app/actions'
 import { startWorkflowRun } from '@/app/workflow-actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
+import { CompatibilityMoveForm } from '@/components/CompatibilityMoveForm'
+import { LocationEnvironmentForm } from '@/components/LocationEnvironmentForm'
 import { PlantIdPreviewLink } from '@/components/PlantIdPreviewLink'
+import { EffectiveEnvironmentSummary, PlantLocationCompatibilityPanel } from '@/components/PlantLocationCompatibilityPanel'
 import { Button, Card, Field, LinkButton, TextArea } from '@/components/ui'
 import { canCreateInCollection, canEditInCollection, canManageCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { descendantLocationIds, isQuarantineLocation, locationPath, locationPathWithCodes, nextLocationCode } from '@/lib/locations'
+import { evaluatePlantLocationCompatibility, getEffectiveLocationEnvironment, getEffectivePlantEnvironmentRequirements } from '@/lib/location-compatibility'
 import { prisma } from '@/lib/prisma'
 import { plantName } from '@/lib/utils'
 import { ensureStarterWorkflowTemplates } from '@/lib/workflows'
@@ -24,7 +28,7 @@ export default async function LocationDetail({ params }: { params: Promise<{ id:
   const [location, allLocations, types] = await Promise.all([
     prisma.location.findFirstOrThrow({
       where: { id, collectionId: collection.id },
-      include: { locationType: true, parentLocation: { include: { locationType: true } } },
+      include: { locationType: true, parentLocation: { include: { locationType: true } }, environmentProfile: true },
     }),
     prisma.location.findMany({
       where: { collectionId: collection.id },
@@ -88,6 +92,15 @@ export default async function LocationDetail({ params }: { params: Promise<{ id:
   const proposedLocationCode = canRegenerateLocationCode
     ? await nextLocationCode(prisma, collection.id, location.locationType.abbreviation)
     : location.code
+  const effectiveEnvironment = await getEffectiveLocationEnvironment(prisma, collection.id, location.id)
+  const directCompatibility = await Promise.all(directPlants.map(async (plant) => {
+    const requirements = await getEffectivePlantEnvironmentRequirements(prisma, collection.id, { plantInstanceId: plant.id })
+    return { plant, result: evaluatePlantLocationCompatibility({ plantRequirements: requirements, locationEnvironment: effectiveEnvironment }) }
+  }))
+  const compatibilityCounts = directCompatibility.reduce((counts, item) => {
+    counts[item.result.overallStatus] += 1
+    return counts
+  }, { GOOD_MATCH: 0, CAUTION: 0, POOR_MATCH: 0, INSUFFICIENT_DATA: 0 })
 
   return (
     <div className="space-y-6">
@@ -149,6 +162,44 @@ export default async function LocationDetail({ params }: { params: Promise<{ id:
           <p className="mt-2 text-3xl font-bold">{childLocations.length}</p>
         </Card>
       </div>
+
+      <Card id="environment">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="font-serif text-xl font-semibold">Environment</h3>
+            <p className="mt-1 text-sm text-stone-600">Effective conditions combine local values with the nearest configured ancestor.</p>
+          </div>
+          <span className="rounded-full border border-[#c7d8bd] bg-[#edf3e6] px-3 py-1 text-xs font-semibold text-[#2f6b45]">
+            {effectiveEnvironment.completeness.replaceAll('_', ' ').toLowerCase()}
+          </span>
+        </div>
+        <div className="mt-4">
+          <EffectiveEnvironmentSummary environment={effectiveEnvironment} />
+        </div>
+        {effectiveEnvironment.stale && <p className="mt-3 rounded-md border border-[#d8bb72] bg-[#fff7dc] px-3 py-2 text-sm text-[#71551b]">The newest effective measurement is more than one year old. Confirm that these conditions are still current.</p>}
+        <div className="mt-4 grid gap-2 sm:grid-cols-4">
+          <div className="rounded-md border border-stone-200 bg-white/55 p-3"><p className="text-xs text-stone-500">Good matches</p><p className="text-2xl font-bold">{compatibilityCounts.GOOD_MATCH}</p></div>
+          <div className="rounded-md border border-stone-200 bg-white/55 p-3"><p className="text-xs text-stone-500">Review</p><p className="text-2xl font-bold">{compatibilityCounts.CAUTION}</p></div>
+          <div className="rounded-md border border-stone-200 bg-white/55 p-3"><p className="text-xs text-stone-500">Poor matches</p><p className="text-2xl font-bold">{compatibilityCounts.POOR_MATCH}</p></div>
+          <div className="rounded-md border border-stone-200 bg-white/55 p-3"><p className="text-xs text-stone-500">Not enough data</p><p className="text-2xl font-bold">{compatibilityCounts.INSUFFICIENT_DATA}</p></div>
+        </div>
+        {directCompatibility.some((item) => item.result.overallStatus === 'CAUTION' || item.result.overallStatus === 'POOR_MATCH') && (
+          <details className="mt-4 rounded-lg border border-stone-200 bg-white/45 p-3">
+            <summary className="cursor-pointer font-semibold">Review affected plants</summary>
+            <div className="mt-3 grid gap-3">
+              {directCompatibility.filter((item) => ['CAUTION', 'POOR_MATCH'].includes(item.result.overallStatus)).map((item) => (
+                <PlantLocationCompatibilityPanel key={item.plant.id} result={item.result} title={`${item.plant.plantId} compatibility`} compact />
+              ))}
+            </div>
+          </details>
+        )}
+        {canManage && (
+          <details className="mt-4 rounded-lg border border-stone-200 bg-white/45 p-3">
+            <summary className="cursor-pointer font-semibold">Edit local environment profile</summary>
+            <div className="mt-4"><LocationEnvironmentForm collectionSlug={collection.slug} locationId={location.id} profile={location.environmentProfile} /></div>
+          </details>
+        )}
+      </Card>
 
       {(isQuarantine || activeQuarantines.length > 0) && (
         <Card>
@@ -235,16 +286,7 @@ export default async function LocationDetail({ params }: { params: Promise<{ id:
                   <p className="text-stone-600">{plantName(plant.plantDefinition)}</p>
                 </div>
                 {canMovePlants && (
-                  <form action={movePlantInstanceLocation} className="flex flex-wrap items-center gap-2">
-                    <input type="hidden" name="collectionSlug" value={collection.slug} />
-                    <input type="hidden" name="plantInstanceId" value={plant.id} />
-                    <input type="hidden" name="back" value={collectionPath(collection.slug, `/locations/${location.id}`)} />
-                    <select className={selectClass} name="toLocationId" defaultValue={location.id}>
-                      <option value="">No structured location</option>
-                      {locationNodes.map((option) => <option key={option.id} value={option.id}>{option.code} · {locationPath(option.id, locationNodes)}</option>)}
-                    </select>
-                    <Button className="px-3 py-1.5">Move</Button>
-                  </form>
+                  <CompatibilityMoveForm collectionSlug={collection.slug} plantInstanceId={plant.id} currentLocationId={location.id} locations={locationNodes.map((option) => ({ id: option.id, label: `${option.code} · ${locationPath(option.id, locationNodes)}` }))} />
                 )}
               </div>
             ))}
