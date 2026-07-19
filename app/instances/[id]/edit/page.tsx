@@ -45,8 +45,6 @@ export default async function EditInstance({ params }: { params: Promise<{ id: s
     locationType: location.locationType,
   }))
   const locationSuggestions = rankedSuggestions(instanceSuggestionRows.map((item) => item.location))
-  const sourceSuggestions = rankedSuggestions(instanceSuggestionRows.map((item) => item.source))
-  const distributorSuggestions = rankedSuggestions(instanceSuggestionRows.map((item) => item.distributor))
   const stockNumberSuggestions = rankedSuggestions(instanceSuggestionRows.map((item) => item.stockNumber))
 
   return (
@@ -55,8 +53,6 @@ export default async function EditInstance({ params }: { params: Promise<{ id: s
       <Card>
         <form action={updatePlantInstance} className="grid max-w-5xl gap-x-3 gap-y-2 lg:grid-cols-4">
           <SuggestionDatalist id="instance-location-suggestions" suggestions={locationSuggestions} />
-          <SuggestionDatalist id="instance-source-suggestions" suggestions={sourceSuggestions} />
-          <SuggestionDatalist id="instance-distributor-suggestions" suggestions={distributorSuggestions} />
           <SuggestionDatalist id="instance-stock-number-suggestions" suggestions={stockNumberSuggestions} />
           <input type="hidden" name="id" value={id} />
           <input type="hidden" name="collectionSlug" value={collection.slug} />
@@ -99,8 +95,10 @@ export default async function EditInstance({ params }: { params: Promise<{ id: s
           />
           <Field label="Acquisition date" name="acquisitionDate" type="date" defaultValue={dateInput(instance.acquisitionDate)} />
           <Field label="Propagation date" name="propagationDate" type="date" defaultValue={dateInput(instance.propagationDate)} />
-          <Field label="Source/propagator" name="source" defaultValue={instance.source} list="instance-source-suggestions" />
-          <Field label="Distributor" name="distributor" defaultValue={instance.distributor} list="instance-distributor-suggestions" />
+          <div className="rounded-md border border-stone-200 bg-[#f5f4e8] px-3 py-2 text-sm lg:col-span-2">
+            <span className="font-semibold">Acquisition provenance:</span> {instance.source || 'source unknown'} · {instance.distributor || 'distributor unknown'}
+            <a className="ml-2 font-semibold text-[#2f6b45] underline" href={collectionPath(collection.slug, `/acquisitions?definition=${instance.plantDefinitionId}`)}>Manage in Acquisition Pipeline</a>
+          </div>
           <Field label="Stock number" name="stockNumber" defaultValue={instance.stockNumber} list="instance-stock-number-suggestions" />
           <Field label="Purchase price" name="purchasePrice" type="number" defaultValue={instance.purchasePrice?.toString()} />
           <Field label="Archive reason" name="archiveReason" defaultValue={instance.archiveReason} />

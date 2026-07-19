@@ -77,7 +77,13 @@ export default async function SearchPage({
                 { plantId: contains(q) },
                 { location: contains(q) },
                 { source: contains(q) },
+                { distributor: contains(q) },
                 { stockNumber: contains(q) },
+                { acquisitionRecordLinks: { some: { acquisitionRecord: { OR: [
+                  { distributor: { name: contains(q) } },
+                  { distributorLocation: { name: contains(q) } },
+                  { sources: { some: { OR: [{ role: contains(q) }, { source: { name: contains(q) } }] } } },
+                ] } } } },
                 { plantDefinition: definitionSearch },
               ],
             }

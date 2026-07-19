@@ -4,6 +4,7 @@ import { subscribeToCollectionExhibit } from '@/app/exhibit-actions'
 import { PlantImage } from '@/components/PlantImage'
 import { cn, plantName, taxonomyLabel } from '@/lib/utils'
 import { formatDate } from '@/lib/time'
+import { distributorDisplay, sourceChainDisplay } from '@/lib/provenance'
 
 type DisplayExhibit = Awaited<ReturnType<typeof import('@/lib/exhibits').loadExhibitForDisplay>>
 
@@ -62,8 +63,9 @@ function DetailList({ items }: { items: Array<[string, string | null | undefined
   )
 }
 
-function PlantCard({ entry, settings, collectionSlug }: { entry: any; settings: any; collectionSlug?: string }) {
+function PlantCard({ entry, settings, collectionSlug, visibility }: { entry: any; settings: any; collectionSlug?: string; visibility: any }) {
   const plant = entry.plantInstance
+  const acquisition = plant.acquisitionRecordLinks?.[0]?.acquisitionRecord
   const openConditions = plant.conditions.filter((condition: any) => condition.status !== 'RESOLVED')
   const activeQuarantine = plant.quarantines.find((quarantine: any) => quarantine.status === 'ACTIVE')
   const timelineHighlights = [
@@ -102,8 +104,8 @@ function PlantCard({ entry, settings, collectionSlug }: { entry: any; settings: 
         items={[
           ['Location', settings.location ? entry.locationPath || 'No location set' : null],
           ['Acquired', settings.acquisitionSource ? formatDate(plant.acquisitionDate) : null],
-          ['Source', settings.acquisitionSource ? plant.source : null],
-          ['Distributor', settings.acquisitionSource ? plant.distributor : null],
+          ['Source', settings.acquisitionSource && visibility.showSourceProvenance ? sourceChainDisplay(acquisition?.sources || [], plant.source) : null],
+          ['Distributor', settings.acquisitionSource && visibility.showDistributorIdentity ? distributorDisplay(acquisition?.distributor, visibility.showDistributorLocation ? acquisition?.distributorLocation : null, plant.distributor) : null],
           ['Status', settings.archivedStatus ? formatStatus(plant.status) : null],
           ['Sunshine', settings.sunshine ? String(entry.sunshineCount || 0) : null],
         ]}
@@ -179,7 +181,7 @@ function PlantCard({ entry, settings, collectionSlug }: { entry: any; settings: 
   )
 }
 
-function DefinitionGroup({ group, settings, collectionSlug }: { group: any; settings: any; collectionSlug?: string }) {
+function DefinitionGroup({ group, settings, collectionSlug, visibility }: { group: any; settings: any; collectionSlug?: string; visibility: any }) {
   const definition = group.definition
   const aliases = textList(group.definition.aliases.map((alias: any) => alias.name))
   const guide = definition.husbandryGuide
@@ -234,7 +236,7 @@ function DefinitionGroup({ group, settings, collectionSlug }: { group: any; sett
       </div>
       <div className="grid gap-4">
         {group.entries.map((entry: any) => (
-          <PlantCard key={entry.id} entry={entry} settings={settings} collectionSlug={collectionSlug} />
+          <PlantCard key={entry.id} entry={entry} settings={settings} collectionSlug={collectionSlug} visibility={visibility} />
         ))}
       </div>
     </section>
@@ -322,7 +324,7 @@ export function CollectionExhibitView({
         )}
 
         <div className="grid gap-6">
-          {groups.map((group) => <DefinitionGroup key={group.definition.id} group={group} settings={settings} collectionSlug={staffCollectionSlug} />)}
+          {groups.map((group) => <DefinitionGroup key={group.definition.id} group={group} settings={settings} collectionSlug={staffCollectionSlug} visibility={exhibit.collection} />)}
         </div>
       </article>
     </main>

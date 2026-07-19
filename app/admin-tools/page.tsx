@@ -56,6 +56,12 @@ export default async function AdminToolsPage() {
       </Card>
 
       <Card>
+        <h3 className="font-bold">Export acquisition provenance</h3>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-stone-700">Download collection-private acquisition records with stable source, distributor, and outlet IDs; ordered source chains and roles; transaction details; legacy vendor text; and linked plant IDs.</p>
+        <div className="mt-4"><LinkButton href={`/api/exports/acquisition-provenance?collectionSlug=${encodeURIComponent(collection.slug)}`}>Download provenance CSV</LinkButton></div>
+      </Card>
+
+      <Card>
         <h3 className="font-bold">Populate demo data</h3>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-stone-700">
           Adds a new batch of realistic sample data based on real species, including taxonomy reference links,

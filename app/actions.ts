@@ -40,6 +40,7 @@ import { collectionRoleAtLeast, isServerAdminRole } from '@/lib/roles'
 import { assertLocationParentAllowed, descendantLocationIds, isQuarantineLocation, nextLocationCode, normalizeQuarantineRiskLevel, quarantineChecklistItems } from '@/lib/locations'
 import { evaluatePlantLocationCompatibility, getEffectiveLocationEnvironment, getEffectivePlantEnvironmentRequirements } from '@/lib/location-compatibility'
 import { emitDomainEvent } from '@/lib/events/emit'
+import { sourceRowsFromForm, validateDistributorSelection, validateSourceRows } from '@/lib/provenance'
 
 const val = (fd: FormData, k: string) =>
   String(fd.get(k) || '').trim() || undefined
@@ -2170,6 +2171,13 @@ export async function createPlantInstance(fd: FormData) {
   const currentLocation = currentLocationId
     ? await prisma.location.findFirstOrThrow({ where: { id: currentLocationId, collectionId: collection.id, status: 'ACTIVE' } })
     : null
+  const distributorId = clearableVal(fd, 'distributorId')
+  const distributorLocationId = clearableVal(fd, 'distributorLocationId')
+  const { distributor, location: distributorLocation } = await validateDistributorSelection(prisma, collection.id, distributorId, distributorLocationId)
+  const sourceRows = sourceRowsFromForm(fd)
+  const sourceRecords = await validateSourceRows(prisma, collection.id, sourceRows)
+  const sourceNames = new Map(sourceRecords.map((source) => [source.id, source.name]))
+  const primarySource = sourceRows.find((row) => row.isPrimary) || sourceRows[0]
   const plantId = await generatePlantId(prisma, {
     collectionId: collection.id,
     plantDefinitionId,
@@ -2188,8 +2196,8 @@ export async function createPlantInstance(fd: FormData) {
       currentLocationId: currentLocation?.id || null,
       acquisitionDate,
       propagationDate,
-      source: val(fd, 'source'),
-      distributor: val(fd, 'distributor'),
+      source: primarySource ? sourceNames.get(primarySource.sourceId) : val(fd, 'source'),
+      distributor: distributor?.name || val(fd, 'distributor'),
       stockNumber: val(fd, 'stockNumber'),
       purchasePrice: dec(val(fd, 'purchasePrice')) as any,
     } })
@@ -2197,6 +2205,24 @@ export async function createPlantInstance(fd: FormData) {
     if (note) await tx.note.create({
       data: { collectionId: collection.id, entityType: 'PLANT_INSTANCE', entityId: created.id, note },
     })
+    if (acquisitionDate || distributor || sourceRows.length || val(fd, 'purchasePrice')) {
+      const acquisition = await tx.plantAcquisitionRecord.create({ data: {
+        collectionId: collection.id,
+        plantDefinitionId,
+        createdByUserId: user.id,
+        vendor: distributor ? (distributorLocation ? `${distributor.name} — ${distributorLocation.name}` : distributor.name) : null,
+        distributorId: distributor?.id || null,
+        distributorLocationId: distributorLocation?.id || null,
+        acquiredAt: acquisitionDate || new Date(),
+        price: dec(val(fd, 'purchasePrice')) as any,
+        quantity: 1,
+        initialLocationId: currentLocation?.id || null,
+        notes: note || null,
+        fulfillmentChoice: 'FULFILLED',
+      } })
+      await tx.plantAcquisitionRecordInstance.create({ data: { acquisitionRecordId: acquisition.id, plantInstanceId: created.id } })
+      if (sourceRows.length) await tx.acquisitionSource.createMany({ data: sourceRows.map((row, sortOrder) => ({ collectionId: collection.id, acquisitionRecordId: acquisition.id, sourceId: row.sourceId, role: row.role, sortOrder, isPrimary: row.isPrimary || (sortOrder === 0 && !sourceRows.some((item) => item.isPrimary)), notes: row.notes })) })
+    }
     await emitDomainEvent(tx, {
       eventType: 'plant.created', collectionId: collection.id, aggregateId: created.id,
       actor: { id: user.id, role: user.role }, occurredAt: created.acquisitionDate || created.createdAt,

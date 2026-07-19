@@ -62,6 +62,7 @@ import { ensureStarterWorkflowTemplates } from '@/lib/workflows'
 import Link from 'next/link'
 import QRCode from 'qrcode'
 import { RefreshCw } from 'lucide-react'
+import { distributorDisplay, sourceChainDisplay } from '@/lib/provenance'
 
 const conditionCategories = [
   ['WILTING', 'Wilting'],
@@ -112,6 +113,10 @@ export default async function InstanceDetail({
   const i = await prisma.plantInstance.findFirstOrThrow({
     where: { id, ...collectionWhere },
     include: {
+      acquisitionRecordLinks: {
+        include: { acquisitionRecord: { include: { distributor: true, distributorLocation: true, sources: { include: { source: true }, orderBy: { sortOrder: 'asc' } } } } },
+        orderBy: { createdAt: 'desc' },
+      },
       plantDefinition: { include: { aliases: { orderBy: { name: 'asc' } }, husbandryGuide: { include: { fertilizerRecipe: true } } } },
       blooms: {
         orderBy: { bloomStartDate: 'desc' },
@@ -906,7 +911,8 @@ export default async function InstanceDetail({
           <p>Location: {i.currentLocation ? `${i.currentLocation.code} · ${i.currentLocation.name}` : i.location || '—'}</p>
           <p>Acquired: {fmtDate(i.acquisitionDate, timezone)}</p>
           <p>Propagated: {fmtDate(i.propagationDate, timezone)}</p>
-          <p>Source: {i.source || '—'}</p>
+          <p>Source: {sourceChainDisplay(i.acquisitionRecordLinks[0]?.acquisitionRecord.sources || [], i.source)}</p>
+          <p>Distributor: {distributorDisplay(i.acquisitionRecordLinks[0]?.acquisitionRecord.distributor, i.acquisitionRecordLinks[0]?.acquisitionRecord.distributorLocation, i.distributor)}</p>
           <p>Stock: {i.stockNumber || '—'}</p>
           <Link className="mt-3 inline-block underline" href={collectionPath(collection.slug, `/graphs?root=${i.id}`)}>
             View lineage graph

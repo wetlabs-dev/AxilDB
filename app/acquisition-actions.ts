@@ -8,6 +8,7 @@ import { collectionPath, requireCollectionLogger, requireCollectionManager } fro
 import { emitDomainEvent } from '@/lib/events/emit'
 import { generatePlantId } from '@/lib/plant-id'
 import { plantName } from '@/lib/utils'
+import { sourceRowsFromForm, validateDistributorSelection, validateSourceRows } from '@/lib/provenance'
 import type { AcquisitionAvailability, AcquisitionFulfillmentChoice, AcquisitionStatus } from '@prisma/client'
 
 const val = (fd: FormData, key: string) => String(fd.get(key) || '').trim() || undefined
@@ -212,13 +213,18 @@ export async function createPlantObservation(fd: FormData) {
   const plantDefinitionId = val(fd, 'plantDefinitionId')!
   const definition = await scopedDefinition(collection.id, plantDefinitionId)
   const observedAt = date(val(fd, 'observedAt')) || new Date()
+  const distributorId = clearableVal(fd, 'distributorId')
+  const distributorLocationId = clearableVal(fd, 'distributorLocationId')
+  const { distributor, location: distributorLocation } = await validateDistributorSelection(prisma, collection.id, distributorId, distributorLocationId)
   const observation = await prisma.$transaction(async (tx) => {
     const created = await tx.plantObservation.create({
       data: {
         collectionId: collection.id,
         plantDefinitionId,
         createdByUserId: user.id,
-        vendor: clearableVal(fd, 'vendor'),
+        vendor: distributor ? (distributorLocation ? `${distributor.name} — ${distributorLocation.name}` : distributor.name) : clearableVal(fd, 'vendor'),
+        distributorId: distributor?.id || null,
+        distributorLocationId: distributorLocation?.id || null,
         observedAt,
         observedPrice: dec(val(fd, 'observedPrice')) as any,
         currency: val(fd, 'currency') || 'USD',
@@ -270,6 +276,13 @@ export async function createPlantAcquisitionRecord(fd: FormData) {
     await prisma.plantObservation.findFirstOrThrow({ where: { id: observationId, collectionId: collection.id, plantDefinitionId }, select: { id: true } })
   }
   const fulfillmentChoice = fulfillmentValue(val(fd, 'fulfillmentChoice'))
+  const distributorId = clearableVal(fd, 'distributorId')
+  const distributorLocationId = clearableVal(fd, 'distributorLocationId')
+  const { distributor, location: distributorLocation } = await validateDistributorSelection(prisma, collection.id, distributorId, distributorLocationId)
+  const sourceRows = sourceRowsFromForm(fd)
+  const sourceRecords = await validateSourceRows(prisma, collection.id, sourceRows)
+  const sourceNames = new Map(sourceRecords.map((source) => [source.id, source.name]))
+  const primarySource = sourceRows.find((row) => row.isPrimary) || sourceRows[0]
 
   const result = await prisma.$transaction(async (tx) => {
     const record = await tx.plantAcquisitionRecord.create({
@@ -278,7 +291,9 @@ export async function createPlantAcquisitionRecord(fd: FormData) {
         plantDefinitionId,
         createdByUserId: user.id,
         observationId,
-        vendor: clearableVal(fd, 'vendor'),
+        vendor: distributor ? (distributorLocation ? `${distributor.name} — ${distributorLocation.name}` : distributor.name) : clearableVal(fd, 'vendor'),
+        distributorId: distributor?.id || null,
+        distributorLocationId: distributorLocation?.id || null,
         acquiredAt,
         price: dec(val(fd, 'price')) as any,
         currency: val(fd, 'currency') || 'USD',
@@ -290,6 +305,20 @@ export async function createPlantAcquisitionRecord(fd: FormData) {
         fulfillmentChoice,
       },
     })
+
+    if (sourceRows.length) {
+      await tx.acquisitionSource.createMany({
+        data: sourceRows.map((row, sortOrder) => ({
+          collectionId: collection.id,
+          acquisitionRecordId: record.id,
+          sourceId: row.sourceId,
+          role: row.role,
+          sortOrder,
+          isPrimary: row.isPrimary || (sortOrder === 0 && !sourceRows.some((item) => item.isPrimary)),
+          notes: row.notes,
+        })),
+      })
+    }
 
     const createdInstances = []
     if (createInstances) {
@@ -310,8 +339,8 @@ export async function createPlantAcquisitionRecord(fd: FormData) {
             legacyLocationText: location?.name || null,
             currentLocationId: location?.id || null,
             acquisitionDate: acquiredAt,
-            source: val(fd, 'source') || val(fd, 'vendor'),
-            distributor: val(fd, 'vendor'),
+            source: primarySource ? sourceNames.get(primarySource.sourceId) : distributor?.name || val(fd, 'source') || val(fd, 'vendor'),
+            distributor: distributor?.name || val(fd, 'vendor'),
             purchasePrice: dec(val(fd, 'price')) as any,
           },
         })
@@ -365,6 +394,9 @@ export async function createPlantAcquisitionRecord(fd: FormData) {
         displayName: plantName(definition),
         title: 'Acquisition recorded',
         quantity,
+        distributorId: distributor?.id,
+        distributorLocationId: distributorLocation?.id,
+        sourceIds: sourceRows.map((row) => row.sourceId),
         createdPlantInstanceIds: createdInstances.map((instance) => instance.id),
         summary: val(fd, 'notes') || val(fd, 'vendor') || undefined,
       },

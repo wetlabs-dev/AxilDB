@@ -177,6 +177,9 @@ model User {
   createdAcquisitionResearchEntries AcquisitionResearchEntry[] @relation("AcquisitionResearchEntryCreatedBy")
   createdPlantObservations PlantObservation[] @relation("PlantObservationCreatedBy")
   createdPlantAcquisitionRecords PlantAcquisitionRecord[] @relation("PlantAcquisitionRecordCreatedBy")
+  createdSources Source[] @relation("SourceCreatedBy")
+  createdDistributors Distributor[] @relation("DistributorCreatedBy")
+  resolvedProvenanceItems ProvenanceReconciliationItem[] @relation("ProvenanceReconciliationResolvedBy")
 
   @@index([role])
   @@index([emailVerifiedAt])
@@ -193,6 +196,9 @@ model Collection {
   aiFeaturesEnabled   Boolean                @default(true)
   aiBriefingEnabled   Boolean                @default(false)
   acquisitionVisibility String                @default("PRIVATE")
+  showSourceProvenance Boolean                @default(true)
+  showDistributorIdentity Boolean             @default(false)
+  showDistributorLocation Boolean             @default(false)
   description         String?
   archivedAt          DateTime?
   archivedById        String?
@@ -245,6 +251,11 @@ model Collection {
   acquisitionResearchEntries AcquisitionResearchEntry[]
   plantObservations   PlantObservation[]
   plantAcquisitionRecords PlantAcquisitionRecord[]
+  sources             Source[]
+  acquisitionSources  AcquisitionSource[]
+  distributors        Distributor[]
+  distributorLocations DistributorLocation[]
+  provenanceReconciliationItems ProvenanceReconciliationItem[]
   outgoingTransferConnections CollectionTransferConnection[] @relation("TransferConnectionSource")
   incomingTransferConnections CollectionTransferConnection[] @relation("TransferConnectionTarget")
   outgoingPlantTransferRequests PlantTransferRequest[] @relation("PlantTransferSourceCollection")
@@ -1202,6 +1213,8 @@ model PlantObservation {
   plantDefinitionId String
   createdByUserId   String?
   vendor            String?
+  distributorId     String?
+  distributorLocationId String?
   observedAt        DateTime @default(now())
   observedPrice     Decimal?
   currency          String   @default("USD")
@@ -1215,11 +1228,15 @@ model PlantObservation {
   collection      Collection      @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   plantDefinition PlantDefinition @relation(fields: [plantDefinitionId], references: [id], onDelete: Cascade)
   createdBy       User?           @relation("PlantObservationCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  distributor     Distributor? @relation(fields: [distributorId], references: [id], onDelete: SetNull)
+  distributorLocation DistributorLocation? @relation(fields: [distributorLocationId], references: [id], onDelete: SetNull)
   acquisitionRecords PlantAcquisitionRecord[]
 
   @@index([collectionId])
   @@index([plantDefinitionId])
   @@index([createdByUserId])
+  @@index([distributorId])
+  @@index([distributorLocationId])
   @@index([observedAt])
   @@index([availability])
 }
@@ -1231,6 +1248,8 @@ model PlantAcquisitionRecord {
   createdByUserId   String?
   observationId     String?
   vendor            String?
+  distributorId     String?
+  distributorLocationId String?
   acquiredAt        DateTime @default(now())
   price             Decimal?
   currency          String   @default("USD")
@@ -1249,12 +1268,17 @@ model PlantAcquisitionRecord {
   observation     PlantObservation? @relation(fields: [observationId], references: [id], onDelete: SetNull)
   initialLocation Location?       @relation("PlantAcquisitionInitialLocation", fields: [initialLocationId], references: [id], onDelete: SetNull)
   plantInstances  PlantAcquisitionRecordInstance[]
+  distributor     Distributor? @relation(fields: [distributorId], references: [id], onDelete: SetNull)
+  distributorLocation DistributorLocation? @relation(fields: [distributorLocationId], references: [id], onDelete: SetNull)
+  sources         AcquisitionSource[]
 
   @@index([collectionId])
   @@index([plantDefinitionId])
   @@index([createdByUserId])
   @@index([observationId])
   @@index([initialLocationId])
+  @@index([distributorId])
+  @@index([distributorLocationId])
   @@index([acquiredAt])
 }
 
@@ -1269,6 +1293,143 @@ model PlantAcquisitionRecordInstance {
 
   @@unique([acquisitionRecordId, plantInstanceId])
   @@index([plantInstanceId])
+}
+
+model Source {
+  id              String   @id @default(cuid())
+  collectionId    String
+  kind            String   @default("ORGANIZATION")
+  name            String
+  normalizedName  String
+  sourceType      String   @default("UNKNOWN")
+  websiteUrl      String?
+  country         String?
+  region          String?
+  locality        String?
+  description     String?
+  notes           String?
+  aliasesJson     Json?
+  active          Boolean  @default(true)
+  archivedAt      DateTime?
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  collection      Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  createdBy       User? @relation("SourceCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  acquisitions    AcquisitionSource[]
+
+  @@unique([collectionId, normalizedName])
+  @@index([collectionId, active])
+  @@index([sourceType])
+}
+
+model Distributor {
+  id              String   @id @default(cuid())
+  collectionId    String
+  kind            String   @default("ORGANIZATION")
+  name            String
+  normalizedName  String
+  distributorType String   @default("OTHER")
+  websiteUrl      String?
+  description     String?
+  rating          Int?
+  experienceNotes String?
+  aliasesJson     Json?
+  active          Boolean  @default(true)
+  archivedAt      DateTime?
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  collection      Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  createdBy       User? @relation("DistributorCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  locations       DistributorLocation[]
+  acquisitions    PlantAcquisitionRecord[]
+  observations    PlantObservation[]
+
+  @@unique([collectionId, normalizedName])
+  @@index([collectionId, active])
+  @@index([distributorType])
+}
+
+model DistributorLocation {
+  id              String   @id @default(cuid())
+  collectionId    String
+  distributorId   String
+  name            String
+  normalizedName  String
+  locationType    String?
+  addressLine1    String?
+  addressLine2    String?
+  city            String?
+  region          String?
+  postalCode      String?
+  country         String?
+  phone           String?
+  url             String?
+  latitude        Decimal?
+  longitude       Decimal?
+  notes           String?
+  active          Boolean  @default(true)
+  archivedAt      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  collection      Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  distributor     Distributor @relation(fields: [distributorId], references: [id], onDelete: Cascade)
+  acquisitions    PlantAcquisitionRecord[]
+  observations    PlantObservation[]
+
+  @@unique([distributorId, normalizedName])
+  @@index([collectionId, active])
+  @@index([distributorId])
+}
+
+model AcquisitionSource {
+  id                  String   @id @default(cuid())
+  collectionId        String
+  acquisitionRecordId String
+  sourceId            String
+  role                String   @default("UNKNOWN")
+  sortOrder           Int      @default(0)
+  isPrimary           Boolean  @default(false)
+  notes               String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  collection          Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  acquisitionRecord   PlantAcquisitionRecord @relation(fields: [acquisitionRecordId], references: [id], onDelete: Cascade)
+  source              Source @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+
+  @@unique([acquisitionRecordId, sourceId, role])
+  @@unique([acquisitionRecordId, sortOrder])
+  @@index([collectionId])
+  @@index([sourceId])
+}
+
+model ProvenanceReconciliationItem {
+  id                            String   @id @default(cuid())
+  collectionId                  String
+  entityType                    String
+  entityId                      String
+  legacyField                   String
+  legacyValue                   String
+  suggestedSourceId             String?
+  suggestedDistributorId        String?
+  suggestedDistributorLocationId String?
+  status                        String   @default("PENDING")
+  resolutionJson                Json?
+  resolvedByUserId              String?
+  resolvedAt                    DateTime?
+  createdAt                     DateTime @default(now())
+  updatedAt                     DateTime @updatedAt
+
+  collection                    Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  resolvedBy                    User? @relation("ProvenanceReconciliationResolvedBy", fields: [resolvedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([collectionId, entityType, entityId, legacyField])
+  @@index([collectionId, status])
 }
 
 model ValidatedDefinitionChange {

@@ -2,6 +2,8 @@ import { createLocation, createPlantInstance } from '@/app/actions'
 import { startWorkflowRun } from '@/app/workflow-actions'
 import { PlantImage } from '@/components/PlantImage'
 import { LocationCompatibilitySelect } from '@/components/LocationCompatibilitySelect'
+import { AcquisitionSourceChainFields } from '@/components/AcquisitionSourceChainFields'
+import { DistributorFields } from '@/components/DistributorFields'
 import { SortControl } from '@/components/SortControl'
 import { SunshineButton } from '@/components/SunshineButton'
 import { AddPanel, Button, Card, Field, HelpTooltip, SuggestionDatalist, TextArea } from '@/components/ui'
@@ -42,7 +44,7 @@ export default async function Instances({
   const includeNestedLocations = sp.includeNested !== '0'
   const sortKey = await sortPreference(user?.id, 'instances', 'plantIdAsc', instanceSortOptions.map((option) => option.value))
   await ensureStarterWorkflowTemplates(prisma, collection.id)
-  const [defs, instanceSuggestionRows, locations, locationTypes, workflowTemplates] = await Promise.all([
+  const [defs, instanceSuggestionRows, locations, locationTypes, workflowTemplates, sources, distributors] = await Promise.all([
     prisma.plantDefinition.findMany({
       where: { OR: [collectionWhere, { collectionId: null, isValidated: true }] },
       orderBy: [{ isValidated: 'desc' }, { genus: 'asc' }, { species: 'asc' }, { cultivarName: 'asc' }],
@@ -65,6 +67,8 @@ export default async function Instances({
       orderBy: [{ isBuiltIn: 'desc' }, { name: 'asc' }],
       take: 12,
     }),
+    prisma.source.findMany({ where: { collectionId: collection.id, active: true }, orderBy: { name: 'asc' } }),
+    prisma.distributor.findMany({ where: { collectionId: collection.id, active: true }, include: { locations: { where: { active: true }, orderBy: { name: 'asc' } } }, orderBy: { name: 'asc' } }),
   ])
   const locationNodes = locations.map((location) => ({
     id: location.id,
@@ -90,8 +94,6 @@ export default async function Instances({
     orderBy: { plantId: 'asc' },
   })
   const locationSuggestions = rankedSuggestions(instanceSuggestionRows.map((instance) => instance.location))
-  const sourceSuggestions = rankedSuggestions(instanceSuggestionRows.map((instance) => instance.source))
-  const distributorSuggestions = rankedSuggestions(instanceSuggestionRows.map((instance) => instance.distributor))
   const stockNumberSuggestions = rankedSuggestions(instanceSuggestionRows.map((instance) => instance.stockNumber))
   const filteredDefinition = definitionFilter
     ? defs.find((definition) => definition.id === definitionFilter)
@@ -196,8 +198,6 @@ export default async function Instances({
       {canCreateInCollection(user, context) && (
         <AddPanel label="Add plant instance">
           <SuggestionDatalist id="instance-location-suggestions" suggestions={locationSuggestions} />
-          <SuggestionDatalist id="instance-source-suggestions" suggestions={sourceSuggestions} />
-          <SuggestionDatalist id="instance-distributor-suggestions" suggestions={distributorSuggestions} />
           <SuggestionDatalist id="instance-stock-number-suggestions" suggestions={stockNumberSuggestions} />
           <form action={createPlantInstance} className="grid max-w-5xl gap-x-3 gap-y-2 lg:grid-cols-4">
             <input type="hidden" name="collectionSlug" value={collection.slug} />
@@ -234,8 +234,8 @@ export default async function Instances({
             />
             <Field label="Acquisition date" help="When this physical plant entered your collection." name="acquisitionDate" type="date" />
             <Field label="Propagation date" help="When this plant was propagated, if it was created from another plant." name="propagationDate" type="date" />
-            <Field label="Source/propagator" help="Who produced or propagated the plant, or the immediate source of the plant material." name="source" list="instance-source-suggestions" />
-            <Field label="Distributor" help="The seller, vendor, swap partner, or organization that distributed the plant to you." name="distributor" list="instance-distributor-suggestions" />
+            <div className="lg:col-span-4"><DistributorFields distributors={distributors} /></div>
+            <div className="lg:col-span-4"><AcquisitionSourceChainFields sources={sources} /></div>
             <Field label="Stock number" help="Optional vendor, nursery, or collection stock number from the original source." name="stockNumber" list="instance-stock-number-suggestions" />
             <Field label="Purchase price" help="Optional cost record for your own collection tracking." name="purchasePrice" type="number" />
             <TextArea label="Notes" help="Initial observation or context to add to the plant's note history at creation." name="note" wrapperClassName="lg:col-span-2" />

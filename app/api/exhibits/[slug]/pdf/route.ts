@@ -9,6 +9,7 @@ import { isPublishedExhibitVisible, loadExhibitForDisplay } from '@/lib/exhibits
 import { prisma } from '@/lib/prisma'
 import { formatDate } from '@/lib/time'
 import { plantName, taxonomyLabel } from '@/lib/utils'
+import { distributorDisplay, sourceChainDisplay } from '@/lib/provenance'
 
 const PAGE_BG = '#f8f3e6'
 const INK = '#2f2618'
@@ -315,6 +316,7 @@ function sectionTextHeight(doc: PDFKit.PDFDocument, lines: string[], textW: numb
 
 function drawSpecimenCard(doc: PDFKit.PDFDocument, data: NonNullable<Awaited<ReturnType<typeof loadExhibitForDisplay>>>, entry: any) {
   const plant = entry.plantInstance
+  const acquisition = plant.acquisitionRecordLinks?.[0]?.acquisitionRecord
   const sections = specimenSections(data, entry)
   const imageSize = 96
   const textX = left(doc) + 16
@@ -332,8 +334,8 @@ function drawSpecimenCard(doc: PDFKit.PDFDocument, data: NonNullable<Awaited<Ret
   doc.font(FONT.sans).fontSize(8.7).fillColor('#4d463c')
   const meta = [
     data.settings.location ? entry.locationPath || 'No location set' : null,
-    data.settings.acquisitionSource && plant.source ? `Source: ${plant.source}` : null,
-    data.settings.acquisitionSource && plant.distributor ? `Distributor: ${plant.distributor}` : null,
+    data.settings.acquisitionSource && data.exhibit.collection.showSourceProvenance ? `Source: ${sourceChainDisplay(acquisition?.sources || [], plant.source)}` : null,
+    data.settings.acquisitionSource && data.exhibit.collection.showDistributorIdentity ? `Distributor: ${distributorDisplay(acquisition?.distributor, data.exhibit.collection.showDistributorLocation ? acquisition?.distributorLocation : null, plant.distributor)}` : null,
     data.settings.archivedStatus ? `Status: ${String(plant.status).toLowerCase()}` : null,
     data.settings.sunshine ? `Sunshine: ${entry.sunshineCount || 0}` : null,
   ].filter(Boolean)

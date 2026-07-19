@@ -10,6 +10,8 @@ import { Button, Card, Field, Select, TextArea, AddPanel, LinkButton } from '@/c
 import { PlantImage } from '@/components/PlantImage'
 import { PlantLocationCompatibilityPanel } from '@/components/PlantLocationCompatibilityPanel'
 import { LocationCompatibilitySelect } from '@/components/LocationCompatibilitySelect'
+import { AcquisitionSourceChainFields } from '@/components/AcquisitionSourceChainFields'
+import { DistributorFields } from '@/components/DistributorFields'
 import { collectionPath, requireCollectionViewer, canCreateInCollection } from '@/lib/collections'
 import { locationPath } from '@/lib/locations'
 import { evaluatePlantLocationCompatibility, getEffectiveLocationEnvironment, getEffectivePlantEnvironmentRequirements } from '@/lib/location-compatibility'
@@ -17,6 +19,7 @@ import { prisma } from '@/lib/prisma'
 import { formatDate } from '@/lib/time'
 import { cn, plantName } from '@/lib/utils'
 import { getCurrentUser } from '@/lib/auth'
+import { distributorDisplay, sourceChainDisplay } from '@/lib/provenance'
 
 const acquisitionStatuses = [
   ['RESEARCHING', 'Researching'],
@@ -59,7 +62,7 @@ function urlList(value: unknown) {
   return Array.isArray(value) ? value.map((item) => String(item)).filter(Boolean) : []
 }
 
-function priceStats(observations: Array<{ observedPrice: unknown; currency: string; vendor: string | null; observedAt: Date }>) {
+function priceStats(observations: Array<{ observedPrice: unknown; currency: string; vendor: string | null; observedAt: Date; distributor?: { name: string } | null }>) {
   const priced = observations
     .map((observation) => ({ ...observation, price: Number(observation.observedPrice) }))
     .filter((observation) => Number.isFinite(observation.price))
@@ -67,7 +70,8 @@ function priceStats(observations: Array<{ observedPrice: unknown; currency: stri
   const prices = priced.map((observation) => observation.price)
   const vendorCounts = new Map<string, number>()
   for (const observation of priced) {
-    if (observation.vendor) vendorCounts.set(observation.vendor, (vendorCounts.get(observation.vendor) || 0) + 1)
+    const name = observation.distributor?.name || observation.vendor
+    if (name) vendorCounts.set(name, (vendorCounts.get(name) || 0) + 1)
   }
   const preferredVendor = [...vendorCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || null
   return {
@@ -82,7 +86,7 @@ function priceStats(observations: Array<{ observedPrice: unknown; currency: stri
 export default async function AcquisitionPipelinePage({
   searchParams,
 }: {
-  searchParams: Promise<{ definition?: string; status?: string; q?: string; sort?: string }>
+  searchParams: Promise<{ definition?: string; status?: string; q?: string; sort?: string; observation?: string }>
 }) {
   const user = await getCurrentUser()
   const context = await requireCollectionViewer()
@@ -111,7 +115,7 @@ export default async function AcquisitionPipelinePage({
     )
   }
 
-  const [definitions, locations] = await Promise.all([
+  const [definitions, locations, sources, distributors] = await Promise.all([
     prisma.plantDefinition.findMany({
       where: {
         ...collectionWhere,
@@ -124,14 +128,16 @@ export default async function AcquisitionPipelinePage({
             { acquisitionLabel: { contains: q, mode: 'insensitive' } },
             { acquisitionInterestNotes: { contains: q, mode: 'insensitive' } },
             { acquisitionResearchSummary: { contains: q, mode: 'insensitive' } },
+            { plantObservations: { some: { OR: [{ vendor: { contains: q, mode: 'insensitive' } }, { distributor: { name: { contains: q, mode: 'insensitive' } } }, { distributorLocation: { name: { contains: q, mode: 'insensitive' } } }] } } },
+            { acquisitionRecords: { some: { OR: [{ vendor: { contains: q, mode: 'insensitive' } }, { distributor: { name: { contains: q, mode: 'insensitive' } } }, { sources: { some: { source: { name: { contains: q, mode: 'insensitive' } } } } }] } } },
           ],
         } : {}),
       },
       include: {
         desiredLocation: { include: { locationType: true } },
         instances: { select: { id: true, status: true } },
-        plantObservations: { orderBy: { observedAt: 'desc' } },
-        acquisitionRecords: { include: { plantInstances: { include: { plantInstance: true } } }, orderBy: { acquiredAt: 'desc' } },
+        plantObservations: { include: { distributor: true, distributorLocation: true }, orderBy: { observedAt: 'desc' } },
+        acquisitionRecords: { include: { distributor: true, distributorLocation: true, sources: { include: { source: true }, orderBy: { sortOrder: 'asc' } }, plantInstances: { include: { plantInstance: true } } }, orderBy: { acquiredAt: 'desc' } },
         acquisitionResearchEntries: { orderBy: { occurredAt: 'desc' } },
       },
       orderBy: [{ updatedAt: 'desc' }],
@@ -141,6 +147,8 @@ export default async function AcquisitionPipelinePage({
       include: { locationType: true },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     }),
+    prisma.source.findMany({ where: { collectionId: collection.id, active: true }, orderBy: { name: 'asc' } }),
+    prisma.distributor.findMany({ where: { collectionId: collection.id, active: true }, include: { locations: { where: { active: true }, orderBy: { name: 'asc' } } }, orderBy: { name: 'asc' } }),
   ])
   const locationNodes = locations.map((location) => ({
     id: location.id,
@@ -166,6 +174,7 @@ export default async function AcquisitionPipelinePage({
       })
     : null
   const selectedStats = selected ? priceStats(selected.plantObservations) : null
+  const selectedObservation = selected?.plantObservations.find((observation) => observation.id === sp.observation) || null
   const activeIntentCount = definitions.filter((definition) => !['FULFILLED', 'NO_LONGER_INTERESTED'].includes(definition.acquisitionStatus || '')).length
   const ownedCount = selected?.instances.filter((instance) => instance.status !== 'ARCHIVED').length || 0
   const selectedBack = collectionPath(collection.slug, `/acquisitions?definition=${selected?.id || ''}`)
@@ -365,7 +374,7 @@ export default async function AcquisitionPipelinePage({
                     <input type="hidden" name="plantDefinitionId" value={selected.id} />
                     <input type="hidden" name="back" value={selectedBack} />
                     <Field label="Date" name="observedAt" type="date" />
-                    <Field label="Vendor/location" name="vendor" />
+                    <DistributorFields distributors={distributors} />
                     <Field label="Observed price" name="observedPrice" type="number" step="0.01" />
                     <Field label="Currency" name="currency" defaultValue="USD" />
                     <Field label="Specimen size" name="specimenSize" />
@@ -384,11 +393,13 @@ export default async function AcquisitionPipelinePage({
                     <input type="hidden" name="plantDefinitionId" value={selected.id} />
                     <input type="hidden" name="back" value={selectedBack} />
                     <Field label="Purchase date" name="acquiredAt" type="date" />
-                    <Field label="Vendor" name="vendor" defaultValue={preferredVendors(selected.preferredVendorsJson)[0] || ''} />
-                    <Field label="Price" name="price" type="number" step="0.01" />
+                    {selectedObservation && <input type="hidden" name="observationId" value={selectedObservation.id} />}
+                    <DistributorFields distributors={distributors} defaultDistributorId={selectedObservation?.distributorId || ''} defaultLocationId={selectedObservation?.distributorLocationId || ''} />
+                    <AcquisitionSourceChainFields sources={sources} />
+                    <Field label="Price" name="price" type="number" step="0.01" defaultValue={selectedObservation?.observedPrice ? String(selectedObservation.observedPrice) : ''} />
                     <Field label="Currency" name="currency" defaultValue="USD" />
                     <Field label="Quantity" name="quantity" type="number" min="1" max="50" defaultValue="1" />
-                    <Field label="Specimen size" name="specimenSize" defaultValue={selected.desiredSpecimenSize || ''} />
+                    <Field label="Specimen size" name="specimenSize" defaultValue={selectedObservation?.specimenSize || selected.desiredSpecimenSize || ''} />
                     <Field label="Pot size" name="potSize" />
                     <LocationCompatibilitySelect
                       collectionSlug={collection.slug}
@@ -445,10 +456,11 @@ export default async function AcquisitionPipelinePage({
                   {selected.plantObservations.map((observation) => (
                     <article key={observation.id} className="rounded-lg border border-stone-200 bg-white/50 p-3 text-sm">
                       <p className="text-xs text-stone-500">{formatDate(observation.observedAt)} · {observation.availability.toLowerCase().replaceAll('_', ' ')}</p>
-                      <h4 className="font-semibold">{observation.vendor || 'Unspecified vendor'}</h4>
+                      <h4 className="font-semibold">{distributorDisplay(observation.distributor, observation.distributorLocation, observation.vendor)}</h4>
                       <p>{money(observation.observedPrice, observation.currency)} · {observation.specimenSize || 'size not recorded'}</p>
                       {observation.condition && <p className="text-stone-600">Condition: {observation.condition}</p>}
                       {observation.notes && <p className="mt-1 whitespace-pre-wrap">{observation.notes}</p>}
+                      {canEdit && <Link className="mt-2 inline-block text-xs font-semibold text-[#2f6b45] underline" href={collectionPath(collection.slug, `/acquisitions?definition=${selected.id}&observation=${observation.id}`)}>Acquire from this observation</Link>}
                     </article>
                   ))}
                   {selected.plantObservations.length === 0 && <p className="text-sm text-stone-600">No sightings recorded yet.</p>}
@@ -460,8 +472,9 @@ export default async function AcquisitionPipelinePage({
                   {selected.acquisitionRecords.map((record) => (
                     <article key={record.id} className="rounded-lg border border-stone-200 bg-white/50 p-3 text-sm">
                       <p className="text-xs text-stone-500">{formatDate(record.acquiredAt)} · {record.fulfillmentChoice.toLowerCase().replaceAll('_', ' ')}</p>
-                      <h4 className="font-semibold">{record.vendor || 'Acquisition recorded'}</h4>
+                      <h4 className="font-semibold">{distributorDisplay(record.distributor, record.distributorLocation, record.vendor)}</h4>
                       <p>{record.quantity} item{record.quantity === 1 ? '' : 's'} · {money(record.price, record.currency)}</p>
+                      <p className="mt-1 text-xs text-stone-600">Produced by: {sourceChainDisplay(record.sources, record.plantInstances[0]?.plantInstance.source)}</p>
                       {record.notes && <p className="mt-1 whitespace-pre-wrap">{record.notes}</p>}
                       {record.plantInstances.length > 0 && (
                         <div className="mt-2 flex flex-wrap gap-2">

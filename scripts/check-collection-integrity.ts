@@ -32,6 +32,11 @@ const requiredCollectionModels = [
   ['CareSheetPlant', 'careSheetPlant'],
   ['CareSheetTask', 'careSheetTask'],
   ['CareSheetAccessLog', 'careSheetAccessLog'],
+  ['Source', 'source'],
+  ['Distributor', 'distributor'],
+  ['DistributorLocation', 'distributorLocation'],
+  ['AcquisitionSource', 'acquisitionSource'],
+  ['ProvenanceReconciliationItem', 'provenanceReconciliationItem'],
 ] as const
 
 const relationshipChecks = [

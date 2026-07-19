@@ -32,6 +32,9 @@
     "check:production": "sh scripts/check-production.sh",
     "check:care-scheduling": "tsx scripts/check-care-scheduling.ts",
     "check:location-compatibility": "tsx scripts/check-location-compatibility.ts",
+    "provenance:migrate": "tsx scripts/migrate-provenance.ts",
+    "provenance:check": "tsx scripts/check-provenance-integrity.ts",
+    "check:provenance": "tsx scripts/check-provenance.ts",
     "check:workflows": "tsx scripts/check-workflows.ts",
     "check:timezone": "tsx scripts/check-timezone.ts"
   },
