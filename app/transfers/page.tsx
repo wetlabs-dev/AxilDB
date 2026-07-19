@@ -27,14 +27,15 @@ type Preview = {
     genus?: string
     species?: string
     cultivarName?: string | null
-    acquisitionLabel?: string | null
     provisionalTaxon?: string | null
+    identificationStatus?: string | null
     confidence?: string | null
   }
   instance?: {
     instanceType?: string
     status?: string
     sportStatus?: string
+    acquisitionLabel?: string | null
   }
   counts?: {
     photoCount?: number
@@ -53,8 +54,8 @@ type DefinitionPreview = {
     genus?: string
     species?: string
     cultivarName?: string | null
-    acquisitionLabel?: string | null
     provisionalTaxon?: string | null
+    identificationStatus?: string | null
     confidence?: string | null
     governingBody?: string | null
   }

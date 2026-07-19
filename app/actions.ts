@@ -33,6 +33,7 @@ import { nextOccurrence } from '@/lib/reminders'
 import { notifySunshineManagers, validateSunshineTarget } from '@/lib/sunshine'
 import { addCalendarDays, calendarDayIndexInTimeZone, formatDate, parseDateLocal, parseDateTimeLocal, timeZoneForPreference } from '@/lib/time'
 import { plantName } from '@/lib/utils'
+import { normalizePlantDefinitionIdentity } from '@/lib/plant-identity'
 import { environmentalHusbandryFields, husbandryFieldNames, husbandryFormValues } from '@/lib/husbandry'
 import { definitionData, findMatchingValidatedDefinition, globalGoverningBodyId, husbandryData } from '@/lib/validated-definitions'
 import { recordValidatedDefinitionChange, snapshotValidatedDefinition, validatedDefinitionInclude } from '@/lib/collection-updates'
@@ -1272,20 +1273,21 @@ export async function createPlantDefinition(fd: FormData) {
     throw new Error('Only collection managers can create definitions from another user’s ID My Plant history.')
   }
 
+  const identity = normalizePlantDefinitionIdentity({ genus: val(fd, 'genus'), species: speciesVal(fd), provisionalTaxon: val(fd, 'provisionalTaxon') })
   const definition = await prisma.$transaction(async (tx) => {
     const created = await tx.plantDefinition.create({
       data: {
         collectionId: collection.id,
-        genus: val(fd, 'genus')!,
-        species: speciesVal(fd)!,
+        genus: identity.genus,
+        species: identity.species,
         hybridNotation: clearableVal(fd, 'hybridNotation'),
         cultivarName: clearableVal(fd, 'cultivarName'),
         authority: clearableVal(fd, 'authority'),
         cultivarRegistrationNumber: clearableVal(fd, 'cultivarRegistrationNumber'),
         governingBodyId: clearableVal(fd, 'governingBodyId'),
         confidence: val(fd, 'confidence') || 'UNCERTAIN',
-        acquisitionLabel: clearableVal(fd, 'acquisitionLabel'),
-        provisionalTaxon: clearableVal(fd, 'provisionalTaxon'),
+        provisionalTaxon: identity.provisionalTaxon,
+        identificationStatus: identity.identificationStatus,
         wikipediaUrl: clearableVal(fd, 'wikipediaUrl'),
         inaturalistUrl: clearableVal(fd, 'inaturalistUrl'),
         powoUrl: clearableVal(fd, 'powoUrl'),
@@ -1402,6 +1404,7 @@ export async function nominatePlantDefinitionForValidation(fd: FormData) {
     include: { validationCandidates: { where: { status: 'PENDING' }, take: 1 } },
   })
   if (definition.isValidated || definition.validatedPlantDefinitionId) throw new Error('This definition is already connected to a validated definition.')
+  if (definition.identificationStatus === 'PROVISIONAL' || definition.provisionalTaxon?.trim()) throw new Error('Resolve the provisional identity before nominating this definition for site validation.')
   if (definition.validationCandidates.length) throw new Error('This definition already has a pending validation nomination.')
 
   const match = await findMatchingValidatedDefinition(prisma, definition)
@@ -1443,6 +1446,7 @@ export async function reviewPlantDefinitionValidationCandidate(fd: FormData) {
     const source = candidate.plantDefinition
     if (!source) throw new Error('The nominated plant definition no longer exists.')
     if (source.isValidated) throw new Error('This nomination source is already validated.')
+    if (source.identificationStatus === 'PROVISIONAL' || source.provisionalTaxon?.trim()) throw new Error('Provisional definitions cannot be approved as validated definitions.')
 
     if (action !== 'APPROVE') {
       const status = action === 'REQUEST_REVISIONS' ? 'REVISION_REQUESTED' : 'REJECTED'
@@ -1467,6 +1471,8 @@ export async function reviewPlantDefinitionValidationCandidate(fd: FormData) {
         validatedSourceCollectionId: candidate.collectionId,
         validatedSourceDefinitionId: source.id,
         validationNotes: reviewNotes,
+        provisionalTaxon: null,
+        identificationStatus: 'IDENTIFIED',
         aliases: {
           create: source.aliases.map((alias) => ({
             collectionId: null,
@@ -1596,8 +1602,8 @@ export async function updateValidatedPlantDefinition(fd: FormData) {
       authority: clearableVal(fd, 'authority'),
       cultivarRegistrationNumber: clearableVal(fd, 'cultivarRegistrationNumber'),
       confidence: val(fd, 'confidence') || 'VERIFIED',
-      acquisitionLabel: clearableVal(fd, 'acquisitionLabel'),
-      provisionalTaxon: clearableVal(fd, 'provisionalTaxon'),
+      provisionalTaxon: null,
+      identificationStatus: 'IDENTIFIED',
       wikipediaUrl: clearableVal(fd, 'wikipediaUrl'),
       inaturalistUrl: clearableVal(fd, 'inaturalistUrl'),
       powoUrl: clearableVal(fd, 'powoUrl'),
@@ -1708,19 +1714,20 @@ export async function updatePlantDefinition(fd: FormData) {
   const id = val(fd, 'id')!
   await prisma.plantDefinition.findFirstOrThrow({ where: { id, collectionId: collection.id }, select: { id: true } })
 
+  const identity = normalizePlantDefinitionIdentity({ genus: val(fd, 'genus'), species: speciesVal(fd), provisionalTaxon: val(fd, 'provisionalTaxon') })
   const definition = await prisma.plantDefinition.update({
     where: { id },
     data: {
-      genus: val(fd, 'genus')!,
-      species: speciesVal(fd)!,
+      genus: identity.genus,
+      species: identity.species,
       hybridNotation: clearableVal(fd, 'hybridNotation'),
       cultivarName: clearableVal(fd, 'cultivarName'),
       authority: clearableVal(fd, 'authority'),
       cultivarRegistrationNumber: clearableVal(fd, 'cultivarRegistrationNumber'),
       governingBodyId: clearableVal(fd, 'governingBodyId'),
       confidence: val(fd, 'confidence') || 'UNCERTAIN',
-      acquisitionLabel: clearableVal(fd, 'acquisitionLabel'),
-      provisionalTaxon: clearableVal(fd, 'provisionalTaxon'),
+      provisionalTaxon: identity.provisionalTaxon,
+      identificationStatus: identity.identificationStatus,
       wikipediaUrl: clearableVal(fd, 'wikipediaUrl'),
       inaturalistUrl: clearableVal(fd, 'inaturalistUrl'),
       powoUrl: clearableVal(fd, 'powoUrl'),
@@ -2199,6 +2206,7 @@ export async function createPlantInstance(fd: FormData) {
       source: primarySource ? sourceNames.get(primarySource.sourceId) : val(fd, 'source'),
       distributor: distributor?.name || val(fd, 'distributor'),
       stockNumber: val(fd, 'stockNumber'),
+      acquisitionLabel: val(fd, 'acquisitionLabel'),
       purchasePrice: dec(val(fd, 'purchasePrice')) as any,
     } })
     const note = val(fd, 'note')
@@ -2276,6 +2284,7 @@ export async function updatePlantInstance(fd: FormData) {
       source: clearableVal(fd, 'source'),
       distributor: clearableVal(fd, 'distributor'),
       stockNumber: clearableVal(fd, 'stockNumber'),
+      acquisitionLabel: clearableVal(fd, 'acquisitionLabel'),
       purchasePrice: clearableDec(fd, 'purchasePrice') as any,
       archiveReason: clearableVal(fd, 'archiveReason'),
       archiveNotes: clearableVal(fd, 'archiveNotes'),

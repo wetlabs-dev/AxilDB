@@ -30,7 +30,6 @@ export default async function SearchPage({
           { species: contains(q) },
           { cultivarName: contains(q) },
           { authority: contains(q) },
-          { acquisitionLabel: contains(q) },
           { provisionalTaxon: contains(q) },
           { wikipediaUrl: contains(q) },
           { inaturalistUrl: contains(q) },
@@ -79,6 +78,7 @@ export default async function SearchPage({
                 { source: contains(q) },
                 { distributor: contains(q) },
                 { stockNumber: contains(q) },
+                { acquisitionLabel: contains(q) },
                 { acquisitionRecordLinks: { some: { acquisitionRecord: { OR: [
                   { distributor: { name: contains(q) } },
                   { distributorLocation: { name: contains(q) } },

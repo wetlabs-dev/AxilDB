@@ -118,7 +118,7 @@ export default async function EditCollectionExhibitPage({ params }: { params: Pr
     if (!photoByPlant.has(photo.entityId)) photoByPlant.set(photo.entityId, photo)
   }
   const builderPlants: ExhibitBuilderPlant[] = candidates.map((plant) => {
-    const acquisitionLabel = [plant.source, plant.distributor, plant.stockNumber].filter(Boolean).join(' · ') || null
+    const acquisitionLabel = plant.acquisitionLabel || [plant.source, plant.distributor, plant.stockNumber].filter(Boolean).join(' · ') || null
     return {
       id: plant.id,
       plantId: plant.plantId,

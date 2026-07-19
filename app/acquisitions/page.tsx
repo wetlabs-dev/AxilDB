@@ -17,7 +17,7 @@ import { locationPath } from '@/lib/locations'
 import { evaluatePlantLocationCompatibility, getEffectiveLocationEnvironment, getEffectivePlantEnvironmentRequirements } from '@/lib/location-compatibility'
 import { prisma } from '@/lib/prisma'
 import { formatDate } from '@/lib/time'
-import { cn, plantName } from '@/lib/utils'
+import { acceptedPlantName, cn, plantName, plantNeedsIdentification } from '@/lib/utils'
 import { getCurrentUser } from '@/lib/auth'
 import { distributorDisplay, sourceChainDisplay } from '@/lib/provenance'
 
@@ -125,7 +125,8 @@ export default async function AcquisitionPipelinePage({
             { genus: { contains: q, mode: 'insensitive' } },
             { species: { contains: q, mode: 'insensitive' } },
             { cultivarName: { contains: q, mode: 'insensitive' } },
-            { acquisitionLabel: { contains: q, mode: 'insensitive' } },
+            { provisionalTaxon: { contains: q, mode: 'insensitive' } },
+            { instances: { some: { acquisitionLabel: { contains: q, mode: 'insensitive' } } } },
             { acquisitionInterestNotes: { contains: q, mode: 'insensitive' } },
             { acquisitionResearchSummary: { contains: q, mode: 'insensitive' } },
             { plantObservations: { some: { OR: [{ vendor: { contains: q, mode: 'insensitive' } }, { distributor: { name: { contains: q, mode: 'insensitive' } } }, { distributorLocation: { name: { contains: q, mode: 'insensitive' } } }] } } },
@@ -204,9 +205,10 @@ export default async function AcquisitionPipelinePage({
         <AddPanel label="Add acquisition target">
           <form action={createAcquisitionTarget} className="grid gap-3 md:grid-cols-4">
             <input type="hidden" name="collectionSlug" value={collection.slug} />
-            <Field label="Genus" name="genus" required />
-            <Field label="Species" name="species" placeholder="sp." autoCapitalize="none" />
+            <Field label="Genus" help="Required unless you provide a provisional taxon." name="genus" />
+            <Field label="Species" help="Required unless you provide a provisional taxon." name="species" autoCapitalize="none" />
             <Field label="Cultivar" name="cultivarName" />
+            <Field label="Provisional / working taxon" help="Use an unresolved seller name or suspected identity. It will be displayed prominently and marked for identification review." name="provisionalTaxon" />
             <Select label="Status" name="acquisitionStatus" defaultValue="WISHLIST">
               {acquisitionStatuses.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
             </Select>
@@ -262,6 +264,7 @@ export default async function AcquisitionPipelinePage({
               >
                 <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#2f6b45]">{statusLabel(definition.acquisitionStatus)}</p>
                 <h3 className="mt-1 font-serif text-xl font-semibold leading-tight">{plantName(definition)}</h3>
+                {plantNeedsIdentification(definition) && <p className="mt-1 text-xs font-semibold text-amber-800">Needs identification review · working placement {acceptedPlantName(definition)}</p>}
                 <p className="mt-1 font-mono text-xs text-[#2f6b45]">{stars(definition.acquisitionPriority)}</p>
                 <p className="mt-2 text-xs text-stone-600">
                   {definition.instances.length ? `Already owned (${definition.instances.length})` : 'Not yet owned'}
@@ -290,6 +293,7 @@ export default async function AcquisitionPipelinePage({
                     <div>
                       <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#2f6b45]">{statusLabel(selected.acquisitionStatus)} · {stars(selected.acquisitionPriority)}</p>
                       <h3 className="font-serif text-3xl font-semibold">{plantName(selected)}</h3>
+                      {plantNeedsIdentification(selected) && <p className="mt-1 text-sm font-semibold text-amber-800">Needs identification review · working placement {acceptedPlantName(selected)}</p>}
                       <p className="mt-1 text-sm text-stone-600">{ownedCount ? `Already owned (${ownedCount} active specimen${ownedCount === 1 ? '' : 's'})` : 'Not yet owned'}</p>
                     </div>
                     <LinkButton href={collectionPath(collection.slug, `/plants/${selected.id}/edit`)}>Open definition</LinkButton>
@@ -401,6 +405,7 @@ export default async function AcquisitionPipelinePage({
                     <Field label="Currency" name="currency" defaultValue="USD" />
                     <Field label="Quantity" name="quantity" type="number" min="1" max="50" defaultValue="1" />
                     <Field label="Specimen size" name="specimenSize" defaultValue={selectedObservation?.specimenSize || selected.desiredSpecimenSize || ''} />
+                    <Field label="Acquisition label" help="The label supplied with these specimens. It is saved on each created plant instance." name="acquisitionLabel" />
                     <Field label="Pot size" name="potSize" />
                     <LocationCompatibilitySelect
                       collectionSlug={collection.slug}

@@ -38,7 +38,8 @@
     "check:wishlist": "node scripts/check-wishlist-features.mjs",
     "check:magic-fill": "tsx scripts/check-magic-fill.ts",
     "check:workflows": "tsx scripts/check-workflows.ts",
-    "check:timezone": "tsx scripts/check-timezone.ts"
+    "check:timezone": "tsx scripts/check-timezone.ts",
+    "check:plant-identity": "tsx scripts/check-plant-identity.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

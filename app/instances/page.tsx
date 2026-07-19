@@ -51,7 +51,7 @@ export default async function Instances({
     }),
     prisma.plantInstance.findMany({
       where: collectionWhere,
-      select: { location: true, source: true, distributor: true, stockNumber: true },
+      select: { location: true, source: true, distributor: true, stockNumber: true, acquisitionLabel: true },
     }),
     prisma.location.findMany({
       where: { collectionId: collection.id, status: 'ACTIVE' },
@@ -95,6 +95,7 @@ export default async function Instances({
   })
   const locationSuggestions = rankedSuggestions(instanceSuggestionRows.map((instance) => instance.location))
   const stockNumberSuggestions = rankedSuggestions(instanceSuggestionRows.map((instance) => instance.stockNumber))
+  const acquisitionLabelSuggestions = rankedSuggestions(instanceSuggestionRows.map((instance) => instance.acquisitionLabel))
   const filteredDefinition = definitionFilter
     ? defs.find((definition) => definition.id === definitionFilter)
     : null
@@ -199,6 +200,7 @@ export default async function Instances({
         <AddPanel label="Add plant instance">
           <SuggestionDatalist id="instance-location-suggestions" suggestions={locationSuggestions} />
           <SuggestionDatalist id="instance-stock-number-suggestions" suggestions={stockNumberSuggestions} />
+          <SuggestionDatalist id="instance-acquisition-label-suggestions" suggestions={acquisitionLabelSuggestions} />
           <form action={createPlantInstance} className="grid max-w-5xl gap-x-3 gap-y-2 lg:grid-cols-4">
             <input type="hidden" name="collectionSlug" value={collection.slug} />
             <label className="grid gap-1 text-sm font-medium">
@@ -234,6 +236,7 @@ export default async function Instances({
             />
             <Field label="Acquisition date" help="When this physical plant entered your collection." name="acquisitionDate" type="date" />
             <Field label="Propagation date" help="When this plant was propagated, if it was created from another plant." name="propagationDate" type="date" />
+            <Field label="Acquisition label" help="The name or identification written on this particular specimen when it entered the collection. It does not change the shared plant definition." name="acquisitionLabel" list="instance-acquisition-label-suggestions" wrapperClassName="lg:col-span-2" />
             <div className="lg:col-span-4"><DistributorFields distributors={distributors} /></div>
             <div className="lg:col-span-4"><AcquisitionSourceChainFields sources={sources} /></div>
             <Field label="Stock number" help="Optional vendor, nursery, or collection stock number from the original source." name="stockNumber" list="instance-stock-number-suggestions" />

@@ -212,7 +212,6 @@ function drawDefinitionSection(
       ['Governing body', group.definition.governingBody?.name],
       ['Confidence', taxonomyLabel(group.definition.confidence)],
       ['Validation', group.definition.isValidated ? `Validated ${formatDate(group.definition.validatedAt)}` : 'Not validated'],
-      ['Acquisition label', group.definition.acquisitionLabel],
     ], 2, data.exhibit.title)
   }
 

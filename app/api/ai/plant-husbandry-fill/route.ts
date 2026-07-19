@@ -112,7 +112,6 @@ export async function POST(req: Request) {
       hybridNotation: trimmedString(plant.hybridNotation, 120) || null,
       cultivarName: cultivarName || null,
       authority: trimmedString(plant.authority, 160) || null,
-      acquisitionLabel: trimmedString(plant.acquisitionLabel, 200) || null,
       provisionalTaxon: trimmedString(plant.provisionalTaxon, 200) || null,
       description: trimmedString(plant.description, 500) || null,
       wikipediaUrl: trimmedString(plant.wikipediaUrl, 500) || null,

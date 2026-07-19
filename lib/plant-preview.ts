@@ -1,7 +1,7 @@
 import type { PrismaClient } from '@prisma/client'
 import { collectionPath } from '@/lib/collections'
 import { locationPathWithCodes } from '@/lib/locations'
-import { plantName } from '@/lib/utils'
+import { acceptedPlantName, plantName } from '@/lib/utils'
 
 export type PlantInstancePreview = {
   id: string
@@ -34,12 +34,14 @@ function mostRecentDate(dates: Array<Date | null | undefined>) {
 }
 
 function acquisitionLabel(instance: {
+  acquisitionLabel?: string | null
   instanceType: string
   source?: string | null
   distributor?: string | null
   acquisitionDate?: Date | null
   propagationDate?: Date | null
 }) {
+  if (instance.acquisitionLabel?.trim()) return instance.acquisitionLabel.trim()
   const source = [instance.source, instance.distributor].filter(Boolean).join(' via ')
   if (source) return source
   if (instance.instanceType === 'ACQUIRED_PROPAGATION') return 'Acquired propagation'
@@ -113,13 +115,14 @@ export async function getPlantInstancePreview(
     ...instance.blooms.map((bloom) => bloom.bloomStartDate),
     ...instance.quarantines.map((quarantine) => quarantine.startDate),
   ])
-  const botanicalName = plantName(instance.plantDefinition)
+  const displayName = plantName(instance.plantDefinition)
+  const botanicalName = acceptedPlantName(instance.plantDefinition)
 
   return {
     id: instance.id,
     plantId: instance.plantId,
     href: collectionPath(options.collectionSlug, `/instances/${instance.id}`),
-    displayName: botanicalName,
+    displayName,
     botanicalName,
     acquisitionLabel: acquisitionLabel(instance),
     coverPhotoUrl,

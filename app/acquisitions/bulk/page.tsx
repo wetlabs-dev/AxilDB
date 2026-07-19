@@ -69,6 +69,7 @@ export default async function BulkAcquisitionPage({ searchParams }: {
                 <Field label="Unit price" name={`unitPrice:${definition.id}`} type="number" step="0.01" />
                 <Field label="Specimen size" name={`specimenSize:${definition.id}`} defaultValue={definition.desiredSpecimenSize} />
                 <Field label="Pot size" name={`potSize:${definition.id}`} />
+                <Field label="Acquisition label" help="The label supplied with these specimens. It is copied to each created instance for this item." name={`acquisitionLabel:${definition.id}`} wrapperClassName="md:col-span-2" />
                 <LocationCompatibilitySelect collectionSlug={context.collection.slug} name={`initialLocationId:${definition.id}`} label="Initial location" defaultValue={definition.desiredLocationId || ''} plantDefinitionId={definition.id} locations={locations.map((location) => ({ id: location.id, label: `${location.code} · ${locationPath(location.id, nodes)}` }))} />
                 <Select label="Wishlist outcome" name={`fulfillmentChoice:${definition.id}`} defaultValue="FULFILLED"><option value="FULFILLED">Mark fulfilled</option><option value="KEEP_ACTIVE">Keep current status</option><option value="REPEAT_PURCHASE">Keep actively seeking</option></Select>
                 <label className="flex items-center gap-2 self-end rounded-md border border-stone-200 bg-white/55 px-3 py-2 text-sm"><input type="checkbox" name={`createInstances:${definition.id}`} defaultChecked /> Create specimen records</label>

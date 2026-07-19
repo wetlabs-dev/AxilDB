@@ -16,7 +16,7 @@ import { savePlantDefinitionEnvironmentRequirements } from '@/app/location-envir
 import { husbandryFieldNames } from '@/lib/husbandry'
 import { locationPath } from '@/lib/locations'
 import { findMatchingValidatedDefinition } from '@/lib/validated-definitions'
-import { plantName } from '@/lib/utils'
+import { acceptedPlantName, plantName, plantNeedsIdentification } from '@/lib/utils'
 import { collectionRoleAtLeast, isServerAdminRole } from '@/lib/roles'
 
 const selectClass = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
@@ -75,7 +75,6 @@ export default async function EditPlant({
         hybridNotation: true,
         cultivarName: true,
         authority: true,
-        acquisitionLabel: true,
         provisionalTaxon: true,
         aliases: { select: { source: true } },
       },
@@ -123,7 +122,6 @@ export default async function EditPlant({
     hybridNotation: rankedSuggestions(definitionSuggestionRows.map((definition) => definition.hybridNotation)),
     cultivarName: rankedSuggestions(definitionSuggestionRows.map((definition) => definition.cultivarName)),
     authority: rankedSuggestions(definitionSuggestionRows.map((definition) => definition.authority)),
-    acquisitionLabel: rankedSuggestions(definitionSuggestionRows.map((definition) => definition.acquisitionLabel)),
     provisionalTaxon: rankedSuggestions(definitionSuggestionRows.map((definition) => definition.provisionalTaxon)),
     aliasSource: rankedSuggestions(definitionSuggestionRows.flatMap((definition) => definition.aliases.map((alias) => alias.source))),
   }
@@ -141,12 +139,17 @@ export default async function EditPlant({
           <SuggestionDatalist id="definition-hybrid-notation-suggestions" suggestions={definitionSuggestions.hybridNotation} />
           <SuggestionDatalist id="definition-cultivar-name-suggestions" suggestions={definitionSuggestions.cultivarName} />
           <SuggestionDatalist id="definition-authority-suggestions" suggestions={definitionSuggestions.authority} />
-          <SuggestionDatalist id="definition-acquisition-label-suggestions" suggestions={definitionSuggestions.acquisitionLabel} />
           <SuggestionDatalist id="definition-provisional-taxon-suggestions" suggestions={definitionSuggestions.provisionalTaxon} />
           <input type="hidden" name="id" value={id} />
           <input type="hidden" name="collectionSlug" value={collection.slug} />
-          <Field label="Genus" name="genus" required defaultValue={plant.genus} list="definition-genus-suggestions" />
-          <Field label="Species" name="species" required defaultValue={plant.species} list="definition-species-suggestions" autoCapitalize="none" />
+          {plantNeedsIdentification(plant) && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 lg:col-span-4">
+              <p className="font-semibold">Needs identification review</p>
+              <p className="mt-1">{plantName(plant)} is the displayed provisional identity. Its working placement is {acceptedPlantName(plant)}. Clear the provisional taxon only after entering the identified genus and species.</p>
+            </div>
+          )}
+          <Field label="Genus" help="Required when the provisional taxon is cleared. This working placement is also used for plant ID generation." name="genus" defaultValue={plant.genus} list="definition-genus-suggestions" />
+          <Field label="Species" help="Required when the provisional taxon is cleared." name="species" defaultValue={plant.species} list="definition-species-suggestions" autoCapitalize="none" />
           <Field label="Hybrid notation" help="Use for botanical hybrid markers or formula context, such as x, grex, or parentage notation that belongs with the name." name="hybridNotation" defaultValue={plant.hybridNotation} list="definition-hybrid-notation-suggestions" />
           <Field label="Cultivar name" help="The named cultivated variety, usually written in single quotes, such as 'Morning Glow'. Leave blank for unnamed species or clones." name="cultivarName" defaultValue={plant.cultivarName} list="definition-cultivar-name-suggestions" />
           <div className="min-w-0 rounded-lg border border-[#d6dfc9] bg-[#f7f4e8]/80 px-3 py-2 text-sm text-stone-700 lg:col-span-4">
@@ -173,8 +176,7 @@ export default async function EditPlant({
               ))}
             </select>
           </label>
-          <Field label="Acquisition label" help="The name or label the plant arrived with, even if you later determine a different accepted name." name="acquisitionLabel" defaultValue={plant.acquisitionLabel} list="definition-acquisition-label-suggestions" wrapperClassName="lg:col-span-2" />
-          <Field label="Provisional taxon" help="A cautious working identification when the accepted name is not settled yet. Useful for 'probably this' or awaiting confirmation." name="provisionalTaxon" defaultValue={plant.provisionalTaxon} list="definition-provisional-taxon-suggestions" wrapperClassName="lg:col-span-2" />
+          <Field label="Provisional / working taxon" help="When present, this takes precedence as the displayed name and marks the definition as needing identification review." name="provisionalTaxon" defaultValue={plant.provisionalTaxon} list="definition-provisional-taxon-suggestions" wrapperClassName="lg:col-span-4" />
           <Field label="Wikipedia URL" help="Optional quick reference link for the species or genus entry." name="wikipediaUrl" type="url" defaultValue={plant.wikipediaUrl} />
           <Field label="iNaturalist URL" help="Optional link to an iNaturalist taxon page for observations, common names, and community references." name="inaturalistUrl" type="url" defaultValue={plant.inaturalistUrl} />
           <Field label="POWO URL" help="Optional Plants of the World Online link for accepted names, synonyms, and distribution data." name="powoUrl" type="url" defaultValue={plant.powoUrl} />

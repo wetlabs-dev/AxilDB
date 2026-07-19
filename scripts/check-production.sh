@@ -13,6 +13,9 @@ npm run check:care-scheduling
 echo "==> Checking Magic Fill merge invariants"
 npm run check:magic-fill
 
+echo "==> Checking plant identity and acquisition-label invariants"
+npm run check:plant-identity
+
 echo "==> Checking event engine invariants"
 npm run check:events
 

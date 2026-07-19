@@ -22,7 +22,7 @@ export default async function EditInstance({ params }: { params: Promise<{ id: s
     }),
     prisma.plantInstance.findMany({
       where: { collectionId: collection.id },
-      select: { location: true, source: true, distributor: true, stockNumber: true },
+      select: { location: true, source: true, distributor: true, stockNumber: true, acquisitionLabel: true },
     }),
     prisma.location.findMany({
       where: { collectionId: collection.id, status: 'ACTIVE' },
@@ -46,6 +46,7 @@ export default async function EditInstance({ params }: { params: Promise<{ id: s
   }))
   const locationSuggestions = rankedSuggestions(instanceSuggestionRows.map((item) => item.location))
   const stockNumberSuggestions = rankedSuggestions(instanceSuggestionRows.map((item) => item.stockNumber))
+  const acquisitionLabelSuggestions = rankedSuggestions(instanceSuggestionRows.map((item) => item.acquisitionLabel))
 
   return (
     <div className="space-y-6">
@@ -54,6 +55,7 @@ export default async function EditInstance({ params }: { params: Promise<{ id: s
         <form action={updatePlantInstance} className="grid max-w-5xl gap-x-3 gap-y-2 lg:grid-cols-4">
           <SuggestionDatalist id="instance-location-suggestions" suggestions={locationSuggestions} />
           <SuggestionDatalist id="instance-stock-number-suggestions" suggestions={stockNumberSuggestions} />
+          <SuggestionDatalist id="instance-acquisition-label-suggestions" suggestions={acquisitionLabelSuggestions} />
           <input type="hidden" name="id" value={id} />
           <input type="hidden" name="collectionSlug" value={collection.slug} />
           <label className="grid gap-1 text-sm font-medium text-stone-800">
@@ -95,6 +97,7 @@ export default async function EditInstance({ params }: { params: Promise<{ id: s
           />
           <Field label="Acquisition date" name="acquisitionDate" type="date" defaultValue={dateInput(instance.acquisitionDate)} />
           <Field label="Propagation date" name="propagationDate" type="date" defaultValue={dateInput(instance.propagationDate)} />
+          <Field label="Acquisition label" help="The name or identification written on this specimen when it entered the collection." name="acquisitionLabel" defaultValue={instance.acquisitionLabel} list="instance-acquisition-label-suggestions" wrapperClassName="lg:col-span-2" />
           <div className="rounded-md border border-stone-200 bg-[#f5f4e8] px-3 py-2 text-sm lg:col-span-2">
             <span className="font-semibold">Acquisition provenance:</span> {instance.source || 'source unknown'} · {instance.distributor || 'distributor unknown'}
             <a className="ml-2 font-semibold text-[#2f6b45] underline" href={collectionPath(collection.slug, `/acquisitions?definition=${instance.plantDefinitionId}`)}>Manage in Acquisition Pipeline</a>

@@ -40,8 +40,6 @@ export default async function EditValidatedDefinition({
           <Select label="Confidence" name="confidence" defaultValue={definition.confidence}>
             {confidenceOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </Select>
-          <Field label="Acquisition label" name="acquisitionLabel" defaultValue={definition.acquisitionLabel || ''} />
-          <Field label="Provisional taxon" name="provisionalTaxon" defaultValue={definition.provisionalTaxon || ''} />
           <Field label="Wikipedia URL" name="wikipediaUrl" defaultValue={definition.wikipediaUrl || ''} />
           <Field label="iNaturalist URL" name="inaturalistUrl" defaultValue={definition.inaturalistUrl || ''} />
           <Field label="POWO URL" name="powoUrl" defaultValue={definition.powoUrl || ''} />

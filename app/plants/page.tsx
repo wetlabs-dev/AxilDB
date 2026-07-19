@@ -13,7 +13,7 @@ import { canCreateInCollection, canEditInCollection, canManageCollection, collec
 import { suggestedAliasesForForm, type PlantIdentificationSuggestion } from '@/lib/plant-identification-history'
 import { rankedSuggestions } from '@/lib/suggestions'
 import { compareText, sortPreference, timeValue, type SortOption } from '@/lib/sort-preferences'
-import { plantName, taxonomyLabel } from '@/lib/utils'
+import { acceptedPlantName, plantName, plantNeedsIdentification, taxonomyLabel } from '@/lib/utils'
 import Link from 'next/link'
 
 const selectClass = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
@@ -88,7 +88,6 @@ export default async function Plants({
     hybridNotation: rankedSuggestions(plants.map((plant) => plant.hybridNotation)),
     cultivarName: rankedSuggestions(plants.map((plant) => plant.cultivarName)),
     authority: rankedSuggestions(plants.map((plant) => plant.authority)),
-    acquisitionLabel: rankedSuggestions(plants.map((plant) => plant.acquisitionLabel)),
     provisionalTaxon: rankedSuggestions(plants.map((plant) => plant.provisionalTaxon)),
     aliasSource: rankedSuggestions(plants.flatMap((plant) => plant.aliases.map((alias) => alias.source))),
   }
@@ -164,7 +163,6 @@ export default async function Plants({
           <SuggestionDatalist id="definition-hybrid-notation-suggestions" suggestions={definitionSuggestions.hybridNotation} />
           <SuggestionDatalist id="definition-cultivar-name-suggestions" suggestions={definitionSuggestions.cultivarName} />
           <SuggestionDatalist id="definition-authority-suggestions" suggestions={definitionSuggestions.authority} />
-          <SuggestionDatalist id="definition-acquisition-label-suggestions" suggestions={definitionSuggestions.acquisitionLabel} />
           <SuggestionDatalist id="definition-provisional-taxon-suggestions" suggestions={definitionSuggestions.provisionalTaxon} />
           <form action={createPlantDefinition} className="grid max-w-6xl gap-x-3 gap-y-2 lg:grid-cols-4">
             <input type="hidden" name="collectionSlug" value={collection.slug} />
@@ -183,8 +181,8 @@ export default async function Plants({
                 )}
               </div>
             )}
-            <Field label="Genus" name="genus" required list="definition-genus-suggestions" defaultValue={identificationPrefill?.genus || ''} />
-            <Field label="Species" name="species" required list="definition-species-suggestions" autoCapitalize="none" defaultValue={identificationPrefill?.species || ''} />
+            <Field label="Genus" help="Required for an identified definition. For an unresolved plant, enter a provisional taxon below and AxilDB will retain a working placement for IDs." name="genus" list="definition-genus-suggestions" defaultValue={identificationPrefill?.genus || ''} />
+            <Field label="Species" help="Required for an identified definition. It may be left blank when a provisional taxon is supplied." name="species" list="definition-species-suggestions" autoCapitalize="none" defaultValue={identificationPrefill?.species || ''} />
             <Field label="Hybrid notation" help="Use for botanical hybrid markers or formula context, such as x, grex, or parentage notation that belongs with the name." name="hybridNotation" list="definition-hybrid-notation-suggestions" defaultValue={identificationPrefill?.hybridNotation || ''} />
             <Field label="Cultivar name" help="The named cultivated variety, usually written in single quotes, such as 'Morning Glow'. Leave blank for unnamed species or clones." name="cultivarName" list="definition-cultivar-name-suggestions" defaultValue={identificationPrefill?.cultivarName || ''} />
             <div className="min-w-0 rounded-lg border border-[#d6dfc9] bg-[#f7f4e8]/80 px-3 py-2 text-sm text-stone-700 lg:col-span-4">
@@ -211,8 +209,7 @@ export default async function Plants({
                 ))}
               </select>
             </label>
-            <Field label="Acquisition label" help="The name or label the plant arrived with, even if you later determine a different accepted name." name="acquisitionLabel" list="definition-acquisition-label-suggestions" wrapperClassName="lg:col-span-2" />
-            <Field label="Provisional taxon" help="A cautious working identification when the accepted name is not settled yet. Useful for 'probably this' or awaiting confirmation." name="provisionalTaxon" list="definition-provisional-taxon-suggestions" wrapperClassName="lg:col-span-2" />
+            <Field label="Provisional / working taxon" help="Use the label you currently suspect when identification is unresolved. It takes precedence as the displayed name and marks the definition as needing identification review." name="provisionalTaxon" list="definition-provisional-taxon-suggestions" wrapperClassName="lg:col-span-4" />
             <Field label="Wikipedia URL" help="Optional quick reference link for the species or genus entry." name="wikipediaUrl" type="url" defaultValue={identificationReferences.wikipediaUrl || ''} />
             <Field label="iNaturalist URL" help="Optional link to an iNaturalist taxon page for observations, common names, and community references." name="inaturalistUrl" type="url" defaultValue={identificationReferences.inaturalistUrl || ''} />
             <Field label="POWO URL" help="Optional Plants of the World Online link for accepted names, synonyms, and distribution data." name="powoUrl" type="url" defaultValue={identificationReferences.powoUrl || ''} />
@@ -240,10 +237,9 @@ export default async function Plants({
                       {plant.governingBody?.abbreviation || 'No governing body'} · {plant._count.instances} instance(s) ·{' '}
                       {taxonomyLabel(plant.confidence)}
                     </p>
-                    {(plant.acquisitionLabel || plant.provisionalTaxon || plant.authority) && (
+                    {(plantNeedsIdentification(plant) || plant.authority) && (
                       <p className="line-clamp-2 text-sm text-stone-600">
-                        {plant.acquisitionLabel && <>Acquired as {plant.acquisitionLabel}. </>}
-                        {plant.provisionalTaxon && <>Provisional taxon: {plant.provisionalTaxon}. </>}
+                        {plantNeedsIdentification(plant) && <>Needs identification review. Working placement: {acceptedPlantName(plant)}. </>}
                         {plant.authority && <>Author citation: {plant.authority}.</>}
                       </p>
                     )}

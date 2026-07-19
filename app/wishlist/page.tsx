@@ -57,7 +57,7 @@ export default async function WishlistPage({ searchParams }: {
   const query = String(sp.q || '').trim().toLowerCase()
   const priority = Number(sp.priority || 0)
   const filtered = allEntries.filter((entry) => {
-    const haystack = [plantName(entry), entry.acquisitionLabel, ...entry.aliases.map((alias) => alias.name), entry.desiredSpecimenSize].filter(Boolean).join(' ').toLowerCase()
+    const haystack = [plantName(entry), entry.provisionalTaxon, ...entry.aliases.map((alias) => alias.name), entry.desiredSpecimenSize].filter(Boolean).join(' ').toLowerCase()
     if (query && !haystack.includes(query)) return false
     if (sp.status && entry.acquisitionStatus !== sp.status) return false
     if (priority && entry.acquisitionPriority !== priority) return false

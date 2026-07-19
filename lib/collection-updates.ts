@@ -37,8 +37,6 @@ const definitionFields = [
   ['authority', 'Authority'],
   ['cultivarRegistrationNumber', 'Registration number'],
   ['confidence', 'Confidence'],
-  ['acquisitionLabel', 'Acquisition label'],
-  ['provisionalTaxon', 'Provisional taxon'],
   ['wikipediaUrl', 'Wikipedia URL'],
   ['inaturalistUrl', 'iNaturalist URL'],
   ['powoUrl', 'POWO URL'],

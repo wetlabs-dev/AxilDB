@@ -8,6 +8,7 @@ import { collectionPath, requireCollectionLogger, requireCollectionManager } fro
 import { emitDomainEvent } from '@/lib/events/emit'
 import { generatePlantId } from '@/lib/plant-id'
 import { plantName } from '@/lib/utils'
+import { normalizePlantDefinitionIdentity } from '@/lib/plant-identity'
 import { sourceRowsFromForm, validateDistributorSelection, validateSourceRows } from '@/lib/provenance'
 import type { AcquisitionAvailability, AcquisitionFulfillmentChoice, AcquisitionStatus } from '@prisma/client'
 
@@ -66,9 +67,7 @@ async function scopedDefinition(collectionId: string, id: string) {
 
 export async function createAcquisitionTarget(fd: FormData) {
   const { user, collection } = await requireCollectionLogger(val(fd, 'collectionSlug'))
-  const genus = val(fd, 'genus')
-  if (!genus) throw new Error('Genus is required.')
-  const species = (val(fd, 'species') || 'sp.').toLowerCase()
+  const identity = normalizePlantDefinitionIdentity({ genus: val(fd, 'genus'), species: val(fd, 'species'), provisionalTaxon: val(fd, 'provisionalTaxon') })
   const status = statusValue(val(fd, 'acquisitionStatus')) || 'WISHLIST'
   const priority = boundedInt(val(fd, 'acquisitionPriority'), 3, 1, 5)
   const desiredLocationId = clearableVal(fd, 'desiredLocationId')
@@ -80,10 +79,11 @@ export async function createAcquisitionTarget(fd: FormData) {
     const definition = await tx.plantDefinition.create({
       data: {
         collectionId: collection.id,
-        genus,
-        species,
+        genus: identity.genus,
+        species: identity.species,
         cultivarName: clearableVal(fd, 'cultivarName'),
-        acquisitionLabel: clearableVal(fd, 'acquisitionLabel'),
+        provisionalTaxon: identity.provisionalTaxon,
+        identificationStatus: identity.identificationStatus,
         confidence: 'UNCERTAIN',
         acquisitionStatus: status,
         acquisitionPriority: priority,
@@ -351,6 +351,7 @@ export async function createPlantAcquisitionRecord(fd: FormData) {
             legacyLocationText: location?.name || null,
             currentLocationId: location?.id || null,
             acquisitionDate: acquiredAt,
+            acquisitionLabel: clearableVal(fd, 'acquisitionLabel'),
             source: primarySource ? sourceNames.get(primarySource.sourceId) : distributor?.name || val(fd, 'source') || val(fd, 'vendor'),
             distributor: distributor?.name || val(fd, 'vendor'),
             purchasePrice: dec(val(fd, 'price')) as any,
@@ -520,6 +521,7 @@ export async function createAcquisitionBatch(fd: FormData) {
             collectionId: collection.id, plantDefinitionId: definition.id, plantId, instanceType: 'MOTHER',
             location: location?.name || null, legacyLocationText: location?.name || null, currentLocationId: location?.id || null,
             acquisitionDate: acquiredAt, distributor: distributor?.name || null, purchasePrice: dec(val(fd, `unitPrice:${definition.id}`)) as any,
+            acquisitionLabel: clearableVal(fd, `acquisitionLabel:${definition.id}`),
           } })
           await tx.plantAcquisitionRecordInstance.create({ data: { acquisitionRecordId: record.id, plantInstanceId: instance.id } })
           await emitDomainEvent(tx, {

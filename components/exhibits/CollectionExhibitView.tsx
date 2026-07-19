@@ -203,7 +203,6 @@ function DefinitionGroup({ group, settings, collectionSlug, visibility }: { grou
               ['Governing body', definition.governingBody?.name],
               ['Confidence', taxonomyLabel(definition.confidence)],
               ['Validation', definition.isValidated ? `Validated ${formatDate(definition.validatedAt)}` : 'Not validated'],
-              ['Acquisition label', definition.acquisitionLabel],
             ]}
           />
         )}

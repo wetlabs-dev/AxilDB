@@ -184,8 +184,8 @@ export async function createDemoData(collectionId: string) {
         cultivarName: item.cultivarName,
         authority: item.authority,
         confidence: item.confidence || 'CONFIRMED',
-        acquisitionLabel: item.acquisitionLabel,
         provisionalTaxon: item.provisionalTaxon,
+        identificationStatus: item.provisionalTaxon ? 'PROVISIONAL' : 'IDENTIFIED',
         wikipediaUrl: item.wikipediaUrl,
         inaturalistUrl: item.inaturalistUrl,
         powoUrl: item.powoUrl,
@@ -269,6 +269,7 @@ export async function createDemoData(collectionId: string) {
 
   const dtrMother = await instance('DTR', '001', {
     acquisitionDate: d('2024-02-14'),
+    acquisitionLabel: definitions.find((item) => item.code === 'DTR')?.acquisitionLabel,
     source: 'Hypothetical neighborhood cutting',
     distributor: 'Local swap table',
     stockNumber: 'SWAP-42',
@@ -280,12 +281,14 @@ export async function createDemoData(collectionId: string) {
   })
   const phrMother = await instance('PHR', '001', {
     acquisitionDate: d('2022-11-19'),
+    acquisitionLabel: definitions.find((item) => item.code === 'PHR')?.acquisitionLabel,
     source: 'Hypothetical orchid nursery',
     location: 'Greenhouse bench 2',
     purchasePrice: '65.00',
   })
   const strMother = await instance('STR', '001', {
     acquisitionDate: d('2025-03-18'),
+    acquisitionLabel: definitions.find((item) => item.code === 'STR')?.acquisitionLabel,
     source: 'Demo violet show',
     location: 'Light shelf A',
   })
@@ -296,6 +299,7 @@ export async function createDemoData(collectionId: string) {
   })
   const hoyMother = await instance('HOY', '001', {
     acquisitionDate: d('2024-05-21'),
+    acquisitionLabel: definitions.find((item) => item.code === 'HOY')?.acquisitionLabel,
     source: 'Demo online seller',
     distributor: 'WetLabs sample import',
     location: 'Hanging basket rail',

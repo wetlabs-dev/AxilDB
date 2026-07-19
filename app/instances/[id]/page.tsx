@@ -57,7 +57,7 @@ import { sunshineCounts, sunshineKey, sunshineStateForUser } from '@/lib/sunshin
 import { addCalendarDays, formatDateTime, startOfDayInTimeZone } from '@/lib/time'
 import { collectPlantTimelineEvents, getPlantTimelineMetrics } from '@/lib/timeline/plantTimeline'
 import { allowedEventVisibilities } from '@/lib/events/visibility'
-import { dateInput, fmtDate, plantName, taxonomyLabel } from '@/lib/utils'
+import { acceptedPlantName, dateInput, fmtDate, plantName, plantNeedsIdentification, taxonomyLabel } from '@/lib/utils'
 import { ensureStarterWorkflowTemplates } from '@/lib/workflows'
 import Link from 'next/link'
 import QRCode from 'qrcode'
@@ -895,8 +895,14 @@ export default async function InstanceDetail({
           <h3 className="font-bold">Identity</h3>
           <p className="font-medium">{plantName(i.plantDefinition)}</p>
           <p>Confidence: {taxonomyLabel(i.plantDefinition.confidence)}</p>
-          <p>Acquired as: {i.plantDefinition.acquisitionLabel || '—'}</p>
-          <p>Provisional taxon: {i.plantDefinition.provisionalTaxon || '—'}</p>
+          <p>Acquisition label: {i.acquisitionLabel || '—'}</p>
+          {plantNeedsIdentification(i.plantDefinition) && (
+            <div className="my-2 rounded-md border border-amber-300 bg-amber-50 p-2 text-amber-950">
+              <p className="font-semibold">Needs identification review</p>
+              <p>Provisional identity: {plantName(i.plantDefinition)}</p>
+              <p>Working placement: {acceptedPlantName(i.plantDefinition)}</p>
+            </div>
+          )}
           <p>Author citation: {i.plantDefinition.authority || '—'}</p>
           {(i.plantDefinition.wikipediaUrl || i.plantDefinition.inaturalistUrl || i.plantDefinition.powoUrl || i.plantDefinition.gbifUrl) && (
             <div className="mt-3 flex flex-wrap gap-2 text-xs">

@@ -1146,8 +1146,8 @@ model PlantDefinition {
   cultivarRegistrationNumber String?
   governingBodyId            String?
   confidence                 String   @default("UNCERTAIN")
-  acquisitionLabel           String?
   provisionalTaxon           String?
+  identificationStatus       String   @default("IDENTIFIED")
   wikipediaUrl               String?
   inaturalistUrl             String?
   powoUrl                    String?
@@ -1202,6 +1202,7 @@ model PlantDefinition {
   @@index([collectionId])
   @@index([governingBodyId])
   @@index([confidence])
+  @@index([identificationStatus])
   @@index([isValidated])
   @@index([validatedByUserId])
   @@index([validatedSourceCollectionId])
@@ -1883,6 +1884,7 @@ model PlantInstance {
   source            String?
   distributor       String?
   stockNumber       String?
+  acquisitionLabel  String?
   purchasePrice     Decimal?
   archiveDate       DateTime?
   archiveReason     String?

@@ -6,6 +6,8 @@ type DefinitionIdentity = {
   species?: string | null
   hybridNotation?: string | null
   cultivarName?: string | null
+  provisionalTaxon?: string | null
+  identificationStatus?: string | null
 }
 
 function normalizedText(value?: string | null) {
@@ -28,6 +30,7 @@ export function validatedIdentityWhere(input: DefinitionIdentity): Prisma.PlantD
 
   return {
     isValidated: true,
+    identificationStatus: 'IDENTIFIED',
     collectionId: null,
     genus: { equals: genus, mode: 'insensitive' },
     species: { equals: species, mode: 'insensitive' },
@@ -36,6 +39,7 @@ export function validatedIdentityWhere(input: DefinitionIdentity): Prisma.PlantD
 }
 
 export async function findMatchingValidatedDefinition(client: PrismaClient | Prisma.TransactionClient, input: DefinitionIdentity) {
+  if (input.identificationStatus === 'PROVISIONAL' || normalizedText(input.provisionalTaxon)) return null
   if (!normalizedText(input.genus) || !normalizedText(input.species)) return null
   return client.plantDefinition.findFirst({
     where: validatedIdentityWhere(input),
@@ -77,8 +81,8 @@ export function definitionData(source: any, overrides: Record<string, unknown> =
     cultivarRegistrationNumber: source.cultivarRegistrationNumber,
     governingBodyId: source.governingBodyId,
     confidence: source.confidence,
-    acquisitionLabel: source.acquisitionLabel,
     provisionalTaxon: source.provisionalTaxon,
+    identificationStatus: source.identificationStatus,
     wikipediaUrl: source.wikipediaUrl,
     inaturalistUrl: source.inaturalistUrl,
     powoUrl: source.powoUrl,
