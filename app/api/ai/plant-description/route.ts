@@ -41,6 +41,7 @@ export async function POST(req: Request) {
   const access = await requireAiFeatureAccess(trimmedString(body.collectionSlug, 80))
   if (access.error) return access.error
   const { user, collection } = access.context
+  const applyMode = body.applyMode === 'REPLACE_ALL' ? 'REPLACE_ALL' : 'FILL_MISSING'
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) {
     return NextResponse.json({ error: 'OpenAI API key is not configured.' }, { status: 503 })
@@ -81,7 +82,7 @@ export async function POST(req: Request) {
     if (!response.ok) {
       const message = payload.error?.message || 'OpenAI description request failed.'
       await recordAiUsage({ collectionId: collection.id, userId: user.id, feature: 'AI_DESCRIPTION', model, success: false, error: message })
-      await audit(user, 'ERROR', 'AI_DESCRIPTION', null, `Failed to generate description for ${name}`, { model, error: message }, collection.id)
+      await audit(user, 'ERROR', 'AI_DESCRIPTION', null, `Failed to generate description for ${name}`, { model, applyMode, error: message }, collection.id)
       return NextResponse.json({ error: message }, { status: response.status })
     }
 
@@ -91,12 +92,12 @@ export async function POST(req: Request) {
     }
 
     await recordAiUsage({ collectionId: collection.id, userId: user.id, feature: 'AI_DESCRIPTION', model, usage: tokenUsage(payload) })
-    await audit(user, 'GENERATE', 'AI_DESCRIPTION', null, `Generated plant description for ${name}`, { model }, collection.id)
+    await audit(user, 'GENERATE', 'AI_DESCRIPTION', null, `Generated plant description for ${name}`, { model, applyMode }, collection.id)
     return NextResponse.json({ description })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'OpenAI description request failed.'
     await recordAiUsage({ collectionId: collection.id, userId: user.id, feature: 'AI_DESCRIPTION', model, success: false, error: message })
-    await audit(user, 'ERROR', 'AI_DESCRIPTION', null, `Failed to generate description for ${name}`, { model, error: message }, collection.id)
+    await audit(user, 'ERROR', 'AI_DESCRIPTION', null, `Failed to generate description for ${name}`, { model, applyMode, error: message }, collection.id)
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

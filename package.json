@@ -36,6 +36,7 @@
     "provenance:check": "tsx scripts/check-provenance-integrity.ts",
     "check:provenance": "tsx scripts/check-provenance.ts",
     "check:wishlist": "node scripts/check-wishlist-features.mjs",
+    "check:magic-fill": "tsx scripts/check-magic-fill.ts",
     "check:workflows": "tsx scripts/check-workflows.ts",
     "check:timezone": "tsx scripts/check-timezone.ts"
   },

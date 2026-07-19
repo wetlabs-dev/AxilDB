@@ -2,6 +2,8 @@
 
 import { useRef, useState } from 'react'
 import { Search, Sparkles } from 'lucide-react'
+import { MagicFillConflictDialog } from '@/components/MagicFillConflictDialog'
+import { applyMagicFillDraftToForm, getMagicFillConflictState, isMagicFillValueEmpty, readMagicFillFormValues, type MagicFillApplyMode } from '@/lib/magic-fill'
 import { cn } from '@/lib/utils'
 
 const control = 'rounded-md border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] px-2.5 py-1.5 text-sm font-normal text-[var(--ax-text)] shadow-inner shadow-stone-200/30 outline-none transition placeholder:text-[var(--ax-muted)] file:mr-3 file:rounded-md file:border-0 file:bg-[var(--ax-surface-solid)] file:px-2 file:py-1 file:text-[var(--ax-text)] focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
@@ -29,14 +31,10 @@ type ValidatedMatch = {
   cultivarName?: string | null
 }
 
-function setControlValue(form: HTMLFormElement, name: string, value?: string | null) {
-  if (value === undefined || value === null) return
-  const field = form.elements.namedItem(name) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null
-  if (!field) return
-  field.value = value
-  field.dispatchEvent(new Event('input', { bubbles: true }))
-  field.dispatchEvent(new Event('change', { bubbles: true }))
-}
+const identificationApplyFields = [
+  'genus', 'species', 'hybridNotation', 'cultivarName', 'confidence', 'description',
+  'wikipediaUrl', 'inaturalistUrl', 'powoUrl', 'gbifUrl', 'aliasName',
+] as const
 
 function referenceField(url: string) {
   const normalized = url.toLowerCase()
@@ -88,6 +86,7 @@ export function PlantIdentificationAssistant({
 }) {
   const rootRef = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const applyButtonRef = useRef<HTMLButtonElement>(null)
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [status, setStatus] = useState('')
@@ -95,6 +94,7 @@ export function PlantIdentificationAssistant({
   const [matchedDefinition, setMatchedDefinition] = useState<ValidatedMatch | null>(null)
   const [logId, setLogId] = useState<string | null>(null)
   const [saveAsTypeImage, setSaveAsTypeImage] = useState(false)
+  const [conflict, setConflict] = useState<ReturnType<typeof getMagicFillConflictState> | null>(null)
 
   async function suggestId() {
     const root = rootRef.current
@@ -149,27 +149,41 @@ export function PlantIdentificationAssistant({
     setStatus('Suggestion applied. Type image uploaded; refresh if it does not appear immediately.')
   }
 
-  async function applySuggestion() {
+  function requestApplySuggestion() {
     const form = rootRef.current?.closest('form')
     if (!form || !suggestion) return
-    setControlValue(form, 'genus', capitalizeGenus(suggestion.genus))
-    setControlValue(form, 'species', suggestion.species?.toLowerCase())
-    setControlValue(form, 'hybridNotation', suggestion.hybridNotation)
-    setControlValue(form, 'cultivarName', suggestion.cultivarName)
-    setControlValue(form, 'confidence', 'AI_DETERMINED')
-    setControlValue(form, 'description', suggestion.suggestedDescription)
+    const state = getMagicFillConflictState(readMagicFillFormValues(form, identificationApplyFields), identificationApplyFields)
+    if (state.hasConflict) setConflict(state)
+    else void applySuggestion('FILL_MISSING')
+  }
+
+  async function applySuggestion(mode: MagicFillApplyMode) {
+    setConflict(null)
+    const form = rootRef.current?.closest('form')
+    if (!form || !suggestion) return
+    const draft: Record<string, unknown> = {
+      genus: capitalizeGenus(suggestion.genus),
+      species: suggestion.species?.toLowerCase(),
+      hybridNotation: suggestion.hybridNotation,
+      cultivarName: suggestion.cultivarName,
+      confidence: 'AI_DETERMINED',
+      description: suggestion.suggestedDescription,
+    }
     for (const reference of suggestion.suggestedReferences || []) {
       const field = referenceField(reference)
-      if (field) setControlValue(form, field, reference)
+      if (field) draft[field] = reference
     }
+    const outcome = applyMagicFillDraftToForm(form, draft, identificationApplyFields, mode)
     const aliases = aliasesFromSuggestion(suggestion)
-    if (aliases.length) window.dispatchEvent(new CustomEvent('axildb:replace-aliases', { detail: { form, aliases } }))
-    setStatus(`Suggestion applied${aliases.length ? ` with ${aliases.length} alias${aliases.length === 1 ? '' : 'es'}` : ''}. Review before saving.`)
+    const currentAliases = readMagicFillFormValues(form, ['aliasName']).aliasName
+    const shouldApplyAliases = mode === 'REPLACE_ALL' || isMagicFillValueEmpty(currentAliases)
+    if (shouldApplyAliases && suggestion.suggestedAliases !== undefined) window.dispatchEvent(new CustomEvent('axildb:replace-aliases', { detail: { form, aliases } }))
+    setStatus(`Suggestion applied to ${outcome.appliedCount} field${outcome.appliedCount === 1 ? '' : 's'}${shouldApplyAliases && aliases.length ? ` with ${aliases.length} alias${aliases.length === 1 ? '' : 'es'}` : ''}. Review before saving.`)
     if (logId) {
       await fetch(`/api/ai/plant-identification/logs/${encodeURIComponent(logId)}/apply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ collectionSlug, plantDefinitionId }),
+        body: JSON.stringify({ collectionSlug, plantDefinitionId, applyMode: mode }),
       }).catch(() => null)
     }
     await uploadTypeImage(form)
@@ -262,8 +276,9 @@ export function PlantIdentificationAssistant({
             </button>
             {suggestion && (
               <button
+                ref={applyButtonRef}
                 type="button"
-                onClick={applySuggestion}
+                onClick={requestApplySuggestion}
                 className="rounded-md border border-[color:var(--ax-border)] bg-[var(--ax-surface-solid)] px-3 py-2 text-sm font-semibold text-[var(--ax-text)] transition hover:bg-[var(--ax-primary-wash)]"
               >
                 Apply to form
@@ -321,6 +336,14 @@ export function PlantIdentificationAssistant({
           )}
         </div>
       )}
+      <MagicFillConflictDialog
+        open={Boolean(conflict)}
+        populatedCount={conflict?.populatedCount || 0}
+        emptyCount={conflict?.emptyCount || 0}
+        onChoose={(mode) => void applySuggestion(mode)}
+        onCancel={() => setConflict(null)}
+        returnFocusRef={applyButtonRef}
+      />
     </div>
   )
 }

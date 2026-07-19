@@ -2,8 +2,19 @@
 
 import { useRef, useState } from 'react'
 import { Sparkles } from 'lucide-react'
+import { MagicFillConflictDialog } from '@/components/MagicFillConflictDialog'
 import { husbandryFieldNames } from '@/lib/husbandry'
+import { applyMagicFillDraftToForm, getMagicFillConflictState, readMagicFillFormValues, type MagicFillApplyMode } from '@/lib/magic-fill'
 import { cn } from '@/lib/utils'
+
+const husbandryMagicFillFields = [...husbandryFieldNames, 'reviewNotes', 'aiModel'] as const
+const fertilizerAssignmentFields = ['fertilizerRecipeId', 'fertilizationFrequency', 'fertilizationStrength', 'fertilizationSeasonalSchedule', 'fertilizationCadenceDays'] as const
+const fertilizerDraftFields = [
+  'createFertilizerRecipeDraft', 'newFertilizerRecipeName', 'newFertilizerRecipeDescription',
+  'newFertilizerRecipeNpk', 'newFertilizerRecipeApplicationMethod', 'newFertilizerRecipeDilution',
+  'newFertilizerRecipeStrength', 'newFertilizerRecipeFrequency', 'newFertilizerRecipeSeasonalNotes',
+  'newFertilizerRecipeProductSuggestions', 'newFertilizerRecipeCautionNotes', ...fertilizerAssignmentFields,
+] as const
 
 function setControlValue(form: HTMLFormElement, name: string, value?: string | null) {
   if (value === undefined || value === null) return
@@ -47,8 +58,35 @@ export function HusbandryMagicFillButton({
   const [status, setStatus] = useState('')
   const [loading, setLoading] = useState(false)
   const [fertilizerRecommendation, setFertilizerRecommendation] = useState<any>(null)
+  const [draft, setDraft] = useState<any>(null)
+  const [readyToSave, setReadyToSave] = useState(false)
+  const [conflict, setConflict] = useState<(ReturnType<typeof getMagicFillConflictState> & { continueWith: (mode: MagicFillApplyMode) => void }) | null>(null)
 
-  async function magicFill() {
+  function ensureControls(form: HTMLFormElement, fields: readonly string[]) {
+    for (const name of fields) {
+      if (form.elements.namedItem(name)) continue
+      const input = document.createElement('input')
+      input.type = 'hidden'
+      input.name = name
+      form.appendChild(input)
+    }
+  }
+
+  function requestMode(fields: readonly string[], continueWith: (mode: MagicFillApplyMode) => void) {
+    const form = buttonRef.current?.form
+    if (!form) return
+    ensureControls(form, fields)
+    const state = getMagicFillConflictState(readMagicFillFormValues(form, fields), fields)
+    if (state.hasConflict) setConflict({ ...state, continueWith })
+    else continueWith('FILL_MISSING')
+  }
+
+  function requestMagicFill() {
+    requestMode(husbandryMagicFillFields, magicFill)
+  }
+
+  async function magicFill(mode: MagicFillApplyMode) {
+    setConflict(null)
     const form = buttonRef.current?.form
     if (!form) return
     const formData = new FormData(form)
@@ -60,22 +98,25 @@ export function HusbandryMagicFillButton({
       const response = await fetch('/api/ai/plant-husbandry-fill', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ collectionSlug, plant }),
+        body: JSON.stringify({ collectionSlug, plant, applyMode: mode }),
       })
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || 'Husbandry fill failed.')
 
       const fields = result.fields || {}
-      for (const field of husbandryFieldNames) setControlValue(form, field, fields[field])
-      setControlValue(form, 'reviewStatus', fields.reviewStatus || 'DRAFT')
-      setControlValue(form, 'reviewNotes', fields.reviewNotes || 'AI-generated draft. Review before relying on this care guide.')
-      setControlValue(form, 'aiModel', fields.aiModel)
+      const fillDraft = {
+        ...fields,
+        reviewNotes: fields.reviewNotes || 'AI-generated draft. Review before relying on this care guide.',
+      }
+      const outcome = applyMagicFillDraftToForm(form, fillDraft, husbandryMagicFillFields, mode)
+      setControlValue(form, 'reviewStatus', 'DRAFT')
+      setDraft(fillDraft)
       setFertilizerRecommendation(result.fertilizerRecommendation || null)
       if (autoSubmit) {
-        setStatus('Draft added. Saving...')
-        form.requestSubmit()
+        setReadyToSave(true)
+        setStatus(`${outcome.appliedCount} husbandry field${outcome.appliedCount === 1 ? '' : 's'} drafted. Review the preview, then save.`)
       } else {
-        setStatus('Draft added. Review before saving.')
+        setStatus(`${outcome.appliedCount} husbandry field${outcome.appliedCount === 1 ? '' : 's'} drafted. Review before saving.`)
       }
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Husbandry fill failed.')
@@ -84,36 +125,52 @@ export function HusbandryMagicFillButton({
     }
   }
 
-  function applyExistingRecipe() {
+  function requestExistingRecipe() {
+    requestMode(fertilizerAssignmentFields, applyExistingRecipe)
+  }
+
+  function applyExistingRecipe(mode: MagicFillApplyMode) {
+    setConflict(null)
     const form = buttonRef.current?.form
     if (!form || !fertilizerRecommendation?.recommendedRecipeId) return
-    setControlValue(form, 'fertilizerRecipeId', fertilizerRecommendation.recommendedRecipeId)
-    setControlValue(form, 'fertilizationFrequency', fertilizerRecommendation.suggestedFrequency)
-    setControlValue(form, 'fertilizationStrength', fertilizerRecommendation.suggestedStrength)
-    setControlValue(form, 'fertilizationSeasonalSchedule', fertilizerRecommendation.seasonalNotes)
-    setControlValue(form, 'fertilizationCadenceDays', cadenceFromText(fertilizerRecommendation.suggestedFrequency))
+    ensureControls(form, fertilizerAssignmentFields)
+    applyMagicFillDraftToForm(form, {
+      fertilizerRecipeId: fertilizerRecommendation.recommendedRecipeId,
+      fertilizationFrequency: fertilizerRecommendation.suggestedFrequency,
+      fertilizationStrength: fertilizerRecommendation.suggestedStrength,
+      fertilizationSeasonalSchedule: fertilizerRecommendation.seasonalNotes,
+      fertilizationCadenceDays: cadenceFromText(fertilizerRecommendation.suggestedFrequency),
+    }, fertilizerAssignmentFields, mode)
     setStatus('Fertilizer recipe selected. Review and save to apply.')
   }
 
-  function applyNewRecipeDraft() {
+  function requestNewRecipeDraft() {
+    requestMode(fertilizerDraftFields, applyNewRecipeDraft)
+  }
+
+  function applyNewRecipeDraft(mode: MagicFillApplyMode) {
+    setConflict(null)
     const form = buttonRef.current?.form
     const draft = fertilizerRecommendation?.newRecipeDraft
     if (!form || !draft) return
-    setControlValue(form, 'createFertilizerRecipeDraft', 'on')
-    setControlValue(form, 'newFertilizerRecipeName', draft.name || fertilizerRecommendation.recommendedRecipeName || 'Fertilizer recipe draft')
-    setControlValue(form, 'newFertilizerRecipeDescription', fertilizerRecommendation.reasoning)
-    setControlValue(form, 'newFertilizerRecipeNpk', draft.targetNpkOrStyle)
-    setControlValue(form, 'newFertilizerRecipeApplicationMethod', draft.applicationMethod)
-    setControlValue(form, 'newFertilizerRecipeDilution', draft.dilutionOrStrength)
-    setControlValue(form, 'newFertilizerRecipeStrength', fertilizerRecommendation.suggestedStrength || draft.dilutionOrStrength)
-    setControlValue(form, 'newFertilizerRecipeFrequency', fertilizerRecommendation.suggestedFrequency || draft.suggestedFrequency)
-    setControlValue(form, 'newFertilizerRecipeSeasonalNotes', fertilizerRecommendation.seasonalNotes)
-    setControlValue(form, 'newFertilizerRecipeProductSuggestions', draft.productTypeSuggestions)
-    setControlValue(form, 'newFertilizerRecipeCautionNotes', draft.cautionNotes)
-    setControlValue(form, 'fertilizationFrequency', fertilizerRecommendation.suggestedFrequency || draft.suggestedFrequency)
-    setControlValue(form, 'fertilizationStrength', fertilizerRecommendation.suggestedStrength || draft.dilutionOrStrength)
-    setControlValue(form, 'fertilizationSeasonalSchedule', fertilizerRecommendation.seasonalNotes)
-    setControlValue(form, 'fertilizationCadenceDays', cadenceFromText(fertilizerRecommendation.suggestedFrequency || draft.suggestedFrequency))
+    ensureControls(form, fertilizerDraftFields)
+    applyMagicFillDraftToForm(form, {
+      createFertilizerRecipeDraft: 'on',
+      newFertilizerRecipeName: draft.name || fertilizerRecommendation.recommendedRecipeName || 'Fertilizer recipe draft',
+      newFertilizerRecipeDescription: fertilizerRecommendation.reasoning,
+      newFertilizerRecipeNpk: draft.targetNpkOrStyle,
+      newFertilizerRecipeApplicationMethod: draft.applicationMethod,
+      newFertilizerRecipeDilution: draft.dilutionOrStrength,
+      newFertilizerRecipeStrength: fertilizerRecommendation.suggestedStrength || draft.dilutionOrStrength,
+      newFertilizerRecipeFrequency: fertilizerRecommendation.suggestedFrequency || draft.suggestedFrequency,
+      newFertilizerRecipeSeasonalNotes: fertilizerRecommendation.seasonalNotes,
+      newFertilizerRecipeProductSuggestions: draft.productTypeSuggestions,
+      newFertilizerRecipeCautionNotes: draft.cautionNotes,
+      fertilizationFrequency: fertilizerRecommendation.suggestedFrequency || draft.suggestedFrequency,
+      fertilizationStrength: fertilizerRecommendation.suggestedStrength || draft.dilutionOrStrength,
+      fertilizationSeasonalSchedule: fertilizerRecommendation.seasonalNotes,
+      fertilizationCadenceDays: cadenceFromText(fertilizerRecommendation.suggestedFrequency || draft.suggestedFrequency),
+    }, fertilizerDraftFields, mode)
     setStatus('Fertilizer recipe draft queued. Save to create and link it.')
   }
 
@@ -124,7 +181,7 @@ export function HusbandryMagicFillButton({
         <button
           ref={buttonRef}
           type="button"
-          onClick={magicFill}
+          onClick={requestMagicFill}
           disabled={loading}
           className="inline-flex items-center gap-1.5 rounded-md border border-[#c4a86a]/60 bg-[#fff5d6] px-2.5 py-1.5 text-sm font-semibold text-[#6f541f] shadow-sm transition hover:bg-[#f7e6ae] disabled:cursor-wait disabled:opacity-70"
         >
@@ -132,6 +189,22 @@ export function HusbandryMagicFillButton({
           {loading ? 'Filling...' : label}
         </button>
       </div>
+      {autoSubmit && draft && (
+        <details className="w-full max-w-xl rounded-lg border border-[#d6dfc9] bg-[#f7f4e8] p-3 text-left text-sm text-stone-700">
+          <summary className="cursor-pointer font-semibold text-[#2f6b45]">Review Magic Fill draft</summary>
+          <dl className="mt-2 grid max-h-72 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+            {husbandryFieldNames.filter((field) => draft[field]).map((field) => (
+              <div key={field} className="rounded-md border border-stone-200 bg-white/65 p-2">
+                <dt className="text-[0.65rem] font-bold uppercase tracking-wide text-stone-500">{field.replace(/([A-Z])/g, ' $1')}</dt>
+                <dd className="mt-1 text-xs leading-5">{draft[field]}</dd>
+              </div>
+            ))}
+          </dl>
+        </details>
+      )}
+      {autoSubmit && readyToSave && (
+        <button type="submit" className="rounded-md bg-[#2f6b45] px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[#28593b]">Save Magic Fill draft</button>
+      )}
       {fertilizerRecommendation && !autoSubmit && (
         <div className="max-w-xl rounded-lg border border-[#d6dfc9] bg-[#f7f4e8] p-3 text-left text-sm text-stone-700 shadow-sm">
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#2f6b45]">Fertilizer recommendation</p>
@@ -156,14 +229,22 @@ export function HusbandryMagicFillButton({
           )}
           <div className="mt-3 flex flex-wrap gap-2">
             {fertilizerRecommendation.fertilizerRecommendationType === 'USE_EXISTING_RECIPE' && fertilizerRecommendation.recommendedRecipeId && (
-              <button type="button" onClick={applyExistingRecipe} className="rounded-md bg-[#2f6b45] px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[#28593b]">Use this recipe</button>
+              <button type="button" onClick={requestExistingRecipe} className="rounded-md bg-[#2f6b45] px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[#28593b]">Use this recipe</button>
             )}
             {fertilizerRecommendation.fertilizerRecommendationType === 'CREATE_NEW_RECIPE' && fertilizerRecommendation.newRecipeDraft && (
-              <button type="button" onClick={applyNewRecipeDraft} className="rounded-md bg-[#2f6b45] px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[#28593b]">Create fertilizer recipe draft</button>
+              <button type="button" onClick={requestNewRecipeDraft} className="rounded-md bg-[#2f6b45] px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[#28593b]">Create fertilizer recipe draft</button>
             )}
           </div>
         </div>
       )}
+      <MagicFillConflictDialog
+        open={Boolean(conflict)}
+        populatedCount={conflict?.populatedCount || 0}
+        emptyCount={conflict?.emptyCount || 0}
+        onChoose={(mode) => conflict?.continueWith(mode)}
+        onCancel={() => setConflict(null)}
+        returnFocusRef={buttonRef}
+      />
     </div>
   )
 }

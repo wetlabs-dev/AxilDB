@@ -84,6 +84,7 @@ export async function POST(req: Request) {
   const access = await requireAiFeatureAccess(trimmedString(body.collectionSlug, 80))
   if (access.error) return access.error
   const { user, collection } = access.context
+  const applyMode = body.applyMode === 'REPLACE_ALL' ? 'REPLACE_ALL' : 'FILL_MISSING'
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) return NextResponse.json({ error: 'OpenAI API key is not configured.' }, { status: 503 })
   if (!rateLimit(user.id)) return NextResponse.json({ error: 'Husbandry fill limit reached. Try again later.' }, { status: 429 })
@@ -174,7 +175,7 @@ export async function POST(req: Request) {
     if (!response.ok) {
       const message = payload.error?.message || 'OpenAI husbandry fill request failed.'
       await recordAiUsage({ collectionId: collection.id, userId: user.id, feature: 'AI_HUSBANDRY_FILL', model, success: false, error: message })
-      await audit(user, 'ERROR', 'AI_HUSBANDRY_FILL', null, `Failed husbandry fill for ${name}`, { model, error: message }, collection.id)
+      await audit(user, 'ERROR', 'AI_HUSBANDRY_FILL', null, `Failed husbandry fill for ${name}`, { model, applyMode, error: message }, collection.id)
       return NextResponse.json({ error: message }, { status: response.status })
     }
 
@@ -182,12 +183,12 @@ export async function POST(req: Request) {
     const fields = normalizeFields(raw, model)
     const fertilizerRecommendation = normalizeFertilizerRecommendation(raw, fertilizerRecipeIds)
     await recordAiUsage({ collectionId: collection.id, userId: user.id, feature: 'AI_HUSBANDRY_FILL', model, usage: tokenUsage(payload) })
-    await audit(user, 'GENERATE', 'AI_HUSBANDRY_FILL', null, `Generated husbandry fill for ${name}`, { model }, collection.id)
+    await audit(user, 'GENERATE', 'AI_HUSBANDRY_FILL', null, `Generated husbandry fill for ${name}`, { model, applyMode }, collection.id)
     return NextResponse.json({ fields, fertilizerRecommendation })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'OpenAI husbandry fill request failed.'
     await recordAiUsage({ collectionId: collection.id, userId: user.id, feature: 'AI_HUSBANDRY_FILL', model, success: false, error: message })
-    await audit(user, 'ERROR', 'AI_HUSBANDRY_FILL', null, `Failed husbandry fill for ${name}`, { model, error: message }, collection.id)
+    await audit(user, 'ERROR', 'AI_HUSBANDRY_FILL', null, `Failed husbandry fill for ${name}`, { model, applyMode, error: message }, collection.id)
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

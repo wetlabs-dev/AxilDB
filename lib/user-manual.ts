@@ -75,6 +75,7 @@ export const manualSections: ManualSection[] = [
       'Use Add plant definition to create a new definition.',
       'Enter genus, species, cultivar, author citation, governing body, reference URLs, aliases, description, and notes.',
       'Use AI draft for a short botanical description, Magic fill to draft taxonomy metadata and aliases, or ID My Plant to suggest an identification from your description, known names, and optional image when AI is enabled for the collection.',
+      'When a Magic Fill-managed field already contains information, choose Fill Missing Only to preserve it, Replace All Fields to replace only that tool’s managed fields, or Cancel. Empty forms proceed directly, and every draft still requires review and an explicit save.',
       'Use ID History from the Plant Definitions header to review past ID My Plant suggestions for the collection and create a new plant definition prefilled from a saved result.',
       'Open Validated from the Plant Definitions header to browse reviewed site-level definitions that can be used by any collection.',
       'Managers can nominate a local definition for validation from the edit page. Server admins review nominations from Server Management.',
@@ -230,7 +231,7 @@ export const manualSections: ManualSection[] = [
     purpose: 'Husbandry guides capture care guidance for plant definitions and allow specimen-specific local overrides where one plant needs special treatment.',
     howTo: [
       'Open a plant definition and use the Husbandry panel to create, link, fork, edit, or delete a guide.',
-      'Use Magic Fill husbandry to draft the structured care guide with one AI call when AI is enabled.',
+      'Use Magic Fill husbandry to draft the structured care guide with one AI call when AI is enabled. Existing guide data triggers the shared Fill Missing Only / Replace All Fields choice, and generated husbandry is previewed before you explicitly save it.',
       'Edit individual husbandry fields inline with the edit controls next to each field instead of working through one large form.',
       'Use Fertilizers from the Admin sidebar to define collection-scoped fertilizer products and recipes, then assign a recipe and cadence from the plant definition husbandry panel.',
       'On fertilizer products, record structured guaranteed-analysis percentages for NPK, secondary nutrients, and micronutrients. Use guaranteed-analysis notes for chelated forms, unusual nutrients, or label text that does not fit a numeric field.',
@@ -242,7 +243,7 @@ export const manualSections: ManualSection[] = [
       'Quick summary fields are standardized for consistent water, light, and toxicity badges.',
       'Summary badges use standardized colors and icons for watering, light, and toxicity.',
       'Full guides are grouped by care sections so future care sheets can include only selected topics.',
-      'Magic Fill product data can draft guaranteed analysis, label feed rate, source URL/name, and confidence from public product-label or manufacturer information. It does not save automatically; apply the draft, review it, then save.',
+      'Magic Fill product data can draft guaranteed analysis, label feed rate, source URL/name, and confidence from public product-label or manufacturer information. If managed fields are populated, choose whether to fill only blanks or replace the managed fields. It does not save automatically; apply the draft, review it, then save.',
       'Magic Fill husbandry can recommend an existing active fertilizer recipe or queue a new fertilizer recipe draft, but the recommendation is not applied until you choose it and save.',
     ],
     warnings: [

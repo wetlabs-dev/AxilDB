@@ -10,6 +10,9 @@ npm run check:workflows
 echo "==> Checking care scheduling invariants"
 npm run check:care-scheduling
 
+echo "==> Checking Magic Fill merge invariants"
+npm run check:magic-fill
+
 echo "==> Checking event engine invariants"
 npm run check:events
 

@@ -117,6 +117,7 @@ export async function POST(req: Request) {
   const access = await requireAiFeatureAccess(trimmedString(body.collectionSlug, 80))
   if (access.error) return access.error
   const { user, collection } = access.context
+  const applyMode = body.applyMode === 'REPLACE_ALL' ? 'REPLACE_ALL' : 'FILL_MISSING'
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) {
     return NextResponse.json({ error: 'OpenAI API key is not configured.' }, { status: 503 })
@@ -227,7 +228,7 @@ export async function POST(req: Request) {
     if (!response.ok) {
       const message = payload.error?.message || 'OpenAI magic fill request failed.'
       await recordAiUsage({ collectionId: collection.id, userId: user.id, feature: 'AI_MAGIC_FILL', model, success: false, error: message })
-      await audit(user, 'ERROR', 'AI_MAGIC_FILL', null, `Failed magic fill for ${originalName}`, { model, error: message }, collection.id)
+      await audit(user, 'ERROR', 'AI_MAGIC_FILL', null, `Failed magic fill for ${originalName}`, { model, applyMode, error: message }, collection.id)
       return NextResponse.json({ error: message }, { status: response.status })
     }
 
@@ -245,12 +246,12 @@ export async function POST(req: Request) {
       fields.aliases = fields.aliases.slice(0, 8)
     }
     await recordAiUsage({ collectionId: collection.id, userId: user.id, feature: 'AI_MAGIC_FILL', model, usage: tokenUsage(payload) })
-    await audit(user, 'GENERATE', 'AI_MAGIC_FILL', null, `Generated magic fill for ${originalName}`, { model, reviewNote: fields.reviewNote }, collection.id)
+    await audit(user, 'GENERATE', 'AI_MAGIC_FILL', null, `Generated magic fill for ${originalName}`, { model, applyMode, reviewNote: fields.reviewNote }, collection.id)
     return NextResponse.json({ fields })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'OpenAI magic fill request failed.'
     await recordAiUsage({ collectionId: collection.id, userId: user.id, feature: 'AI_MAGIC_FILL', model, success: false, error: message })
-    await audit(user, 'ERROR', 'AI_MAGIC_FILL', null, `Failed magic fill for ${originalName}`, { model, error: message }, collection.id)
+    await audit(user, 'ERROR', 'AI_MAGIC_FILL', null, `Failed magic fill for ${originalName}`, { model, applyMode, error: message }, collection.id)
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

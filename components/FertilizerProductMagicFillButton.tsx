@@ -2,6 +2,8 @@
 
 import { useRef, useState } from 'react'
 import { Sparkles } from 'lucide-react'
+import { MagicFillConflictDialog } from '@/components/MagicFillConflictDialog'
+import { applyMagicFillDraftToForm, getMagicFillConflictState, readMagicFillFormValues, type MagicFillApplyMode } from '@/lib/magic-fill'
 import { cn } from '@/lib/utils'
 
 const draftFields = [
@@ -38,22 +40,25 @@ const draftFields = [
   'aiFilledAt',
 ] as const
 
-function setControlValue(form: HTMLFormElement, name: string, value?: string | number | null) {
-  if (value === undefined || value === null || value === '') return
-  const field = form.elements.namedItem(name) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null
-  if (!field) return
-  field.value = String(value)
-  field.dispatchEvent(new Event('input', { bubbles: true }))
-  field.dispatchEvent(new Event('change', { bubbles: true }))
-}
-
 export function FertilizerProductMagicFillButton({ className = '' }: { className?: string }) {
   const buttonRef = useRef<HTMLButtonElement>(null)
   const [loading, setLoading] = useState(false)
   const [status, setStatus] = useState('')
   const [draft, setDraft] = useState<any>(null)
+  const [applyMode, setApplyMode] = useState<MagicFillApplyMode>('FILL_MISSING')
+  const [conflict, setConflict] = useState<ReturnType<typeof getMagicFillConflictState> | null>(null)
 
-  async function magicFill() {
+  function requestMagicFill() {
+    const form = buttonRef.current?.form
+    if (!form) return
+    const state = getMagicFillConflictState(readMagicFillFormValues(form, draftFields), draftFields)
+    if (state.hasConflict) setConflict(state)
+    else void magicFill('FILL_MISSING')
+  }
+
+  async function magicFill(mode: MagicFillApplyMode) {
+    setConflict(null)
+    setApplyMode(mode)
     const form = buttonRef.current?.form
     if (!form) return
     const formData = new FormData(form)
@@ -69,6 +74,7 @@ export function FertilizerProductMagicFillButton({ className = '' }: { className
           name: String(formData.get('name') || ''),
           brand: String(formData.get('brand') || ''),
           productType: String(formData.get('productType') || ''),
+          applyMode: mode,
         }),
       })
       const result = await response.json()
@@ -85,8 +91,8 @@ export function FertilizerProductMagicFillButton({ className = '' }: { className
   function applyDraft() {
     const form = buttonRef.current?.form
     if (!form || !draft) return
-    for (const field of draftFields) setControlValue(form, field, draft[field])
-    setStatus('Draft applied to the form. Save to keep it.')
+    const outcome = applyMagicFillDraftToForm(form, draft, draftFields, applyMode)
+    setStatus(`${outcome.appliedCount} field${outcome.appliedCount === 1 ? '' : 's'} applied${outcome.preservedCount ? `; ${outcome.preservedCount} preserved` : ''}. Review and save to keep it.`)
   }
 
   return (
@@ -95,7 +101,7 @@ export function FertilizerProductMagicFillButton({ className = '' }: { className
         <button
           ref={buttonRef}
           type="button"
-          onClick={magicFill}
+          onClick={requestMagicFill}
           disabled={loading}
           className="inline-flex items-center gap-1.5 rounded-md border border-[#c4a86a]/60 bg-[#fff5d6] px-2.5 py-1.5 text-sm font-semibold text-[#6f541f] shadow-sm transition hover:bg-[#f7e6ae] disabled:cursor-wait disabled:opacity-70"
         >
@@ -123,6 +129,14 @@ export function FertilizerProductMagicFillButton({ className = '' }: { className
           </button>
         </div>
       )}
+      <MagicFillConflictDialog
+        open={Boolean(conflict)}
+        populatedCount={conflict?.populatedCount || 0}
+        emptyCount={conflict?.emptyCount || 0}
+        onChoose={(mode) => void magicFill(mode)}
+        onCancel={() => setConflict(null)}
+        returnFocusRef={buttonRef}
+      />
     </div>
   )
 }
