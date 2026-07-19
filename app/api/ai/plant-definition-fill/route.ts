@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { audit } from '@/lib/auth'
 import { recordAiUsage, requireAiFeatureAccess, tokenUsage } from '@/lib/ai-usage'
+import { prisma } from '@/lib/prisma'
 
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses'
 const DEFAULT_MODEL = 'gpt-5.4-mini'
@@ -76,6 +77,22 @@ function normalizeFields(raw: any, originalName: string) {
     ? raw.aliases.map(normalizeAlias).filter(Boolean).slice(0, 8)
     : []
 
+  const acquisition = raw.acquisitionPlan && typeof raw.acquisitionPlan === 'object' ? raw.acquisitionPlan : {}
+  const recommendation = {
+    catSafety: nullish(acquisition.catSafety, 240),
+    confidence: nullish(acquisition.confidence, 80) || 'UNCERTAIN',
+    difficulty: nullish(acquisition.difficulty, 160),
+    desiredSpecimenSize: nullish(acquisition.desiredSpecimenSize, 160),
+    approximatePriceRange: nullish(acquisition.approximatePriceRange, 160),
+    environmentSuitability: nullish(acquisition.environmentSuitability, 500),
+    sensitivities: nullish(acquisition.sensitivities, 500),
+    locationCharacteristics: nullish(acquisition.locationCharacteristics, 500),
+    warnings: nullish(acquisition.warnings, 500),
+    researchSummary: nullish(acquisition.researchSummary, 800),
+    suggestedLocationId: nullish(acquisition.suggestedLocationId, 100),
+    locationCompatibility: nullish(acquisition.locationCompatibility, 500),
+    sources: Array.isArray(acquisition.sources) ? acquisition.sources.map(url).filter(Boolean).slice(0, 8) : [],
+  }
   return {
     genus: nullish(raw.genus, 80),
     species: nullish(raw.species, 80)?.toLowerCase() || null,
@@ -91,6 +108,7 @@ function normalizeFields(raw: any, originalName: string) {
     description: nullish(raw.description, 500),
     aliases,
     reviewNote: nullish(raw.reviewNote, 500) || `Review AI-filled data for ${originalName} before saving.`,
+    acquisitionPlan: recommendation,
   }
 }
 
@@ -118,6 +136,22 @@ export async function POST(req: Request) {
         abbreviation: trimmedString(item.abbreviation, 40),
       })).filter((item: any) => item.id && item.name)
     : []
+  const locations = await prisma.location.findMany({
+    where: { collectionId: collection.id, status: 'ACTIVE', environmentProfile: { isNot: null } },
+    include: { locationType: true, environmentProfile: true },
+    orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+    take: 40,
+  })
+  const locationProfiles = locations.map((location) => ({
+    id: location.id,
+    category: location.locationType.name,
+    temperatureC: [location.environmentProfile?.temperatureMinC, location.environmentProfile?.temperatureMaxC],
+    humidityPercent: [location.environmentProfile?.humidityMinPercent, location.environmentProfile?.humidityMaxPercent],
+    lightLevel: location.environmentProfile?.lightLevel,
+    lightExposure: location.environmentProfile?.lightExposure,
+    airflow: location.environmentProfile?.airflowLevel,
+    stability: location.environmentProfile?.environmentStability,
+  }))
 
   if (!genus || !species) {
     return NextResponse.json({ error: 'Genus and species are required.' }, { status: 400 })
@@ -129,6 +163,7 @@ export async function POST(req: Request) {
     task: 'Fill plant definition fields for a horticultural accession database.',
     originalInput: { genus, species, hybridNotation, cultivarName },
     governingBodies,
+    collectionLocationProfiles: locationProfiles,
     rules: [
       'Return only valid JSON, with no markdown.',
       'If the supplied genus/species is outdated, return the currently accepted genus/species and include the supplied name as an alias with aliasType OBSOLETE_TAXONOMY or SYNONYM.',
@@ -142,6 +177,10 @@ export async function POST(req: Request) {
       'If you change the accepted genus or species from the supplied input, aliases must include the original supplied binomial.',
       'Allowed aliasType values: SYNONYM, TRADE_NAME, OBSOLETE_TAXONOMY, COMMON_NAME, MISAPPLIED_NAME, SHORTHAND.',
       'Allowed confidence values: CONFIRMED, PROBABLE, UNCERTAIN, TRADE_ASSUMED, DISPUTED.',
+      'Draft an optional acquisitionPlan using cautious, practical horticultural language. Do not set wishlist priority or status.',
+      'Typical prices are approximate and time-sensitive. Use null when reliable market information is unavailable.',
+      'Use reputable grower, botanical garden, extension, registry, or manufacturer sources and return source URLs.',
+      'Compare requirements to the compact collectionLocationProfiles. Suggest an ID only when it is a plausible fit, and explain cautions. Never assign it.',
     ],
     jsonShape: {
       genus: 'string|null',
@@ -158,6 +197,12 @@ export async function POST(req: Request) {
       description: 'string|null',
       aliases: [{ name: 'string', aliasType: 'SYNONYM', confidence: 'CONFIRMED', source: 'string|null', notes: 'string|null' }],
       reviewNote: 'string|null',
+      acquisitionPlan: {
+        catSafety: 'string|null', confidence: 'string|null', difficulty: 'string|null', desiredSpecimenSize: 'string|null',
+        approximatePriceRange: 'string|null', environmentSuitability: 'string|null', sensitivities: 'string|null',
+        locationCharacteristics: 'string|null', warnings: 'string|null', researchSummary: 'string|null',
+        suggestedLocationId: 'string|null', locationCompatibility: 'string|null', sources: ['https://example.org/source'],
+      },
     },
   }
 
@@ -172,7 +217,8 @@ export async function POST(req: Request) {
         model,
         instructions: 'You are careful botanical taxonomy assistant. Return only machine-parseable JSON. Use null when you are not confident.',
         input: JSON.stringify(prompt),
-        max_output_tokens: 1400,
+        max_output_tokens: 2200,
+        tools: [{ type: 'web_search_preview' }],
         store: false,
       }),
     })

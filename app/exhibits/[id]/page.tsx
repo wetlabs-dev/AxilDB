@@ -23,6 +23,7 @@ import { prisma } from '@/lib/prisma'
 import { sunshineCounts, sunshineKey } from '@/lib/sunshine'
 import { dateInput, plantName } from '@/lib/utils'
 import { formatDateTime } from '@/lib/time'
+import { loadWishlistEntries } from '@/lib/wishlist'
 
 function Checkbox({
   name,
@@ -50,17 +51,19 @@ export default async function EditCollectionExhibitPage({ params }: { params: Pr
   const context = await requireCollectionGardener()
   const canManage = canManageCollection(context.user, context)
   const { id } = await params
-  const [exhibit, candidates] = await Promise.all([
+  const [exhibit, candidates, wishlistCandidates] = await Promise.all([
     prisma.collectionExhibit.findFirstOrThrow({
       where: { id, collectionId: context.collection.id },
       include: {
         coverPhoto: true,
         plants: { orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }] },
+        wishlistItems: { orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }] },
         subscribers: { orderBy: { createdAt: 'desc' } },
         updates: { include: { deliveries: true }, orderBy: { createdAt: 'desc' }, take: 10 },
       },
     }),
     exhibitPlantCandidates(prisma, context.collection.id),
+    loadWishlistEntries(prisma, context.collection.id, { includeFulfilled: true }),
   ])
   const settings = normalizeExhibitSettings(exhibit.settingsJson)
   const updateSettings = normalizeExhibitUpdateSettings(exhibit.updateSettingsJson)
@@ -224,6 +227,34 @@ export default async function EditCollectionExhibitPage({ params }: { params: Pr
             plants={builderPlants}
             selections={exhibitSelections}
           />
+        </Card>
+
+        <Card className="space-y-4">
+          <input type="hidden" name="wishlistSelectionPresent" value="1" />
+          <div>
+            <h3 className="font-serif text-2xl font-bold">Wishlist definitions</h3>
+            <p className="text-sm text-stone-600">Curate planned acquisitions separately from owned specimens. Only public-safe definition fields appear.</p>
+          </div>
+          <Field label="Public section heading" name="wishlistHeading" defaultValue={settings.wishlistHeading} />
+          <div className="grid gap-3 lg:grid-cols-2">
+            {wishlistCandidates.map((definition, index) => {
+              const selected = exhibit.wishlistItems.find((item) => item.plantDefinitionId === definition.id)
+              return (
+                <article key={definition.id} className="grid gap-2 rounded-lg border border-stone-200 bg-white/50 p-3">
+                  <label className="flex items-start gap-3">
+                    <input className="mt-1 h-4 w-4" type="checkbox" name="wishlistDefinitionId" value={definition.id} defaultChecked={Boolean(selected)} />
+                    <span><span className="block font-serif text-lg font-semibold">{plantName(definition)}</span><span className="block text-xs text-stone-600">{definition.acquisitionStatus?.toLowerCase().replaceAll('_', ' ')} · {definition.instances.length} owned</span></span>
+                  </label>
+                  <div className="grid gap-2 sm:grid-cols-[6rem_1fr]">
+                    <Field label="Order" name={`wishlistSortOrder:${definition.id}`} type="number" min="0" defaultValue={String(selected?.sortOrder ?? index)} />
+                    <Field label="Exhibit caption" name={`wishlistCaption:${definition.id}`} defaultValue={selected?.customCaption || ''} />
+                  </div>
+                  <label className="flex items-center gap-2 text-sm"><input type="checkbox" name={`wishlistFeatured:${definition.id}`} defaultChecked={selected?.featured} /> Featured planned acquisition</label>
+                </article>
+              )
+            })}
+            {wishlistCandidates.length === 0 && <p className="text-sm text-stone-600">No acquisition targets are available.</p>}
+          </div>
         </Card>
 
         <Card className="space-y-4">

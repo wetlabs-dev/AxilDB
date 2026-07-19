@@ -5,6 +5,7 @@ import { requireCollectionManager } from '@/lib/collections'
 import { careScheduleLabel, ensureQuietDayShiftRules, schedulableCareTypes } from '@/lib/care-scheduling'
 import { prisma } from '@/lib/prisma'
 import { formatDate, timeZoneForPreference } from '@/lib/time'
+import { normalizeWishlistPublicSettings, wishlistPublicSettingLabels } from '@/lib/wishlist'
 
 function quietDaySummary(quietDay: {
   quietType: string
@@ -50,6 +51,7 @@ export default async function CollectionSettingsPage({
   ])
   const timezone = timeZoneForPreference(preferences)
   const quietRuleByType = new Map(quietRules.map((rule) => [rule.careType, rule]))
+  const wishlistSettings = normalizeWishlistPublicSettings(collection.wishlistPublicSettingsJson)
 
   return (
     <div className="space-y-6">
@@ -75,6 +77,17 @@ export default async function CollectionSettingsPage({
             <option value="PUBLIC">Public when collection is public</option>
           </Select>
           <TextArea label="Description" name="description" defaultValue={collection.description} wrapperClassName="lg:col-span-3" />
+          <TextArea label="Public wishlist introduction" name="wishlistIntro" defaultValue={collection.wishlistIntro} wrapperClassName="lg:col-span-3" />
+          <fieldset className="grid gap-2 rounded-lg border border-stone-200 bg-white/45 p-3 lg:col-span-3 sm:grid-cols-2">
+            <legend className="px-1 text-sm font-semibold">Public wishlist fields</legend>
+            {wishlistPublicSettingLabels.map(([key, label]) => (
+              <label key={key} className="flex items-center gap-2 text-sm">
+                <input type="checkbox" name={key} defaultChecked={wishlistSettings[key]} />
+                {label}
+              </label>
+            ))}
+            <p className="text-xs text-stone-600 sm:col-span-2">Exact locations, maximum price, private notes, and non-public observations are never shown.</p>
+          </fieldset>
           <div className="lg:col-span-3">
             <Button>Save collection settings</Button>
           </div>

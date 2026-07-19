@@ -104,6 +104,7 @@ async function buildSidebarBadges(collection: { id: string; slug: string }, user
     '/exhibits': exhibits,
     '/plants': plantDefinitions,
     '/acquisitions': acquisitionTargets,
+    '/wishlist': acquisitionTargets,
     '/instances': activeInstances,
     '/locations': locations,
     '/propagations': propagationEvents + acquiredPropagations,

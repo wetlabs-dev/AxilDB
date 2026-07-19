@@ -44,7 +44,7 @@ function referencePrefill(log: { resultJson: unknown }) {
 export default async function Plants({
   searchParams,
 }: {
-  searchParams: Promise<{ fromIdentification?: string }>
+  searchParams: Promise<{ fromIdentification?: string; wishlist?: string }>
 }) {
   const user = await getCurrentUser()
   const sp = await searchParams
@@ -169,10 +169,12 @@ export default async function Plants({
           <form action={createPlantDefinition} className="grid max-w-6xl gap-x-3 gap-y-2 lg:grid-cols-4">
             <input type="hidden" name="collectionSlug" value={collection.slug} />
             {identificationPrefill && <input type="hidden" name="plantIdentificationLogId" value={identificationPrefill.id} />}
+            {identificationPrefill && sp.wishlist === '1' && <><input type="hidden" name="acquisitionStatus" value="WISHLIST" /><input type="hidden" name="acquisitionPriority" value="3" /></>}
             {identificationPrefill && (
               <div className="rounded-lg border border-[#b7caa9] bg-[#edf3e6] p-3 text-sm text-[#255537] lg:col-span-4">
                 <p className="font-semibold">Prefilled from ID My Plant history.</p>
                 <p className="mt-1">Review the AI-assisted draft before saving. Confidence is set to AI Determined.</p>
+                {sp.wishlist === '1' && <p className="mt-1 font-semibold">Saving will also add this definition to the Wishlist at priority 3.</p>}
                 {identificationPrefill.uploadedPhoto && (
                   <label className="mt-2 flex items-center gap-2">
                     <input type="checkbox" name="attachIdentificationImage" defaultChecked />

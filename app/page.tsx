@@ -14,7 +14,7 @@ import { allowedEventVisibilities } from '@/lib/events/visibility'
 import { resolveSunshineTarget, sunshineCountLabel, sunshineCounts, sunshineKey } from '@/lib/sunshine'
 import { ensureStarterWorkflowTemplates, workflowProgress, workflowScopeLabel } from '@/lib/workflows'
 import { cn, fmtDate, plantName } from '@/lib/utils'
-import { Archive, ClipboardCheck, Flower2, GalleryHorizontal, GitBranch, Leaf, ListChecks, MapPin, ShieldCheck, Sparkles, Sprout, Sun } from 'lucide-react'
+import { Archive, ClipboardCheck, ClipboardList, Flower2, GalleryHorizontal, GitBranch, Leaf, ListChecks, MapPin, ShieldCheck, Sparkles, Sprout, Sun } from 'lucide-react'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 
@@ -585,12 +585,14 @@ export default async function Dashboard({
     .sort((a, b) => b.date.getTime() - a.date.getTime())
     .filter((item) => includesActivityKind(item.kind))
     .slice(0, activityTake)
+  const wishlistCount = await prisma.plantDefinition.count({ where: { ...collectionWhere, acquisitionStatus: { in: ['RESEARCHING', 'WISHLIST', 'ACTIVELY_SEEKING', 'ON_HOLD'] } } })
   const stats = [
     ['Care today', care.today, ClipboardCheck, collectionPath(collection.slug, '/care')],
     ['Active plants', active, Leaf, collectionPath(collection.slug, '/instances')],
     ['Propagations', propagationEvents + acquiredPropagations, GitBranch, activityHref(collection.slug, activityTake, ['propagation'])],
     ['Recent blooms', bloomCount, Flower2, collectionPath(collection.slug, '/blooms')],
     ['Sport candidates', sportCandidates, Sprout, collectionPath(collection.slug, '/sports')],
+    ['Wishlist', wishlistCount, ClipboardList, collectionPath(collection.slug, '/wishlist')],
   ] as const
   const collectionUpdates = canViewCollectionUpdates
     ? await recentCollectionUpdates(prisma, collection.id, collection.slug, 5)

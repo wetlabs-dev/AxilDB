@@ -11,6 +11,7 @@ import { prisma } from '@/lib/prisma'
 import { collectionRoles, normalizeCollectionRole } from '@/lib/roles'
 import { getOrCreateTodaysCollectionBriefing } from '@/lib/briefing'
 import { emitDomainEvent } from '@/lib/events/emit'
+import { defaultWishlistPublicSettings, wishlistPublicSettingLabels } from '@/lib/wishlist'
 
 const val = (fd: FormData, key: string) => String(fd.get(key) || '').trim()
 const validRoles = new Set<string>(collectionRoles)
@@ -96,6 +97,8 @@ export async function saveCollectionSettings(fd: FormData) {
       description: val(fd, 'description'),
       aiBriefingEnabled: collection.aiFeaturesEnabled && val(fd, 'aiBriefingEnabled') === 'on',
       acquisitionVisibility: ['PRIVATE', 'MEMBERS', 'PUBLIC'].includes(val(fd, 'acquisitionVisibility') || '') ? val(fd, 'acquisitionVisibility')! : 'PRIVATE',
+      wishlistIntro: val(fd, 'wishlistIntro') || null,
+      wishlistPublicSettingsJson: Object.fromEntries(wishlistPublicSettingLabels.map(([key]) => [key, fd.get(key) === 'on'])) || defaultWishlistPublicSettings,
     } })
     await emitDomainEvent(tx, {
       eventType: 'collection.updated', collectionId: collection.id, aggregateId: collection.id, actor: { id: user.id, role: user.role },

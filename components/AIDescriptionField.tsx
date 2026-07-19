@@ -134,6 +134,10 @@ export function AIMagicFillButton({
   const buttonRef = useRef<HTMLButtonElement>(null)
   const [status, setStatus] = useState('')
   const [loading, setLoading] = useState(false)
+  const [acquisitionDraft, setAcquisitionDraft] = useState<any>(null)
+  const [selectedAcquisitionFields, setSelectedAcquisitionFields] = useState<Record<string, boolean>>({
+    desiredSpecimenSize: true, acquisitionResearchSummary: true, desiredLocationId: false,
+  })
 
   async function magicFillDefinition() {
     const form = buttonRef.current?.form
@@ -178,6 +182,7 @@ export function AIMagicFillButton({
 
       const aliases = Array.isArray(fields.aliases) ? fields.aliases.map(normalizeAlias).filter((alias: any) => alias.name) : []
       window.dispatchEvent(new CustomEvent('axildb:replace-aliases', { detail: { form, aliases } }))
+      setAcquisitionDraft(fields.acquisitionPlan || null)
       setStatus(`Magic fill added${aliases.length ? ` with ${aliases.length} alias${aliases.length === 1 ? '' : 'es'}` : ''}. Review before saving.`)
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Magic fill failed.')
@@ -186,10 +191,20 @@ export function AIMagicFillButton({
     }
   }
 
+  function applyAcquisitionDraft() {
+    const form = buttonRef.current?.form
+    if (!form || !acquisitionDraft) return
+    if (selectedAcquisitionFields.desiredSpecimenSize) setControlValue(form, 'desiredSpecimenSize', acquisitionDraft.desiredSpecimenSize)
+    if (selectedAcquisitionFields.acquisitionResearchSummary) setControlValue(form, 'acquisitionResearchSummary', acquisitionDraft.researchSummary)
+    if (selectedAcquisitionFields.desiredLocationId) setControlValue(form, 'desiredLocationId', acquisitionDraft.suggestedLocationId)
+    setStatus('Selected acquisition suggestions applied. Review the form before saving.')
+  }
+
   return (
-    <div className={cn('flex min-w-0 flex-wrap items-center justify-end gap-2', className)}>
-      {status && <span className="min-w-0 text-xs font-normal text-stone-600 md:text-right">{status}</span>}
-      <button
+    <div className={cn('grid min-w-0 gap-2', className)}>
+      <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
+        {status && <span className="min-w-0 text-xs font-normal text-stone-600 md:text-right">{status}</span>}
+        <button
         ref={buttonRef}
         type="button"
         onClick={magicFillDefinition}
@@ -198,7 +213,21 @@ export function AIMagicFillButton({
       >
         <Sparkles className="h-4 w-4" />
         {loading ? 'Filling...' : 'Magic fill'}
-      </button>
+        </button>
+      </div>
+      {acquisitionDraft && (
+        <section className="rounded-lg border border-[#c7d8bd] bg-[#f7f8ee] p-3 text-left text-sm text-stone-700">
+          <div className="flex flex-wrap items-start justify-between gap-2"><div><p className="text-xs font-bold uppercase tracking-[0.14em] text-[#2f6b45]">Acquisition planning draft</p><p className="mt-1 text-xs text-stone-600">{acquisitionDraft.confidence || 'Uncertain'} · review only · wishlist status and priority are never changed</p></div></div>
+          <dl className="mt-3 grid gap-2 sm:grid-cols-2">
+            {[['Cat safety', acquisitionDraft.catSafety], ['Difficulty', acquisitionDraft.difficulty], ['Suggested size', acquisitionDraft.desiredSpecimenSize], ['Approximate market range', acquisitionDraft.approximatePriceRange], ['Environment fit', acquisitionDraft.environmentSuitability], ['Sensitivities', acquisitionDraft.sensitivities], ['Location needs', acquisitionDraft.locationCharacteristics], ['Location compatibility', acquisitionDraft.locationCompatibility], ['Warnings', acquisitionDraft.warnings], ['Research summary', acquisitionDraft.researchSummary]].filter(([, value]) => value).map(([label, value]) => <div key={label} className="rounded-md border border-stone-200 bg-white/60 p-2"><dt className="text-[0.65rem] font-bold uppercase tracking-wide text-stone-500">{label}</dt><dd className="mt-1 leading-5">{value}</dd></div>)}
+          </dl>
+          {Array.isArray(acquisitionDraft.sources) && acquisitionDraft.sources.length > 0 && <div className="mt-3 flex flex-wrap gap-2">{acquisitionDraft.sources.map((source: string) => <a key={source} href={source} target="_blank" rel="noreferrer" className="text-xs font-semibold text-[#2f6b45] underline">Source</a>)}</div>}
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            {[['desiredSpecimenSize', 'Desired size'], ['acquisitionResearchSummary', 'Research summary'], ['desiredLocationId', 'Suggested location']].map(([key, label]) => <label key={key} className="flex items-center gap-1.5 text-xs"><input type="checkbox" checked={Boolean(selectedAcquisitionFields[key])} onChange={(event) => setSelectedAcquisitionFields((current) => ({ ...current, [key]: event.target.checked }))} />{label}</label>)}
+            <button type="button" onClick={applyAcquisitionDraft} className="rounded-md bg-[#2f6b45] px-3 py-1.5 text-xs font-semibold text-white">Apply selected acquisition fields</button>
+          </div>
+        </section>
+      )}
     </div>
   )
 }

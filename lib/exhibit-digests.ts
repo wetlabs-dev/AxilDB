@@ -85,6 +85,7 @@ export async function collectExhibitDigestChanges(prisma: PrismaClient, exhibitI
           },
         },
       },
+      wishlistItems: { include: { plantDefinition: true } },
     },
   })
   if (!exhibit) return []
@@ -93,9 +94,9 @@ export async function collectExhibitDigestChanges(prisma: PrismaClient, exhibitI
   const changesEnabled = updateSettings.changes || {}
   const plants = exhibit.plants.map((row) => row.plantInstance)
   const plantIds = plants.map((plant) => plant.id)
-  const definitionIds = Array.from(new Set(plants.map((plant) => plant.plantDefinitionId)))
+  const definitionIds = Array.from(new Set([...plants.map((plant) => plant.plantDefinitionId), ...exhibit.wishlistItems.map((item) => item.plantDefinitionId)]))
   const plantById = new Map(plants.map((plant) => [plant.id, plant]))
-  const definitionById = new Map(plants.map((plant) => [plant.plantDefinitionId, plant.plantDefinition]))
+  const definitionById = new Map([...plants.map((plant) => [plant.plantDefinitionId, plant.plantDefinition] as const), ...exhibit.wishlistItems.map((item) => [item.plantDefinitionId, item.plantDefinition] as const)])
   const changes: ExhibitDigestChange[] = []
 
   if (bool(changesEnabled.plants)) {
@@ -103,6 +104,9 @@ export async function collectExhibitDigestChanges(prisma: PrismaClient, exhibitI
     const added = addedRows.map((row) => row.plantInstance.plantId)
     const change = summarizeRows('Selected plants', addedRows[0]?.createdAt || until, added, 'new exhibit plant')
     if (change) changes.push(change)
+    const wishlistAdded = exhibit.wishlistItems.filter((row) => row.createdAt > since && row.createdAt <= until)
+    const wishlistChange = summarizeRows('Planned acquisitions', wishlistAdded[0]?.createdAt || until, wishlistAdded.map((row) => plantName(row.plantDefinition)), 'new wishlist exhibit item')
+    if (wishlistChange) changes.push(wishlistChange)
   }
 
   if (bool(changesEnabled.photos) && (settings.specimenPhotos || settings.typeImages)) {

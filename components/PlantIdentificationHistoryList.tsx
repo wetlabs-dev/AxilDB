@@ -4,6 +4,7 @@ import { collectionPath } from '@/lib/collections'
 import { createDefinitionFromIdentificationHref, identificationDisplayName } from '@/lib/plant-identification-history'
 import { formatDateTime } from '@/lib/time'
 import { plantName } from '@/lib/utils'
+import { addIdentificationToWishlist } from '@/app/acquisition-actions'
 
 type DefinitionSummary = {
   id: string
@@ -130,6 +131,20 @@ export function PlantIdentificationHistoryList({
                   <Link href={createDefinitionFromIdentificationHref(collectionSlug, log.id)} className="rounded-md bg-[#2f6b45] px-3 py-1.5 font-semibold text-white">
                     Create Plant Definition from this ID
                   </Link>
+                )}
+                {canCreateDefinitions && !log.createdPlantDefinition && !log.matchedPlantDefinition && (
+                  <form action={addIdentificationToWishlist}>
+                    <input type="hidden" name="collectionSlug" value={collectionSlug} />
+                    <input type="hidden" name="identificationLogId" value={log.id} />
+                    <button className="rounded-md border border-[#b7caa9] bg-[#edf3e6] px-3 py-1.5 font-semibold text-[#255537]">Review and add to Wishlist</button>
+                  </form>
+                )}
+                {canCreateDefinitions && (log.createdPlantDefinition || log.matchedPlantDefinition) && (
+                  <form action={addIdentificationToWishlist}>
+                    <input type="hidden" name="collectionSlug" value={collectionSlug} />
+                    <input type="hidden" name="identificationLogId" value={log.id} />
+                    <button className="rounded-md border border-[#b7caa9] bg-[#edf3e6] px-3 py-1.5 font-semibold text-[#255537]">Add to Wishlist</button>
+                  </form>
                 )}
                 {!log.matchedPlantDefinition && !log.createdPlantDefinition && (
                   <span className="rounded-md border border-stone-200 bg-white/60 px-3 py-1.5 text-stone-600">No matching definition yet</span>

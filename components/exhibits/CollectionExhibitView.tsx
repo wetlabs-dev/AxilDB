@@ -5,6 +5,7 @@ import { PlantImage } from '@/components/PlantImage'
 import { cn, plantName, taxonomyLabel } from '@/lib/utils'
 import { formatDate } from '@/lib/time'
 import { distributorDisplay, sourceChainDisplay } from '@/lib/provenance'
+import { wishlistEnvironmentSummary, wishlistPriceRange } from '@/lib/wishlist'
 
 type DisplayExhibit = Awaited<ReturnType<typeof import('@/lib/exhibits').loadExhibitForDisplay>>
 
@@ -243,6 +244,39 @@ function DefinitionGroup({ group, settings, collectionSlug, visibility }: { grou
   )
 }
 
+function WishlistSection({ items, heading }: { items: any[]; heading: string }) {
+  if (!items.length) return null
+  return (
+    <section className="grid gap-4 rounded-xl border border-[#c7d8bd] bg-[#f7f8ee] p-5 shadow-sm">
+      <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#2f6b45]">Future collection</p><h2 className="font-serif text-3xl font-semibold">{heading}</h2><p className="mt-1 text-sm text-stone-600">Plants the collection is researching or hopes to acquire.</p></div>
+      <div className="grid gap-4 md:grid-cols-2">
+        {items.map((entry) => {
+          const definition = entry.plantDefinition
+          const range = wishlistPriceRange(definition.plantObservations)
+          return (
+            <article key={entry.id} className="overflow-hidden rounded-lg border border-stone-200 bg-white/75">
+              {entry.typePhotos[0] && <div className="aspect-[4/3]"><PlantImage src={entry.typePhotos[0]} alt={plantName(definition)} className="h-full w-full object-cover" /></div>}
+              <div className="p-4">
+                <div className="flex flex-wrap items-center gap-2 text-xs"><span className="font-bold uppercase tracking-wide text-[#2f6b45]">Planned acquisition</span>{entry.featured && <span className="rounded-full border border-[#b7caa9] bg-[#edf3e6] px-2 py-0.5 font-semibold">Featured</span>}</div>
+                <h3 className="mt-1 font-serif text-2xl font-semibold">{plantName(definition)}</h3>
+                {entry.customCaption && <p className="mt-2 text-sm text-stone-700">{entry.customCaption}</p>}
+                <DetailList items={[
+                  ['Status', formatStatus(definition.acquisitionStatus || 'wishlist')],
+                  ['Desired size', definition.desiredSpecimenSize],
+                  ['Environment', wishlistEnvironmentSummary(definition.husbandryGuide)],
+                  ['Owned specimens', String(definition.instances.length)],
+                  ['Public observations', range ? `${range.low}-${range.high} ${range.currency}` : null],
+                ]} />
+                {definition.acquisitionResearchSummary && <p className="mt-3 text-sm leading-6 text-stone-700">{definition.acquisitionResearchSummary}</p>}
+              </div>
+            </article>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
 export function CollectionExhibitView({
   data,
   token,
@@ -256,7 +290,7 @@ export function CollectionExhibitView({
   print?: boolean
   subscribeStatus?: string | null
 }) {
-  const { exhibit, settings, groups } = data
+  const { exhibit, settings, groups, wishlistItems } = data
   const tokenValue = token || (exhibit.accessMode === CollectionExhibitAccessMode.UNLISTED ? exhibit.token : '')
   const subscribeMessage = subscribeStatus === 'sent'
     ? 'Check your email to confirm this exhibit subscription.'
@@ -325,6 +359,7 @@ export function CollectionExhibitView({
 
         <div className="grid gap-6">
           {groups.map((group) => <DefinitionGroup key={group.definition.id} group={group} settings={settings} collectionSlug={staffCollectionSlug} visibility={exhibit.collection} />)}
+          <WishlistSection items={wishlistItems} heading={settings.wishlistHeading} />
         </div>
       </article>
     </main>

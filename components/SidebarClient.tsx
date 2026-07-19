@@ -70,6 +70,7 @@ const navSections = [
     label: 'Collection',
     items: [
       ['/plants', 'Plant Definitions', Leaf],
+      ['/wishlist', 'Wishlist', ClipboardList],
       ['/acquisitions', 'Acquisitions', ShoppingBag],
       ['/instances', 'Plant Instances', Sprout],
       ['/locations', 'Locations', MapPinned],

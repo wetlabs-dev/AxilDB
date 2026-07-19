@@ -7,6 +7,7 @@ import { locationPathWithCodes } from '@/lib/locations'
 import { plantName } from '@/lib/utils'
 
 export type ExhibitSettings = {
+  wishlistHeading: string
   taxonomyDetails: boolean
   aliases: boolean
   referenceLinks: boolean
@@ -70,6 +71,7 @@ export const updateChangeLabels = [
 ] as const
 
 export const defaultExhibitSettings: ExhibitSettings = {
+  wishlistHeading: 'Planned Acquisitions',
   taxonomyDetails: true,
   aliases: true,
   referenceLinks: true,
@@ -107,6 +109,7 @@ export function normalizeExhibitSettings(raw: unknown): ExhibitSettings {
       typeof (input as any)[key] === 'boolean' ? (input as any)[key] : (defaultExhibitSettings as any)[key],
     ])),
     imageMode,
+    wishlistHeading: typeof input.wishlistHeading === 'string' && input.wishlistHeading.trim() ? input.wishlistHeading.trim().slice(0, 120) : defaultExhibitSettings.wishlistHeading,
   }
 }
 
@@ -214,6 +217,20 @@ export async function loadExhibitForDisplay(prisma: PrismaClient, slug: string) 
           },
         },
       },
+      wishlistItems: {
+        orderBy: [{ featured: 'desc' }, { sortOrder: 'asc' }, { createdAt: 'asc' }],
+        include: {
+          plantDefinition: {
+            include: {
+              aliases: true,
+              husbandryGuide: true,
+              desiredLocation: { include: { locationType: true } },
+              instances: { select: { id: true } },
+              plantObservations: { where: { isPublic: true }, orderBy: { observedAt: 'desc' }, take: 10 },
+            },
+          },
+        },
+      },
       subscribers: { select: { id: true, email: true, status: true, createdAt: true, confirmedAt: true, unsubscribedAt: true }, orderBy: { createdAt: 'desc' } },
       updates: { include: { deliveries: true }, orderBy: { createdAt: 'desc' }, take: 8 },
     },
@@ -222,7 +239,10 @@ export async function loadExhibitForDisplay(prisma: PrismaClient, slug: string) 
   const settings = normalizeExhibitSettings(exhibit.settingsJson)
   const updateSettings = normalizeExhibitUpdateSettings(exhibit.updateSettingsJson)
   const plantIds = exhibit.plants.map((entry) => entry.plantInstance.id)
-  const definitionIds = Array.from(new Set(exhibit.plants.map((entry) => entry.plantInstance.plantDefinitionId)))
+  const definitionIds = Array.from(new Set([
+    ...exhibit.plants.map((entry) => entry.plantInstance.plantDefinitionId),
+    ...exhibit.wishlistItems.map((entry) => entry.plantDefinitionId),
+  ]))
   const [locations, photos, definitionPhotos, notes, sunshineRows] = await Promise.all([
     prisma.location.findMany({ where: { collectionId: exhibit.collectionId }, include: { locationType: true }, orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }] }),
     settings.specimenPhotos && plantIds.length ? prisma.photo.findMany({
@@ -299,6 +319,10 @@ export async function loadExhibitForDisplay(prisma: PrismaClient, slug: string) 
     settings,
     updateSettings,
     groups: Array.from(groups.values()),
+    wishlistItems: exhibit.wishlistItems.map((entry) => ({
+      ...entry,
+      typePhotos: typePhotosByDefinition.get(entry.plantDefinitionId) || [],
+    })),
     publicPath: publicExhibitPath(exhibit),
     publicUrl: publicExhibitUrl(exhibit),
   }

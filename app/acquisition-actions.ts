@@ -110,6 +110,11 @@ export async function createAcquisitionTarget(fd: FormData) {
         priority,
       },
     })
+    await emitDomainEvent(tx, {
+      eventType: 'wishlist.added', collectionId: collection.id, aggregateId: definition.id,
+      actor: { id: user.id, role: user.role }, idempotencyKey: `wishlist:${definition.id}:added`,
+      payload: { subjectId: definition.id, displayName: plantName(definition), status, priority },
+    })
     return definition
   })
   await audit(user, 'CREATE', 'PLANT_DEFINITION', created.id, `Added acquisition target ${plantName(created)}`, { acquisitionStatus: status }, collection.id)
@@ -120,7 +125,7 @@ export async function createAcquisitionTarget(fd: FormData) {
 export async function updateAcquisitionIntent(fd: FormData) {
   const { user, collection } = await requireCollectionLogger(val(fd, 'collectionSlug'))
   const id = val(fd, 'plantDefinitionId')!
-  await scopedDefinition(collection.id, id)
+  const existing = await scopedDefinition(collection.id, id)
   const status = statusValue(val(fd, 'acquisitionStatus'))
   const priority = boundedInt(val(fd, 'acquisitionPriority'), 3, 1, 5)
   const desiredLocationId = clearableVal(fd, 'desiredLocationId')
@@ -156,6 +161,12 @@ export async function updateAcquisitionIntent(fd: FormData) {
         status,
         priority,
       },
+    })
+    if (existing.acquisitionStatus !== status) await emitDomainEvent(tx, {
+      eventType: existing.acquisitionStatus === 'FULFILLED' && status !== 'FULFILLED' ? 'wishlist.reactivated' : status === 'FULFILLED' ? 'wishlist.fulfilled' : 'wishlist.status_changed',
+      collectionId: collection.id, aggregateId: id, actor: { id: user.id, role: user.role },
+      idempotencyKey: `wishlist:${id}:status:${definition.updatedAt.toISOString()}`,
+      payload: { subjectId: id, displayName: plantName(definition), previousStatus: existing.acquisitionStatus, status },
     })
     return definition
   })
@@ -232,6 +243,7 @@ export async function createPlantObservation(fd: FormData) {
         condition: clearableVal(fd, 'condition'),
         availability: availabilityValue(val(fd, 'availability')),
         notes: clearableVal(fd, 'notes'),
+        isPublic: fd.get('isPublic') === 'on',
       },
     })
     await emitDomainEvent(tx, {
@@ -408,6 +420,161 @@ export async function createPlantAcquisitionRecord(fd: FormData) {
   revalidatePath(collectionPath(collection.slug, '/acquisitions'))
   revalidatePath(collectionPath(collection.slug, '/instances'))
   redirect(back(fd, collectionPath(collection.slug, `/acquisitions?definition=${plantDefinitionId}`)))
+}
+
+export async function createAcquisitionBatch(fd: FormData) {
+  const { user, collection } = await requireCollectionLogger(val(fd, 'collectionSlug'))
+  const definitionIds = Array.from(new Set(fd.getAll('definitionId').map(String).filter(Boolean)))
+  if (!definitionIds.length) throw new Error('Select at least one wishlist definition.')
+  const idempotencyKey = val(fd, 'idempotencyKey')
+  if (!idempotencyKey) throw new Error('This acquisition review has expired. Reload it and try again.')
+  const existing = await prisma.acquisitionBatch.findUnique({
+    where: { collectionId_idempotencyKey: { collectionId: collection.id, idempotencyKey } },
+    select: { id: true },
+  })
+  if (existing) redirect(collectionPath(collection.slug, `/acquisitions/bulk?batch=${existing.id}`))
+
+  const definitions = await prisma.plantDefinition.findMany({
+    where: { collectionId: collection.id, id: { in: definitionIds } },
+    select: { id: true, genus: true, species: true, cultivarName: true, desiredLocationId: true },
+  })
+  if (definitions.length !== definitionIds.length) throw new Error('One or more selected definitions are unavailable in this collection.')
+  const distributorId = clearableVal(fd, 'distributorId')
+  const distributorLocationId = clearableVal(fd, 'distributorLocationId')
+  const { distributor, location: distributorLocation } = await validateDistributorSelection(prisma, collection.id, distributorId, distributorLocationId)
+  const acquiredAt = date(val(fd, 'acquisitionDate')) || new Date()
+  const currency = val(fd, 'currency') || 'USD'
+  const requestedLocationIds = definitionIds.map((id) => clearableVal(fd, `initialLocationId:${id}`)).filter(Boolean) as string[]
+  const validLocations = requestedLocationIds.length ? await prisma.location.findMany({
+    where: { collectionId: collection.id, status: 'ACTIVE', id: { in: requestedLocationIds } },
+    select: { id: true, name: true },
+  }) : []
+  if (validLocations.length !== new Set(requestedLocationIds).size) throw new Error('One or more selected locations are unavailable.')
+  const locationById = new Map(validLocations.map((location) => [location.id, location]))
+
+  const result = await prisma.$transaction(async (tx) => {
+    const batch = await tx.acquisitionBatch.create({ data: {
+      collectionId: collection.id,
+      distributorId: distributor?.id || null,
+      distributorLocationId: distributorLocation?.id || null,
+      acquisitionDate: acquiredAt,
+      orderNumber: clearableVal(fd, 'orderNumber'),
+      currency,
+      subtotal: dec(val(fd, 'subtotal')) as any,
+      shippingCost: dec(val(fd, 'shippingCost')) as any,
+      tax: dec(val(fd, 'tax')) as any,
+      totalCost: dec(val(fd, 'totalCost')) as any,
+      sharedNotes: clearableVal(fd, 'sharedNotes'),
+      idempotencyKey,
+      status: 'PROCESSING',
+      createdByUserId: user.id,
+    } })
+    await emitDomainEvent(tx, {
+      eventType: 'acquisition.batch_created', collectionId: collection.id, aggregateId: batch.id,
+      actor: { id: user.id, role: user.role }, idempotencyKey: `acquisition-batch:${batch.id}:created`,
+      payload: { subjectId: batch.id, recordId: batch.id, recordType: 'AcquisitionBatch', title: 'Acquisition batch created', itemCount: definitions.length },
+    })
+
+    let instanceCount = 0
+    for (const definition of definitions) {
+      const quantity = boundedInt(val(fd, `quantity:${definition.id}`), 1, 1, 50)
+      const createInstances = fd.get(`createInstances:${definition.id}`) === 'on'
+      const fulfillmentChoice = fulfillmentValue(val(fd, `fulfillmentChoice:${definition.id}`))
+      const locationId = clearableVal(fd, `initialLocationId:${definition.id}`) || definition.desiredLocationId
+      const location = locationId ? locationById.get(locationId) || null : null
+      const item = await tx.acquisitionBatchItem.create({ data: {
+        acquisitionBatchId: batch.id,
+        plantDefinitionId: definition.id,
+        quantity,
+        unitPrice: dec(val(fd, `unitPrice:${definition.id}`)) as any,
+        specimenSize: clearableVal(fd, `specimenSize:${definition.id}`),
+        potSize: clearableVal(fd, `potSize:${definition.id}`),
+        initialLocationId: location?.id || null,
+        notes: clearableVal(fd, `notes:${definition.id}`),
+        fulfillmentChoice,
+        createPlantInstances: createInstances,
+      } })
+      const record = await tx.plantAcquisitionRecord.create({ data: {
+        collectionId: collection.id,
+        plantDefinitionId: definition.id,
+        createdByUserId: user.id,
+        vendor: distributor ? (distributorLocation ? `${distributor.name} — ${distributorLocation.name}` : distributor.name) : null,
+        distributorId: distributor?.id || null,
+        distributorLocationId: distributorLocation?.id || null,
+        acquiredAt,
+        price: dec(val(fd, `unitPrice:${definition.id}`)) as any,
+        currency,
+        quantity,
+        specimenSize: clearableVal(fd, `specimenSize:${definition.id}`),
+        potSize: clearableVal(fd, `potSize:${definition.id}`),
+        initialLocationId: location?.id || null,
+        notes: [clearableVal(fd, 'sharedNotes'), clearableVal(fd, `notes:${definition.id}`)].filter(Boolean).join('\n') || null,
+        fulfillmentChoice,
+        acquisitionBatchId: batch.id,
+      } })
+      await tx.acquisitionBatchItem.update({ where: { id: item.id }, data: { createdAcquisitionRecordId: record.id } })
+      if (createInstances) {
+        for (let index = 0; index < quantity; index += 1) {
+          const plantId = await generatePlantId(tx as any, { collectionId: collection.id, plantDefinitionId: definition.id, instanceType: 'MOTHER', date: acquiredAt })
+          const instance = await tx.plantInstance.create({ data: {
+            collectionId: collection.id, plantDefinitionId: definition.id, plantId, instanceType: 'MOTHER',
+            location: location?.name || null, legacyLocationText: location?.name || null, currentLocationId: location?.id || null,
+            acquisitionDate: acquiredAt, distributor: distributor?.name || null, purchasePrice: dec(val(fd, `unitPrice:${definition.id}`)) as any,
+          } })
+          await tx.plantAcquisitionRecordInstance.create({ data: { acquisitionRecordId: record.id, plantInstanceId: instance.id } })
+          await emitDomainEvent(tx, {
+            eventType: 'acquisition.instance_created', collectionId: collection.id, aggregateId: instance.id,
+            actor: { id: user.id, role: user.role }, occurredAt: acquiredAt, idempotencyKey: `acquisition-batch:${batch.id}:instance:${instance.id}`,
+            payload: { subjectId: instance.id, plantInstanceId: instance.id, plantId: instance.plantId, recordId: batch.id, recordType: 'AcquisitionBatch' },
+          })
+          instanceCount += 1
+        }
+      }
+      const nextStatus = fulfillmentChoice === 'FULFILLED' ? 'FULFILLED' : fulfillmentChoice === 'REPEAT_PURCHASE' ? 'ACTIVELY_SEEKING' : undefined
+      if (nextStatus) await tx.plantDefinition.update({ where: { id: definition.id }, data: { acquisitionStatus: nextStatus } })
+    }
+    await tx.acquisitionBatch.update({ where: { id: batch.id }, data: { status: 'COMPLETED' } })
+    await emitDomainEvent(tx, {
+      eventType: 'acquisition.batch_completed', collectionId: collection.id, aggregateId: batch.id,
+      actor: { id: user.id, role: user.role }, idempotencyKey: `acquisition-batch:${batch.id}:completed`,
+      payload: { subjectId: batch.id, recordId: batch.id, recordType: 'AcquisitionBatch', title: 'Acquisition batch completed', itemCount: definitions.length, instanceCount },
+    })
+    return { batch, instanceCount }
+  })
+  await audit(user, 'CREATE', 'ACQUISITION_BATCH', result.batch.id, `Recorded acquisition batch with ${definitions.length} definitions`, { itemCount: definitions.length, instanceCount: result.instanceCount }, collection.id)
+  revalidatePath(collectionPath(collection.slug, '/acquisitions'))
+  revalidatePath(collectionPath(collection.slug, '/wishlist'))
+  redirect(collectionPath(collection.slug, `/acquisitions/bulk?batch=${result.batch.id}`))
+}
+
+export async function addIdentificationToWishlist(fd: FormData) {
+  const { user, collection, role } = await requireCollectionLogger(val(fd, 'collectionSlug'))
+  const logId = val(fd, 'identificationLogId')
+  const log = await prisma.plantIdentificationLog.findFirst({
+    where: { id: logId, collectionId: collection.id },
+    include: { matchedPlantDefinition: true, createdPlantDefinition: true },
+  })
+  if (!log) throw new Error('ID My Plant history item was not found.')
+  if (log.userId !== user.id && role !== 'MANAGER') throw new Error('Only collection managers can use another member’s ID result.')
+  const definition = [log.createdPlantDefinition, log.matchedPlantDefinition].find((item) => item?.collectionId === collection.id)
+  if (!definition) {
+    redirect(`${collectionPath(collection.slug, '/plants')}?fromIdentification=${encodeURIComponent(log.id)}&wishlist=1`)
+  }
+  const previousStatus = definition.acquisitionStatus
+  await prisma.$transaction(async (tx) => {
+    await tx.plantDefinition.update({ where: { id: definition.id }, data: {
+      acquisitionStatus: 'WISHLIST',
+      acquisitionPriority: definition.acquisitionPriority || 3,
+    } })
+    await emitDomainEvent(tx, {
+      eventType: previousStatus ? 'wishlist.status_changed' : 'wishlist.added', collectionId: collection.id, aggregateId: definition.id,
+      actor: { id: user.id, role: user.role }, idempotencyKey: `wishlist:${definition.id}:identification:${log.id}`,
+      payload: { subjectId: definition.id, recordId: log.id, recordType: 'PlantIdentificationLog', displayName: plantName(definition), previousStatus, status: 'WISHLIST' },
+    })
+  })
+  await audit(user, 'UPDATE', 'PLANT_DEFINITION', definition.id, `Added ${plantName(definition)} to wishlist from ID My Plant`, { identificationLogId: log.id }, collection.id)
+  revalidatePath(collectionPath(collection.slug, '/wishlist'))
+  redirect(collectionPath(collection.slug, `/acquisitions?definition=${definition.id}`))
 }
 
 export async function updateAcquisitionVisibility(fd: FormData) {

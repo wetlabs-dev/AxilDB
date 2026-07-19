@@ -383,6 +383,7 @@ export default async function AcquisitionPipelinePage({
                       {availabilities.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                     </Select>
                     <TextArea label="Notes" name="notes" />
+                    <label className="flex items-start gap-2 rounded-md border border-stone-200 bg-white/55 p-3 text-sm"><input className="mt-1" type="checkbox" name="isPublic" /><span><span className="block font-semibold">Public observation</span><span className="block text-xs text-stone-600">Allow its date, price, size, condition, and availability in public-safe wishlist summaries. Distributor identity and notes remain private.</span></span></label>
                     <Button>Add observation</Button>
                   </form>
                 </Card>

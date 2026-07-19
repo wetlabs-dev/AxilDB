@@ -10,6 +10,7 @@ import { prisma } from '@/lib/prisma'
 import { formatDate } from '@/lib/time'
 import { plantName, taxonomyLabel } from '@/lib/utils'
 import { distributorDisplay, sourceChainDisplay } from '@/lib/provenance'
+import { wishlistEnvironmentSummary, wishlistPriceRange } from '@/lib/wishlist'
 
 const PAGE_BG = '#f8f3e6'
 const INK = '#2f2618'
@@ -359,6 +360,38 @@ function drawSpecimenCard(doc: PDFKit.PDFDocument, data: NonNullable<Awaited<Ret
   doc.y = y + cardH + 12
 }
 
+function drawWishlistSection(doc: PDFKit.PDFDocument, data: NonNullable<Awaited<ReturnType<typeof loadExhibitForDisplay>>>) {
+  if (!data.wishlistItems.length) return
+  newPage(doc, data.exhibit.title)
+  doc.font(FONT.sansBold).fontSize(8.5).fillColor(GREEN).text('FUTURE COLLECTION', left(doc), doc.y, { characterSpacing: 1.1 })
+  doc.moveDown(0.4).font(FONT.serifBold).fontSize(25).fillColor(INK).text(data.settings.wishlistHeading)
+  doc.moveDown(0.3).font(FONT.sans).fontSize(9).fillColor(MUTED).text('Planned acquisitions are definition records, not currently owned specimens.')
+  doc.moveDown(1)
+  for (const entry of data.wishlistItems) {
+    const definition = entry.plantDefinition
+    const range = wishlistPriceRange(definition.plantObservations)
+    const rows = [
+      `Status: ${String(definition.acquisitionStatus || 'WISHLIST').toLowerCase().replaceAll('_', ' ')}`,
+      definition.desiredSpecimenSize ? `Desired size: ${definition.desiredSpecimenSize}` : null,
+      wishlistEnvironmentSummary(definition.husbandryGuide) ? `Environment: ${wishlistEnvironmentSummary(definition.husbandryGuide)}` : null,
+      `Owned specimens: ${definition.instances.length}`,
+      range ? `Public observations: ${range.low}-${range.high} ${range.currency}` : null,
+      entry.customCaption || null,
+      definition.acquisitionResearchSummary || null,
+    ].filter(Boolean) as string[]
+    doc.font(FONT.sans).fontSize(8.5)
+    const body = rows.join('\n')
+    const cardH = Math.max(74, doc.heightOfString(body, { width: width(doc) - 28 }) + 43)
+    ensureRoom(doc, cardH + 10, data.exhibit.title)
+    const y = doc.y
+    doc.roundedRect(left(doc), y, width(doc), cardH, 8).fillAndStroke(CARD, BORDER)
+    doc.font(FONT.sansBold).fontSize(7.5).fillColor(GREEN).text('PLANNED ACQUISITION', left(doc) + 14, y + 12, { characterSpacing: 0.8 })
+    doc.font(FONT.serifBold).fontSize(16).fillColor(INK).text(plantName(definition), left(doc) + 14, y + 27, { width: width(doc) - 28 })
+    doc.font(FONT.sans).fontSize(8.5).fillColor('#4d463c').text(body, left(doc) + 14, doc.y + 5, { width: width(doc) - 28, lineGap: 2 })
+    doc.y = y + cardH + 10
+  }
+}
+
 function addFooters(doc: PDFKit.PDFDocument, title: string) {
   const range = doc.bufferedPageRange()
   for (let i = 0; i < range.count; i += 1) {
@@ -397,6 +430,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
   data.groups.forEach((group, index) => {
     drawDefinitionSection(doc, data, group, index > 0 || Boolean(data.exhibit.coverPhoto))
   })
+  drawWishlistSection(doc, data)
 
   addFooters(doc, data.exhibit.title)
   doc.end()

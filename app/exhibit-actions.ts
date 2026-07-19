@@ -59,7 +59,17 @@ function settingsFromForm(fd: FormData) {
   }
   const imageMode = value(fd, 'imageMode')
   settings.imageMode = ['cover', 'recent', 'all', 'selected'].includes(imageMode) ? imageMode as typeof settings.imageMode : 'cover'
+  settings.wishlistHeading = value(fd, 'wishlistHeading') || defaultExhibitSettings.wishlistHeading
   return settings
+}
+
+function selectedWishlistRows(fd: FormData) {
+  return fd.getAll('wishlistDefinitionId').map(String).filter(Boolean).map((plantDefinitionId, index) => ({
+    plantDefinitionId,
+    sortOrder: Number(value(fd, `wishlistSortOrder:${plantDefinitionId}`)) || index,
+    featured: checkbox(fd, `wishlistFeatured:${plantDefinitionId}`),
+    customCaption: value(fd, `wishlistCaption:${plantDefinitionId}`) || null,
+  }))
 }
 
 function updateSettingsFromForm(fd: FormData) {
@@ -124,6 +134,15 @@ export async function updateCollectionExhibit(fd: FormData) {
     : []
   const validPlantIds = new Set(validPlants.map((plant) => plant.id))
   const filteredRows = rows.filter((row) => validPlantIds.has(row.plantInstanceId))
+  const shouldReplaceWishlist = fd.has('wishlistSelectionPresent')
+  const wishlistRows = shouldReplaceWishlist ? selectedWishlistRows(fd) : []
+  const previousWishlistRows = shouldReplaceWishlist ? await prisma.collectionExhibitWishlistItem.findMany({ where: { exhibitId: id }, select: { plantDefinitionId: true } }) : []
+  const validWishlistDefinitions = wishlistRows.length ? await prisma.plantDefinition.findMany({
+    where: { collectionId: context.collection.id, id: { in: wishlistRows.map((row) => row.plantDefinitionId) }, acquisitionStatus: { not: null } },
+    select: { id: true },
+  }) : []
+  const validWishlistIds = new Set(validWishlistDefinitions.map((definition) => definition.id))
+  const filteredWishlistRows = wishlistRows.filter((row) => validWishlistIds.has(row.plantDefinitionId))
   const accessMode = value(fd, 'accessMode') === 'PUBLIC' ? CollectionExhibitAccessMode.PUBLIC : CollectionExhibitAccessMode.UNLISTED
   const requestedCoverPhotoId = value(fd, 'coverPhotoId')
   const coverPhoto = requestedCoverPhotoId
@@ -160,11 +179,37 @@ export async function updateCollectionExhibit(fd: FormData) {
           })),
         ]
       : []),
+    ...(shouldReplaceWishlist
+      ? [
+          prisma.collectionExhibitWishlistItem.deleteMany({ where: { exhibitId: id } }),
+          ...filteredWishlistRows.map((row) => prisma.collectionExhibitWishlistItem.create({
+            data: { exhibitId: id, collectionId: context.collection.id, ...row },
+          })),
+        ]
+      : []),
   ]
   await prisma.$transaction(updates)
+  if (shouldReplaceWishlist) {
+    const previousIds = new Set(previousWishlistRows.map((row) => row.plantDefinitionId))
+    const nextIds = new Set(filteredWishlistRows.map((row) => row.plantDefinitionId))
+    const changedAt = new Date()
+    await prisma.$transaction(async (tx) => {
+      for (const plantDefinitionId of nextIds) if (!previousIds.has(plantDefinitionId)) await emitDomainEvent(tx, {
+        eventType: 'exhibit.wishlist_item_added', collectionId: context.collection.id, aggregateId: id,
+        actor: { id: context.user.id, role: context.user.role }, idempotencyKey: `exhibit:${id}:wishlist:${plantDefinitionId}:added:${changedAt.toISOString()}`,
+        payload: { subjectId: id, recordId: plantDefinitionId, recordType: 'PlantDefinition', title: 'Wishlist definition added to exhibit' },
+      })
+      for (const plantDefinitionId of previousIds) if (!nextIds.has(plantDefinitionId)) await emitDomainEvent(tx, {
+        eventType: 'exhibit.wishlist_item_removed', collectionId: context.collection.id, aggregateId: id,
+        actor: { id: context.user.id, role: context.user.role }, idempotencyKey: `exhibit:${id}:wishlist:${plantDefinitionId}:removed:${changedAt.toISOString()}`,
+        payload: { subjectId: id, recordId: plantDefinitionId, recordType: 'PlantDefinition', title: 'Wishlist definition removed from exhibit' },
+      })
+    })
+  }
   await audit(context.user, 'UPDATE', 'COLLECTION_EXHIBIT', id, `Updated exhibit ${existing.title}`, {
     accessMode,
     selectedPlants: shouldReplacePlants ? filteredRows.length : undefined,
+    selectedWishlistDefinitions: shouldReplaceWishlist ? filteredWishlistRows.length : undefined,
     settings: settingsFromForm(fd),
   }, context.collection.id)
   redirect(collectionPath(context.collection.slug, `/exhibits/${id}?saved=1`))

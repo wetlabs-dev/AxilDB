@@ -177,6 +177,7 @@ model User {
   createdAcquisitionResearchEntries AcquisitionResearchEntry[] @relation("AcquisitionResearchEntryCreatedBy")
   createdPlantObservations PlantObservation[] @relation("PlantObservationCreatedBy")
   createdPlantAcquisitionRecords PlantAcquisitionRecord[] @relation("PlantAcquisitionRecordCreatedBy")
+  createdAcquisitionBatches AcquisitionBatch[] @relation("AcquisitionBatchCreatedBy")
   createdSources Source[] @relation("SourceCreatedBy")
   createdDistributors Distributor[] @relation("DistributorCreatedBy")
   resolvedProvenanceItems ProvenanceReconciliationItem[] @relation("ProvenanceReconciliationResolvedBy")
@@ -196,6 +197,8 @@ model Collection {
   aiFeaturesEnabled   Boolean                @default(true)
   aiBriefingEnabled   Boolean                @default(false)
   acquisitionVisibility String                @default("PRIVATE")
+  wishlistIntro       String?
+  wishlistPublicSettingsJson Json?
   showSourceProvenance Boolean                @default(true)
   showDistributorIdentity Boolean             @default(false)
   showDistributorLocation Boolean             @default(false)
@@ -251,6 +254,7 @@ model Collection {
   acquisitionResearchEntries AcquisitionResearchEntry[]
   plantObservations   PlantObservation[]
   plantAcquisitionRecords PlantAcquisitionRecord[]
+  acquisitionBatches AcquisitionBatch[]
   sources             Source[]
   acquisitionSources  AcquisitionSource[]
   distributors        Distributor[]
@@ -268,6 +272,7 @@ model Collection {
   careSheetAccessLogs CareSheetAccessLog[]
   collectionUpdateDigestDeliveries CollectionUpdateDigestDelivery[]
   exhibits            CollectionExhibit[]
+  exhibitWishlistItems CollectionExhibitWishlistItem[]
   workflowTemplates   WorkflowTemplate[]
   workflowRuns        WorkflowRun[]
   workflowRunPlants   WorkflowRunPlant[]
@@ -736,6 +741,7 @@ model CollectionExhibit {
   createdBy   User?      @relation("CollectionExhibitCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
   publishedBy User?      @relation("CollectionExhibitPublishedBy", fields: [publishedByUserId], references: [id], onDelete: SetNull)
   plants      CollectionExhibitPlant[]
+  wishlistItems CollectionExhibitWishlistItem[]
   subscribers CollectionExhibitSubscriber[]
   updates     CollectionExhibitUpdate[]
 
@@ -763,6 +769,26 @@ model CollectionExhibitPlant {
   @@index([exhibitId])
   @@index([plantInstanceId])
   @@index([sortOrder])
+}
+
+model CollectionExhibitWishlistItem {
+  id                String   @id @default(cuid())
+  exhibitId         String
+  collectionId      String
+  plantDefinitionId String
+  sortOrder         Int      @default(0)
+  featured          Boolean  @default(false)
+  customCaption     String?
+  createdAt         DateTime @default(now())
+
+  exhibit         CollectionExhibit @relation(fields: [exhibitId], references: [id], onDelete: Cascade)
+  collection      Collection        @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  plantDefinition PlantDefinition   @relation(fields: [plantDefinitionId], references: [id], onDelete: Cascade)
+
+  @@unique([exhibitId, plantDefinitionId])
+  @@index([exhibitId, sortOrder])
+  @@index([collectionId])
+  @@index([plantDefinitionId])
 }
 
 model CollectionExhibitSubscriber {
@@ -1170,6 +1196,8 @@ model PlantDefinition {
   acquisitionResearchEntries AcquisitionResearchEntry[]
   plantObservations PlantObservation[]
   acquisitionRecords PlantAcquisitionRecord[]
+  acquisitionBatchItems AcquisitionBatchItem[]
+  exhibitWishlistItems CollectionExhibitWishlistItem[]
 
   @@index([collectionId])
   @@index([governingBodyId])
@@ -1222,6 +1250,7 @@ model PlantObservation {
   condition         String?
   availability      AcquisitionAvailability @default(UNKNOWN)
   notes             String?
+  isPublic          Boolean  @default(false)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
@@ -1231,6 +1260,7 @@ model PlantObservation {
   distributor     Distributor? @relation(fields: [distributorId], references: [id], onDelete: SetNull)
   distributorLocation DistributorLocation? @relation(fields: [distributorLocationId], references: [id], onDelete: SetNull)
   acquisitionRecords PlantAcquisitionRecord[]
+  acquisitionBatchItems AcquisitionBatchItem[]
 
   @@index([collectionId])
   @@index([plantDefinitionId])
@@ -1239,6 +1269,71 @@ model PlantObservation {
   @@index([distributorLocationId])
   @@index([observedAt])
   @@index([availability])
+}
+
+model AcquisitionBatch {
+  id                    String   @id @default(cuid())
+  collectionId          String
+  distributorId         String?
+  distributorLocationId String?
+  acquisitionDate       DateTime @default(now())
+  orderNumber           String?
+  currency              String   @default("USD")
+  subtotal              Decimal?
+  shippingCost          Decimal?
+  tax                   Decimal?
+  totalCost             Decimal?
+  sharedNotes           String?
+  receiptPhotoId        String?
+  idempotencyKey        String
+  status                String   @default("COMPLETED")
+  createdByUserId       String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  collection          Collection           @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  distributor         Distributor?          @relation(fields: [distributorId], references: [id], onDelete: SetNull)
+  distributorLocation DistributorLocation?  @relation(fields: [distributorLocationId], references: [id], onDelete: SetNull)
+  receiptPhoto        Photo?                 @relation("AcquisitionBatchReceiptPhoto", fields: [receiptPhotoId], references: [id], onDelete: SetNull)
+  createdBy           User?                  @relation("AcquisitionBatchCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  items               AcquisitionBatchItem[]
+  acquisitionRecords  PlantAcquisitionRecord[]
+
+  @@unique([collectionId, idempotencyKey])
+  @@index([collectionId, acquisitionDate])
+  @@index([distributorId])
+  @@index([distributorLocationId])
+  @@index([receiptPhotoId])
+  @@index([createdByUserId])
+}
+
+model AcquisitionBatchItem {
+  id                         String   @id @default(cuid())
+  acquisitionBatchId         String
+  plantDefinitionId          String
+  observationId              String?
+  quantity                   Int      @default(1)
+  unitPrice                  Decimal?
+  specimenSize               String?
+  potSize                    String?
+  initialLocationId          String?
+  notes                      String?
+  fulfillmentChoice          AcquisitionFulfillmentChoice @default(FULFILLED)
+  createPlantInstances       Boolean  @default(true)
+  createdAcquisitionRecordId String?  @unique
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+
+  batch             AcquisitionBatch      @relation(fields: [acquisitionBatchId], references: [id], onDelete: Cascade)
+  plantDefinition   PlantDefinition        @relation(fields: [plantDefinitionId], references: [id], onDelete: Restrict)
+  observation       PlantObservation?       @relation(fields: [observationId], references: [id], onDelete: SetNull)
+  initialLocation   Location?               @relation("AcquisitionBatchItemInitialLocation", fields: [initialLocationId], references: [id], onDelete: SetNull)
+  acquisitionRecord PlantAcquisitionRecord? @relation("AcquisitionBatchItemRecord", fields: [createdAcquisitionRecordId], references: [id], onDelete: SetNull)
+
+  @@index([acquisitionBatchId])
+  @@index([plantDefinitionId])
+  @@index([observationId])
+  @@index([initialLocationId])
 }
 
 model PlantAcquisitionRecord {
@@ -1259,6 +1354,7 @@ model PlantAcquisitionRecord {
   initialLocationId String?
   notes             String?
   fulfillmentChoice AcquisitionFulfillmentChoice @default(FULFILLED)
+  acquisitionBatchId String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
@@ -1271,6 +1367,8 @@ model PlantAcquisitionRecord {
   distributor     Distributor? @relation(fields: [distributorId], references: [id], onDelete: SetNull)
   distributorLocation DistributorLocation? @relation(fields: [distributorLocationId], references: [id], onDelete: SetNull)
   sources         AcquisitionSource[]
+  acquisitionBatch AcquisitionBatch? @relation(fields: [acquisitionBatchId], references: [id], onDelete: SetNull)
+  acquisitionBatchItem AcquisitionBatchItem? @relation("AcquisitionBatchItemRecord")
 
   @@index([collectionId])
   @@index([plantDefinitionId])
@@ -1280,6 +1378,7 @@ model PlantAcquisitionRecord {
   @@index([distributorId])
   @@index([distributorLocationId])
   @@index([acquiredAt])
+  @@index([acquisitionBatchId])
 }
 
 model PlantAcquisitionRecordInstance {
@@ -1347,6 +1446,7 @@ model Distributor {
   locations       DistributorLocation[]
   acquisitions    PlantAcquisitionRecord[]
   observations    PlantObservation[]
+  acquisitionBatches AcquisitionBatch[]
 
   @@unique([collectionId, normalizedName])
   @@index([collectionId, active])
@@ -1380,6 +1480,7 @@ model DistributorLocation {
   distributor     Distributor @relation(fields: [distributorId], references: [id], onDelete: Cascade)
   acquisitions    PlantAcquisitionRecord[]
   observations    PlantObservation[]
+  acquisitionBatches AcquisitionBatch[]
 
   @@unique([distributorId, normalizedName])
   @@index([collectionId, active])
@@ -1871,6 +1972,7 @@ model Location {
   plantInstances PlantInstance[] @relation("CurrentPlantLocation")
   desiredPlantDefinitions PlantDefinition[] @relation("PlantDefinitionDesiredLocation")
   acquisitionRecords PlantAcquisitionRecord[] @relation("PlantAcquisitionInitialLocation")
+  acquisitionBatchItems AcquisitionBatchItem[] @relation("AcquisitionBatchItemInitialLocation")
   movesFrom      PlantLocationMove[] @relation("PlantLocationMoveFrom")
   movesTo        PlantLocationMove[] @relation("PlantLocationMoveTo")
   quarantineRecords PlantQuarantine[]
@@ -2501,6 +2603,7 @@ model Photo {
   moderationReviews ImageModerationReview[]
   plantIdentificationLogs PlantIdentificationLog[]
   exhibitCoverPhotos CollectionExhibit[] @relation("CollectionExhibitCoverPhoto")
+  acquisitionBatchReceipts AcquisitionBatch[] @relation("AcquisitionBatchReceiptPhoto")
 
   @@index([collectionId])
   @@index([uploadedByUserId])

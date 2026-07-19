@@ -29,7 +29,8 @@ export function middleware(request: NextRequest) {
     const [, , slug, ...rest] = pathname.split('/')
     const url = request.nextUrl.clone()
     url.pathname = `/${rest.join('/')}` || '/'
-    const requestHeaders = requestHeadersWithPath(request)
+    const isPublicWishlist = rest.join('/') === 'wishlist'
+    const requestHeaders = isPublicWishlist ? publicPageHeaders(request) : requestHeadersWithPath(request)
     requestHeaders.set('x-axildb-collection', decodeURIComponent(slug))
     requestHeaders.set(RETURN_TO_HEADER, `${pathname}${search}`)
     return NextResponse.rewrite(url, {
