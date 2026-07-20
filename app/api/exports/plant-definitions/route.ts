@@ -5,8 +5,9 @@ import { NextResponse } from 'next/server'
 import { requireCollectionAdmin } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
 import { plantName } from '@/lib/utils'
+import { getUserUnitPreferences, lightInputValue, lightSymbol, temperatureInputValue, temperatureSymbol } from '@/lib/units'
 
-const headers = [
+const baseHeaders = [
   'id',
   'name',
   'genus',
@@ -51,12 +52,23 @@ function exportFileName(slug: string) {
 export async function GET(request: Request) {
   const url = new URL(request.url)
   const collectionSlug = url.searchParams.get('collectionSlug') || undefined
-  const { collection } = await requireCollectionAdmin(collectionSlug)
+  const { collection, user } = await requireCollectionAdmin(collectionSlug)
+  const unitPreferences = await getUserUnitPreferences(prisma, user.id)
+  const headers = [
+    ...baseHeaders,
+    `temperatureMinimum (${temperatureSymbol(unitPreferences.temperatureUnit)})`,
+    `temperatureMaximum (${temperatureSymbol(unitPreferences.temperatureUnit)})`,
+    `nightTemperatureMinimum (${temperatureSymbol(unitPreferences.temperatureUnit)})`,
+    `nightTemperatureMaximum (${temperatureSymbol(unitPreferences.temperatureUnit)})`,
+    `measuredLightMinimum (${lightSymbol(unitPreferences.lightUnit)})`,
+    `measuredLightMaximum (${lightSymbol(unitPreferences.lightUnit)})`,
+  ]
 
   const definitions = await prisma.plantDefinition.findMany({
     where: { collectionId: collection.id },
     include: {
       governingBody: true,
+      husbandryGuide: true,
       aliases: { orderBy: [{ aliasType: 'asc' }, { name: 'asc' }] },
       _count: { select: { instances: true } },
     },
@@ -87,6 +99,12 @@ export async function GET(request: Request) {
     definition._count.instances,
     definition.createdAt,
     definition.updatedAt,
+    temperatureInputValue(definition.husbandryGuide?.environmentTemperatureMinC, unitPreferences.temperatureUnit),
+    temperatureInputValue(definition.husbandryGuide?.environmentTemperatureMaxC, unitPreferences.temperatureUnit),
+    temperatureInputValue(definition.husbandryGuide?.environmentNightTemperatureMinC, unitPreferences.temperatureUnit),
+    temperatureInputValue(definition.husbandryGuide?.environmentNightTemperatureMaxC, unitPreferences.temperatureUnit),
+    lightInputValue(definition.husbandryGuide?.environmentLightMinLux, unitPreferences.lightUnit),
+    lightInputValue(definition.husbandryGuide?.environmentLightMaxLux, unitPreferences.lightUnit),
   ]))
 
   const csv = `${csvRow(headers)}\n${rows.join('\n')}${rows.length ? '\n' : ''}`

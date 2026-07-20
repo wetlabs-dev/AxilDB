@@ -55,6 +55,7 @@ It is designed for real collection work: messy taxonomy, acquisition names, alia
 - Server-admin orphaned image cleanup that scans uploaded image storage, shows dry-run results, re-checks references before deletion, and logs cleanup actions.
 - QR-code two-factor authentication with one-time recovery codes, compatible with Apple Passwords and standard authenticator apps.
 - SMTP-ready email foundation with welcome/verification emails, secure single-use tokens, branded HTML/plain-text templates, and user email preferences.
+- Account-level measurement preferences for Celsius/Fahrenheit and lux/foot-candles. AxilDB stores canonical Celsius/lux values, converts structured environment forms on save, and labels converted compatibility views and CSV exports explicitly.
 - User reminders for general tasks, plant check-ins, bloom follow-ups, and propagation follow-ups, with one-time or recurring schedules.
 - Reminder delivery history and a lightweight scheduled reminder worker.
 - Followed plant updates for individual specimens, plant types, and connected lineages, with email notifications for blooms, propagations, sport updates, photos, notes, archives, and new specimens of followed types.

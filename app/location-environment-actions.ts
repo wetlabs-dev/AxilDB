@@ -12,6 +12,14 @@ import {
   getEffectivePlantEnvironmentRequirements,
 } from '@/lib/location-compatibility'
 import { prisma } from '@/lib/prisma'
+import {
+  getUserUnitPreferences,
+  lightInputValue,
+  parseLightInput,
+  parseTemperatureInput,
+  temperatureInputValue,
+  type UnitPreferences,
+} from '@/lib/units'
 
 const text = (fd: FormData, key: string) => String(fd.get(key) || '').trim() || null
 const number = (fd: FormData, key: string, min: number, max: number) => {
@@ -35,21 +43,39 @@ const optionalBoolean = (fd: FormData, key: string) => {
 
 const allowed = (value: string | null, values: string[]) => value && values.includes(value) ? value : null
 
-function husbandryEnvironmentData(fd: FormData) {
-  const temperatureMinC = number(fd, 'environmentTemperatureMinC', -60, 80)
-  const temperatureMaxC = number(fd, 'environmentTemperatureMaxC', -60, 80)
-  const nighttimeTemperatureMinC = number(fd, 'environmentNightTemperatureMinC', -60, 80)
-  const nighttimeTemperatureMaxC = number(fd, 'environmentNightTemperatureMaxC', -60, 80)
+function preferredTemperature(fd: FormData, key: string, preferences: UnitPreferences, existing?: number | null) {
+  const value = text(fd, key)
+  if (value == null) return null
+  if (existing != null && value === temperatureInputValue(existing, preferences.temperatureUnit)) return existing
+  const canonical = parseTemperatureInput(value, preferences.temperatureUnit)
+  if (canonical < -60 || canonical > 80) throw new Error(`${key} is outside the supported temperature range.`)
+  return canonical
+}
+
+function preferredLight(fd: FormData, key: string, preferences: UnitPreferences, existing?: number | null) {
+  const value = text(fd, key)
+  if (value == null) return null
+  if (existing != null && value === lightInputValue(existing, preferences.lightUnit)) return existing
+  const canonical = Math.round(parseLightInput(value, preferences.lightUnit))
+  if (canonical < 0 || canonical > 500000) throw new Error(`${key} is outside the supported measured-light range.`)
+  return canonical
+}
+
+function husbandryEnvironmentData(fd: FormData, preferences: UnitPreferences, existing?: Record<string, any> | null) {
+  const temperatureMinC = preferredTemperature(fd, 'environmentTemperatureMinC', preferences, existing?.environmentTemperatureMinC)
+  const temperatureMaxC = preferredTemperature(fd, 'environmentTemperatureMaxC', preferences, existing?.environmentTemperatureMaxC)
+  const nighttimeTemperatureMinC = preferredTemperature(fd, 'environmentNightTemperatureMinC', preferences, existing?.environmentNightTemperatureMinC)
+  const nighttimeTemperatureMaxC = preferredTemperature(fd, 'environmentNightTemperatureMaxC', preferences, existing?.environmentNightTemperatureMaxC)
   const humidityMinPercent = number(fd, 'environmentHumidityMinPercent', 0, 100)
   const humidityMaxPercent = number(fd, 'environmentHumidityMaxPercent', 0, 100)
-  const lightMinLux = integer(fd, 'environmentLightMinLux', 0, 500000)
-  const lightMaxLux = integer(fd, 'environmentLightMaxLux', 0, 500000)
+  const lightMinLux = preferredLight(fd, 'environmentLightMinLux', preferences, existing?.environmentLightMinLux)
+  const lightMaxLux = preferredLight(fd, 'environmentLightMaxLux', preferences, existing?.environmentLightMaxLux)
   const photoperiodMinHours = number(fd, 'environmentPhotoperiodMinHours', 0, 24)
   const photoperiodMaxHours = number(fd, 'environmentPhotoperiodMaxHours', 0, 24)
   if (temperatureMinC != null && temperatureMaxC != null && temperatureMinC > temperatureMaxC) throw new Error('Minimum temperature cannot exceed maximum temperature.')
   if (nighttimeTemperatureMinC != null && nighttimeTemperatureMaxC != null && nighttimeTemperatureMinC > nighttimeTemperatureMaxC) throw new Error('Minimum nighttime temperature cannot exceed maximum nighttime temperature.')
   if (humidityMinPercent != null && humidityMaxPercent != null && humidityMinPercent > humidityMaxPercent) throw new Error('Minimum humidity cannot exceed maximum humidity.')
-  if (lightMinLux != null && lightMaxLux != null && lightMinLux > lightMaxLux) throw new Error('Minimum lux cannot exceed maximum lux.')
+  if (lightMinLux != null && lightMaxLux != null && lightMinLux > lightMaxLux) throw new Error('Minimum measured light cannot exceed maximum measured light.')
   if (photoperiodMinHours != null && photoperiodMaxHours != null && photoperiodMinHours > photoperiodMaxHours) throw new Error('Minimum photoperiod cannot exceed maximum photoperiod.')
   return {
     environmentTemperatureMinC: temperatureMinC,
@@ -78,7 +104,8 @@ export async function savePlantDefinitionEnvironmentRequirements(fd: FormData) {
   await prisma.plantDefinition.findFirstOrThrow({ where: { id: plantDefinitionId, collectionId: collection.id } })
   const existing = await prisma.plantHusbandryGuide.findFirst({ where: { plantDefinitionId, collectionId: collection.id } })
   if (existing?.sourcePlantDefinitionId) throw new Error('Make a local husbandry copy before editing environmental requirements.')
-  const data = husbandryEnvironmentData(fd)
+  const preferences = await getUserUnitPreferences(prisma, user.id)
+  const data = husbandryEnvironmentData(fd, preferences, existing)
   const guide = await prisma.plantHusbandryGuide.upsert({
     where: { plantDefinitionId },
     update: data,
@@ -93,7 +120,9 @@ export async function savePlantInstanceEnvironmentRequirements(fd: FormData) {
   const { user, collection } = await requireCollectionLogger(collectionSlug)
   const plantInstanceId = String(fd.get('plantInstanceId') || '')
   await prisma.plantInstance.findFirstOrThrow({ where: { id: plantInstanceId, collectionId: collection.id } })
-  const data = husbandryEnvironmentData(fd)
+  const existing = await prisma.plantHusbandryOverride.findUnique({ where: { plantInstanceId } })
+  const preferences = await getUserUnitPreferences(prisma, user.id)
+  const data = husbandryEnvironmentData(fd, preferences, existing)
   const override = await prisma.plantHusbandryOverride.upsert({
     where: { plantInstanceId },
     update: data,
@@ -107,19 +136,20 @@ export async function saveLocationEnvironmentProfile(fd: FormData) {
   const collectionSlug = String(fd.get('collectionSlug') || '')
   const { user, collection } = await requireCollectionManager(collectionSlug)
   const locationId = String(fd.get('locationId') || '')
-  const location = await prisma.location.findFirstOrThrow({ where: { id: locationId, collectionId: collection.id } })
-  const temperatureMinC = number(fd, 'temperatureMinC', -60, 80)
-  const temperatureMaxC = number(fd, 'temperatureMaxC', -60, 80)
-  const nighttimeTemperatureMinC = number(fd, 'nighttimeTemperatureMinC', -60, 80)
-  const nighttimeTemperatureMaxC = number(fd, 'nighttimeTemperatureMaxC', -60, 80)
+  const location = await prisma.location.findFirstOrThrow({ where: { id: locationId, collectionId: collection.id }, include: { environmentProfile: true } })
+  const preferences = await getUserUnitPreferences(prisma, user.id)
+  const temperatureMinC = preferredTemperature(fd, 'temperatureMinC', preferences, location.environmentProfile?.temperatureMinC)
+  const temperatureMaxC = preferredTemperature(fd, 'temperatureMaxC', preferences, location.environmentProfile?.temperatureMaxC)
+  const nighttimeTemperatureMinC = preferredTemperature(fd, 'nighttimeTemperatureMinC', preferences, location.environmentProfile?.nighttimeTemperatureMinC)
+  const nighttimeTemperatureMaxC = preferredTemperature(fd, 'nighttimeTemperatureMaxC', preferences, location.environmentProfile?.nighttimeTemperatureMaxC)
   const humidityMinPercent = number(fd, 'humidityMinPercent', 0, 100)
   const humidityMaxPercent = number(fd, 'humidityMaxPercent', 0, 100)
-  const lightMinLux = integer(fd, 'lightMinLux', 0, 500000)
-  const lightMaxLux = integer(fd, 'lightMaxLux', 0, 500000)
+  const lightMinLux = preferredLight(fd, 'lightMinLux', preferences, location.environmentProfile?.lightMinLux)
+  const lightMaxLux = preferredLight(fd, 'lightMaxLux', preferences, location.environmentProfile?.lightMaxLux)
   if (temperatureMinC != null && temperatureMaxC != null && temperatureMinC > temperatureMaxC) throw new Error('Minimum temperature cannot exceed maximum temperature.')
   if (nighttimeTemperatureMinC != null && nighttimeTemperatureMaxC != null && nighttimeTemperatureMinC > nighttimeTemperatureMaxC) throw new Error('Minimum nighttime temperature cannot exceed maximum nighttime temperature.')
   if (humidityMinPercent != null && humidityMaxPercent != null && humidityMinPercent > humidityMaxPercent) throw new Error('Minimum humidity cannot exceed maximum humidity.')
-  if (lightMinLux != null && lightMaxLux != null && lightMinLux > lightMaxLux) throw new Error('Minimum lux cannot exceed maximum lux.')
+  if (lightMinLux != null && lightMaxLux != null && lightMinLux > lightMaxLux) throw new Error('Minimum measured light cannot exceed maximum measured light.')
 
   const data = {
     temperatureMinC,

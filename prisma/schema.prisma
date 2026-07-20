@@ -1001,6 +1001,8 @@ model EmailPreference {
   id                    String   @id @default(cuid())
   userId                String   @unique
   timezone              String   @default("America/New_York")
+  temperatureUnit       String   @default("CELSIUS")
+  lightUnit             String   @default("LUX")
   authSecurityEmails    Boolean  @default(true)
   welcomeEmails         Boolean  @default(true)
   generalReminders      Boolean  @default(true)

@@ -58,6 +58,13 @@ export type CompatibilityCheck = {
   locationValue: string
   explanation: string
   severity: 'INFO' | 'WARNING' | 'HIGH'
+  measurement?: {
+    dimension: 'TEMPERATURE' | 'LIGHT' | 'PERCENT' | 'HOURS'
+    plantMin: number | null
+    plantMax: number | null
+    locationMin: number | null
+    locationMax: number | null
+  }
 }
 
 export type CompatibilityResult = {
@@ -212,11 +219,12 @@ function displayRange(min: number | null, max: number | null, unit: string) {
   return min != null ? `at least ${min}${unit}` : `up to ${max}${unit}`
 }
 
-function rangeCheck(category: string, requirementMin: number | null, requirementMax: number | null, locationMin: number | null, locationMax: number | null, unit: string): CompatibilityCheck {
+function rangeCheck(category: string, requirementMin: number | null, requirementMax: number | null, locationMin: number | null, locationMax: number | null, unit: string, dimension: NonNullable<CompatibilityCheck['measurement']>['dimension']): CompatibilityCheck {
   const plantRequirement = displayRange(requirementMin, requirementMax, unit)
   const locationValue = displayRange(locationMin, locationMax, unit)
+  const measurement = { dimension, plantMin: requirementMin, plantMax: requirementMax, locationMin, locationMax }
   if ((requirementMin == null && requirementMax == null) || (locationMin == null && locationMax == null)) {
-    return { category, status: 'UNKNOWN', plantRequirement, locationValue, explanation: `There is not enough structured ${category.toLowerCase()} data to compare.`, severity: 'INFO' }
+    return { category, status: 'UNKNOWN', plantRequirement, locationValue, explanation: `There is not enough structured ${category.toLowerCase()} data to compare.`, severity: 'INFO', measurement }
   }
   const reqMin = requirementMin ?? -Infinity
   const reqMax = requirementMax ?? Infinity
@@ -226,12 +234,12 @@ function rangeCheck(category: string, requirementMin: number | null, requirement
   if (overlap < 0) {
     const gap = Math.max(reqMin - locMax, locMin - reqMax)
     const high = category.includes('Temperature') ? gap >= 5 : category === 'Humidity' ? gap >= 15 : false
-    return { category, status: 'CONFLICT', plantRequirement, locationValue, explanation: `Recorded ${category.toLowerCase()} does not overlap the plant's preferred range${high ? ' and differs materially' : ''}.`, severity: high ? 'HIGH' : 'WARNING' }
+    return { category, status: 'CONFLICT', plantRequirement, locationValue, explanation: `Recorded ${category.toLowerCase()} does not overlap the plant's preferred range${high ? ' and differs materially' : ''}.`, severity: high ? 'HIGH' : 'WARNING', measurement }
   }
   if (locMin < reqMin || locMax > reqMax) {
-    return { category, status: 'CAUTION', plantRequirement, locationValue, explanation: `The ranges overlap, but part of the recorded location range falls outside the plant's preference.`, severity: 'WARNING' }
+    return { category, status: 'CAUTION', plantRequirement, locationValue, explanation: `The ranges overlap, but part of the recorded location range falls outside the plant's preference.`, severity: 'WARNING', measurement }
   }
-  return { category, status: 'MATCH', plantRequirement, locationValue, explanation: `The recorded location range sits within the plant's preferred range.`, severity: 'INFO' }
+  return { category, status: 'MATCH', plantRequirement, locationValue, explanation: `The recorded location range sits within the plant's preferred range.`, severity: 'INFO', measurement }
 }
 
 const lightRanks: Record<string, number> = { VERY_LOW: 0, LOW: 1, MODERATE: 2, BRIGHT: 3, VERY_BRIGHT: 4 }
@@ -243,11 +251,11 @@ export function evaluatePlantLocationCompatibility(input: {
 }): CompatibilityResult {
   const { plantRequirements: plant, locationEnvironment: location } = input
   const checks: CompatibilityCheck[] = [
-    rangeCheck('Temperature', plant.temperatureMinC, plant.temperatureMaxC, environmentNumber(location, 'temperatureMinC'), environmentNumber(location, 'temperatureMaxC'), ' C'),
-    rangeCheck('Nighttime temperature', plant.nighttimeTemperatureMinC, plant.nighttimeTemperatureMaxC, environmentNumber(location, 'nighttimeTemperatureMinC'), environmentNumber(location, 'nighttimeTemperatureMaxC'), ' C'),
-    rangeCheck('Humidity', plant.humidityMinPercent, plant.humidityMaxPercent, environmentNumber(location, 'humidityMinPercent'), environmentNumber(location, 'humidityMaxPercent'), '%'),
-    rangeCheck('Light measurement', plant.lightMinLux, plant.lightMaxLux, environmentNumber(location, 'lightMinLux'), environmentNumber(location, 'lightMaxLux'), ' lux'),
-    rangeCheck('Photoperiod', plant.photoperiodMinHours, plant.photoperiodMaxHours, environmentNumber(location, 'photoperiodHours'), environmentNumber(location, 'photoperiodHours'), ' h'),
+    rangeCheck('Temperature', plant.temperatureMinC, plant.temperatureMaxC, environmentNumber(location, 'temperatureMinC'), environmentNumber(location, 'temperatureMaxC'), ' C', 'TEMPERATURE'),
+    rangeCheck('Nighttime temperature', plant.nighttimeTemperatureMinC, plant.nighttimeTemperatureMaxC, environmentNumber(location, 'nighttimeTemperatureMinC'), environmentNumber(location, 'nighttimeTemperatureMaxC'), ' C', 'TEMPERATURE'),
+    rangeCheck('Humidity', plant.humidityMinPercent, plant.humidityMaxPercent, environmentNumber(location, 'humidityMinPercent'), environmentNumber(location, 'humidityMaxPercent'), '%', 'PERCENT'),
+    rangeCheck('Light measurement', plant.lightMinLux, plant.lightMaxLux, environmentNumber(location, 'lightMinLux'), environmentNumber(location, 'lightMaxLux'), ' lux', 'LIGHT'),
+    rangeCheck('Photoperiod', plant.photoperiodMinHours, plant.photoperiodMaxHours, environmentNumber(location, 'photoperiodHours'), environmentNumber(location, 'photoperiodHours'), ' h', 'HOURS'),
   ]
 
   const locationLight = String(location.values.lightLevel?.value || '')

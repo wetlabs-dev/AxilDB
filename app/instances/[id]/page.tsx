@@ -50,6 +50,7 @@ import { isQuarantineLocation, quarantineChecklistItems } from '@/lib/locations'
 import { evaluatePlantLocationCompatibility, getEffectiveLocationEnvironment, getEffectivePlantEnvironmentRequirements } from '@/lib/location-compatibility'
 import { expectedPlantIdForInstance } from '@/lib/plant-id'
 import { prisma } from '@/lib/prisma'
+import { resolveUnitPreferences } from '@/lib/units'
 import { recurrenceLabel, reminderCategories, reminderCategoryLabel, reminderRecurrences } from '@/lib/reminders'
 import { hasHusbandryData, husbandryFieldNames, mergeHusbandryValues } from '@/lib/husbandry'
 import { isServerAdminRole } from '@/lib/roles'
@@ -109,6 +110,7 @@ export default async function InstanceDetail({
     ? await prisma.emailPreference.findUnique({ where: { userId: user.id } })
     : null
   const timezone = preferences?.timezone
+  const unitPreferences = resolveUnitPreferences(preferences)
 
   const i = await prisma.plantInstance.findFirstOrThrow({
     where: { id, ...collectionWhere },
@@ -985,7 +987,7 @@ export default async function InstanceDetail({
               {effectiveHusbandry.summaryCare && <p className="mt-2 text-sm text-stone-700">{effectiveHusbandry.summaryCare}</p>}
               <div id="environment-compatibility" className="mt-4 grid gap-3">
                 {locationCompatibility ? (
-                  <PlantLocationCompatibilityPanel result={locationCompatibility} />
+                  <PlantLocationCompatibilityPanel result={locationCompatibility} unitPreferences={unitPreferences} />
                 ) : (
                   <div className="rounded-lg border border-stone-300 bg-stone-100/80 p-3 text-sm text-stone-700">Assign a structured location to evaluate environmental compatibility.</div>
                 )}
@@ -999,6 +1001,7 @@ export default async function InstanceDetail({
                         plantInstanceId={i.id}
                         values={i.husbandryOverride}
                         inheritedLabel="the plant definition's structured requirements"
+                        unitPreferences={unitPreferences}
                       />
                     </div>
                   </details>

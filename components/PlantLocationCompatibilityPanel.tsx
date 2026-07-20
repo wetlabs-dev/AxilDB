@@ -1,4 +1,5 @@
 import type { CompatibilityResult, EffectiveLocationEnvironment } from '@/lib/location-compatibility'
+import { defaultUnitPreferences, formatLightRange, formatTemperatureRange, type UnitPreferences } from '@/lib/units'
 import { cn } from '@/lib/utils'
 
 const statusLabels = {
@@ -22,22 +23,22 @@ function display(value: unknown) {
   return String(value).replaceAll('_', ' ').toLowerCase()
 }
 
-export function EffectiveEnvironmentSummary({ environment }: { environment: EffectiveLocationEnvironment }) {
+export function EffectiveEnvironmentSummary({ environment, unitPreferences = defaultUnitPreferences }: { environment: EffectiveLocationEnvironment; unitPreferences?: UnitPreferences }) {
   const rows = [
-    ['Temperature', 'temperatureMinC', 'temperatureMaxC', ' C'],
-    ['Humidity', 'humidityMinPercent', 'humidityMaxPercent', '%'],
-    ['Lux', 'lightMinLux', 'lightMaxLux', ' lux'],
+    ['Temperature', 'temperatureMinC', 'temperatureMaxC', (min: number | null, max: number | null) => formatTemperatureRange(min, max, unitPreferences.temperatureUnit)],
+    ['Humidity', 'humidityMinPercent', 'humidityMaxPercent', (min: number | null, max: number | null) => min != null && max != null ? `${min}–${max}%` : min != null ? `at least ${min}%` : max != null ? `up to ${max}%` : 'Unknown'],
+    ['Measured light', 'lightMinLux', 'lightMaxLux', (min: number | null, max: number | null) => formatLightRange(min, max, unitPreferences.lightUnit)],
   ] as const
   return (
     <div className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
-      {rows.map(([label, minField, maxField, unit]) => {
+      {rows.map(([label, minField, maxField, formatter]) => {
         const min = environment.values[minField]
         const max = environment.values[maxField]
         const source = min || max
         return (
           <div key={label} className="rounded-md border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] p-2.5">
             <p className="text-xs font-bold uppercase tracking-[0.12em] text-stone-500">{label}</p>
-            <p className="font-semibold">{min || max ? `${display(min?.value)}-${display(max?.value)}${unit}` : 'Not configured'}</p>
+            <p className="font-semibold">{min || max ? formatter(min?.value == null ? null : Number(min.value), max?.value == null ? null : Number(max.value)) : 'Not configured'}</p>
             {source && <p className="text-xs text-stone-600">{source.inherited ? `Inherited from ${source.sourceLocationCode} ${source.sourceLocationName}` : 'Set locally'}</p>}
           </div>
         )
@@ -56,7 +57,16 @@ export function EffectiveEnvironmentSummary({ environment }: { environment: Effe
   )
 }
 
-export function PlantLocationCompatibilityPanel({ result, title = 'Location compatibility', compact = false }: { result: CompatibilityResult; title?: string; compact?: boolean }) {
+function preferredCheckRange(check: CompatibilityResult['checks'][number], side: 'plant' | 'location', unitPreferences: UnitPreferences) {
+  if (!check.measurement) return side === 'plant' ? check.plantRequirement : check.locationValue
+  const min = check.measurement[side === 'plant' ? 'plantMin' : 'locationMin']
+  const max = check.measurement[side === 'plant' ? 'plantMax' : 'locationMax']
+  if (check.measurement.dimension === 'TEMPERATURE') return formatTemperatureRange(min, max, unitPreferences.temperatureUnit)
+  if (check.measurement.dimension === 'LIGHT') return formatLightRange(min, max, unitPreferences.lightUnit)
+  return side === 'plant' ? check.plantRequirement : check.locationValue
+}
+
+export function PlantLocationCompatibilityPanel({ result, title = 'Location compatibility', compact = false, unitPreferences = defaultUnitPreferences }: { result: CompatibilityResult; title?: string; compact?: boolean; unitPreferences?: UnitPreferences }) {
   const visibleChecks = compact ? result.checks.filter((check) => check.status === 'CAUTION' || check.status === 'CONFLICT') : result.checks
   return (
     <section className={cn('rounded-lg border p-3', statusClasses[result.overallStatus])} aria-label={title}>
@@ -77,7 +87,7 @@ export function PlantLocationCompatibilityPanel({ result, title = 'Location comp
                 <span className="text-xs font-bold uppercase tracking-[0.12em]">{check.status.toLowerCase()}</span>
               </div>
               <p className="mt-1">{check.explanation}</p>
-              <p className="mt-1 text-xs opacity-80">Plant: {check.plantRequirement} · Location: {check.locationValue}</p>
+              <p className="mt-1 text-xs opacity-80">Plant: {preferredCheckRange(check, 'plant', unitPreferences)} · Location: {preferredCheckRange(check, 'location', unitPreferences)}</p>
             </div>
           ))}
         </div>

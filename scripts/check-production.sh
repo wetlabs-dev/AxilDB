@@ -10,6 +10,9 @@ npm run check:workflows
 echo "==> Checking care scheduling invariants"
 npm run check:care-scheduling
 
+echo "==> Checking measurement unit conversions"
+npm run check:units
+
 echo "==> Checking Magic Fill merge invariants"
 npm run check:magic-fill
 

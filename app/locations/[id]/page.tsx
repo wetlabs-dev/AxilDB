@@ -12,6 +12,7 @@ import { canCreateInCollection, canEditInCollection, canManageCollection, collec
 import { descendantLocationIds, isQuarantineLocation, locationPath, locationPathWithCodes, nextLocationCode } from '@/lib/locations'
 import { evaluatePlantLocationCompatibility, getEffectiveLocationEnvironment, getEffectivePlantEnvironmentRequirements } from '@/lib/location-compatibility'
 import { prisma } from '@/lib/prisma'
+import { getUserUnitPreferences } from '@/lib/units'
 import { plantName } from '@/lib/utils'
 import { ensureStarterWorkflowTemplates } from '@/lib/workflows'
 
@@ -25,7 +26,7 @@ export default async function LocationDetail({ params }: { params: Promise<{ id:
   const canBulkCare = canCreateInCollection(user, context)
   const canMovePlants = canEditInCollection(user, context)
   if (canBulkCare) await ensureStarterWorkflowTemplates(prisma, collection.id)
-  const [location, allLocations, types] = await Promise.all([
+  const [location, allLocations, types, unitPreferences] = await Promise.all([
     prisma.location.findFirstOrThrow({
       where: { id, collectionId: collection.id },
       include: { locationType: true, parentLocation: { include: { locationType: true } }, environmentProfile: true },
@@ -36,6 +37,7 @@ export default async function LocationDetail({ params }: { params: Promise<{ id:
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     }),
     prisma.locationType.findMany({ where: { collectionId: collection.id, status: 'ACTIVE' }, orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }] }),
+    getUserUnitPreferences(prisma, user?.id),
   ])
   const activeLocations = allLocations.filter((item) => item.status === 'ACTIVE')
   const locationNodes = activeLocations.map((item) => ({
@@ -174,7 +176,7 @@ export default async function LocationDetail({ params }: { params: Promise<{ id:
           </span>
         </div>
         <div className="mt-4">
-          <EffectiveEnvironmentSummary environment={effectiveEnvironment} />
+          <EffectiveEnvironmentSummary environment={effectiveEnvironment} unitPreferences={unitPreferences} />
         </div>
         {effectiveEnvironment.stale && <p className="mt-3 rounded-md border border-[#d8bb72] bg-[#fff7dc] px-3 py-2 text-sm text-[#71551b]">The newest effective measurement is more than one year old. Confirm that these conditions are still current.</p>}
         <div className="mt-4 grid gap-2 sm:grid-cols-4">
@@ -188,7 +190,7 @@ export default async function LocationDetail({ params }: { params: Promise<{ id:
             <summary className="cursor-pointer font-semibold">Review affected plants</summary>
             <div className="mt-3 grid gap-3">
               {directCompatibility.filter((item) => ['CAUTION', 'POOR_MATCH'].includes(item.result.overallStatus)).map((item) => (
-                <PlantLocationCompatibilityPanel key={item.plant.id} result={item.result} title={`${item.plant.plantId} compatibility`} compact />
+                <PlantLocationCompatibilityPanel key={item.plant.id} result={item.result} title={`${item.plant.plantId} compatibility`} compact unitPreferences={unitPreferences} />
               ))}
             </div>
           </details>
@@ -196,7 +198,7 @@ export default async function LocationDetail({ params }: { params: Promise<{ id:
         {canManage && (
           <details className="mt-4 rounded-lg border border-stone-200 bg-white/45 p-3">
             <summary className="cursor-pointer font-semibold">Edit local environment profile</summary>
-            <div className="mt-4"><LocationEnvironmentForm collectionSlug={collection.slug} locationId={location.id} profile={location.environmentProfile} /></div>
+            <div className="mt-4"><LocationEnvironmentForm collectionSlug={collection.slug} locationId={location.id} profile={location.environmentProfile} unitPreferences={unitPreferences} /></div>
           </details>
         )}
       </Card>

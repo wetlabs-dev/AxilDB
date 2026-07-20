@@ -1,5 +1,6 @@
 import { saveLocationEnvironmentProfile } from '@/app/location-environment-actions'
 import { Button, Field, TextArea } from '@/components/ui'
+import { defaultUnitPreferences, lightInputValue, lightSymbol, temperatureInputValue, temperatureSymbol, type UnitPreferences } from '@/lib/units'
 
 const selectClass = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-2 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
 
@@ -28,21 +29,23 @@ function BooleanSelect({ label, name, defaultValue }: { label: string; name: str
   )
 }
 
-export function LocationEnvironmentForm({ collectionSlug, locationId, profile }: { collectionSlug: string; locationId: string; profile?: any }) {
+export function LocationEnvironmentForm({ collectionSlug, locationId, profile, unitPreferences = defaultUnitPreferences }: { collectionSlug: string; locationId: string; profile?: any; unitPreferences?: UnitPreferences }) {
+  const temperatureUnit = temperatureSymbol(unitPreferences.temperatureUnit)
+  const measuredLightUnit = lightSymbol(unitPreferences.lightUnit)
   return (
     <form action={saveLocationEnvironmentProfile} className="grid gap-3 md:grid-cols-4">
       <input type="hidden" name="collectionSlug" value={collectionSlug} />
       <input type="hidden" name="locationId" value={locationId} />
-      <Field label="Day minimum (C)" name="temperatureMinC" type="number" step="0.1" defaultValue={profile?.temperatureMinC ?? ''} />
-      <Field label="Day maximum (C)" name="temperatureMaxC" type="number" step="0.1" defaultValue={profile?.temperatureMaxC ?? ''} />
-      <Field label="Night minimum (C)" name="nighttimeTemperatureMinC" type="number" step="0.1" defaultValue={profile?.nighttimeTemperatureMinC ?? ''} />
-      <Field label="Night maximum (C)" name="nighttimeTemperatureMaxC" type="number" step="0.1" defaultValue={profile?.nighttimeTemperatureMaxC ?? ''} />
+      <Field label={`Day minimum (${temperatureUnit})`} name="temperatureMinC" type="number" step="any" defaultValue={temperatureInputValue(profile?.temperatureMinC, unitPreferences.temperatureUnit)} />
+      <Field label={`Day maximum (${temperatureUnit})`} name="temperatureMaxC" type="number" step="any" defaultValue={temperatureInputValue(profile?.temperatureMaxC, unitPreferences.temperatureUnit)} />
+      <Field label={`Night minimum (${temperatureUnit})`} name="nighttimeTemperatureMinC" type="number" step="any" defaultValue={temperatureInputValue(profile?.nighttimeTemperatureMinC, unitPreferences.temperatureUnit)} />
+      <Field label={`Night maximum (${temperatureUnit})`} name="nighttimeTemperatureMaxC" type="number" step="any" defaultValue={temperatureInputValue(profile?.nighttimeTemperatureMaxC, unitPreferences.temperatureUnit)} />
       <Field label="Humidity minimum (%)" name="humidityMinPercent" type="number" min="0" max="100" defaultValue={profile?.humidityMinPercent ?? ''} />
       <Field label="Humidity maximum (%)" name="humidityMaxPercent" type="number" min="0" max="100" defaultValue={profile?.humidityMaxPercent ?? ''} />
       <Select label="Light level" name="lightLevel" values={['VERY_LOW', 'LOW', 'MODERATE', 'BRIGHT', 'VERY_BRIGHT']} defaultValue={profile?.lightLevel} />
       <Select label="Light exposure" name="lightExposure" values={['INDIRECT', 'FILTERED', 'MORNING_DIRECT', 'AFTERNOON_DIRECT', 'FULL_DIRECT', 'ARTIFICIAL_ONLY', 'MIXED', 'UNKNOWN']} defaultValue={profile?.lightExposure} />
-      <Field label="Minimum lux" name="lightMinLux" type="number" min="0" defaultValue={profile?.lightMinLux ?? ''} />
-      <Field label="Maximum lux" name="lightMaxLux" type="number" min="0" defaultValue={profile?.lightMaxLux ?? ''} />
+      <Field label={`Minimum measured light (${measuredLightUnit})`} name="lightMinLux" type="number" step="any" min="0" defaultValue={lightInputValue(profile?.lightMinLux, unitPreferences.lightUnit)} />
+      <Field label={`Maximum measured light (${measuredLightUnit})`} name="lightMaxLux" type="number" step="any" min="0" defaultValue={lightInputValue(profile?.lightMaxLux, unitPreferences.lightUnit)} />
       <Field label="Photoperiod (hours)" name="photoperiodHours" type="number" step="0.5" min="0" max="24" defaultValue={profile?.photoperiodHours ?? ''} />
       <Select label="Airflow" name="airflowLevel" values={['STILL', 'LOW', 'MODERATE', 'HIGH', 'DRAFTY', 'UNKNOWN']} defaultValue={profile?.airflowLevel} />
       <Select label="Environment stability" name="environmentStability" values={['STABLE', 'MODERATELY_VARIABLE', 'HIGHLY_VARIABLE', 'SEASONAL', 'UNKNOWN']} defaultValue={profile?.environmentStability} />

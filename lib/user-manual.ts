@@ -32,12 +32,13 @@ export const manualSections: ManualSection[] = [
     title: 'Accounts, Email, and Security',
     route: '/account',
     screenshot: 'account.png',
-    purpose: 'Account settings manage your email address, password, email verification, two-factor authentication, recovery codes, and email preferences.',
+    purpose: 'Account settings manage your email address, password, email verification, two-factor authentication, recovery codes, measurement units, and notification preferences.',
     howTo: [
       'Open Account from the sidebar footer.',
       'Update your email or password from the Account page.',
       'Use Resend verification when your email status is not verified.',
       'Open Account Security to set up authenticator-app verification codes and recovery codes.',
+      'Under Units, choose Celsius or Fahrenheit for temperature and lux or foot-candles for measured light, then save. Forms, compatibility panels, and account-scoped exports use those choices.',
       'Use Forgot password or Magic login from the login page when needed.',
       'Review My Sunshine for plant instances you have appreciated. Optional plant-sunshine email and push notifications default off and never reveal who gave sunshine.',
       'Review image upload prompts when AxilDB asks you to keep, remove, or continue with a no-plant or uncertain-plant image.',
@@ -45,6 +46,10 @@ export const manualSections: ManualSection[] = [
     warnings: [
       'Server admins, collection managers, and collection gardeners must complete two-factor authentication before using privileged tools.',
       'Store recovery codes somewhere safe. They are intended for account recovery when your authenticator is unavailable.',
+    ],
+    notes: [
+      'AxilDB stores temperature canonically in Celsius and measured light in lux. Changing Units changes input and display only; it does not rewrite stored records or affect compatibility calculations.',
+      'Public pages and shared system output use Celsius and lux unless a signed-in user context is available. Humidity and NPK remain percentages, while freeform manufacturer dose and pot-size text is preserved exactly as entered.',
     ],
   },
   {

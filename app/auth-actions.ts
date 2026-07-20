@@ -10,6 +10,7 @@ import { pathWithNext, safeNextPath } from '@/lib/redirects'
 import { collectionRoles, normalizeCollectionRole } from '@/lib/roles'
 import { defaultTimeZone, normalizeTimeZone } from '@/lib/time'
 import { decryptTotpSecret, encryptRecoveryCodes, encryptTotpSecret, generateRecoveryCodes, generateTotpSecret, hashRecoveryCode, verifyTotp } from '@/lib/totp'
+import { lightUnits, temperatureUnits, type LightUnit, type TemperatureUnit } from '@/lib/units'
 
 const val = (fd: FormData, key: string) => String(fd.get(key) || '').trim()
 const roles = new Set(['USER', 'SERVER_ADMIN'])
@@ -705,6 +706,22 @@ export async function updateEmailPreferences(fd: FormData) {
 
   await audit(user, 'UPDATE', 'EMAIL_PREFERENCES', user.id, `${user.email} updated notification preferences`)
   redirect('/account')
+}
+
+export async function updateUnitPreferences(fd: FormData) {
+  const user = await requireUser()
+  const temperatureUnit = val(fd, 'temperatureUnit') as TemperatureUnit
+  const lightUnit = val(fd, 'lightUnit') as LightUnit
+  if (!temperatureUnits.includes(temperatureUnit)) throw new Error('Choose a supported temperature unit.')
+  if (!lightUnits.includes(lightUnit)) throw new Error('Choose a supported light unit.')
+
+  await prisma.emailPreference.upsert({
+    where: { userId: user.id },
+    update: { temperatureUnit, lightUnit },
+    create: { userId: user.id, temperatureUnit, lightUnit },
+  })
+  await audit(user, 'UPDATE', 'UNIT_PREFERENCES', user.id, `${user.email} updated measurement unit preferences`, { temperatureUnit, lightUnit })
+  redirect('/account?unitsStatus=saved')
 }
 
 export async function deleteUser(fd: FormData) {

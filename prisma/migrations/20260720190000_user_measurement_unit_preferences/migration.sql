@@ -1,0 +1,3 @@
+ALTER TABLE "EmailPreference"
+  ADD COLUMN "temperatureUnit" TEXT NOT NULL DEFAULT 'CELSIUS',
+  ADD COLUMN "lightUnit" TEXT NOT NULL DEFAULT 'LUX';

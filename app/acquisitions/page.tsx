@@ -20,6 +20,7 @@ import { formatDate } from '@/lib/time'
 import { acceptedPlantName, cn, plantName, plantNeedsIdentification } from '@/lib/utils'
 import { getCurrentUser } from '@/lib/auth'
 import { distributorDisplay, sourceChainDisplay } from '@/lib/provenance'
+import { getUserUnitPreferences } from '@/lib/units'
 
 const acquisitionStatuses = [
   ['RESEARCHING', 'Researching'],
@@ -92,6 +93,7 @@ export default async function AcquisitionPipelinePage({
   const context = await requireCollectionViewer()
   const { collection } = context
   const canEdit = canCreateInCollection(user, context)
+  const unitPreferences = await getUserUnitPreferences(prisma, user?.id)
   const canViewPipeline = canEdit
     || (collection.acquisitionVisibility === 'MEMBERS' && context.membership?.status === 'ACTIVE')
     || (collection.acquisitionVisibility === 'PUBLIC' && collection.visibility === 'PUBLIC')
@@ -315,6 +317,7 @@ export default async function AcquisitionPipelinePage({
               <PlantLocationCompatibilityPanel
                 result={desiredLocationCompatibility}
                 title={`Desired location: ${selected.desiredLocation?.code || 'location'}`}
+                unitPreferences={unitPreferences}
               />
             )}
 

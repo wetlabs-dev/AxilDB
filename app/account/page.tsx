@@ -1,4 +1,4 @@
-import { resendOwnVerificationEmail, updateAccount, updateEmailPreferences } from '@/app/auth-actions'
+import { resendOwnVerificationEmail, updateAccount, updateEmailPreferences, updateUnitPreferences } from '@/app/auth-actions'
 import { resolveImageModerationReview } from '@/app/actions'
 import Link from 'next/link'
 import { PlantImage } from '@/components/PlantImage'
@@ -14,7 +14,7 @@ import { defaultTimeZone, formatDate } from '@/lib/time'
 export default async function Account({
   searchParams,
 }: {
-  searchParams: Promise<{ emailStatus?: string }>
+  searchParams: Promise<{ emailStatus?: string; unitsStatus?: string }>
 }) {
   const user = await requireUser()
   const sp = await searchParams
@@ -171,6 +171,39 @@ export default async function Account({
           <Field label="Email" name="email" type="email" required defaultValue={user.email} />
           <Field label="New password" name="password" type="password" />
           <Button className="justify-self-start md:col-span-2">Save account settings</Button>
+        </form>
+      </Card>
+
+      <Card>
+        <h3 className="font-bold">Units</h3>
+        <p className="mt-1 text-sm text-[var(--ax-muted)]">Choose how structured measurements are displayed and entered. AxilDB stores temperature in Celsius and measured light in lux, then converts them for your account.</p>
+        {sp.unitsStatus === 'saved' && <p role="status" className="mt-3 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900">Unit preferences saved. New pages and forms will use these units immediately.</p>}
+        <form action={updateUnitPreferences} className="mt-4 grid max-w-2xl gap-4 sm:grid-cols-2">
+          <fieldset className="grid gap-2 rounded-lg border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] p-3">
+            <legend className="px-1 text-sm font-semibold text-[var(--ax-heading)]">Temperature</legend>
+            {[
+              ['CELSIUS', 'Celsius (°C)'],
+              ['FAHRENHEIT', 'Fahrenheit (°F)'],
+            ].map(([value, label]) => (
+              <label key={value} className="flex items-center gap-2 text-sm text-[var(--ax-text)]">
+                <input type="radio" name="temperatureUnit" value={value} defaultChecked={(preferences?.temperatureUnit || 'CELSIUS') === value} />
+                <span>{label}</span>
+              </label>
+            ))}
+          </fieldset>
+          <fieldset className="grid gap-2 rounded-lg border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] p-3">
+            <legend className="px-1 text-sm font-semibold text-[var(--ax-heading)]">Measured light</legend>
+            {[
+              ['LUX', 'Lux'],
+              ['FOOT_CANDLE', 'Foot-candles (fc)'],
+            ].map(([value, label]) => (
+              <label key={value} className="flex items-center gap-2 text-sm text-[var(--ax-text)]">
+                <input type="radio" name="lightUnit" value={value} defaultChecked={(preferences?.lightUnit || 'LUX') === value} />
+                <span>{label}</span>
+              </label>
+            ))}
+          </fieldset>
+          <Button className="justify-self-start sm:col-span-2">Save unit preferences</Button>
         </form>
       </Card>
 

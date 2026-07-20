@@ -18,6 +18,7 @@ import { locationPath } from '@/lib/locations'
 import { findMatchingValidatedDefinition } from '@/lib/validated-definitions'
 import { acceptedPlantName, plantName, plantNeedsIdentification } from '@/lib/utils'
 import { collectionRoleAtLeast, isServerAdminRole } from '@/lib/roles'
+import { getUserUnitPreferences } from '@/lib/units'
 
 const selectClass = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
 
@@ -50,6 +51,7 @@ export default async function EditPlant({
 }) {
   const { collection, role, user } = await requireCollectionAdmin()
   const canManageImages = isServerAdminRole(user.role) || collectionRoleAtLeast(role, 'MANAGER')
+  const unitPreferences = await getUserUnitPreferences(prisma, user.id)
   const { id } = await params
   const { uploadError } = await searchParams
   const [plant, bodies, typePhotos, definitionSuggestionRows, guideSourceOptions, mergeTargetOptions, fertilizerRecipes, locations] = await Promise.all([
@@ -415,6 +417,7 @@ export default async function EditPlant({
                   collectionSlug={collection.slug}
                   plantDefinitionId={plant.id}
                   values={plant.husbandryGuide}
+                  unitPreferences={unitPreferences}
                 />
               </div>
             )}
