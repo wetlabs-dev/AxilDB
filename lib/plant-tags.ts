@@ -4,8 +4,16 @@ export const plantTagCategories = [
   'COLLECTION_THEME', 'OTHER',
 ] as const
 
-export const plantTagIcons = ['tag', 'sparkles', 'moon', 'feather', 'palette', 'shapes', 'sprout', 'leaf', 'shield-check', 'sun', 'droplets'] as const
-export const plantTagColors = ['fern', 'moss', 'sage', 'amber', 'rose', 'sky', 'violet', 'stone'] as const
+export const plantTagIcons = [
+  'tag', 'sparkles', 'gem', 'moon', 'sun', 'cloud-sun', 'snowflake', 'flame',
+  'droplets', 'waves', 'wind', 'thermometer', 'mountain', 'house',
+  'feather', 'palette', 'shapes', 'circle-dot', 'eye', 'heart',
+  'sprout', 'leaf', 'flower-2', 'bug', 'paw-print',
+  'shield-check', 'shield-alert', 'triangle-alert',
+] as const
+
+export const plantTagColors = ['fern', 'sage', 'amber', 'coral', 'rose', 'sky', 'ocean', 'violet', 'stone'] as const
+export const acceptedPlantTagColors = [...plantTagColors, 'moss'] as const
 
 export function normalizePlantTagName(value: unknown) {
   return String(value || '').trim().replace(/\s+/g, ' ').slice(0, 60)

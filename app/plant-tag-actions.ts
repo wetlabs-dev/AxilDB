@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation'
 import { audit } from '@/lib/auth'
 import { collectionPath, requireCollectionGardener } from '@/lib/collections'
 import { emitDomainEvent } from '@/lib/events/emit'
-import { plantTagCategories, plantTagColors, plantTagIcons, normalizePlantTagName, parseTagIds, plantTagSlug } from '@/lib/plant-tags'
+import { acceptedPlantTagColors, plantTagCategories, plantTagIcons, normalizePlantTagName, parseTagIds, plantTagSlug } from '@/lib/plant-tags'
 import { prisma } from '@/lib/prisma'
 
 const value = (fd: FormData, key: string) => String(fd.get(key) || '').trim()
@@ -23,7 +23,7 @@ export async function savePlantTag(fd: FormData) {
     name, slug,
     icon: allowed(value(fd, 'icon'), plantTagIcons),
     category: allowed(value(fd, 'category'), plantTagCategories),
-    colorToken: allowed(value(fd, 'colorToken'), plantTagColors),
+    colorToken: allowed(value(fd, 'colorToken'), acceptedPlantTagColors),
     description: value(fd, 'description').slice(0, 500) || null,
     publicVisible: fd.get('publicVisible') === 'on',
   }

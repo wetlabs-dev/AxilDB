@@ -1,16 +1,29 @@
-import { Droplets, Feather, Leaf, Moon, Palette, Shapes, ShieldCheck, Sparkles, Sprout, Sun, Tag } from 'lucide-react'
+import {
+  Bug, CircleDot, CloudSun, Droplets, Eye, Feather, Flame, Flower2, Gem, Heart,
+  House, Leaf, Moon, Mountain, Palette, PawPrint, Shapes, ShieldAlert, ShieldCheck,
+  Snowflake, Sparkles, Sprout, Sun, Tag, Thermometer, TriangleAlert, Waves, Wind,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-const icons = { tag: Tag, sparkles: Sparkles, moon: Moon, feather: Feather, palette: Palette, shapes: Shapes, sprout: Sprout, leaf: Leaf, 'shield-check': ShieldCheck, sun: Sun, droplets: Droplets }
+const icons = {
+  tag: Tag, sparkles: Sparkles, gem: Gem, moon: Moon, sun: Sun, 'cloud-sun': CloudSun,
+  snowflake: Snowflake, flame: Flame, droplets: Droplets, waves: Waves, wind: Wind,
+  thermometer: Thermometer, mountain: Mountain, house: House, feather: Feather,
+  palette: Palette, shapes: Shapes, 'circle-dot': CircleDot, eye: Eye, heart: Heart,
+  sprout: Sprout, leaf: Leaf, 'flower-2': Flower2, bug: Bug, 'paw-print': PawPrint,
+  'shield-check': ShieldCheck, 'shield-alert': ShieldAlert, 'triangle-alert': TriangleAlert,
+}
 export const plantTagColorClassNames: Record<string, string> = {
   fern: 'border-[#9fbea1] bg-[#eaf2e4] text-[#285d3b]', moss: 'border-[#a9b48e] bg-[#f0f2df] text-[#4c5d31]',
   sage: 'border-[#b7c6ae] bg-[#f2f5ec] text-[#486044]', amber: 'border-[#dcc88b] bg-[#fff5d8] text-[#71551b]',
   rose: 'border-[#d8aaa0] bg-[#fff0eb] text-[#7b4437]', sky: 'border-[#a8c8cc] bg-[#ebf5f5] text-[#315f64]',
+  coral: 'border-[#d9a08d] bg-[#fff0e8] text-[#824837]', ocean: 'border-[#91abc4] bg-[#edf3fa] text-[#34536f]',
   violet: 'border-[#bdb1cf] bg-[#f3eef8] text-[#5d4b75]', stone: 'border-stone-300 bg-stone-100 text-stone-700',
 }
 export const plantTagColorSwatches: Record<string, string> = {
-  fern: '#6f956f', moss: '#899466', sage: '#9baa91', amber: '#c09c43',
-  rose: '#b87969', sky: '#6f9fa5', violet: '#8d78a8', stone: '#8c8276',
+  fern: '#4f835d', moss: '#899466', sage: '#9eae99', amber: '#c09c43',
+  coral: '#c87860', rose: '#b96f83', sky: '#6fa9b2', ocean: '#527da7',
+  violet: '#8d78a8', stone: '#8c8276',
 }
 
 export type PlantTagSummary = { id: string; name: string; icon?: string | null; colorToken?: string | null; publicVisible?: boolean; active?: boolean }
