@@ -15,6 +15,8 @@ import { rankedSuggestions } from '@/lib/suggestions'
 import { compareText, sortPreference, timeValue, type SortOption } from '@/lib/sort-preferences'
 import { acceptedPlantName, plantName, plantNeedsIdentification, taxonomyLabel } from '@/lib/utils'
 import Link from 'next/link'
+import { PlantTagPicker } from '@/components/PlantTagPicker'
+import { PlantTagRow } from '@/components/PlantTagChip'
 
 const selectClass = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
 
@@ -44,7 +46,7 @@ function referencePrefill(log: { resultJson: unknown }) {
 export default async function Plants({
   searchParams,
 }: {
-  searchParams: Promise<{ fromIdentification?: string; wishlist?: string }>
+  searchParams: Promise<{ fromIdentification?: string; wishlist?: string; tag?: string | string[]; tagMode?: string }>
 }) {
   const user = await getCurrentUser()
   const sp = await searchParams
@@ -54,15 +56,18 @@ export default async function Plants({
   const canEdit = canEditInCollection(user, context)
   const canManage = canManageCollection(user, context)
   const collectionWhere = { collectionId: collection.id }
+  const selectedTagIds = (Array.isArray(sp.tag) ? sp.tag : sp.tag ? [sp.tag] : []).filter(Boolean)
+  const tagMode = sp.tagMode === 'all' ? 'all' : 'any'
   const sortKey = await sortPreference(user?.id, 'plants', 'nameAsc', plantSortOptions.map((option) => option.value))
-  const [plants, bodies, follows, outgoingTransferConnections] = await Promise.all([
+  const [plants, bodies, follows, activeTags, outgoingTransferConnections] = await Promise.all([
     prisma.plantDefinition.findMany({
-      where: collectionWhere,
+      where: { ...collectionWhere, ...(selectedTagIds.length ? tagMode === 'all' ? { AND: selectedTagIds.map((plantTagId) => ({ tags: { some: { plantTagId } } })) } : { tags: { some: { plantTagId: { in: selectedTagIds } } } } : {}) },
       include: {
         governingBody: true,
         aliases: { orderBy: { name: 'asc' } },
         husbandryGuide: true,
         instances: { select: { id: true } },
+        tags: { include: { plantTag: true }, orderBy: { plantTag: { name: 'asc' } } },
         _count: { select: { instances: true } },
       },
       orderBy: [{ genus: 'asc' }, { species: 'asc' }],
@@ -73,6 +78,7 @@ export default async function Plants({
           where: { ...collectionWhere, userId: user.id, scope: 'TYPE', entityType: 'PLANT_DEFINITION' },
         })
       : [],
+    prisma.plantTag.findMany({ where: { collectionId: collection.id, active: true }, orderBy: [{ category: 'asc' }, { name: 'asc' }] }),
     canEdit
       ? prisma.collectionTransferConnection.findMany({
           where: { sourceCollectionId: collection.id, status: 'ACTIVE' },
@@ -153,6 +159,7 @@ export default async function Plants({
           {canManage && <LinkButton href={collectionPath(collection.slug, '/id-history')}>ID History</LinkButton>}
           <LinkButton href={collectionPath(collection.slug, '/validated-definitions')}>Validated</LinkButton>
           <LinkButton href={collectionPath(collection.slug, '/search')}>Search</LinkButton>
+          {canCreate && <LinkButton href={collectionPath(collection.slug, '/plant-tags')}>Plant Tags</LinkButton>}
         </div>
       </div>
 
@@ -216,10 +223,13 @@ export default async function Plants({
             <Field label="GBIF URL" help="Optional GBIF link for occurrence records, taxonomy backbone data, and biodiversity references." name="gbifUrl" type="url" defaultValue={identificationReferences.gbifUrl || ''} />
             <AIDescriptionField wrapperClassName="lg:col-span-2" defaultValue={identificationPrefill?.suggestedDescription || ''} />
             <TextArea label="Notes" name="notes" wrapperClassName="lg:col-span-2" defaultValue={identificationPrefill?.confidenceExplanation || ''} />
+            <PlantTagPicker tags={activeTags} />
             <PlantAliasFields aliases={identificationAliases} submitLabel="Create plant definition" sourceSuggestions={definitionSuggestions.aliasSource} />
           </form>
         </AddPanel>
       )}
+
+      {activeTags.length > 0 && <Card><form className="grid gap-3 md:grid-cols-[minmax(0,1fr)_10rem_auto] md:items-end"><label className="grid gap-1 text-sm font-medium">Filter by tags<select className={selectClass} name="tag" multiple size={Math.min(5, activeTags.length)} defaultValue={selectedTagIds}>{activeTags.map((tag) => <option key={tag.id} value={tag.id}>{tag.name}</option>)}</select></label><label className="grid gap-1 text-sm font-medium">Match<select className={selectClass} name="tagMode" defaultValue={tagMode}><option value="any">Any selected</option><option value="all">All selected</option></select></label><div className="flex gap-2"><Button>Apply</Button>{selectedTagIds.length > 0 && <LinkButton href={collectionPath(collection.slug, '/plants')}>Clear</LinkButton>}</div></form></Card>}
 
       <div className="grid auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
         {sortedPlants.map((plant) => {
@@ -258,6 +268,7 @@ export default async function Plants({
                       </div>
                     )}
                     <p className="line-clamp-2 text-sm text-stone-600">{plant.description}</p>
+                    <div className="mt-2"><PlantTagRow tags={plant.tags.map((item) => item.plantTag)} limit={4} /></div>
                     <HusbandryBadges
                       values={(plant.husbandryGuide?.sourcePlantDefinitionId
                         ? husbandryGuideByDefinitionId.get(plant.husbandryGuide.sourcePlantDefinitionId)

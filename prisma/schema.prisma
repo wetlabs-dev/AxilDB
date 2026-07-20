@@ -168,6 +168,8 @@ model User {
   createdCollectionExhibits CollectionExhibit[] @relation("CollectionExhibitCreatedBy")
   publishedCollectionExhibits CollectionExhibit[] @relation("CollectionExhibitPublishedBy")
   createdCollectionExhibitUpdates CollectionExhibitUpdate[] @relation("CollectionExhibitUpdateCreatedBy")
+  createdPlantTags    PlantTag[] @relation("PlantTagCreatedBy")
+  createdPlantDefinitionTags PlantDefinitionTag[] @relation("PlantDefinitionTagCreatedBy")
   createdWorkflowTemplates WorkflowTemplate[] @relation("WorkflowTemplateCreatedBy")
   startedWorkflowRuns WorkflowRun[] @relation("WorkflowRunStartedBy")
   assignedWorkflowRuns WorkflowRun[] @relation("WorkflowRunAssignedTo")
@@ -220,6 +222,8 @@ model Collection {
   follows             Follow[]
   followNotifications FollowNotification[]
   plantDefinitions    PlantDefinition[]
+  plantTags           PlantTag[]
+  plantDefinitionTags PlantDefinitionTag[]
   sourceValidatedPlantDefinitions PlantDefinition[] @relation("ValidatedPlantDefinitionSourceCollection")
   plantDefinitionValidationCandidates PlantDefinitionValidationCandidate[]
   plantDefinitionDisputes PlantDefinitionDispute[]
@@ -285,6 +289,53 @@ model Collection {
   @@index([aiFeaturesEnabled])
   @@index([aiBriefingEnabled])
   @@index([acquisitionVisibility])
+}
+
+model PlantTag {
+  id              String    @id @default(cuid())
+  collectionId    String
+  name            String
+  slug            String
+  icon            String?
+  description     String?
+  category        String?
+  colorToken      String?
+  publicVisible   Boolean   @default(false)
+  active          Boolean   @default(true)
+  archivedAt      DateTime?
+  createdByUserId String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  createdBy  User? @relation("PlantTagCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  definitions PlantDefinitionTag[]
+
+  @@unique([collectionId, slug])
+  @@index([collectionId, slug])
+  @@index([collectionId, category])
+  @@index([collectionId, active])
+}
+
+model PlantDefinitionTag {
+  id                String   @id @default(cuid())
+  collectionId      String
+  plantDefinitionId String
+  plantTagId        String
+  source            String   @default("USER")
+  confidence        Float?
+  createdByUserId   String?
+  createdAt         DateTime @default(now())
+
+  collection      Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  plantDefinition PlantDefinition @relation(fields: [plantDefinitionId], references: [id], onDelete: Cascade)
+  plantTag        PlantTag @relation(fields: [plantTagId], references: [id], onDelete: Restrict)
+  createdBy       User? @relation("PlantDefinitionTagCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([plantDefinitionId, plantTagId])
+  @@index([collectionId])
+  @@index([plantDefinitionId])
+  @@index([plantTagId])
 }
 
 model CollectionBriefing {
@@ -1200,6 +1251,7 @@ model PlantDefinition {
   acquisitionRecords PlantAcquisitionRecord[]
   acquisitionBatchItems AcquisitionBatchItem[]
   exhibitWishlistItems CollectionExhibitWishlistItem[]
+  tags PlantDefinitionTag[]
 
   @@index([collectionId])
   @@index([governingBodyId])

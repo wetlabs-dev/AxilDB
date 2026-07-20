@@ -34,6 +34,7 @@ function publicRows(entries: Awaited<ReturnType<typeof loadWishlistEntries>>, se
       observedRange: settings.showObservedPriceRange && range ? `${range.low}-${range.high} ${range.currency}` : '',
       latestObservation: settings.showLatestPublicObservation && latest ? formatDate(latest.observedAt) : '',
       plannedLocationCategory: settings.showPlannedLocationCategory ? entry.desiredLocation?.locationType.name || '' : '',
+      tags: settings.showTags ? entry.tags.map((item) => item.plantTag.name).join('; ') : '',
     }
   })
 }
@@ -50,6 +51,7 @@ function privateRows(entries: Awaited<ReturnType<typeof loadWishlistEntries>>) {
       observedRange: range ? `${range.low}-${range.high} ${range.currency}` : '',
       latestObservation: entry.plantObservations[0] ? formatDate(entry.plantObservations[0].observedAt) : '',
       plannedLocation: entry.desiredLocation?.name || '', interestNotes: entry.acquisitionInterestNotes || '',
+      tags: entry.tags.map((item) => item.plantTag.name).join('; '),
     }
   })
 }

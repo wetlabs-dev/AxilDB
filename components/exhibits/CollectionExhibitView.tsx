@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { CollectionExhibitAccessMode } from '@prisma/client'
 import { subscribeToCollectionExhibit } from '@/app/exhibit-actions'
 import { PlantImage } from '@/components/PlantImage'
+import { PlantTagRow } from '@/components/PlantTagChip'
 import { cn, plantName, taxonomyLabel } from '@/lib/utils'
 import { formatDate } from '@/lib/time'
 import { distributorDisplay, sourceChainDisplay } from '@/lib/provenance'
@@ -193,6 +194,7 @@ function DefinitionGroup({ group, settings, collectionSlug, visibility }: { grou
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-stone-500">{group.entries.length} selected specimens</p>
           <h2 className="font-serif text-3xl font-semibold">{plantName(definition)}</h2>
           {definition.description && <p className="mt-2 text-sm leading-6 text-stone-700">{definition.description}</p>}
+          {settings.plantTags && <div className="mt-2"><PlantTagRow tags={definition.tags.map((item: any) => item.plantTag)} limit={8} compact={false} /></div>}
         </div>
         {settings.typeImages && <PhotoStrip photos={group.typePhotos} label="Definition images" />}
         {settings.taxonomyDetails && (

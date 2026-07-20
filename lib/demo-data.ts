@@ -199,6 +199,32 @@ export async function createDemoData(collectionId: string) {
     definitionsByCode.set(item.code, definition)
   }
 
+  const demoTags = [
+    { slug: 'geometric', name: 'Geometric', icon: 'shapes', category: 'LEAF_PATTERN', colorToken: 'sage', definitionCode: 'BEG', description: 'Strongly patterned or regularly arranged foliage.' },
+    { slug: 'trailing', name: 'Trailing', icon: 'sprout', category: 'GROWTH_HABIT', colorToken: 'fern', definitionCode: 'HOY', description: 'Growth habit suited to trailing or hanging presentation.' },
+    { slug: 'cat-safe', name: 'Cat Safe', icon: 'shield-check', category: 'PET_SAFETY', colorToken: 'sky', definitionCode: 'STR', description: 'Commonly regarded as non-toxic to cats; verify current authoritative guidance.' },
+  ]
+  for (const item of demoTags) {
+    const tag = await prisma.plantTag.upsert({
+      where: { collectionId_slug: { collectionId, slug: item.slug } },
+      update: {},
+      create: {
+        collectionId,
+        name: item.name,
+        slug: item.slug,
+        icon: item.icon,
+        category: item.category,
+        colorToken: item.colorToken,
+        description: item.description,
+        publicVisible: true,
+      },
+    })
+    await prisma.plantDefinitionTag.createMany({
+      data: [{ collectionId, plantDefinitionId: definitionsByCode.get(item.definitionCode)!.id, plantTagId: tag.id, source: 'SYSTEM' }],
+      skipDuplicates: true,
+    })
+  }
+
   const guideDefaults: Record<string, Record<string, string>> = {
     DTR: {
       summaryWater: 'Water sparingly',

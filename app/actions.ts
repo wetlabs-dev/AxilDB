@@ -42,6 +42,7 @@ import { assertLocationParentAllowed, descendantLocationIds, isQuarantineLocatio
 import { evaluatePlantLocationCompatibility, getEffectiveLocationEnvironment, getEffectivePlantEnvironmentRequirements } from '@/lib/location-compatibility'
 import { emitDomainEvent } from '@/lib/events/emit'
 import { sourceRowsFromForm, validateDistributorSelection, validateSourceRows } from '@/lib/provenance'
+import { parseTagIds } from '@/lib/plant-tags'
 
 const val = (fd: FormData, k: string) =>
   String(fd.get(k) || '').trim() || undefined
@@ -1274,6 +1275,10 @@ export async function createPlantDefinition(fd: FormData) {
   }
 
   const identity = normalizePlantDefinitionIdentity({ genus: val(fd, 'genus'), species: speciesVal(fd), provisionalTaxon: val(fd, 'provisionalTaxon') })
+  const requestedTagIds = parseTagIds(fd)
+  const magicFillTagIds = new Set(fd.getAll('magicFillPlantTagIds').map(String))
+  const validTags = requestedTagIds.length ? await prisma.plantTag.findMany({ where: { id: { in: requestedTagIds }, collectionId: collection.id, active: true }, select: { id: true } }) : []
+  if (validTags.length !== requestedTagIds.length) throw new Error('One or more selected tags are unavailable in this collection.')
   const definition = await prisma.$transaction(async (tx) => {
     const created = await tx.plantDefinition.create({
       data: {
@@ -1304,7 +1309,13 @@ export async function createPlantDefinition(fd: FormData) {
         preferredVendorsJson: jsonListValue(fd, 'preferredVendors') as any,
         acquisitionResearchSummary: clearableVal(fd, 'acquisitionResearchSummary'),
         aliases: { create: aliasRows(fd).map((alias) => ({ ...alias, collectionId: collection.id })) },
+        tags: { create: validTags.map((tag) => ({ collectionId: collection.id, plantTagId: tag.id, source: magicFillTagIds.has(tag.id) ? 'MAGIC_FILL' : 'USER', createdByUserId: user.id })) },
       },
+    })
+    for (const tag of validTags) await emitDomainEvent(tx, {
+      eventType: 'plant_definition.tag_added', collectionId: collection.id, aggregateId: created.id,
+      actor: { id: user.id, role: user.role }, idempotencyKey: `definition-tag-add:${created.id}:${tag.id}:${created.updatedAt.toISOString()}`,
+      payload: { subjectId: created.id, plantDefinitionId: created.id, plantTagId: tag.id, source: magicFillTagIds.has(tag.id) ? 'MAGIC_FILL' : 'USER' },
     })
 
     if (identificationLog) {
@@ -1715,9 +1726,12 @@ export async function updatePlantDefinition(fd: FormData) {
   await prisma.plantDefinition.findFirstOrThrow({ where: { id, collectionId: collection.id }, select: { id: true } })
 
   const identity = normalizePlantDefinitionIdentity({ genus: val(fd, 'genus'), species: speciesVal(fd), provisionalTaxon: val(fd, 'provisionalTaxon') })
-  const definition = await prisma.plantDefinition.update({
-    where: { id },
-    data: {
+  const requestedTagIds = parseTagIds(fd)
+  const magicFillTagIds = new Set(fd.getAll('magicFillPlantTagIds').map(String))
+  const validTags = requestedTagIds.length ? await prisma.plantTag.findMany({ where: { id: { in: requestedTagIds }, collectionId: collection.id, active: true }, select: { id: true } }) : []
+  if (validTags.length !== requestedTagIds.length) throw new Error('One or more selected tags are unavailable in this collection.')
+  const definition = await prisma.$transaction(async (tx) => {
+    const updated = await tx.plantDefinition.update({ where: { id }, data: {
       genus: identity.genus,
       species: identity.species,
       hybridNotation: clearableVal(fd, 'hybridNotation'),
@@ -1747,7 +1761,26 @@ export async function updatePlantDefinition(fd: FormData) {
         deleteMany: {},
         create: aliasRows(fd).map((alias) => ({ ...alias, collectionId: collection.id })),
       },
-    },
+    } })
+    const current = await tx.plantDefinitionTag.findMany({ where: { collectionId: collection.id, plantDefinitionId: id, plantTag: { active: true } } })
+    const requested = new Set(validTags.map((tag) => tag.id))
+    const removeIds = current.filter((item) => !requested.has(item.plantTagId)).map((item) => item.id)
+    if (removeIds.length) await tx.plantDefinitionTag.deleteMany({ where: { id: { in: removeIds } } })
+    for (const item of current) if (!requested.has(item.plantTagId)) await emitDomainEvent(tx, {
+      eventType: 'plant_definition.tag_removed', collectionId: collection.id, aggregateId: id,
+      actor: { id: user.id, role: user.role }, idempotencyKey: `definition-tag-remove:${id}:${item.plantTagId}:${item.id}`,
+      payload: { subjectId: id, plantDefinitionId: id, plantTagId: item.plantTagId },
+    })
+    const currentIds = new Set(current.map((item) => item.plantTagId))
+    for (const tag of validTags) if (!currentIds.has(tag.id)) {
+      const assignment = await tx.plantDefinitionTag.create({ data: { collectionId: collection.id, plantDefinitionId: id, plantTagId: tag.id, source: magicFillTagIds.has(tag.id) ? 'MAGIC_FILL' : 'USER', createdByUserId: user.id } })
+      await emitDomainEvent(tx, {
+        eventType: 'plant_definition.tag_added', collectionId: collection.id, aggregateId: id,
+        actor: { id: user.id, role: user.role }, idempotencyKey: `definition-tag-add:${id}:${tag.id}:${assignment.id}`,
+        payload: { subjectId: id, plantDefinitionId: id, plantTagId: tag.id, source: assignment.source },
+      })
+    }
+    return updated
   })
   await audit(user, 'UPDATE', 'PLANT_DEFINITION', id, `Updated plant definition ${definition.genus} ${definition.species}`, undefined, collection.id)
 

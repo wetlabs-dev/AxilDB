@@ -6,6 +6,7 @@ import { collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { sunshineCounts, sunshineKey, sunshineStateForUser } from '@/lib/sunshine'
 import { plantName, fmtDate, taxonomyLabel } from '@/lib/utils'
 import Link from 'next/link'
+import { PlantTagRow } from '@/components/PlantTagChip'
 
 const control = 'rounded-md border border-stone-300 bg-[#fffdf7] px-3 py-2 text-sm shadow-inner shadow-stone-200/30 outline-none focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
 const contains = (value: string) => ({ contains: value, mode: 'insensitive' as const })
@@ -13,7 +14,7 @@ const contains = (value: string) => ({ contains: value, mode: 'insensitive' as c
 export default async function SearchPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string; type?: string; sport?: string }>
+  searchParams: Promise<{ q?: string; status?: string; type?: string; sport?: string; tag?: string | string[]; tagMode?: string }>
 }) {
   const sp = await searchParams
   const user = await getCurrentUser()
@@ -22,6 +23,10 @@ export default async function SearchPage({
   const status = sp.status || ''
   const type = sp.type || ''
   const sport = sp.sport || ''
+  const selectedTagIds = (Array.isArray(sp.tag) ? sp.tag : sp.tag ? [sp.tag] : []).filter(Boolean)
+  const tagMode = sp.tagMode === 'all' ? 'all' : 'any'
+  const tagWhere = selectedTagIds.length ? tagMode === 'all' ? { AND: selectedTagIds.map((plantTagId) => ({ tags: { some: { plantTagId } } })) } : { tags: { some: { plantTagId: { in: selectedTagIds } } } } : {}
+  const activeTags = await prisma.plantTag.findMany({ where: { collectionId: collection.id, active: true }, orderBy: { name: 'asc' } })
 
   const definitionSearch = q
     ? {
@@ -59,6 +64,7 @@ export default async function SearchPage({
             },
           },
           { aliases: { some: { OR: [{ name: contains(q) }, { source: contains(q) }, { notes: contains(q) }] } } },
+          { tags: { some: { plantTag: { name: contains(q) } } } },
         ],
       }
     : {}
@@ -70,6 +76,7 @@ export default async function SearchPage({
         { collectionId: collection.id },
         type ? { instanceType: type } : {},
         sport ? { sportStatus: sport } : {},
+        selectedTagIds.length ? { plantDefinition: tagWhere } : {},
         q
           ? {
               OR: [
@@ -84,21 +91,22 @@ export default async function SearchPage({
                   { distributorLocation: { name: contains(q) } },
                   { sources: { some: { OR: [{ role: contains(q) }, { source: { name: contains(q) } }] } } },
                 ] } } } },
-                { plantDefinition: definitionSearch },
+                { plantDefinition: { AND: [definitionSearch, tagWhere] } },
               ],
             }
           : {},
       ],
     },
-    include: { plantDefinition: { include: { aliases: true } } },
+    include: { plantDefinition: { include: { aliases: true, tags: { include: { plantTag: true } } } } },
     orderBy: { plantId: 'asc' },
   })
 
   const defs = await prisma.plantDefinition.findMany({
-    where: { AND: [{ OR: [{ collectionId: collection.id }, { collectionId: null, isValidated: true }] }, definitionSearch] },
+    where: { AND: [{ OR: [{ collectionId: collection.id }, { collectionId: null, isValidated: true }] }, definitionSearch, tagWhere] },
     include: {
       aliases: { orderBy: { name: 'asc' } },
       _count: { select: { instances: true } },
+      tags: { include: { plantTag: true } },
     },
     orderBy: [{ isValidated: 'desc' }, { genus: 'asc' }, { species: 'asc' }, { cultivarName: 'asc' }],
   })
@@ -135,6 +143,8 @@ export default async function SearchPage({
             <option>REVERTED</option>
             <option>REGISTERED</option>
           </select>
+          <select className={control} name="tag" multiple size={Math.min(4, Math.max(2, activeTags.length))} defaultValue={selectedTagIds}><option value="">Any tag</option>{activeTags.map((tag) => <option key={tag.id} value={tag.id}>{tag.name}</option>)}</select>
+          <select className={control} name="tagMode" defaultValue={tagMode}><option value="any">Match any tag</option><option value="all">Match all tags</option></select>
           <Button className="md:col-span-5">Search</Button>
         </form>
       </Card>
@@ -171,6 +181,7 @@ export default async function SearchPage({
                 {definition.isValidated && <span className="rounded-full bg-[#edf3e6] px-2 py-0.5 text-xs font-semibold text-[#2f6b45]">Validated</span>}{' '}
                 · {definition._count.instances} instance(s) · {taxonomyLabel(definition.confidence)}
               </p>
+              <PlantTagRow tags={definition.tags.map((item) => item.plantTag)} limit={5} />
               {definition.aliases.length > 0 && (
                 <p className="text-stone-600">Aliases: {definition.aliases.map((alias) => alias.name).join(', ')}</p>
               )}

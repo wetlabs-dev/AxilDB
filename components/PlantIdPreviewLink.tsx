@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { Leaf } from 'lucide-react'
 import { type ReactNode, useEffect, useId, useRef, useState } from 'react'
 import { PlantImage } from '@/components/PlantImage'
+import { PlantTagRow } from '@/components/PlantTagChip'
 import type { PlantInstancePreview } from '@/lib/plant-preview'
 import { cn } from '@/lib/utils'
 
@@ -133,6 +134,7 @@ function PreviewCard({
               {preview.acquisitionLabel && <p className="mt-1 line-clamp-2 text-xs text-[var(--ax-muted)]">{preview.acquisitionLabel}</p>}
             </div>
           </div>
+          <PlantTagRow tags={preview.tags} limit={4} />
           <div className="grid gap-1.5 text-xs text-[var(--ax-muted-strong)]">
             <p><span className="font-semibold text-[var(--ax-heading)]">Location:</span> {preview.currentLocationPath || 'No location set'}</p>
             <p>

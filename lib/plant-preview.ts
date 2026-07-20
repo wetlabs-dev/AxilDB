@@ -25,6 +25,14 @@ export type PlantInstancePreview = {
   desiredLocationPath: string | null
   idealPurchasePrice: string | null
   maximumPurchasePrice: string | null
+  tags: Array<{
+    id: string
+    name: string
+    icon: string | null
+    colorToken: string | null
+    publicVisible: boolean
+    active: boolean
+  }>
 }
 
 function mostRecentDate(dates: Array<Date | null | undefined>) {
@@ -56,6 +64,7 @@ export async function getPlantInstancePreview(
     collectionId: string
     collectionSlug: string
     plantInstanceIdOrCode: string
+    publicOnly?: boolean
   },
 ): Promise<PlantInstancePreview | null> {
   const instance = await prisma.plantInstance.findFirst({
@@ -67,7 +76,20 @@ export async function getPlantInstancePreview(
       ],
     },
     include: {
-      plantDefinition: true,
+      plantDefinition: {
+        include: {
+          tags: {
+            where: {
+              plantTag: {
+                active: true,
+                ...(options.publicOnly ? { publicVisible: true } : {}),
+              },
+            },
+            include: { plantTag: true },
+            orderBy: { createdAt: 'asc' },
+          },
+        },
+      },
       currentLocation: { include: { locationType: true } },
       conditions: {
         where: { status: 'OPEN' },
@@ -144,5 +166,13 @@ export async function getPlantInstancePreview(
       : null,
     idealPurchasePrice: instance.plantDefinition.idealPurchasePrice ? String(instance.plantDefinition.idealPurchasePrice) : null,
     maximumPurchasePrice: instance.plantDefinition.maximumPurchasePrice ? String(instance.plantDefinition.maximumPurchasePrice) : null,
+    tags: instance.plantDefinition.tags.map(({ plantTag }) => ({
+      id: plantTag.id,
+      name: plantTag.name,
+      icon: plantTag.icon,
+      colorToken: plantTag.colorToken,
+      publicVisible: plantTag.publicVisible,
+      active: plantTag.active,
+    })),
   }
 }

@@ -126,6 +126,8 @@ App route: `/plants`
 - Upload a plant definition type image when the representative image comes from a reference source rather than your collection.
 - Use Copy on an existing definition to start a similar definition without copying cultivar-specific fields or images.
 - Use Share Definition when you have an active collection connection and want another collection to review and copy the definition.
+- Use Plant Tags to maintain reusable collection traits, then select multiple active tags in a Plant Definition form. Search can match any or all selected tags.
+- Review Magic Fill tag suggestions separately from taxonomy fields. Existing tags and proposed private tags require explicit selection, and proposed tags require a second creation confirmation.
 
 ### Notes
 
@@ -138,6 +140,8 @@ App route: `/plants`
 - Your own ID My Plant results also appear under Account → My Plant IDs, even if you did not create a plant definition immediately.
 - Collection Update Digest is separate from care reminders. It covers validated definition reference changes for definitions currently used by the collection.
 - Use specimen-level husbandry overrides for local care differences before detaching from a validated definition.
+- Tags belong to local Plant Definitions, not Plant Instances or site-level Validated Definitions. Archived tags remain visible historically but are not offered for new assignment.
+- Tag icons use AxilDB’s curated botanical icon set so they render consistently across devices.
 
 ### Warnings
 
@@ -201,6 +205,7 @@ App route: `/instances`
 - Use the plant ID refresh action when the current ID no longer matches the generated ID format after type or date changes.
 - Use Green Thumb assist for one focused care question per specimen per day when AI is enabled for the collection.
 - Filter the instance list by structured location, with optional inclusion of child locations.
+- Filter instances by a Plant Tag inherited from their linked definition; specimen cards and plant ID previews show a compact inherited tag row.
 - Review quarantine status from the specimen page. Gardeners can start, update, release, or cancel quarantine records manually.
 
 ### Notes
@@ -454,6 +459,7 @@ App route: `/exhibits`
 - Basics, visibility toggles, image mode, and update digest settings still use the Save exhibit button.
 - Daily and weekly automatic update digests are sent by the scheduled reminders worker when public-safe selected changes are detected.
 - Manual updates can include a detected-change summary since the last sent exhibit update.
+- Enable Show Plant Tags when an exhibit should include them. Public exhibits include only active tags explicitly marked public by the collection.
 
 ### Warnings
 
@@ -530,6 +536,7 @@ App route: `/following`
 ### How It Is Used
 
 - Use Search near the top of the sidebar to search plant IDs, names, aliases, locations, notes, sources, and husbandry text.
+- Search by Plant Tag name or select several tags and choose Match any or Match all. Tag filtering remains scoped to the active collection.
 - Use Follow buttons on plant definitions, specimens, and lineage-related records to subscribe to updates.
 - Create reminders from specimen pages or the Reminders section.
 - Manage followed records from Following and reminder history from Reminders.

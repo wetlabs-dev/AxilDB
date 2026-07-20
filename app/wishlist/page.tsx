@@ -13,6 +13,7 @@ import {
 } from '@/lib/wishlist'
 import { prisma } from '@/lib/prisma'
 import { WishlistSelectionControls } from '@/components/WishlistSelectionControls'
+import { PlantTagRow } from '@/components/PlantTagChip'
 
 const statusLabels: Record<string, string> = {
   RESEARCHING: 'Researching', WISHLIST: 'Wishlist', ACTIVELY_SEEKING: 'Actively seeking',
@@ -33,7 +34,7 @@ function compactFacts(values: Array<string | null | false | undefined>) {
 }
 
 export default async function WishlistPage({ searchParams }: {
-  searchParams: Promise<{ q?: string; status?: string; priority?: string; genus?: string; owned?: string; sort?: string; compact?: string; catSafety?: string; difficulty?: string; size?: string; locationType?: string; recent?: string }>
+  searchParams: Promise<{ q?: string; status?: string; priority?: string; genus?: string; owned?: string; sort?: string; compact?: string; catSafety?: string; difficulty?: string; size?: string; locationType?: string; recent?: string; tag?: string }>
 }) {
   const context = await getCollectionContext()
   const { collection } = context
@@ -71,6 +72,7 @@ export default async function WishlistPage({ searchParams }: {
     if (sp.size && entry.desiredSpecimenSize !== sp.size) return false
     if (sp.locationType && entry.desiredLocation?.locationType.name !== sp.locationType) return false
     if (sp.recent === '1' && entry.createdAt < new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)) return false
+    if (sp.tag && !entry.tags.some((item) => item.plantTagId === sp.tag)) return false
     if (sp.owned === 'yes' && entry.instances.length === 0) return false
     if (sp.owned === 'no' && entry.instances.length > 0) return false
     return true
@@ -88,6 +90,7 @@ export default async function WishlistPage({ searchParams }: {
   const difficultyOptions = Array.from(new Set(allEntries.map((entry) => entry.husbandryGuide?.propagationDifficulty).filter(Boolean) as string[])).sort()
   const sizeOptions = Array.from(new Set(allEntries.map((entry) => entry.desiredSpecimenSize).filter(Boolean) as string[])).sort()
   const locationTypeOptions = Array.from(new Set(allEntries.map((entry) => entry.desiredLocation?.locationType.name).filter(Boolean) as string[])).sort()
+  const availableTags = Array.from(new Map(allEntries.flatMap((entry) => entry.tags.map((item) => [item.plantTag.id, item.plantTag] as const))).values()).sort((a, b) => a.name.localeCompare(b.name))
   const canAcquire = !publicVisitor && canCreateInCollection(context.user, context)
   const compact = sp.compact === '1'
   const statusCounts = Object.entries(statusLabels).map(([status, label]) => [status, label, allEntries.filter((entry) => entry.acquisitionStatus === status).length] as const).filter(([, , count]) => count > 0)
@@ -124,6 +127,7 @@ export default async function WishlistPage({ searchParams }: {
           {(!publicVisitor || settings.showDifficulty) && difficultyOptions.length > 0 && <select className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm" name="difficulty" defaultValue={sp.difficulty || ''}><option value="">All difficulty levels</option>{difficultyOptions.map((value) => <option key={value}>{value}</option>)}</select>}
           {(!publicVisitor || settings.showDesiredSize) && sizeOptions.length > 0 && <select className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm" name="size" defaultValue={sp.size || ''}><option value="">All desired sizes</option>{sizeOptions.map((value) => <option key={value}>{value}</option>)}</select>}
           {(!publicVisitor || settings.showPlannedLocationCategory) && locationTypeOptions.length > 0 && <select className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm" name="locationType" defaultValue={sp.locationType || ''}><option value="">All planned settings</option>{locationTypeOptions.map((value) => <option key={value}>{value}</option>)}</select>}
+          {(!publicVisitor || settings.showTags) && availableTags.length > 0 && <select className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm" name="tag" defaultValue={sp.tag || ''}><option value="">All plant tags</option>{availableTags.map((tag) => <option key={tag.id} value={tag.id}>{tag.name}</option>)}</select>}
           <label className="flex items-center gap-2 rounded-md border border-stone-300 bg-white px-3 py-2 text-sm"><input type="checkbox" name="recent" value="1" defaultChecked={sp.recent === '1'} /> Added in last 90 days</label>
           <select className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm" name="sort" defaultValue={sp.sort || 'priority'}><option value="priority">Highest priority</option><option value="newest">Newest added</option><option value="name">Botanical name</option><option value="observed">Recently observed</option>{(!publicVisitor || settings.showObservedPriceRange) && <option value="price">Lowest observed price</option>}<option value="status">Status</option></select>
           <button className="rounded-md bg-[#2f6b45] px-4 py-2 text-sm font-semibold text-white sm:w-fit">Apply filters</button>
@@ -163,6 +167,7 @@ export default async function WishlistPage({ searchParams }: {
                         <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#2f6b45]">{statusLabels[entry.acquisitionStatus || '']}</p>
                         <h2 className="mt-1 font-serif text-xl font-semibold leading-tight">{plantName(entry)}</h2>
                         {entry.aliases.length > 0 && <p className="mt-1 line-clamp-1 text-xs text-stone-500">{entry.aliases.slice(0, 3).map((alias) => alias.name).join(', ')}</p>}
+                        {(!publicVisitor || settings.showTags) && <div className="mt-2"><PlantTagRow tags={entry.tags.map((item) => item.plantTag)} limit={4} /></div>}
                       </div>
                       {canAcquire && <input aria-label={`Select ${plantName(entry)}`} type="checkbox" name="definition" value={entry.id} className="h-5 w-5 shrink-0" />}
                     </div>

@@ -10,6 +10,7 @@ export type ExhibitSettings = {
   wishlistHeading: string
   taxonomyDetails: boolean
   aliases: boolean
+  plantTags: boolean
   referenceLinks: boolean
   husbandry: boolean
   typeImages: boolean
@@ -38,6 +39,7 @@ export type ExhibitUpdateSettings = {
 export const exhibitSettingLabels: Array<[keyof ExhibitSettings, string, string]> = [
   ['taxonomyDetails', 'Definition taxonomy details', 'Botanical identity, authority, registration, and validation context.'],
   ['aliases', 'Aliases and common names', 'Common, trade, and alternate names attached to the definition.'],
+  ['plantTags', 'Plant tags', 'Collection-defined traits marked public-visible.'],
   ['referenceLinks', 'Reference links', 'Definition reference URLs.'],
   ['husbandry', 'Husbandry summary', 'Structured care guidance from the definition.'],
   ['typeImages', 'Type images', 'Definition/type photos.'],
@@ -74,6 +76,7 @@ export const defaultExhibitSettings: ExhibitSettings = {
   wishlistHeading: 'Planned Acquisitions',
   taxonomyDetails: true,
   aliases: true,
+  plantTags: false,
   referenceLinks: true,
   husbandry: true,
   typeImages: true,
@@ -201,6 +204,7 @@ export async function loadExhibitForDisplay(prisma: PrismaClient, slug: string) 
               plantDefinition: {
                 include: {
                   aliases: true,
+                  tags: { where: { plantTag: { publicVisible: true, active: true } }, include: { plantTag: true }, orderBy: { plantTag: { name: 'asc' } } },
                   governingBody: true,
                   husbandryGuide: true,
                 },
@@ -223,6 +227,7 @@ export async function loadExhibitForDisplay(prisma: PrismaClient, slug: string) 
           plantDefinition: {
             include: {
               aliases: true,
+              tags: { where: { plantTag: { publicVisible: true, active: true } }, include: { plantTag: true }, orderBy: { plantTag: { name: 'asc' } } },
               husbandryGuide: true,
               desiredLocation: { include: { locationType: true } },
               instances: { select: { id: true } },

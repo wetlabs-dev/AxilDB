@@ -17,6 +17,7 @@ import { rankedSuggestions } from '@/lib/suggestions'
 import { cn, plantName } from '@/lib/utils'
 import { ensureStarterWorkflowTemplates } from '@/lib/workflows'
 import Link from 'next/link'
+import { PlantTagRow } from '@/components/PlantTagChip'
 
 const instanceSortOptions: SortOption[] = [
   { value: 'plantIdAsc', label: 'Plant ID A-Z' },
@@ -32,7 +33,7 @@ const instanceSortOptions: SortOption[] = [
 export default async function Instances({
   searchParams,
 }: {
-  searchParams: Promise<{ definition?: string; location?: string; includeNested?: string }>
+  searchParams: Promise<{ definition?: string; location?: string; includeNested?: string; tag?: string }>
 }) {
   const user = await getCurrentUser()
   const sp = await searchParams
@@ -42,9 +43,10 @@ export default async function Instances({
   const definitionFilter = sp.definition || ''
   const locationFilter = sp.location || ''
   const includeNestedLocations = sp.includeNested !== '0'
+  const tagFilter = sp.tag || ''
   const sortKey = await sortPreference(user?.id, 'instances', 'plantIdAsc', instanceSortOptions.map((option) => option.value))
   await ensureStarterWorkflowTemplates(prisma, collection.id)
-  const [defs, instanceSuggestionRows, locations, locationTypes, workflowTemplates, sources, distributors] = await Promise.all([
+  const [defs, instanceSuggestionRows, locations, locationTypes, workflowTemplates, sources, distributors, activeTags] = await Promise.all([
     prisma.plantDefinition.findMany({
       where: { OR: [collectionWhere, { collectionId: null, isValidated: true }] },
       orderBy: [{ isValidated: 'desc' }, { genus: 'asc' }, { species: 'asc' }, { cultivarName: 'asc' }],
@@ -69,6 +71,7 @@ export default async function Instances({
     }),
     prisma.source.findMany({ where: { collectionId: collection.id, active: true }, orderBy: { name: 'asc' } }),
     prisma.distributor.findMany({ where: { collectionId: collection.id, active: true }, include: { locations: { where: { active: true }, orderBy: { name: 'asc' } } }, orderBy: { name: 'asc' } }),
+    prisma.plantTag.findMany({ where: { collectionId: collection.id, active: true }, orderBy: { name: 'asc' } }),
   ])
   const locationNodes = locations.map((location) => ({
     id: location.id,
@@ -89,8 +92,9 @@ export default async function Instances({
       status: 'ACTIVE',
       ...(definitionFilter ? { plantDefinitionId: definitionFilter } : {}),
       ...(filteredLocationIds.length ? { currentLocationId: { in: filteredLocationIds } } : {}),
+      ...(tagFilter ? { plantDefinition: { tags: { some: { plantTagId: tagFilter } } } } : {}),
     },
-    include: { plantDefinition: true, currentLocation: { include: { locationType: true } }, quarantines: { where: { status: 'ACTIVE' }, take: 1 } },
+    include: { plantDefinition: { include: { tags: { include: { plantTag: true }, orderBy: { plantTag: { name: 'asc' } } } } }, currentLocation: { include: { locationType: true } }, quarantines: { where: { status: 'ACTIVE' }, take: 1 } },
     orderBy: { plantId: 'asc' },
   })
   const locationSuggestions = rankedSuggestions(instanceSuggestionRows.map((instance) => instance.location))
@@ -102,6 +106,7 @@ export default async function Instances({
   const filterParams = new URLSearchParams()
   if (definitionFilter) filterParams.set('definition', definitionFilter)
   if (locationFilter) filterParams.set('location', locationFilter)
+  if (tagFilter) filterParams.set('tag', tagFilter)
   filterParams.set('includeNested', includeNestedLocations ? '1' : '0')
   const instancesBackPath = collectionPath(collection.slug, `/instances${filterParams.toString() ? `?${filterParams}` : ''}`)
   const careSyncParams = new URLSearchParams()
@@ -173,7 +178,7 @@ export default async function Instances({
       </div>
 
       <Card>
-        <form action={collectionPath(collection.slug, '/instances')} className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-end">
+        <form action={collectionPath(collection.slug, '/instances')} className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto] md:items-end">
           {definitionFilter && <input type="hidden" name="definition" value={definitionFilter} />}
           <label className="grid gap-1 text-sm font-medium text-stone-800">
             Filter by location
@@ -184,6 +189,7 @@ export default async function Instances({
               ))}
             </select>
           </label>
+          <label className="grid gap-1 text-sm font-medium text-stone-800">Filter by tag<select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="tag" defaultValue={tagFilter}><option value="">All tags</option>{activeTags.map((tag) => <option key={tag.id} value={tag.id}>{tag.name}</option>)}</select></label>
           <label className="flex items-center gap-2 rounded-md border border-stone-200 bg-white/50 px-3 py-2 text-sm font-medium text-stone-800">
             <input type="hidden" name="includeNested" value="0" />
             <input type="checkbox" name="includeNested" value="1" defaultChecked={includeNestedLocations} />
@@ -191,7 +197,7 @@ export default async function Instances({
           </label>
           <div className="flex gap-2">
             <Button className="px-3 py-2">Apply</Button>
-            {(definitionFilter || locationFilter) && <Link className="rounded-md border border-stone-300 bg-white/70 px-3 py-2 text-sm font-semibold" href={collectionPath(collection.slug, '/instances')}>Clear</Link>}
+            {(definitionFilter || locationFilter || tagFilter) && <Link className="rounded-md border border-stone-300 bg-white/70 px-3 py-2 text-sm font-semibold" href={collectionPath(collection.slug, '/instances')}>Clear</Link>}
           </div>
         </form>
       </Card>
@@ -321,6 +327,7 @@ export default async function Instances({
                   <p className="truncate text-sm text-stone-600">
                     {instance.instanceType} · {instance.currentLocation ? `${instance.currentLocation.code} · ${locationPath(instance.currentLocation.id, locationNodes)}` : instance.location || 'No location'}
                   </p>
+                  <div className="mt-2"><PlantTagRow tags={instance.plantDefinition.tags.map((item) => item.plantTag)} limit={3} /></div>
                   {instance.quarantines.length > 0 && (
                     <p className="mt-2 inline-flex rounded-full border border-[#c9a15b] bg-[#fff2cf] px-2 py-0.5 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-[#6f4b12]">
                       Quarantine

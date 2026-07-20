@@ -109,6 +109,8 @@ function normalizeFields(raw: any, originalName: string) {
     aliases,
     reviewNote: nullish(raw.reviewNote, 500) || `Review AI-filled data for ${originalName} before saving.`,
     acquisitionPlan: recommendation,
+    suggestedTags: Array.isArray(raw.suggestedTags) ? raw.suggestedTags.slice(0, 8) : [],
+    newTagSuggestions: Array.isArray(raw.newTagSuggestions) ? raw.newTagSuggestions.slice(0, 5) : [],
   }
 }
 
@@ -137,12 +139,12 @@ export async function POST(req: Request) {
         abbreviation: trimmedString(item.abbreviation, 40),
       })).filter((item: any) => item.id && item.name)
     : []
-  const locations = await prisma.location.findMany({
+  const [locations, plantTags] = await Promise.all([prisma.location.findMany({
     where: { collectionId: collection.id, status: 'ACTIVE', environmentProfile: { isNot: null } },
     include: { locationType: true, environmentProfile: true },
     orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     take: 40,
-  })
+  }), prisma.plantTag.findMany({ where: { collectionId: collection.id, active: true }, select: { id: true, name: true, category: true, description: true }, orderBy: { name: 'asc' }, take: 120 })])
   const locationProfiles = locations.map((location) => ({
     id: location.id,
     category: location.locationType.name,
@@ -165,6 +167,7 @@ export async function POST(req: Request) {
     originalInput: { genus, species, hybridNotation, cultivarName },
     governingBodies,
     collectionLocationProfiles: locationProfiles,
+    collectionPlantTags: plantTags,
     rules: [
       'Return only valid JSON, with no markdown.',
       'If the supplied genus/species is outdated, return the currently accepted genus/species and include the supplied name as an alias with aliasType OBSOLETE_TAXONOMY or SYNONYM.',
@@ -182,6 +185,8 @@ export async function POST(req: Request) {
       'Typical prices are approximate and time-sensitive. Use null when reliable market information is unavailable.',
       'Use reputable grower, botanical garden, extension, registry, or manufacturer sources and return source URLs.',
       'Compare requirements to the compact collectionLocationProfiles. Suggest an ID only when it is a plausible fit, and explain cautions. Never assign it.',
+      'Suggest only reasonably supported traits. Prefer IDs from collectionPlantTags. Propose a new tag only when no existing tag fits.',
+      'Never treat subjective rarity or beauty as a trait. Cat-safety suggestions require authoritative support and cautious confidence.',
     ],
     jsonShape: {
       genus: 'string|null',
@@ -204,6 +209,8 @@ export async function POST(req: Request) {
         locationCharacteristics: 'string|null', warnings: 'string|null', researchSummary: 'string|null',
         suggestedLocationId: 'string|null', locationCompatibility: 'string|null', sources: ['https://example.org/source'],
       },
+      suggestedTags: [{ tagId: 'existing tag ID', tagName: 'string', confidence: 0.8, reason: 'string' }],
+      newTagSuggestions: [{ name: 'string', icon: 'stable concept or null', category: 'string', description: 'string', confidence: 0.8, reason: 'string' }],
     },
   }
 
@@ -233,6 +240,9 @@ export async function POST(req: Request) {
     }
 
     const fields = normalizeFields(extractJson(outputText(payload)), originalName)
+    const catalogIds = new Set(plantTags.map((tag) => tag.id))
+    fields.suggestedTags = fields.suggestedTags.map((suggestion: any) => ({ tagId: trimmedString(suggestion?.tagId, 100), tagName: trimmedString(suggestion?.tagName, 60), confidence: Math.max(0, Math.min(1, Number(suggestion?.confidence || 0))), reason: trimmedString(suggestion?.reason, 240) })).filter((suggestion: any) => catalogIds.has(suggestion.tagId) && suggestion.confidence >= 0.6)
+    fields.newTagSuggestions = fields.newTagSuggestions.map((suggestion: any) => ({ name: trimmedString(suggestion?.name, 60), category: trimmedString(suggestion?.category, 40), description: trimmedString(suggestion?.description, 300), confidence: Math.max(0, Math.min(1, Number(suggestion?.confidence || 0))), reason: trimmedString(suggestion?.reason, 240) })).filter((suggestion: any) => suggestion.name && suggestion.confidence >= 0.7)
     const acceptedBinomial = `${fields.genus || genus} ${fields.species || species}`.trim().toLowerCase()
     const originalBinomial = `${genus} ${species}`.trim().toLowerCase()
     if (acceptedBinomial !== originalBinomial && !fields.aliases.some((alias: { name: string }) => alias.name.toLowerCase() === originalBinomial)) {

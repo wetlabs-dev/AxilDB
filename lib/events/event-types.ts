@@ -10,6 +10,7 @@ export const DOMAIN_EVENT_TYPES = [
   'workflow.run_started', 'workflow.step_completed', 'workflow.run_completed', 'workflow.run_cancelled',
   'exhibit.created', 'exhibit.published', 'exhibit.updated', 'exhibit.unpublished',
   'definition.created', 'definition.updated', 'definition.validated', 'definition.disputed', 'definition.detached', 'definition.husbandry_updated',
+  'tag.created', 'tag.updated', 'tag.archived', 'tag.restored', 'tag.merged', 'plant_definition.tag_added', 'plant_definition.tag_removed',
   'acquisition.intent_updated', 'acquisition.research_added', 'acquisition.observation_added', 'acquisition.recorded', 'acquisition.batch_created', 'acquisition.batch_completed', 'acquisition.instance_created',
   'wishlist.added', 'wishlist.status_changed', 'wishlist.fulfilled', 'wishlist.reactivated',
   'exhibit.wishlist_item_added', 'exhibit.wishlist_item_removed',
@@ -62,6 +63,8 @@ const aggregateFor = (type: DomainEventType) => {
   if (type.startsWith('workflow.')) return 'WorkflowRun'
   if (type.startsWith('exhibit.')) return 'CollectionExhibit'
   if (type.startsWith('definition.')) return 'PlantDefinition'
+  if (type.startsWith('tag.')) return 'PlantTag'
+  if (type.startsWith('plant_definition.')) return 'PlantDefinition'
   if (type.startsWith('acquisition.')) return 'PlantDefinition'
   if (type.startsWith('fertilizer.product')) return 'FertilizerProduct'
   if (type.startsWith('fertilizer.recipe') || type === 'fertilizer.assigned') return 'FertilizerRecipe'

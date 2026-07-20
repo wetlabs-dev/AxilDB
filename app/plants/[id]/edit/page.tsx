@@ -19,6 +19,8 @@ import { findMatchingValidatedDefinition } from '@/lib/validated-definitions'
 import { acceptedPlantName, plantName, plantNeedsIdentification } from '@/lib/utils'
 import { collectionRoleAtLeast, isServerAdminRole } from '@/lib/roles'
 import { getUserUnitPreferences } from '@/lib/units'
+import { PlantTagPicker } from '@/components/PlantTagPicker'
+import { PlantTagRow } from '@/components/PlantTagChip'
 
 const selectClass = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
 
@@ -54,7 +56,7 @@ export default async function EditPlant({
   const unitPreferences = await getUserUnitPreferences(prisma, user.id)
   const { id } = await params
   const { uploadError } = await searchParams
-  const [plant, bodies, typePhotos, definitionSuggestionRows, guideSourceOptions, mergeTargetOptions, fertilizerRecipes, locations] = await Promise.all([
+  const [plant, bodies, typePhotos, definitionSuggestionRows, guideSourceOptions, mergeTargetOptions, fertilizerRecipes, locations, activeTags] = await Promise.all([
     prisma.plantDefinition.findFirstOrThrow({
       where: { id, collectionId: collection.id },
       include: {
@@ -62,6 +64,7 @@ export default async function EditPlant({
         husbandryGuide: { include: { fertilizerRecipe: true } },
         validationCandidates: { orderBy: { createdAt: 'desc' }, take: 5 },
         _count: { select: { instances: true } },
+        tags: { include: { plantTag: true }, orderBy: { plantTag: { name: 'asc' } } },
       },
     }),
     prisma.governingBody.findMany({ where: { collectionId: collection.id }, orderBy: { name: 'asc' } }),
@@ -100,6 +103,7 @@ export default async function EditPlant({
       include: { locationType: true },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     }),
+    prisma.plantTag.findMany({ where: { collectionId: collection.id, active: true }, orderBy: [{ category: 'asc' }, { name: 'asc' }] }),
   ])
   const locationNodes = locations.map((location) => ({
     id: location.id,
@@ -185,6 +189,7 @@ export default async function EditPlant({
           <Field label="GBIF URL" help="Optional GBIF link for occurrence records, taxonomy backbone data, and biodiversity references." name="gbifUrl" type="url" defaultValue={plant.gbifUrl} />
           <AIDescriptionField defaultValue={plant.description} wrapperClassName="lg:col-span-2" />
           <TextArea label="Notes" name="notes" defaultValue={plant.notes} wrapperClassName="lg:col-span-2" />
+          <div id="plant-tags" className="lg:col-span-4"><PlantTagPicker tags={activeTags} selectedIds={plant.tags.filter((item) => item.plantTag.active).map((item) => item.plantTagId)} />{plant.tags.some((item) => !item.plantTag.active) && <div className="mt-2"><p className="mb-1 text-xs font-semibold text-stone-600">Archived historical tags</p><PlantTagRow tags={plant.tags.filter((item) => !item.plantTag.active).map((item) => item.plantTag)} /></div>}</div>
           <div className="rounded-lg border border-[#d6dfc9] bg-[#f7f4e8]/80 p-3 lg:col-span-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>

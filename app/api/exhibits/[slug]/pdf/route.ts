@@ -192,6 +192,11 @@ function drawDefinitionSection(
   text(doc, plantName(group.definition))
   doc.moveDown(0.35)
   writeParagraph(doc, group.definition.description, 10, data.exhibit.title)
+  if (data.settings.plantTags && group.definition.tags.length) {
+    doc.font(FONT.sansBold).fontSize(8.5).fillColor(GREEN)
+    text(doc, `Tags: ${group.definition.tags.map((item: any) => item.plantTag.name).join(' · ')}`)
+    doc.moveDown(0.35)
+  }
 
   if (data.settings.typeImages && group.typePhotos.length) {
     ensureRoom(doc, 106, data.exhibit.title)

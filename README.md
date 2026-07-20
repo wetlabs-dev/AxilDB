@@ -10,6 +10,7 @@ It is designed for real collection work: messy taxonomy, acquisition names, alia
 - Main application at `https://app.axildb.com`.
 - Multi-collection workspaces at `/c/[collectionSlug]`, with private/public visibility and collection-scoped memberships.
 - Plant definitions with genus, species, hybrid notation, cultivar name, authority, governing body, registration number, confidence, provisional identity review, reference URLs, notes, and aliases.
+- Collection-scoped Plant Definition Tags with curated Lucide icons, categories, public visibility, archive/merge tools, inherited specimen display, any/all filtering, exports, and review-only Magic Fill suggestions.
 - Acquisition Pipeline for pre-accession research and wishlist intent on plant definitions, with structured sources, distributors and reusable distributor locations, nursery observations, price analytics, and acquisition records that can create one or more Plant Instances.
 - Site-level Validated Plant Definitions with reviewed taxonomy, aliases, type images, and husbandry that can be reused across collections without depending on the originating collection.
 - Alias tracking for synonyms, old taxonomy, trade names, common names, shorthand, and misapplied names.
@@ -70,6 +71,14 @@ It is designed for real collection work: messy taxonomy, acquisition names, alia
 - Web-based Help page and generated Markdown user manual, with repeatable Playwright screenshot capture for documentation.
 
 Plant Health Timeline now prefers authorized Unified Event Engine records and retains legacy source adapters for historical records not yet represented in the event stream.
+
+### Plant Definition Tags
+
+Plant Tags are reusable collection-defined traits for appearance, texture, behavior, growth habit, care, environment, pet safety, and collection themes. They belong to Plant Definitions; linked Plant Instances inherit them for display and filtering without copying relationships. Managers and gardeners maintain the catalog under **Plant Tags**, including archive/restore and duplicate merge. Archived tags remain on historical definitions but cannot be newly assigned.
+
+Tag slugs are normalized per collection, preventing case and punctuation variants from becoming duplicates. Search supports matching any or all selected tags, while instance and wishlist filtering follows the linked definition. Definition and wishlist CSV exports include explicit multi-value tag columns. Exhibits expose tags only when **Show Plant Tags** is enabled, and public wishlist, exhibit, and hover-preview output includes only active tags explicitly marked public.
+
+Plant Definition Magic Fill receives only the active collection tag catalog and may suggest supported existing tags or proposed private tags. Suggestions never save automatically. Existing suggestions must be selected; proposed tags require a separate create confirmation. Manually assigned tags are preserved, including when other Magic Fill fields use Replace All.
 
 ## Collections And Roles
 

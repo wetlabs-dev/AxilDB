@@ -3,6 +3,7 @@ import { canViewCollection } from '@/lib/collections'
 import { getCurrentUser } from '@/lib/auth'
 import { getPlantInstancePreview } from '@/lib/plant-preview'
 import { prisma } from '@/lib/prisma'
+import { isServerAdminRole } from '@/lib/roles'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -33,6 +34,7 @@ export async function GET(request: NextRequest) {
     collectionId: context.collection.id,
     collectionSlug: context.collection.slug,
     plantInstanceIdOrCode: plant,
+    publicOnly: !isServerAdminRole(user?.role) && membership?.status !== 'ACTIVE',
   })
   if (!preview) return NextResponse.json({ error: 'Not found.' }, { status: 404 })
   return NextResponse.json(preview)

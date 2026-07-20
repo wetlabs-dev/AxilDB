@@ -6,6 +6,7 @@ export const activeWishlistStatuses = ['RESEARCHING', 'WISHLIST', 'ACTIVELY_SEEK
 export type WishlistPublicSettings = {
   showPriority: boolean
   showCatSafety: boolean
+  showTags: boolean
   showDifficulty: boolean
   showDesiredSize: boolean
   showPublicResearchSummary: boolean
@@ -19,6 +20,7 @@ export type WishlistPublicSettings = {
 export const defaultWishlistPublicSettings: WishlistPublicSettings = {
   showPriority: false,
   showCatSafety: false,
+  showTags: false,
   showDifficulty: false,
   showDesiredSize: false,
   showPublicResearchSummary: false,
@@ -32,6 +34,7 @@ export const defaultWishlistPublicSettings: WishlistPublicSettings = {
 export const wishlistPublicSettingLabels: Array<[keyof WishlistPublicSettings, string]> = [
   ['showPriority', 'Show priority'],
   ['showCatSafety', 'Show cat safety'],
+  ['showTags', 'Show public plant tags'],
   ['showDifficulty', 'Show difficulty'],
   ['showDesiredSize', 'Show desired size'],
   ['showPublicResearchSummary', 'Show public research summary'],
@@ -78,6 +81,7 @@ export async function loadWishlistEntries(
     where: { collectionId, acquisitionStatus: { in: statuses } },
     include: {
       aliases: { orderBy: { name: 'asc' } },
+      tags: { where: options.publicOnly ? { plantTag: { publicVisible: true, active: true } } : undefined, include: { plantTag: true }, orderBy: { plantTag: { name: 'asc' } } },
       husbandryGuide: true,
       desiredLocation: { include: { locationType: true } },
       instances: { select: { id: true, status: true } },

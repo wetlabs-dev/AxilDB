@@ -19,6 +19,9 @@ npm run check:magic-fill
 echo "==> Checking plant identity and acquisition-label invariants"
 npm run check:plant-identity
 
+echo "==> Checking Plant Definition Tag invariants"
+npm run check:plant-tags
+
 echo "==> Checking event engine invariants"
 npm run check:events
 
