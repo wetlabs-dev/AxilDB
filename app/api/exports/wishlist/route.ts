@@ -54,7 +54,7 @@ function privateRows(entries: Awaited<ReturnType<typeof loadWishlistEntries>>) {
   })
 }
 
-async function pdfBuffer(collectionName: string, rows: ReturnType<typeof publicRows> | ReturnType<typeof privateRows>, report: string) {
+async function pdfBuffer(collectionName: string, rows: ReturnType<typeof publicRows> | ReturnType<typeof privateRows>) {
   const doc = new PDFDocument({ size: 'LETTER', margins: { top: 54, right: 48, bottom: 54, left: 48 }, bufferPages: true })
   const chunks: Buffer[] = []
   doc.on('data', (chunk) => chunks.push(Buffer.from(chunk)))
@@ -71,7 +71,7 @@ async function pdfBuffer(collectionName: string, rows: ReturnType<typeof publicR
   const addBackground = () => doc.save().rect(0, 0, doc.page.width, doc.page.height).fill('#f8f3e6').restore()
   addBackground()
   doc.fillColor('#2f6b45').font(BOLD).fontSize(9).text(collectionName.toUpperCase(), { characterSpacing: 1.3 })
-  doc.moveDown(0.5).fillColor('#2f2618').font(SERIF).fontSize(28).text(report === 'research' ? 'Wishlist Research Report' : report === 'shopping' ? 'Wishlist Shopping Report' : 'Plant Wishlist')
+  doc.moveDown(0.5).fillColor('#2f2618').font(SERIF).fontSize(28).text('Plant Wishlist')
   doc.moveDown(0.35).font(SANS).fontSize(9).fillColor('#756f64').text(`Generated ${formatDate(new Date())} · ${rows.length} acquisition targets`)
   doc.moveDown(1)
   for (const row of rows) {
@@ -106,10 +106,9 @@ export async function GET(request: Request) {
   const entries = await loadWishlistEntries(prisma, collection.id, { includeFulfilled: publicOnly ? settings.showFulfilled : true, publicOnly })
   const rows = publicOnly ? publicRows(entries, settings) : privateRows(entries)
   const format = url.searchParams.get('format') || 'csv'
-  const report = ['shopping', 'research'].includes(String(url.searchParams.get('report'))) ? String(url.searchParams.get('report')) : 'catalog'
-  const filename = `${collection.slug}-wishlist-${report}`
+  const filename = `${collection.slug}-wishlist`
   if (format === 'pdf') {
-    const body = await pdfBuffer(collection.name, rows, report)
+    const body = await pdfBuffer(collection.name, rows)
     return new NextResponse(new Uint8Array(body), { headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="${filename}.pdf"` } })
   }
   const keys = Array.from(new Set(rows.flatMap((row) => Object.keys(row))))

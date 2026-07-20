@@ -88,8 +88,7 @@ export default async function WishlistPage({ searchParams }: {
   const compact = sp.compact === '1'
   const statusCounts = Object.entries(statusLabels).map(([status, label]) => [status, label, allEntries.filter((entry) => entry.acquisitionStatus === status).length] as const).filter(([, , count]) => count > 0)
 
-  return (
-    <main className="ax-public-light min-h-screen bg-[#f8f3e6] px-4 py-8 text-stone-900">
+  const content = (
       <div className="mx-auto grid max-w-6xl gap-5">
         <header className="rounded-lg border border-stone-200 bg-white/80 p-5 shadow-sm">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#2f6b45]">{collection.name}</p>
@@ -103,8 +102,6 @@ export default async function WishlistPage({ searchParams }: {
               <Link className="rounded-md border border-stone-300 bg-white px-3 py-2 font-semibold" href={`${collectionPath(collection.slug, '/wishlist')}?compact=${compact ? '0' : '1'}`}>{compact ? 'Card view' : 'Shopping view'}</Link>
               <a className="rounded-md border border-stone-300 bg-white px-3 py-2 font-semibold" href={`/api/exports/wishlist?collection=${encodeURIComponent(collection.slug)}&format=csv${publicVisitor ? '&public=1' : ''}`}>CSV</a>
               <a className="rounded-md border border-stone-300 bg-white px-3 py-2 font-semibold" href={`/api/exports/wishlist?collection=${encodeURIComponent(collection.slug)}&format=pdf${publicVisitor ? '&public=1' : ''}`}>PDF</a>
-              {!publicVisitor && <a className="rounded-md border border-stone-300 bg-white px-3 py-2 font-semibold" href={`/api/exports/wishlist?collection=${encodeURIComponent(collection.slug)}&format=pdf&report=shopping`}>Shopping report</a>}
-              {!publicVisitor && <a className="rounded-md border border-stone-300 bg-white px-3 py-2 font-semibold" href={`/api/exports/wishlist?collection=${encodeURIComponent(collection.slug)}&format=pdf&report=research`}>Research report</a>}
             </div>
           </div>
         </header>
@@ -170,6 +167,11 @@ export default async function WishlistPage({ searchParams }: {
           </div>
         </form>
       </div>
-    </main>
   )
+
+  return publicVisitor ? (
+    <main className="ax-public-light min-h-screen bg-[#f8f3e6] px-4 py-8 text-stone-900">
+      {content}
+    </main>
+  ) : content
 }

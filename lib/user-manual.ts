@@ -110,7 +110,7 @@ export const manualSections: ManualSection[] = [
     howTo: [
       'Open Acquisitions from the sidebar.',
       'Open Wishlist for filterable acquisition cards or switch to the compact Shopping view. Select several definitions and choose Acquire selected to review one shared acquisition batch before any records are created.',
-      'Download the wishlist as CSV or a branded PDF. Shopping and research report variants use the same collection-scoped data and public privacy rules.',
+      'Download the wishlist as CSV or a branded PDF using the same collection-scoped data and public privacy rules.',
       'Use Add acquisition target to create a research or wishlist definition with status, priority, target price, desired specimen size, desired location, preferred vendors, interest notes, and research summary.',
       'Filter by status, search researched plants, and sort by priority, recent observations, price, or name when shopping or planning.',
       'Add Research Journal entries for chronological notes, URLs, citations, and the reasoning behind the target.',
