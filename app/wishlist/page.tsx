@@ -28,6 +28,10 @@ function priorityLabel(value?: number | null) {
   return `${value} of 5 priority`
 }
 
+function compactFacts(values: Array<string | null | false | undefined>) {
+  return values.filter((value): value is string => Boolean(value))
+}
+
 export default async function WishlistPage({ searchParams }: {
   searchParams: Promise<{ q?: string; status?: string; priority?: string; genus?: string; owned?: string; sort?: string; compact?: string; catSafety?: string; difficulty?: string; size?: string; locationType?: string; recent?: string }>
 }) {
@@ -127,38 +131,58 @@ export default async function WishlistPage({ searchParams }: {
 
         <form action={collectionPath(collection.slug, '/acquisitions/bulk')} method="get">
           {canAcquire && <WishlistSelectionControls />}
-          <div className={compact ? 'grid gap-2' : 'grid gap-4 md:grid-cols-2 xl:grid-cols-3'}>
+          <div className={compact ? 'grid gap-2' : 'grid items-start gap-4 md:grid-cols-2 xl:grid-cols-3'}>
             {entries.map((entry) => {
               const latest = entry.plantObservations[0]
               const range = wishlistPriceRange(entry.plantObservations)
               const environment = wishlistEnvironmentSummary(entry.husbandryGuide)
-              const details = [
-                (!publicVisitor || settings.showDesiredSize) && entry.desiredSpecimenSize ? `Wanted size: ${entry.desiredSpecimenSize}` : null,
+              const observedPrice = range
+                ? `Observed ${money(range.low, range.currency)}${range.high !== range.low ? `-${money(range.high, range.currency)}` : ''}`
+                : null
+              const primaryFacts = compactFacts([
+                (!publicVisitor || settings.showPriority) && priorityLabel(entry.acquisitionPriority),
+                (!publicVisitor || settings.showDesiredSize) && entry.desiredSpecimenSize ? `Size: ${entry.desiredSpecimenSize}` : null,
+                (!publicVisitor || settings.showPlannedLocationCategory) && entry.desiredLocation?.locationType ? `Setting: ${entry.desiredLocation.locationType.name}` : null,
+                !publicVisitor && entry.idealPurchasePrice ? `Target ${money(Number(entry.idealPurchasePrice), 'USD')}` : null,
+                (!publicVisitor || settings.showObservedPriceRange) && observedPrice,
+                (!publicVisitor || settings.showOwnedCount) ? (entry.instances.length > 0 ? `${entry.instances.length} owned` : 'Not owned') : null,
+              ]).slice(0, 6)
+              const careFacts = compactFacts([
                 (!publicVisitor || settings.showCatSafety) && entry.husbandryGuide?.toxicityPets ? `Pet safety: ${entry.husbandryGuide.toxicityPets}` : null,
                 (!publicVisitor || settings.showDifficulty) && entry.husbandryGuide?.propagationDifficulty ? `Difficulty: ${entry.husbandryGuide.propagationDifficulty}` : null,
-                (!publicVisitor || settings.showPlannedLocationCategory) && entry.desiredLocation?.locationType ? `Planned setting: ${entry.desiredLocation.locationType.name}` : null,
-                (!publicVisitor || settings.showOwnedCount) ? `${entry.instances.length} owned` : null,
-                !publicVisitor && entry.idealPurchasePrice ? `Target price: ${money(Number(entry.idealPurchasePrice), 'USD')}` : null,
-                !publicVisitor && entry.maximumPurchasePrice ? `Private ceiling: ${money(Number(entry.maximumPurchasePrice), 'USD')}` : null,
-              ].filter(Boolean)
+                !publicVisitor && entry.maximumPurchasePrice ? `Ceiling ${money(Number(entry.maximumPurchasePrice), 'USD')}` : null,
+              ]).slice(0, 3)
               return (
-                <article key={entry.id} className={`relative overflow-hidden rounded-lg border border-stone-200 bg-white/80 shadow-sm ${compact ? 'grid grid-cols-[5rem_minmax(0,1fr)]' : ''}`}>
-                  <div className={compact ? 'h-full min-h-28' : 'aspect-[4/3]'}><PlantImage src={entry.coverPhoto} alt={plantName(entry)} className="h-full w-full object-cover" /></div>
+                <article key={entry.id} className={`relative min-w-0 overflow-hidden rounded-lg border border-stone-200 bg-white/80 shadow-sm ${compact ? 'grid grid-cols-[6rem_minmax(0,1fr)]' : ''}`}>
+                  <div className={compact ? 'h-full min-h-32 overflow-hidden bg-[#edf3e6]' : 'aspect-[16/11] max-h-64 overflow-hidden bg-[#edf3e6]'}>
+                    <PlantImage src={entry.coverPhoto} alt={plantName(entry)} className="h-full w-full object-cover" />
+                  </div>
                   <div className="min-w-0 p-4">
                     <div className="flex items-start justify-between gap-3">
-                      <div>
+                      <div className="min-w-0">
                         <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#2f6b45]">{statusLabels[entry.acquisitionStatus || '']}</p>
                         <h2 className="mt-1 font-serif text-xl font-semibold leading-tight">{plantName(entry)}</h2>
                         {entry.aliases.length > 0 && <p className="mt-1 line-clamp-1 text-xs text-stone-500">{entry.aliases.slice(0, 3).map((alias) => alias.name).join(', ')}</p>}
                       </div>
                       {canAcquire && <input aria-label={`Select ${plantName(entry)}`} type="checkbox" name="definition" value={entry.id} className="h-5 w-5 shrink-0" />}
                     </div>
-                    {(!publicVisitor || settings.showPriority) && <p className="mt-2 text-sm font-semibold text-[#6f541f]">{priorityLabel(entry.acquisitionPriority)}</p>}
-                    {details.length > 0 && <p className="mt-2 text-xs leading-5 text-stone-600">{details.join(' · ')}</p>}
-                    {(!publicVisitor || settings.showPublicResearchSummary) && entry.acquisitionResearchSummary && <p className="mt-2 text-sm leading-5 text-stone-700">{entry.acquisitionResearchSummary}</p>}
-                    {environment && <p className="mt-2 text-xs text-stone-500">Environment: {environment}</p>}
-                    {(!publicVisitor || settings.showObservedPriceRange) && range && <p className="mt-2 text-xs text-stone-600">Observed {money(range.low, range.currency)}{range.high !== range.low ? `-${money(range.high, range.currency)}` : ''}</p>}
-                    {(!publicVisitor || settings.showLatestPublicObservation) && latest && <p className="mt-1 text-xs text-stone-500">Last observed {formatDate(latest.observedAt)} · {latest.availability.toLowerCase().replaceAll('_', ' ')}</p>}
+                    {primaryFacts.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        {primaryFacts.map((fact) => (
+                          <span key={fact} className="rounded-full border border-[#d7c792] bg-[#fff8d8] px-2 py-1 text-xs font-semibold text-[#6f541f]">{fact}</span>
+                        ))}
+                      </div>
+                    )}
+                    {careFacts.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {careFacts.map((fact) => (
+                          <span key={fact} className="rounded-full border border-stone-200 bg-stone-50 px-2 py-1 text-xs text-stone-600">{fact}</span>
+                        ))}
+                      </div>
+                    )}
+                    {(!publicVisitor || settings.showPublicResearchSummary) && entry.acquisitionResearchSummary && <p className="mt-3 line-clamp-3 text-sm leading-5 text-stone-700">{entry.acquisitionResearchSummary}</p>}
+                    {environment && <p className="mt-2 line-clamp-2 text-xs leading-5 text-stone-500">Environment: {environment}</p>}
+                    {(!publicVisitor || settings.showLatestPublicObservation) && latest && <p className="mt-2 text-xs text-stone-500">Last observed {formatDate(latest.observedAt)} · {latest.availability.toLowerCase().replaceAll('_', ' ')}</p>}
                   </div>
                 </article>
               )
