@@ -22,6 +22,9 @@ npm run check:plant-identity
 echo "==> Checking Plant Definition Tag invariants"
 npm run check:plant-tags
 
+echo "==> Checking treatment management invariants"
+npm run check:treatments
+
 echo "==> Checking event engine invariants"
 npm run check:events
 

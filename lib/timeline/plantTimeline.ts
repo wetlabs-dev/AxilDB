@@ -114,6 +114,7 @@ function domainEventPresentation(type: string): Pick<PlantTimelineEvent, 'catego
   if (type.startsWith('bloom.')) return { category: 'growth', icon: '🌸', colorVariant: 'mauve' }
   if (type.startsWith('propagation.')) return { category: 'lineage', icon: '🌿', colorVariant: 'mauve' }
   if (type.startsWith('workflow.')) return { category: 'documentation', icon: '📋', colorVariant: type.endsWith('completed') ? 'green' : 'sage' }
+  if (type.startsWith('treatment.')) return { category: 'health', icon: '🧪', colorVariant: type.endsWith('completed') ? 'green' : 'amber' }
   if (type === 'plant.archived') return { category: 'archive', icon: '📁', colorVariant: 'gray' }
   return { category: 'accession', icon: '🌱', colorVariant: 'green' }
 }

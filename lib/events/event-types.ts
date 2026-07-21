@@ -15,6 +15,8 @@ export const DOMAIN_EVENT_TYPES = [
   'wishlist.added', 'wishlist.status_changed', 'wishlist.fulfilled', 'wishlist.reactivated',
   'exhibit.wishlist_item_added', 'exhibit.wishlist_item_removed',
   'fertilizer.product_created', 'fertilizer.product_updated', 'fertilizer.recipe_created', 'fertilizer.recipe_updated', 'fertilizer.assigned',
+  'treatment.definition_created', 'treatment.definition_updated', 'treatment.product_created', 'treatment.product_updated',
+  'treatment.plan_started', 'treatment.applied', 'treatment.application_corrected', 'treatment.outcome_recorded', 'treatment.plan_completed', 'treatment.plan_cancelled',
   'collection.created', 'collection.updated', 'collection.archived',
   'membership.requested', 'membership.approved', 'membership.role_changed', 'membership.removed',
   'event.corrected', 'event.redacted',
@@ -46,7 +48,7 @@ export type EventDefinition = {
 
 const visibilityFor = (type: DomainEventType): EventVisibility => {
   if (['bloom.started', 'bloom.peaked', 'exhibit.published'].includes(type)) return 'PUBLIC'
-  if (type.startsWith('condition.') || type.startsWith('quarantine.') || type.startsWith('workflow.')) return 'STAFF'
+  if (type.startsWith('condition.') || type.startsWith('quarantine.') || type.startsWith('workflow.') || type.startsWith('treatment.')) return 'STAFF'
   if (type.startsWith('collection.') || type.startsWith('membership.') || type === 'event.redacted') return 'SERVER_ADMIN'
   if (type === 'event.corrected') return 'STAFF'
   return 'COLLECTION_MEMBER'
@@ -68,13 +70,17 @@ const aggregateFor = (type: DomainEventType) => {
   if (type.startsWith('acquisition.')) return 'PlantDefinition'
   if (type.startsWith('fertilizer.product')) return 'FertilizerProduct'
   if (type.startsWith('fertilizer.recipe') || type === 'fertilizer.assigned') return 'FertilizerRecipe'
+  if (type.startsWith('treatment.definition')) return 'TreatmentDefinition'
+  if (type.startsWith('treatment.product')) return 'TreatmentProduct'
+  if (type.startsWith('treatment.plan')) return 'TreatmentPlan'
+  if (type.startsWith('treatment.')) return 'TreatmentApplication'
   if (type.startsWith('membership.')) return 'CollectionMembership'
   if (type.startsWith('collection.')) return 'Collection'
   return 'DomainEvent'
 }
 
 const timelineTypes = new Set<DomainEventType>(DOMAIN_EVENT_TYPES.filter((type) =>
-  /^(plant|care|condition|bloom|propagation|quarantine|workflow|acquisition)\./.test(type),
+  /^(plant|care|condition|bloom|propagation|quarantine|workflow|acquisition|treatment)\./.test(type),
 ))
 const dashboardTypes = new Set<DomainEventType>([
   'plant.created', 'plant.archived', 'plant.restored', 'plant.location_moved',

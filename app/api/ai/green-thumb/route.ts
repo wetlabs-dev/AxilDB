@@ -6,6 +6,8 @@ import { recordAiUsage, requireAiFeatureAccess, tokenUsage } from '@/lib/ai-usag
 import { prisma } from '@/lib/prisma'
 import { startOfDayInTimeZone, timeZoneForPreference } from '@/lib/time'
 import { fmtDate, plantName, taxonomyLabel } from '@/lib/utils'
+import { collectionPath } from '@/lib/collections'
+import { summarizeTreatmentEffectiveness } from '@/lib/treatments'
 
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses'
 const DEFAULT_MODEL = 'gpt-5.4-mini'
@@ -135,6 +137,17 @@ export async function POST(req: Request) {
     orderBy: { performedAt: 'desc' },
     take: 5,
   })
+  const openConditionTypes = [...new Set(plant.conditions.map((condition) => condition.category))]
+  const availableTreatments = openConditionTypes.length ? await prisma.treatmentDefinition.findMany({
+    where: { collectionId: collection.id, active: true, conditionTypes: { some: { conditionType: { in: openConditionTypes } } } },
+    include: {
+      conditionTypes: true,
+      products: { include: { product: true }, orderBy: { sortOrder: 'asc' } },
+      planSteps: { include: { plan: { include: { applications: { include: { outcomes: true } } } } } },
+    },
+    orderBy: { name: 'asc' },
+    take: 6,
+  }) : []
 
   const sourceHusbandryGuide = plant.plantDefinition.husbandryGuide?.sourcePlantDefinitionId
     ? await prisma.plantHusbandryGuide.findFirst({
@@ -219,6 +232,27 @@ export async function POST(req: Request) {
       notes: bloom.notes || null,
     })),
     attachedPhoto: selectedPhoto ? { caption: selectedPhoto.caption || null } : null,
+    collectionTreatmentOptions: availableTreatments.map((treatment) => {
+      const plans = [...new Map(treatment.planSteps.map((step) => [step.plan.id, step.plan])).values()]
+      const effectiveness = summarizeTreatmentEffectiveness(plans)
+      return {
+        id: treatment.id,
+        name: treatment.name,
+        category: treatment.category,
+        applicableConditions: treatment.conditionTypes.map((item) => item.conditionType),
+        applicationMethod: treatment.applicationMethod,
+        productNames: treatment.products.map((item) => item.product.name),
+        targetSummary: treatment.targetSummary,
+        safety: {
+          requiresQuarantine: treatment.requiresQuarantine,
+          ventilationRequired: treatment.ventilationRequired,
+          indoorUseAllowed: treatment.indoorUseAllowed,
+          minimumIntervalDays: treatment.minimumIntervalDays,
+          safetyNotes: treatment.safetyNotes,
+        },
+        collectionOutcomeSummary: { completedPlans: effectiveness.completed, favorablePlans: effectiveness.effective, label: effectiveness.label },
+      }
+    }),
   }
 
   const prompt = `Plant context JSON:\n${JSON.stringify(context)}\n\nUser care question: ${question}`
@@ -237,7 +271,7 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         model,
         instructions:
-          'You are AxilDB Green Thumb, a concise horticultural care assistant. Answer under 50 words. Directly address the user question for this exact plant scenario. Be practical and cautious. If a photo is provided, use it only as supporting context and do not overstate certainty. Return plain text only, no markdown.',
+          'You are AxilDB Green Thumb, a concise horticultural care assistant. Answer under 50 words. Directly address the user question for this exact plant scenario. Be practical and cautious. If relevant, prefer a named collectionTreatmentOption over inventing a treatment, but never tell the user that AxilDB applied or scheduled it. Treat collection outcome summaries as descriptive local records, not scientific evidence. If a photo is provided, use it only as supporting context and do not overstate certainty. Return plain text only, no markdown.',
         input: [{ role: 'user', content: inputContent }],
         max_output_tokens: 150,
         store: false,
@@ -278,7 +312,16 @@ export async function POST(req: Request) {
     await recordAiUsage({ collectionId: collection.id, userId: user.id, feature: 'AI_GREEN_THUMB', model, usage: tokenUsage(payload) })
     await audit(user, 'GENERATE', 'AI_GREEN_THUMB', event.id, `Generated Green Thumb care note for ${plant.plantId}`, { model, photoIncluded: !!selectedPhoto }, collection.id)
 
-    return NextResponse.json({ answer, eventId: event.id })
+    return NextResponse.json({
+      answer,
+      eventId: event.id,
+      treatmentOptions: availableTreatments.slice(0, 3).map((treatment) => ({
+        id: treatment.id,
+        name: treatment.name,
+        href: collectionPath(collection.slug, `/treatments?selected=${treatment.id}`),
+        applyHref: collectionPath(collection.slug, `/treatments/apply?plant=${plant.id}&treatment=${treatment.id}${plant.conditions[0] ? `&condition=${plant.conditions[0].id}` : ''}`),
+      })),
+    })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Green Thumb assist request failed.'
     await recordAiUsage({ collectionId: collection.id, userId: user.id, feature: 'AI_GREEN_THUMB', model, success: false, error: message })

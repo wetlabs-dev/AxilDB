@@ -13,6 +13,7 @@ const filters = [
   ['overdue', 'Overdue'],
   ['water', 'Water'],
   ['fertilize', 'Fertilizer'],
+  ['treatment', 'Treatments'],
   ['propagation', 'Propagation'],
   ['health', 'Health'],
   ['pest', 'Pest'],

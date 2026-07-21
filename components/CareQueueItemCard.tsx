@@ -25,6 +25,7 @@ function taskIcon(task: CareQueueItem) {
   const className = 'h-4 w-4'
   if (task.taskType === 'WATER') return <Droplets className={className} />
   if (task.taskType === 'FERTILIZE') return <FlaskConical className={className} />
+  if (task.taskType === 'TREATMENT') return <FlaskConical className={className} />
   if (task.taskType === 'PROPAGATION_CHECK') return <Sprout className={className} />
   if (task.taskType === 'PEST_CHECK') return <Bug className={className} />
   if (task.taskType === 'HEALTH_CHECK') return <HeartPulse className={className} />
@@ -35,6 +36,7 @@ function taskIcon(task: CareQueueItem) {
 function careTaskLabel(type: CareQueueItem['taskType']) {
   if (type === 'WATER') return 'Water'
   if (type === 'FERTILIZE') return 'Fertilize'
+  if (type === 'TREATMENT') return 'Treatment'
   if (type === 'PROPAGATION_CHECK') return 'Propagation check'
   if (type === 'PEST_CHECK') return 'Pest check'
   if (type === 'HEALTH_CHECK') return 'Health check'
@@ -215,6 +217,15 @@ function NormalCareDetails({
   collectionSlug: string
   back: string
 }) {
+  if (item.source === 'treatment-plan') return (
+    <div className="grid gap-2 rounded-md border border-amber-200 bg-amber-50/70 p-3 text-sm text-stone-700">
+      <p className="font-semibold text-stone-900">{item.treatmentPlanTitle || 'Treatment plan'}</p>
+      {item.treatmentName && <p>Treatment: {item.treatmentName}</p>}
+      {item.treatmentProgress && <p>{item.treatmentProgress}</p>}
+      {item.treatmentSafetySummary && <p className="font-medium text-amber-900">Safety: {item.treatmentSafetySummary}</p>}
+      <Link href={item.href} className="mt-1 inline-flex w-fit rounded-md bg-[#2f6b45] px-3 py-2 font-semibold text-white">Continue plan</Link>
+    </div>
+  )
   return (
     <>
       <form action={completeCareTask} className="grid gap-2">
@@ -310,6 +321,7 @@ function DesktopPrimaryAction({
   canAct: boolean
 }) {
   if (!canAct || item.completedAt || item.condition) return null
+  if (item.source === 'treatment-plan') return <Link href={item.href} className="rounded-md bg-[#2f6b45] px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#28593b]">Continue plan</Link>
   return (
     <form action={completeCareTask}>
       <CompleteCareHiddenFields item={item} collectionSlug={collectionSlug} back={back} />

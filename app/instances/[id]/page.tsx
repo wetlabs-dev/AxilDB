@@ -64,6 +64,7 @@ import Link from 'next/link'
 import QRCode from 'qrcode'
 import { RefreshCw } from 'lucide-react'
 import { distributorDisplay, sourceChainDisplay } from '@/lib/provenance'
+import { labelizeTreatment } from '@/lib/treatments'
 
 const conditionCategories = [
   ['WILTING', 'Wilting'],
@@ -264,7 +265,7 @@ export default async function InstanceDetail({
 
   const today = startOfDayInTimeZone(new Date(), timezone)
 
-  const [careEvents, careConditions, greenThumbToday] = await Promise.all([
+  const [careEvents, careConditions, greenThumbToday, treatmentPlans, treatmentApplications] = await Promise.all([
     prisma.plantCareEvent.findMany({
       where: { collectionId: collection.id, plantInstanceId: id },
       orderBy: { performedAt: 'desc' },
@@ -282,6 +283,18 @@ export default async function InstanceDetail({
         performedAt: { gte: today },
       },
       select: { id: true },
+    }),
+    prisma.treatmentPlan.findMany({
+      where: { collectionId: collection.id, plantInstanceId: id },
+      include: { steps: true, condition: true },
+      orderBy: { updatedAt: 'desc' },
+      take: 12,
+    }),
+    prisma.treatmentApplication.findMany({
+      where: { collectionId: collection.id, plantInstanceId: id },
+      include: { outcomes: { orderBy: { observedAt: 'desc' }, take: 1 }, product: true },
+      orderBy: { appliedAt: 'desc' },
+      take: 12,
     }),
   ])
   const lastWatered = careEvents.find((event) => event.eventType === 'WATERED')?.performedAt
@@ -597,6 +610,7 @@ export default async function InstanceDetail({
                 <div className="min-w-0">
                   <p className="font-medium">{condition.category.replaceAll('_', ' ').toLowerCase()}</p>
                   <p className="text-xs text-stone-600">Observed {fmtDate(condition.observedAt, timezone)}</p>
+                  {condition.status !== 'RESOLVED' && <div className="mt-2 flex flex-wrap gap-2"><Link className="text-xs font-semibold text-[#2f6b45] underline" href={collectionPath(collection.slug, `/treatments?plant=${id}&condition=${condition.id}`)}>Start treatment plan</Link><Link className="text-xs font-semibold text-[#2f6b45] underline" href={collectionPath(collection.slug, `/treatments/apply?plant=${id}&condition=${condition.id}`)}>Record one-off treatment</Link></div>}
                   <input name="notes" defaultValue={condition.notes || ''} className="mt-2 w-full min-w-0 rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm" />
                 </div>
                 <Select label="Severity" name="severity" defaultValue={condition.severity}>
@@ -617,6 +631,15 @@ export default async function InstanceDetail({
           ))}
         </div>
       )}
+
+      <div id="treatments" className="mt-4 border-t border-stone-200 pt-4">
+        <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-sm font-semibold">Treatment history</p><p className="text-xs text-stone-600">Plans, applications, safety snapshots, and outcomes for this specimen.</p></div>{canCreateRecords && <div className="flex gap-2"><Link className="rounded-md border border-stone-300 bg-white/70 px-3 py-1.5 text-xs font-semibold" href={collectionPath(collection.slug, `/treatments/apply?plant=${id}`)}>One-off application</Link><Link className="rounded-md bg-[#2f6b45] px-3 py-1.5 text-xs font-semibold text-white" href={collectionPath(collection.slug, `/treatments?plant=${id}`)}>Start plan</Link></div>}</div>
+        <div className="mt-3 grid gap-2 md:grid-cols-2">
+          {treatmentPlans.map((plan) => <Link key={plan.id} href={collectionPath(collection.slug, `/treatments/plans/${plan.id}`)} className="rounded-md border border-stone-200 bg-white/60 p-3 text-sm"><p className="font-semibold">{plan.title}</p><p className="text-xs text-stone-600">{labelizeTreatment(plan.status)} · {plan.steps.filter((step) => step.status === 'COMPLETED').length}/{plan.steps.length} steps{plan.condition ? ` · ${labelizeTreatment(plan.condition.category)}` : ''}</p></Link>)}
+          {treatmentApplications.map((application) => <div key={application.id} className="rounded-md border border-stone-200 bg-white/60 p-3 text-sm"><p className="font-semibold">{application.treatmentNameSnapshot}</p><p className="text-xs text-stone-600">Applied {fmtDate(application.appliedAt, timezone)}{application.productNameSnapshot ? ` · ${application.productNameSnapshot}` : ''}</p><p className="mt-1 text-xs">{application.doseAmount != null ? `${application.doseAmount} ${labelizeTreatment(application.doseUnit)}` : 'Dose not recorded'}{application.outcomes[0] ? ` · ${labelizeTreatment(application.outcomes[0].effectiveness)} outcome` : ' · outcome pending'}</p></div>)}
+          {treatmentPlans.length === 0 && treatmentApplications.length === 0 && <p className="text-sm text-stone-600">No treatment records yet.</p>}
+        </div>
+      </div>
 
       {canUseGreenThumb && (
         <div className="mt-4">

@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Sparkles } from 'lucide-react'
 import { Button, Select, TextArea } from '@/components/ui'
+import Link from 'next/link'
 
 type GreenThumbPhoto = {
   id: string
@@ -24,12 +25,14 @@ export function GreenThumbAssist({ collectionSlug, plantInstanceId, photos, used
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [answer, setAnswer] = useState('')
+  const [treatmentOptions, setTreatmentOptions] = useState<Array<{ id: string; name: string; href: string; applyHref: string }>>([])
   const [pendingQuestion, setPendingQuestion] = useState('')
 
   async function askGreenThumb() {
     const trimmedQuestion = question.trim()
     setError('')
     setAnswer('')
+    setTreatmentOptions([])
 
     if (!trimmedQuestion) {
       setError('Enter a plant care question first.')
@@ -58,6 +61,7 @@ export function GreenThumbAssist({ collectionSlug, plantInstanceId, photos, used
         throw new Error(payload.error || 'Green Thumb assist failed.')
       }
       setAnswer(payload.answer || 'Green Thumb care note created.')
+      setTreatmentOptions(Array.isArray(payload.treatmentOptions) ? payload.treatmentOptions : [])
       setQuestion('')
       setPhotoId('')
       router.refresh()
@@ -122,6 +126,7 @@ export function GreenThumbAssist({ collectionSlug, plantInstanceId, photos, used
 
       {error && <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p>}
       {answer && <p className="mt-3 rounded-md border border-[#bdd5b6] bg-white/70 px-3 py-2 text-sm text-[#255537]">{answer}</p>}
+      {treatmentOptions.length > 0 && <div className="mt-3 rounded-md border border-[#bdd5b6] bg-white/70 p-3"><p className="text-xs font-bold uppercase tracking-[0.14em] text-[#255537]">Relevant saved treatments</p><div className="mt-2 grid gap-2">{treatmentOptions.map((option) => <div key={option.id} className="flex flex-wrap items-center justify-between gap-2 text-sm"><Link href={option.href} className="font-semibold text-[#255537] underline">{option.name}</Link><Link href={option.applyHref} className="rounded-md border border-[#bdd5b6] px-2 py-1 text-xs font-semibold text-[#255537]">Review application</Link></div>)}</div><p className="mt-2 text-xs text-stone-600">Review the saved safety details and product label before choosing a treatment.</p></div>}
 
       {pendingQuestion && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/45 px-4 py-6">

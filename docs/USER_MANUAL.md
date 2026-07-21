@@ -20,6 +20,7 @@ AXILDB_DOCS_BASE_URL=https://app.axildb.com AXILDB_DOCS_COLLECTION_SLUG=axildb n
 - [Photos and Gallery](#photos-gallery)
 - [Plant Husbandry](#husbandry)
 - [Care Queue and Green Thumb](#care-queue)
+- [Treatment Management](#treatment-management)
 - [Greenhouse Workflows](#greenhouse-workflows)
 - [Weekly Greenhouse Checklist](#weekly-checklist)
 - [Care Sheets and Plant Sitter Mode](#care-sheets)
@@ -330,7 +331,7 @@ App route: `/care`
 
 ### How It Is Used
 
-- Open Care Queue from the sidebar to review today’s tasks, overdue work, watering, fertilizing, propagation checks, health issues, pest checks, bloom follow-ups, custom reminders, and completed care.
+- Open Care Queue from the sidebar to review today’s tasks, overdue work, watering, fertilizing, treatment plan steps, propagation checks, health issues, pest checks, bloom follow-ups, custom reminders, and completed care.
 - Complete or snooze generated care tasks from the queue.
 - For condition-related queue items, use the condition actions to resolve the condition, update severity/status/follow-up details, or mark that it still needs attention with a follow-up date.
 - Use Bulk care by location to record one care event per selected plant in a location, with direct-only or nested-location scope and a required review step before submit. Fertilizing bulk care can include a recipe, strength, dose, and water volume.
@@ -339,7 +340,7 @@ App route: `/care`
 - Use per-plant overrides for individual notes, results, or skip reasons while keeping shared task details on the batch.
 - Open Weekly checklist to group overdue, due, and upcoming care by location for a printable work session.
 - Open a specimen to log watering, add conditions such as wilting or pests, resolve conditions, and review recent care history.
-- Use Green Thumb assist on a specimen to ask one concise care question per day with plant identity, husbandry, recent care history, and optional photo context.
+- Use Green Thumb assist on a specimen to ask one concise care question per day with plant identity, husbandry, recent care history, relevant saved collection treatments, aggregate local outcomes, and optional photo context.
 - Delete a Green Thumb care note if the response was not useful.
 
 ### Notes
@@ -355,6 +356,35 @@ App route: `/care`
 ### Warnings
 
 - Green Thumb responses are care suggestions, not guaranteed diagnoses. Review the plant directly before treating pests, disease, toxicity, or severe decline.
+
+## Treatment Management
+
+Treatment Management keeps reusable treatment instructions, physical products, safety requirements, plans, actual applications, and observed outcomes together without replacing product labels or professional guidance.
+
+App route: `/treatments`
+
+### How It Is Used
+
+- Gardeners and managers can open Treatments from the Admin sidebar to create collection-scoped treatments and products, set applicable condition types, link products, and record deterministic safety details.
+- Start a treatment plan from Treatment Management or an open condition on a specimen. Choose a start date, repeat count, repeat interval, and outcome follow-up; AxilDB creates concrete dated steps for review.
+- Loggers and above can continue due treatment steps from the Care Queue. Application steps require actual amount, unit, water volume, strength, method, product, notes, and safety acknowledgement where warnings apply.
+- Use Record one-off treatment when an application does not need a plan. Link it to an open condition when applicable.
+- Record one or more follow-up outcomes for each application, then complete the plan with a final condition outcome and effectiveness rating after all required steps are complete.
+- Review plans and application history from each specimen. Treatment events also appear on the Plant Health Timeline.
+
+### Notes
+
+- Treatment defaults are reference values only. AxilDB stores actual application values separately and snapshots the treatment instructions and safety details so later library edits do not rewrite history.
+- Care Queue treatment items point back to their plan and do not masquerade as ordinary one-click care completion.
+- Effectiveness labels summarize the collection’s completed plans and adverse-reaction records. They are descriptive local history, not scientific evidence.
+- Green Thumb receives only relevant active treatment metadata and aggregate local outcomes. It may point to saved options, but it never applies or schedules a treatment automatically.
+- Library changes, plan lifecycle changes, applications, and outcomes produce collection audit and domain-event history.
+
+### Warnings
+
+- Always verify the current product label, local regulations, compatibility, dose, PPE, ventilation, environmental conditions, and re-entry interval before application.
+- Minimum-interval, quarantine, bloom, indoor-use, ventilation, and plant-tag cautions are deterministic prompts. They do not guarantee safety or suitability.
+- Application and outcome records are historical. Correct mistakes with an explicit correction note rather than silently treating old records as current instructions.
 
 ## Greenhouse Workflows
 

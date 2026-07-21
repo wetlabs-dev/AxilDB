@@ -15,6 +15,7 @@ export const careTaskTypes = [
   'HEALTH_CHECK',
   'BLOOM_CHECK',
   'QUARANTINE_REVIEW',
+  'TREATMENT',
   'REMINDER',
 ] as const
 
@@ -28,12 +29,12 @@ const latestCareEventTypes = [
 ] as const
 
 export type CareTaskType = (typeof careTaskTypes)[number]
-export type CareQueueFilter = 'today' | 'overdue' | 'water' | 'fertilize' | 'propagation' | 'health' | 'pest' | 'bloom' | 'custom' | 'completed'
+export type CareQueueFilter = 'today' | 'overdue' | 'water' | 'fertilize' | 'treatment' | 'propagation' | 'health' | 'pest' | 'bloom' | 'custom' | 'completed'
 
 export type CareQueueItem = {
   key: string
   taskType: CareTaskType
-  source: 'derived' | 'reminder'
+  source: 'derived' | 'reminder' | 'treatment-plan'
   title: string
   reason: string
   dueAt: Date
@@ -71,6 +72,12 @@ export type CareQueueItem = {
   fertilizerRecipeSummary?: string | null
   fertilizerStrength?: string | null
   fertilizerSource?: 'definition' | 'override'
+  treatmentPlanId?: string
+  treatmentPlanStepId?: string
+  treatmentName?: string | null
+  treatmentPlanTitle?: string | null
+  treatmentProgress?: string | null
+  treatmentSafetySummary?: string | null
 }
 
 function addDays(date: Date, days: number, timezone?: string) {
@@ -128,6 +135,7 @@ export function careTaskLabel(type: CareTaskType) {
   if (type === 'HEALTH_CHECK') return 'Health check'
   if (type === 'BLOOM_CHECK') return 'Bloom check'
   if (type === 'QUARANTINE_REVIEW') return 'Quarantine review'
+  if (type === 'TREATMENT') return 'Treatment'
   return 'Reminder'
 }
 
@@ -271,7 +279,7 @@ export async function getCareQueue(
     },
   })
   const activePlantInstanceIds = instances.map((instance) => instance.id)
-  const [careEvents, conditions, adjustments, photos, openBlooms, activeQuarantines, reminders, quietDays, quietRules] = await Promise.all([
+  const [careEvents, conditions, adjustments, photos, openBlooms, activeQuarantines, reminders, quietDays, quietRules, treatmentSteps] = await Promise.all([
     latestCareEvents(prisma, collectionId, activePlantInstanceIds),
     prisma.plantCondition.findMany({
       where: { collectionId, plantInstanceId: { in: activePlantInstanceIds }, status: { in: ['OPEN', 'IMPROVING'] } },
@@ -305,6 +313,11 @@ export async function getCareQueue(
       orderBy: [{ quietType: 'asc' }, { date: 'asc' }, { dayOfWeek: 'asc' }],
     }),
     prisma.collectionQuietDayShiftRule.findMany({ where: { collectionId, active: true } }),
+    prisma.treatmentPlanStep.findMany({
+      where: { collectionId, status: 'PENDING', plan: { status: 'ACTIVE', plantInstance: { status: 'ACTIVE' } } },
+      include: { treatment: true, plan: { include: { plantInstance: { include: { plantDefinition: true } }, steps: { select: { status: true } } } } },
+      orderBy: [{ scheduledAt: 'asc' }, { sortOrder: 'asc' }],
+    }),
   ])
 
   const photosByInstance = imageLookup(photos)
@@ -541,6 +554,49 @@ export async function getCareQueue(
     })
   }
 
+  for (const step of treatmentSteps) {
+    const instance = step.plan.plantInstance
+    const completedSteps = step.plan.steps.filter((item) => item.status === 'COMPLETED').length
+    const adjusted = quietAdjusted(dayStart(step.scheduledAt, timezone), 'TREATMENT', instance.id)
+    const dueAt = adjusted.dueAt
+    const overdueDays = Math.max(0, daysBetween(now, dueAt, timezone))
+    const snapshot = step.treatmentSnapshotJson && typeof step.treatmentSnapshotJson === 'object' && !Array.isArray(step.treatmentSnapshotJson)
+      ? step.treatmentSnapshotJson as Record<string, any>
+      : null
+    const safety = snapshot?.safety || null
+    const safetySummary = [
+      safety?.requiresQuarantine ? 'quarantine required' : null,
+      safety?.ventilationRequired ? 'ventilation required' : null,
+      safety?.reentryIntervalHours ? `${safety.reentryIntervalHours}h re-entry` : null,
+    ].filter(Boolean).join(' · ')
+    items.push({
+      key: `TREATMENT:${step.id}`,
+      taskType: 'TREATMENT',
+      source: 'treatment-plan',
+      title: step.title,
+      reason: step.instructions || `Continue ${step.plan.title}.`,
+      dueAt,
+      priority: clampPriority(120 + overdueDays * 10),
+      overdueDays,
+      plantInstanceId: instance.id,
+      plantId: instance.plantId,
+      plantName: plantName(instance.plantDefinition),
+      location: instance.location,
+      image: photosByInstance[instance.id],
+      href: collectionPath(collectionSlug, `/treatments/plans/${step.plan.id}#step-${step.id}`),
+      treatmentPlanId: step.plan.id,
+      treatmentPlanStepId: step.id,
+      treatmentName: step.treatment?.name || snapshot?.name || null,
+      treatmentPlanTitle: step.plan.title,
+      treatmentProgress: `${completedSteps}/${step.plan.steps.length} steps complete`,
+      treatmentSafetySummary: safetySummary || null,
+      originalDueAt: adjusted.originalDueAt || null,
+      quietDayName: adjusted.quietDayName || null,
+      quietDayReason: adjusted.quietDayReason || null,
+      quietDayShiftDirection: adjusted.quietDayShiftDirection || null,
+    })
+  }
+
   for (const reminder of reminders) {
     const reminderAdjustment = reminder.entityType === 'PLANT_INSTANCE' && reminder.entityId
       ? adjustmentMap.get(`${reminder.entityId}:REMINDER`)
@@ -599,6 +655,7 @@ export function filterCareQueue(items: CareQueueItem[], filter?: string | null, 
   if (filter === 'completed') return items.filter((item) => item.completedAt)
   if (filter === 'water') return items.filter((item) => !item.completedAt && item.taskType === 'WATER')
   if (filter === 'fertilize') return items.filter((item) => !item.completedAt && item.taskType === 'FERTILIZE')
+  if (filter === 'treatment') return items.filter((item) => !item.completedAt && item.taskType === 'TREATMENT')
   if (filter === 'propagation') return items.filter((item) => !item.completedAt && item.taskType === 'PROPAGATION_CHECK')
   if (filter === 'health') return items.filter((item) => !item.completedAt && ['HEALTH_CHECK', 'QUARANTINE_REVIEW'].includes(item.taskType))
   if (filter === 'pest') return items.filter((item) => !item.completedAt && item.taskType === 'PEST_CHECK')

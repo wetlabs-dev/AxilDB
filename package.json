@@ -41,7 +41,8 @@
     "check:workflows": "tsx scripts/check-workflows.ts",
     "check:timezone": "tsx scripts/check-timezone.ts",
     "check:plant-identity": "tsx scripts/check-plant-identity.ts",
-    "check:plant-tags": "tsx scripts/check-plant-tags.ts"
+    "check:plant-tags": "tsx scripts/check-plant-tags.ts",
+    "check:treatments": "tsx scripts/check-treatments.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

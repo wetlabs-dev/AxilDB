@@ -255,6 +255,12 @@ model Collection {
   plantHusbandryOverrides PlantHusbandryOverride[]
   fertilizerProducts  FertilizerProduct[]
   fertilizerRecipes   FertilizerRecipe[]
+  treatmentDefinitions TreatmentDefinition[]
+  treatmentProducts   TreatmentProduct[]
+  treatmentPlans      TreatmentPlan[]
+  treatmentPlanSteps  TreatmentPlanStep[]
+  treatmentApplications TreatmentApplication[]
+  treatmentApplicationOutcomes TreatmentApplicationOutcome[]
   acquisitionResearchEntries AcquisitionResearchEntry[]
   plantObservations   PlantObservation[]
   plantAcquisitionRecords PlantAcquisitionRecord[]
@@ -310,6 +316,7 @@ model PlantTag {
   collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   createdBy  User? @relation("PlantTagCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
   definitions PlantDefinitionTag[]
+  treatmentCautions TreatmentTagCaution[]
 
   @@unique([collectionId, slug])
   @@index([collectionId, slug])
@@ -1975,6 +1982,8 @@ model PlantInstance {
   careScheduleSyncItems CareScheduleSyncItem[]
   acquisitionRecordLinks PlantAcquisitionRecordInstance[]
   quietDayAdjustments CareQuietDayAdjustment[]
+  treatmentPlans TreatmentPlan[]
+  treatmentApplications TreatmentApplication[]
 
   @@index([collectionId])
   @@unique([collectionId, plantId])
@@ -2278,6 +2287,248 @@ model PlantCareEvent {
   @@index([collectionId, plantInstanceId, eventType, performedAt])
 }
 
+model TreatmentDefinition {
+  id                       String   @id @default(cuid())
+  collectionId             String
+  name                     String
+  slug                     String
+  category                 String
+  active                   Boolean  @default(true)
+  targetSummary            String?
+  instructions             String?
+  manufacturerDoseText     String?
+  defaultDoseAmount        Float?
+  defaultDoseUnit          String?
+  defaultWaterVolumeMl     Float?
+  defaultStrength          String?
+  applicationMethod        String?
+  minimumIntervalDays      Int?
+  defaultRepeatCount       Int?
+  defaultRepeatIntervalDays Int?
+  defaultFollowUpDays      Int?
+  requiresQuarantine       Boolean  @default(false)
+  reentryIntervalHours     Int?
+  ventilationRequired      Boolean  @default(false)
+  indoorUseAllowed         Boolean?
+  avoidBlooms              Boolean  @default(false)
+  avoidHeat                Boolean  @default(false)
+  avoidDirectLight         Boolean  @default(false)
+  ppeRequirementsJson      Json?
+  safetyNotes              String?
+  contraindications        String?
+  createdByUserId          String?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  collection       Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  products         TreatmentDefinitionProduct[]
+  conditionTypes   TreatmentConditionType[]
+  cautionTags      TreatmentTagCaution[]
+  planSteps        TreatmentPlanStep[]
+  applications     TreatmentApplication[]
+
+  @@unique([collectionId, slug])
+  @@index([collectionId, active])
+  @@index([collectionId, category])
+}
+
+model TreatmentProduct {
+  id                 String   @id @default(cuid())
+  collectionId       String
+  name               String
+  manufacturer       String?
+  productType        String?
+  activeIngredient   String?
+  concentration      String?
+  registrationNumber String?
+  form               String?
+  containerSize      String?
+  purchaseDate       DateTime?
+  expirationDate     DateTime?
+  lotNumber          String?
+  storageLocation    String?
+  labelUrl           String?
+  safetyDataSheetUrl String?
+  labelNotes         String?
+  active             Boolean  @default(true)
+  createdByUserId    String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  collection  Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  treatments TreatmentDefinitionProduct[]
+  applications TreatmentApplication[]
+
+  @@unique([collectionId, name, manufacturer])
+  @@index([collectionId, active])
+  @@index([expirationDate])
+}
+
+model TreatmentDefinitionProduct {
+  id                    String   @id @default(cuid())
+  collectionId          String
+  treatmentDefinitionId String
+  treatmentProductId    String
+  notes                 String?
+  sortOrder             Int      @default(0)
+
+  treatment TreatmentDefinition @relation(fields: [treatmentDefinitionId], references: [id], onDelete: Cascade)
+  product   TreatmentProduct @relation(fields: [treatmentProductId], references: [id], onDelete: Restrict)
+
+  @@unique([treatmentDefinitionId, treatmentProductId])
+  @@index([collectionId])
+  @@index([treatmentProductId])
+}
+
+model TreatmentConditionType {
+  id                    String @id @default(cuid())
+  collectionId          String
+  treatmentDefinitionId String
+  conditionType         String
+
+  treatment TreatmentDefinition @relation(fields: [treatmentDefinitionId], references: [id], onDelete: Cascade)
+
+  @@unique([treatmentDefinitionId, conditionType])
+  @@index([collectionId, conditionType])
+}
+
+model TreatmentTagCaution {
+  id                    String @id @default(cuid())
+  collectionId          String
+  treatmentDefinitionId String
+  plantTagId            String
+  severity              String @default("WARNING")
+  warningText           String
+
+  treatment TreatmentDefinition @relation(fields: [treatmentDefinitionId], references: [id], onDelete: Cascade)
+  plantTag  PlantTag @relation(fields: [plantTagId], references: [id], onDelete: Restrict)
+
+  @@unique([treatmentDefinitionId, plantTagId])
+  @@index([collectionId])
+  @@index([plantTagId])
+}
+
+model TreatmentPlan {
+  id                String    @id @default(cuid())
+  collectionId      String
+  plantInstanceId   String
+  plantConditionId  String?
+  title             String
+  status            String    @default("ACTIVE")
+  startedAt         DateTime  @default(now())
+  completedAt       DateTime?
+  cancelledAt       DateTime?
+  finalOutcome      String?
+  finalEffectiveness String?
+  finalNotes        String?
+  createdByUserId   String?
+  updatedByUserId   String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  collection    Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  plantInstance PlantInstance @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
+  condition     PlantCondition? @relation(fields: [plantConditionId], references: [id], onDelete: SetNull)
+  steps         TreatmentPlanStep[]
+  applications  TreatmentApplication[]
+
+  @@index([collectionId, status])
+  @@index([plantInstanceId, status])
+  @@index([plantConditionId])
+}
+
+model TreatmentPlanStep {
+  id                    String    @id @default(cuid())
+  collectionId          String
+  treatmentPlanId       String
+  treatmentDefinitionId String?
+  stepType              String
+  title                 String
+  instructions          String?
+  scheduledAt           DateTime
+  sortOrder             Int       @default(0)
+  required              Boolean   @default(true)
+  status                String    @default("PENDING")
+  completedAt           DateTime?
+  completedByUserId     String?
+  completionNotes       String?
+  treatmentSnapshotJson Json?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  plan       TreatmentPlan @relation(fields: [treatmentPlanId], references: [id], onDelete: Cascade)
+  treatment  TreatmentDefinition? @relation(fields: [treatmentDefinitionId], references: [id], onDelete: SetNull)
+  application TreatmentApplication?
+
+  @@index([collectionId, status, scheduledAt])
+  @@index([treatmentPlanId, sortOrder])
+  @@index([treatmentDefinitionId])
+}
+
+model TreatmentApplication {
+  id                    String   @id @default(cuid())
+  collectionId          String
+  plantInstanceId       String
+  plantConditionId      String?
+  treatmentPlanId       String?
+  treatmentPlanStepId   String?  @unique
+  treatmentDefinitionId String?
+  treatmentProductId    String?
+  appliedByUserId       String?
+  appliedAt             DateTime @default(now())
+  treatmentNameSnapshot String
+  productNameSnapshot   String?
+  doseAmount            Float?
+  doseUnit              String?
+  waterVolumeMl         Float?
+  strength              String?
+  applicationMethod     String?
+  instructionsSnapshot  String?
+  safetySnapshotJson    Json?
+  notes                 String?
+  adverseReaction       Boolean  @default(false)
+  correctedAt           DateTime?
+  correctionReason      String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  collection    Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  plantInstance PlantInstance @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
+  condition     PlantCondition? @relation(fields: [plantConditionId], references: [id], onDelete: SetNull)
+  plan          TreatmentPlan? @relation(fields: [treatmentPlanId], references: [id], onDelete: SetNull)
+  planStep      TreatmentPlanStep? @relation(fields: [treatmentPlanStepId], references: [id], onDelete: SetNull)
+  treatment     TreatmentDefinition? @relation(fields: [treatmentDefinitionId], references: [id], onDelete: SetNull)
+  product       TreatmentProduct? @relation(fields: [treatmentProductId], references: [id], onDelete: SetNull)
+  outcomes      TreatmentApplicationOutcome[]
+
+  @@index([collectionId, appliedAt])
+  @@index([plantInstanceId, appliedAt])
+  @@index([plantConditionId])
+  @@index([treatmentDefinitionId, appliedAt])
+  @@index([treatmentPlanId])
+}
+
+model TreatmentApplicationOutcome {
+  id                       String   @id @default(cuid())
+  collectionId             String
+  treatmentApplicationId   String
+  recordedByUserId         String?
+  observedAt               DateTime @default(now())
+  effectiveness            String
+  conditionResponse        String?
+  adverseEffects           String?
+  notes                    String?
+  createdAt                DateTime @default(now())
+
+  collection  Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  application TreatmentApplication @relation(fields: [treatmentApplicationId], references: [id], onDelete: Cascade)
+
+  @@index([collectionId, observedAt])
+  @@index([treatmentApplicationId, observedAt])
+  @@index([effectiveness])
+}
+
 model PlantCondition {
   id              String    @id @default(cuid())
   collectionId    String?
@@ -2296,6 +2547,8 @@ model PlantCondition {
   collection    Collection?    @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   plantInstance PlantInstance @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
   user          User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  treatmentPlans TreatmentPlan[]
+  treatmentApplications TreatmentApplication[]
 
   @@index([collectionId])
   @@index([plantInstanceId])
