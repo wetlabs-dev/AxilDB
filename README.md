@@ -356,6 +356,8 @@ The restore script restores Postgres and extracts uploaded images/labels. It doe
 
 ## Docker Deployment
 
+Docker builds give the Next.js builder a 2 GB Node heap ceiling and use memory-optimized, single-worker compilation. This applies only while building the image, not while running AxilDB. On an unusually constrained or large build host, override the ceiling with `docker compose build --build-arg NODE_BUILD_MEMORY_MB=3072` before `docker compose up -d`.
+
 Point DNS for `axildb.com`, `www.axildb.com`, and `app.axildb.com` at the server. Make sure inbound ports 80 and 443 are open.
 
 Then on the server:

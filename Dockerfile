@@ -6,7 +6,9 @@ RUN npm ci
 
 FROM node:22-alpine AS builder
 WORKDIR /app
+ARG NODE_BUILD_MEMORY_MB=2048
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_OPTIONS="--max-old-space-size=${NODE_BUILD_MEMORY_MB}"
 RUN apk add --no-cache openssl postgresql-client
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
