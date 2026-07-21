@@ -113,6 +113,8 @@ export async function POST(req: Request) {
       husbandryOverride: true,
       blooms: { orderBy: { bloomStartDate: 'desc' }, take: 3 },
       conditions: { where: { status: { in: ['OPEN', 'IMPROVING'] } }, orderBy: { observedAt: 'desc' }, take: 5 },
+      currentLocation: true,
+      quarantines: { where: { status: 'ACTIVE' }, orderBy: { startDate: 'desc' }, take: 1 },
     },
   })
 
@@ -148,6 +150,10 @@ export async function POST(req: Request) {
     orderBy: { name: 'asc' },
     take: 6,
   }) : []
+  const [activeTreatmentPlans, recentTreatmentApplications] = await Promise.all([
+    prisma.treatmentPlan.findMany({ where: { collectionId: collection.id, plantInstanceId: plant.id, status: 'ACTIVE' }, include: { steps: { orderBy: { scheduledAt: 'asc' } } }, take: 3 }),
+    prisma.treatmentApplication.findMany({ where: { collectionId: collection.id, plantInstanceId: plant.id }, include: { outcomes: { orderBy: { observedAt: 'desc' }, take: 1 } }, orderBy: { appliedAt: 'desc' }, take: 5 }),
+  ])
 
   const sourceHusbandryGuide = plant.plantDefinition.husbandryGuide?.sourcePlantDefinitionId
     ? await prisma.plantHusbandryGuide.findFirst({
@@ -189,6 +195,8 @@ export async function POST(req: Request) {
     type: plant.instanceType,
     status: plant.status,
     location: plant.location || null,
+    structuredLocation: plant.currentLocation ? { code: plant.currentLocation.code, name: plant.currentLocation.name } : null,
+    activeQuarantine: plant.quarantines[0] ? { riskLevel: plant.quarantines[0].riskLevel, targetReleaseDate: fmtDate(plant.quarantines[0].targetReleaseDate, timezone) } : null,
     acquired: fmtDate(plant.acquisitionDate, timezone),
     propagated: fmtDate(plant.propagationDate, timezone),
     source: plant.source || null,
@@ -232,6 +240,8 @@ export async function POST(req: Request) {
       notes: bloom.notes || null,
     })),
     attachedPhoto: selectedPhoto ? { caption: selectedPhoto.caption || null } : null,
+    activeTreatmentPlans: activeTreatmentPlans.map((plan) => ({ title: plan.title, progress: `${plan.steps.filter((step) => step.status === 'COMPLETED').length}/${plan.steps.length}`, nextStep: plan.steps.find((step) => step.status === 'PENDING')?.title || null })),
+    recentTreatmentApplications: recentTreatmentApplications.map((application) => ({ treatment: application.treatmentNameSnapshot, appliedAt: fmtDate(application.appliedAt, timezone), adverseReaction: application.adverseReaction, outcome: application.outcomes[0]?.outcome || null, effectiveness: application.outcomes[0]?.effectiveness || null })),
     collectionTreatmentOptions: availableTreatments.map((treatment) => {
       const plans = [...new Map(treatment.planSteps.map((step) => [step.plan.id, step.plan])).values()]
       const effectiveness = summarizeTreatmentEffectiveness(plans)
@@ -250,7 +260,7 @@ export async function POST(req: Request) {
           minimumIntervalDays: treatment.minimumIntervalDays,
           safetyNotes: treatment.safetyNotes,
         },
-        collectionOutcomeSummary: { completedPlans: effectiveness.completed, favorablePlans: effectiveness.effective, label: effectiveness.label },
+        collectionOutcomeSummary: { completedPlans: effectiveness.completed, favorablePlans: effectiveness.effective, adverseReactions: effectiveness.adverse, label: effectiveness.label, sampleLabel: effectiveness.sampleLabel },
       }
     }),
   }
@@ -271,7 +281,7 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         model,
         instructions:
-          'You are AxilDB Green Thumb, a concise horticultural care assistant. Answer under 50 words. Directly address the user question for this exact plant scenario. Be practical and cautious. If relevant, prefer a named collectionTreatmentOption over inventing a treatment, but never tell the user that AxilDB applied or scheduled it. Treat collection outcome summaries as descriptive local records, not scientific evidence. If a photo is provided, use it only as supporting context and do not overstate certainty. Return plain text only, no markdown.',
+          'You are AxilDB Green Thumb, a concise horticultural care assistant. Answer under 50 words. Directly address the user question for this exact plant scenario. Be practical and cautious. If relevant, prefer a named collectionTreatmentOption over inventing a treatment, mention its safety constraints, and treat collection outcomes as descriptive local records rather than scientific evidence. If no saved treatment fits, you may suggest a short reviewable treatment-definition idea, but never claim it was created, applied, or scheduled. If a photo is provided, use it only as supporting context and do not overstate certainty. Return plain text only, no markdown.',
         input: [{ role: 'user', content: inputContent }],
         max_output_tokens: 150,
         store: false,
@@ -320,6 +330,7 @@ export async function POST(req: Request) {
         name: treatment.name,
         href: collectionPath(collection.slug, `/treatments?selected=${treatment.id}`),
         applyHref: collectionPath(collection.slug, `/treatments/apply?plant=${plant.id}&treatment=${treatment.id}${plant.conditions[0] ? `&condition=${plant.conditions[0].id}` : ''}`),
+        startPlanHref: collectionPath(collection.slug, `/treatments?plant=${plant.id}&condition=${plant.conditions[0]?.id || ''}&selected=${treatment.id}`),
       })),
     })
   } catch (error) {

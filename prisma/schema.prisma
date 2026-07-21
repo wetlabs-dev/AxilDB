@@ -261,6 +261,8 @@ model Collection {
   treatmentPlanSteps  TreatmentPlanStep[]
   treatmentApplications TreatmentApplication[]
   treatmentApplicationOutcomes TreatmentApplicationOutcome[]
+  treatmentApplicationBatches TreatmentApplicationBatch[]
+  treatmentApplicationBatchItems TreatmentApplicationBatchItem[]
   acquisitionResearchEntries AcquisitionResearchEntry[]
   plantObservations   PlantObservation[]
   plantAcquisitionRecords PlantAcquisitionRecord[]
@@ -1984,6 +1986,7 @@ model PlantInstance {
   quietDayAdjustments CareQuietDayAdjustment[]
   treatmentPlans TreatmentPlan[]
   treatmentApplications TreatmentApplication[]
+  treatmentApplicationBatchItems TreatmentApplicationBatchItem[]
 
   @@index([collectionId])
   @@unique([collectionId, plantId])
@@ -2294,28 +2297,42 @@ model TreatmentDefinition {
   slug                     String
   category                 String
   active                   Boolean  @default(true)
+  description              String?
   targetSummary            String?
+  targetArea               String?
   instructions             String?
   manufacturerDoseText     String?
   defaultDoseAmount        Float?
   defaultDoseUnit          String?
   defaultWaterVolumeMl     Float?
+  defaultWaterVolumeUnit   String?  @default("ML")
   defaultStrength          String?
   applicationMethod        String?
   minimumIntervalDays      Int?
   defaultRepeatCount       Int?
   defaultRepeatIntervalDays Int?
   defaultFollowUpDays      Int?
+  maximumApplications      Int?
+  petSafety                String?
   requiresQuarantine       Boolean  @default(false)
   reentryIntervalHours     Int?
   ventilationRequired      Boolean  @default(false)
   indoorUseAllowed         Boolean?
+  outdoorApplicationPreferred Boolean @default(false)
+  keepAwayAquaticSystems   Boolean  @default(false)
+  temperatureMinC          Float?
+  temperatureMaxC          Float?
   avoidBlooms              Boolean  @default(false)
   avoidHeat                Boolean  @default(false)
   avoidDirectLight         Boolean  @default(false)
   ppeRequirementsJson      Json?
   safetyNotes              String?
   contraindications        String?
+  incompatibilities        String?
+  precautions              String?
+  disposalNotes            String?
+  sourceUrlsJson           Json?
+  archivedAt               DateTime?
   createdByUserId          String?
   createdAt                DateTime @default(now())
   updatedAt                DateTime @updatedAt
@@ -2326,6 +2343,7 @@ model TreatmentDefinition {
   cautionTags      TreatmentTagCaution[]
   planSteps        TreatmentPlanStep[]
   applications     TreatmentApplication[]
+  applicationBatches TreatmentApplicationBatch[]
 
   @@unique([collectionId, slug])
   @@index([collectionId, active])
@@ -2349,8 +2367,12 @@ model TreatmentProduct {
   storageLocation    String?
   labelUrl           String?
   safetyDataSheetUrl String?
+  websiteUrl         String?
+  petSafety          String?
   labelNotes         String?
+  notes              String?
   active             Boolean  @default(true)
+  archivedAt         DateTime?
   createdByUserId    String?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
@@ -2369,6 +2391,9 @@ model TreatmentDefinitionProduct {
   collectionId          String
   treatmentDefinitionId String
   treatmentProductId    String
+  amount                 Float?
+  unit                   String?
+  role                   String?
   notes                 String?
   sortOrder             Int      @default(0)
 
@@ -2385,6 +2410,9 @@ model TreatmentConditionType {
   collectionId          String
   treatmentDefinitionId String
   conditionType         String
+  suitability           String   @default("POSSIBLE")
+  notes                 String?
+  createdAt             DateTime @default(now())
 
   treatment TreatmentDefinition @relation(fields: [treatmentDefinitionId], references: [id], onDelete: Cascade)
 
@@ -2414,8 +2442,10 @@ model TreatmentPlan {
   plantInstanceId   String
   plantConditionId  String?
   title             String
+  description       String?
   status            String    @default("ACTIVE")
   startedAt         DateTime  @default(now())
+  targetCompletionAt DateTime?
   completedAt       DateTime?
   cancelledAt       DateTime?
   finalOutcome      String?
@@ -2423,6 +2453,9 @@ model TreatmentPlan {
   finalNotes        String?
   createdByUserId   String?
   updatedByUserId   String?
+  assignedToUserId  String?
+  finalOutcomeAmendmentReason String?
+  conditionReviewJson Json?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
@@ -2446,12 +2479,18 @@ model TreatmentPlanStep {
   title                 String
   instructions          String?
   scheduledAt           DateTime
+  timingMode            String    @default("FIXED_DATE")
+  offsetDays            Int?
+  repeatEveryDays       Int?
+  repeatCount           Int?
   sortOrder             Int       @default(0)
   required              Boolean   @default(true)
   status                String    @default("PENDING")
   completedAt           DateTime?
   completedByUserId     String?
   completionNotes       String?
+  skippedAt             DateTime?
+  skipReason            String?
   treatmentSnapshotJson Json?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
@@ -2475,6 +2514,7 @@ model TreatmentApplication {
   treatmentPlanStepId   String?  @unique
   treatmentDefinitionId String?
   treatmentProductId    String?
+  treatmentApplicationBatchItemId String? @unique
   appliedByUserId       String?
   appliedAt             DateTime @default(now())
   treatmentNameSnapshot String
@@ -2484,12 +2524,19 @@ model TreatmentApplication {
   waterVolumeMl         Float?
   strength              String?
   applicationMethod     String?
+  targetArea            String?
   instructionsSnapshot  String?
   safetySnapshotJson    Json?
   notes                 String?
+  immediateResponse     String?
   adverseReaction       Boolean  @default(false)
+  adverseReactionNotes  String?
+  followUpDueAt         DateTime?
+  intervalOverrideNote  String?
   correctedAt           DateTime?
+  correctedByUserId     String?
   correctionReason      String?
+  originalSnapshotJson  Json?
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
@@ -2501,6 +2548,7 @@ model TreatmentApplication {
   treatment     TreatmentDefinition? @relation(fields: [treatmentDefinitionId], references: [id], onDelete: SetNull)
   product       TreatmentProduct? @relation(fields: [treatmentProductId], references: [id], onDelete: SetNull)
   outcomes      TreatmentApplicationOutcome[]
+  batchItem     TreatmentApplicationBatchItem? @relation(fields: [treatmentApplicationBatchItemId], references: [id], onDelete: SetNull)
 
   @@index([collectionId, appliedAt])
   @@index([plantInstanceId, appliedAt])
@@ -2516,9 +2564,14 @@ model TreatmentApplicationOutcome {
   recordedByUserId         String?
   observedAt               DateTime @default(now())
   effectiveness            String
+  outcome                   String @default("UNKNOWN")
   conditionResponse        String?
+  observedConditionSeverity String?
   adverseEffects           String?
   notes                    String?
+  correctedAt              DateTime?
+  correctedByUserId        String?
+  correctionReason         String?
   createdAt                DateTime @default(now())
 
   collection  Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
@@ -2527,6 +2580,50 @@ model TreatmentApplicationOutcome {
   @@index([collectionId, observedAt])
   @@index([treatmentApplicationId, observedAt])
   @@index([effectiveness])
+}
+
+model TreatmentApplicationBatch {
+  id                    String   @id @default(cuid())
+  collectionId          String
+  treatmentDefinitionId String
+  createdByUserId       String?
+  idempotencyKey        String
+  appliedAt             DateTime
+  sharedValuesJson      Json
+  createdAt             DateTime @default(now())
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  treatment TreatmentDefinition @relation(fields: [treatmentDefinitionId], references: [id], onDelete: Restrict)
+  items TreatmentApplicationBatchItem[]
+
+  @@unique([collectionId, idempotencyKey])
+  @@index([collectionId, appliedAt])
+  @@index([treatmentDefinitionId])
+}
+
+model TreatmentApplicationBatchItem {
+  id                       String   @id @default(cuid())
+  collectionId             String
+  batchId                   String
+  plantInstanceId           String
+  plantConditionId          String?
+  treatmentPlanStepId       String?
+  status                    String   @default("PENDING")
+  warningSnapshotJson       Json?
+  error                     String?
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  batch TreatmentApplicationBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  plantInstance PlantInstance @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
+  condition PlantCondition? @relation(fields: [plantConditionId], references: [id], onDelete: SetNull)
+  application TreatmentApplication?
+
+  @@unique([batchId, plantInstanceId])
+  @@index([collectionId, status])
+  @@index([plantInstanceId])
+  @@index([plantConditionId])
 }
 
 model PlantCondition {
@@ -2549,6 +2646,7 @@ model PlantCondition {
   user          User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
   treatmentPlans TreatmentPlan[]
   treatmentApplications TreatmentApplication[]
+  treatmentApplicationBatchItems TreatmentApplicationBatchItem[]
 
   @@index([collectionId])
   @@index([plantInstanceId])

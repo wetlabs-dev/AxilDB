@@ -159,6 +159,7 @@ function ConditionActionsPanel({
 
       <div className="rounded-md border border-stone-200 bg-white/75 p-3">
         <h4 className="text-sm font-semibold text-stone-800">Condition actions</h4>
+        {item.plantInstanceId && item.conditionId && <div className="mt-2 flex flex-wrap gap-2"><Link href={`/c/${encodeURIComponent(collectionSlug)}/treatments?plant=${encodeURIComponent(item.plantInstanceId)}&condition=${encodeURIComponent(item.conditionId)}`} className="rounded-md bg-[#2f6b45] px-3 py-2 text-sm font-semibold text-white">Start treatment plan</Link><Link href={`/c/${encodeURIComponent(collectionSlug)}/treatments/apply?plant=${encodeURIComponent(item.plantInstanceId)}&condition=${encodeURIComponent(item.conditionId)}`} className="rounded-md border border-[#8fa58f] bg-white px-3 py-2 text-sm font-semibold text-[#2f6b45]">Apply one-off treatment</Link></div>}
         <div className="mt-3 grid gap-3">
           <form action={resolveConditionFromCareQueue} className="grid gap-2">
             <ConditionHiddenFields item={item} collectionSlug={collectionSlug} back={back} />

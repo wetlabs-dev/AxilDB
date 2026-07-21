@@ -2,16 +2,17 @@ import { recordTreatmentApplication } from '@/app/treatment-actions'
 import { Button, Card, Field, LinkButton, Select, TextArea } from '@/components/ui'
 import { collectionPath, requireCollectionLogger } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
-import { labelizeTreatment, treatmentApplicationMethods, treatmentDoseUnits, treatmentSafetyWarnings } from '@/lib/treatments'
+import { labelizeTreatment, treatmentApplicationMethods, treatmentDoseUnits, treatmentSafetyWarnings, treatmentTargetAreas } from '@/lib/treatments'
 import { plantName } from '@/lib/utils'
 
 export default async function TreatmentApplyPage({ searchParams }: { searchParams: Promise<{ plant?: string; treatment?: string; condition?: string }> }) {
   const { collection } = await requireCollectionLogger()
   const sp = await searchParams
-  const [plants, treatments, conditions] = await Promise.all([
+  const [plants, treatments, conditions, quarantineLocations] = await Promise.all([
     prisma.plantInstance.findMany({ where: { collectionId: collection.id, status: 'ACTIVE' }, include: { plantDefinition: true }, orderBy: { plantId: 'asc' }, take: 750 }),
     prisma.treatmentDefinition.findMany({ where: { collectionId: collection.id, active: true }, include: { conditionTypes: true, products: { include: { product: true }, orderBy: { sortOrder: 'asc' } }, cautionTags: true }, orderBy: { name: 'asc' } }),
     prisma.plantCondition.findMany({ where: { collectionId: collection.id, status: { in: ['OPEN', 'IMPROVING'] } }, orderBy: { observedAt: 'desc' } }),
+    prisma.location.findMany({ where: { collectionId: collection.id, status: 'ACTIVE', locationType: { name: { contains: 'quarantine', mode: 'insensitive' } } }, orderBy: { name: 'asc' } }),
   ])
   const plant = plants.find((item) => item.id === sp.plant)
   const treatment = treatments.find((item) => item.id === sp.treatment)
@@ -41,8 +42,14 @@ export default async function TreatmentApplyPage({ searchParams }: { searchParam
         <Select label="Actual dose unit" name="doseUnit" defaultValue={treatment.defaultDoseUnit || ''}><option value="">Not recorded</option>{treatmentDoseUnits.map((item) => <option key={item} value={item}>{labelizeTreatment(item)}</option>)}</Select>
         <Field label="Actual water volume (mL)" name="waterVolumeMl" type="number" min="0" step="any" placeholder={treatment.defaultWaterVolumeMl != null ? `Saved reference: ${treatment.defaultWaterVolumeMl}` : ''} />
         <Field label="Actual strength" name="strength" placeholder={treatment.defaultStrength ? `Saved reference: ${treatment.defaultStrength}` : ''} />
+        <Select label="Target area" name="targetArea" defaultValue={treatment.targetArea || ''}><option value="">Not recorded</option>{treatmentTargetAreas.map((item) => <option key={item} value={item}>{labelizeTreatment(item)}</option>)}</Select>
+        <Field label="Follow-up due" name="followUpDueAt" type="date" />
+        <TextArea label="Immediate response" name="immediateResponse" wrapperClassName="md:col-span-2" />
         <TextArea label="Application notes" name="notes" wrapperClassName="md:col-span-2" />
-        <div className="space-y-2 md:col-span-3"><label className="inline-flex items-center gap-2 text-sm font-medium"><input type="checkbox" name="adverseReaction" />Adverse reaction observed during application</label>{warnings.length > 0 && <label className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm font-medium"><input className="mt-1" type="checkbox" name="acknowledgeWarnings" required />I reviewed these warnings and verified the product label, dose, PPE, environment, and local requirements.</label>}</div>
+        <TextArea label="Adverse reaction notes" name="adverseReactionNotes" />
+        {warnings.some((warning) => warning.severity === 'BLOCKING') && <TextArea label="Required interval override note" name="intervalOverrideNote" required wrapperClassName="md:col-span-3" />}
+        {treatment.requiresQuarantine && <div className="grid gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 md:col-span-3 md:grid-cols-2"><label className="inline-flex items-center gap-2 text-sm font-medium"><input type="checkbox" name="startQuarantine" />Start quarantine with this application</label><Select label="Quarantine location" name="quarantineLocationId"><option value="">No location change</option>{quarantineLocations.map((location) => <option key={location.id} value={location.id}>{location.code} · {location.name}</option>)}</Select><label className="inline-flex items-center gap-2 text-sm"><input type="checkbox" name="moveToQuarantine" />Move the plant to the selected quarantine location</label></div>}
+        <div className="space-y-2 md:col-span-3"><label className="inline-flex items-center gap-2 text-sm font-medium"><input type="checkbox" name="adverseReaction" />Adverse reaction observed during application</label><label className="inline-flex items-center gap-2 text-sm font-medium"><input type="checkbox" name="createFollowUpReminder" defaultChecked />Create a follow-up reminder when a due date is set</label>{warnings.length > 0 && <label className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm font-medium"><input className="mt-1" type="checkbox" name="acknowledgeWarnings" required />I reviewed these warnings and verified the product label, dose, PPE, environment, and local requirements.</label>}</div>
         <Button className="w-fit md:col-span-3">Record application</Button>
       </form>
     </Card>}

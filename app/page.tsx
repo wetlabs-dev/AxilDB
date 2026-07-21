@@ -325,6 +325,7 @@ export default async function Dashboard({
   )
   const canViewCollectionUpdates = canEditInCollection(context.user, context)
   const canStartWorkflows = canCreateInCollection(context.user, context)
+  const canViewTreatmentRecords = Boolean(context.user && (context.membership?.status === 'ACTIVE' || isServerAdminRole(context.user.role)))
   await ensureStarterWorkflowTemplates(prisma, collection.id)
   const briefing = canGenerateBriefing
     ? await getOrCreateTodaysCollectionBriefing(prisma, {
@@ -419,6 +420,11 @@ export default async function Dashboard({
     }),
   ])
   const care = careQueueSummary(careItems, new Date(), preferences?.timezone)
+  const [activeTreatmentPlans, overdueTreatmentSteps, adverseTreatmentApplications] = await Promise.all([
+    canViewTreatmentRecords ? prisma.treatmentPlan.count({ where: { collectionId: collection.id, status: 'ACTIVE' } }) : Promise.resolve(0),
+    canViewTreatmentRecords ? prisma.treatmentPlanStep.count({ where: { collectionId: collection.id, status: 'PENDING', scheduledAt: { lt: new Date() }, plan: { status: 'ACTIVE' } } }) : Promise.resolve(0),
+    canViewTreatmentRecords ? prisma.treatmentApplication.count({ where: { collectionId: collection.id, adverseReaction: true, appliedAt: { gte: new Date(Date.now() - 30 * 86_400_000) } } }) : Promise.resolve(0),
+  ])
 
   const domainActivityPlantIds = domainActivityEvents.map((event) => {
     const payload = event.payloadJson && typeof event.payloadJson === 'object' && !Array.isArray(event.payloadJson) ? event.payloadJson as Record<string, unknown> : {}
@@ -623,6 +629,8 @@ export default async function Dashboard({
           </Link>
         ))}
       </div>
+
+      {(activeTreatmentPlans > 0 || overdueTreatmentSteps > 0 || adverseTreatmentApplications > 0) && <Card><div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="font-serif text-xl font-semibold">Treatment attention</h3><p className="mt-1 text-sm text-stone-600">{activeTreatmentPlans} active plans · {overdueTreatmentSteps} overdue steps · {adverseTreatmentApplications} adverse reactions in the last 30 days</p></div><Link className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm font-semibold" href={collectionPath(collection.slug, '/treatments/reports')}>Open treatment reports</Link></div></Card>}
 
       {briefing && (
         <Card>

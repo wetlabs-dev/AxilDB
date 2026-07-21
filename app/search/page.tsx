@@ -7,6 +7,7 @@ import { sunshineCounts, sunshineKey, sunshineStateForUser } from '@/lib/sunshin
 import { plantName, fmtDate, taxonomyLabel } from '@/lib/utils'
 import Link from 'next/link'
 import { PlantTagRow } from '@/components/PlantTagChip'
+import { isServerAdminRole } from '@/lib/roles'
 
 const control = 'rounded-md border border-stone-300 bg-[#fffdf7] px-3 py-2 text-sm shadow-inner shadow-stone-200/30 outline-none focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
 const contains = (value: string) => ({ contains: value, mode: 'insensitive' as const })
@@ -18,7 +19,9 @@ export default async function SearchPage({
 }) {
   const sp = await searchParams
   const user = await getCurrentUser()
-  const { collection } = await requireCollectionViewer()
+  const context = await requireCollectionViewer()
+  const { collection } = context
+  const canSearchTreatments = Boolean(context.user && (context.membership?.status === 'ACTIVE' || isServerAdminRole(context.user.role)))
   const q = (sp.q || '').trim()
   const status = sp.status || ''
   const type = sp.type || ''
@@ -110,6 +113,10 @@ export default async function SearchPage({
     },
     orderBy: [{ isValidated: 'desc' }, { genus: 'asc' }, { species: 'asc' }, { cultivarName: 'asc' }],
   })
+  const treatmentResults = q && canSearchTreatments ? await prisma.treatmentDefinition.findMany({
+    where: { collectionId: collection.id, OR: [{ name: contains(q) }, { description: contains(q) }, { targetSummary: contains(q) }, { instructions: contains(q) }, { products: { some: { product: { OR: [{ name: contains(q) }, { manufacturer: contains(q) }, { activeIngredient: contains(q) }] } } } }, { applications: { some: { notes: contains(q) } } }] },
+    include: { products: { include: { product: true } }, conditionTypes: true, _count: { select: { applications: true, planSteps: true } } }, orderBy: { name: 'asc' }, take: 50,
+  }) : []
   const instanceSunshineTargets = instances.map((instance) => ({ targetType: 'PLANT_INSTANCE' as const, targetId: instance.id }))
   const [instanceSunshineCounts, currentUserSunshine] = await Promise.all([
     sunshineCounts(prisma, collection.id, instanceSunshineTargets),
@@ -189,6 +196,7 @@ export default async function SearchPage({
           ))}
         </Card>
       </div>
+      {q && canSearchTreatments && <Card><h3 className="mb-3 font-bold">Treatments and products</h3>{treatmentResults.map((treatment) => <div key={treatment.id} className="border-t border-stone-200 py-2 text-sm"><Link className="font-bold underline" href={collectionPath(collection.slug, `/treatments?selected=${treatment.id}`)}>{treatment.name}</Link><span> · {treatment.active ? 'active' : 'archived'} · {treatment._count.applications} applications</span><p className="text-stone-600">{treatment.conditionTypes.map((item) => taxonomyLabel(item.conditionType)).join(', ') || 'No condition links'}{treatment.products.length ? ` · Products: ${treatment.products.map((item) => item.product.name).join(', ')}` : ''}</p></div>)}{!treatmentResults.length && <p className="text-sm text-stone-600">No treatment results.</p>}</Card>}
     </div>
   )
 }
