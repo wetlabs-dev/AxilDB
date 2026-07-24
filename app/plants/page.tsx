@@ -17,6 +17,7 @@ import { acceptedPlantName, plantName, plantNeedsIdentification, taxonomyLabel }
 import Link from 'next/link'
 import { PlantTagPicker } from '@/components/PlantTagPicker'
 import { PlantTagRow } from '@/components/PlantTagChip'
+import { PlantTagFilter } from '@/components/PlantTagFilter'
 
 const selectClass = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
 
@@ -229,7 +230,11 @@ export default async function Plants({
         </AddPanel>
       )}
 
-      {activeTags.length > 0 && <Card><form className="grid gap-3 md:grid-cols-[minmax(0,1fr)_10rem_auto] md:items-end"><label className="grid gap-1 text-sm font-medium">Filter by tags<select className={selectClass} name="tag" multiple size={Math.min(5, activeTags.length)} defaultValue={selectedTagIds}>{activeTags.map((tag) => <option key={tag.id} value={tag.id}>{tag.name}</option>)}</select></label><label className="grid gap-1 text-sm font-medium">Match<select className={selectClass} name="tagMode" defaultValue={tagMode}><option value="any">Any selected</option><option value="all">All selected</option></select></label><div className="flex gap-2"><Button>Apply</Button>{selectedTagIds.length > 0 && <LinkButton href={collectionPath(collection.slug, '/plants')}>Clear</LinkButton>}</div></form></Card>}
+      {activeTags.length > 0 && (
+        <Card>
+          <PlantTagFilter tags={activeTags} selectedTagIds={selectedTagIds} matchMode={tagMode} />
+        </Card>
+      )}
 
       <div className="grid auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
         {sortedPlants.map((plant) => {
