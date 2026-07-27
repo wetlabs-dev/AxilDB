@@ -246,7 +246,7 @@ export default async function Instances({
             <div className="lg:col-span-4"><DistributorFields distributors={distributors} /></div>
             <div className="lg:col-span-4"><AcquisitionSourceChainFields sources={sources} /></div>
             <Field label="Stock number" help="Optional vendor, nursery, or collection stock number from the original source." name="stockNumber" list="instance-stock-number-suggestions" />
-            <Field label="Purchase price" help="Optional cost record for your own collection tracking." name="purchasePrice" type="number" />
+            <Field label="Purchase price" help="Optional cost record for your own collection tracking." name="purchasePrice" type="number" min="0" step="0.01" />
             <TextArea label="Notes" help="Initial observation or context to add to the plant's note history at creation." name="note" wrapperClassName="lg:col-span-2" />
             <Button className="justify-self-start lg:col-span-4">Create instance</Button>
           </form>

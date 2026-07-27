@@ -103,7 +103,7 @@ export default async function EditInstance({ params }: { params: Promise<{ id: s
             <a className="ml-2 font-semibold text-[#2f6b45] underline" href={collectionPath(collection.slug, `/acquisitions?definition=${instance.plantDefinitionId}`)}>Manage in Acquisition Pipeline</a>
           </div>
           <Field label="Stock number" name="stockNumber" defaultValue={instance.stockNumber} list="instance-stock-number-suggestions" />
-          <Field label="Purchase price" name="purchasePrice" type="number" defaultValue={instance.purchasePrice?.toString()} />
+          <Field label="Purchase price" name="purchasePrice" type="number" min="0" step="0.01" defaultValue={instance.purchasePrice?.toString()} />
           <Field label="Archive reason" name="archiveReason" defaultValue={instance.archiveReason} />
           <TextArea label="Archive notes" name="archiveNotes" defaultValue={instance.archiveNotes} wrapperClassName="lg:col-span-2" />
           <Button className="justify-self-start lg:col-span-4">Save changes</Button>
