@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client'
 import { randomBytes, scryptSync } from 'crypto'
 import { ensureStarterSubstrates } from '../lib/substrates'
+import { ensureDefaultSalesChannelTypes } from '../lib/provenance'
 
 const prisma = new PrismaClient()
 
@@ -67,6 +68,7 @@ async function main() {
     where: { id: collection.id },
   })
   await ensureStarterSubstrates(prisma, defaultCollection.id, admin.id)
+  await ensureDefaultSalesChannelTypes(prisma, defaultCollection.id)
 
   await prisma.collection.updateMany({ where: { status: { not: 'ARCHIVED' } }, data: { status: 'ACTIVE' } })
   await prisma.user.updateMany({ where: { email: 'admin@axildb.com' }, data: { role: 'SERVER_ADMIN' } })

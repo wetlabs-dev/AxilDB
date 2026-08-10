@@ -163,12 +163,12 @@ App route: `/acquisitions`
 - Open Acquisitions from the sidebar.
 - Open Wishlist for filterable acquisition cards or switch to the compact Shopping view. Select several definitions and choose Acquire selected to review one shared acquisition batch before any records are created.
 - Download the wishlist as CSV or a branded PDF using the same collection-scoped data and public privacy rules.
-- Use Add acquisition target to create a research or wishlist definition with status, priority, target price, desired specimen size, desired location, preferred sellers/storefronts/platforms, other vendor notes, interest notes, and research summary.
+- Use Add acquisition target to create a research or wishlist definition with status, priority, target price, desired specimen size, desired location, preferred sellers and sales channels, other vendor notes, interest notes, and research summary.
 - Filter by status, search researched plants, and sort by priority, recent observations, price, or name when shopping or planning.
 - Add Research Journal entries for chronological notes, URLs, citations, and the reasoning behind the target.
-- Use Seen at... to record the seller, sales channel, storefront or outlet, observed price, size, condition, availability, and notes.
-- Open Provenance to create reusable upstream sources, sellers, seller storefronts, distributors/platforms, and distributor-operated outlets.
-- On an observation, select a seller and marketplace storefront or a conventional distributor and outlet. Use Acquire from this observation to prefill all known provenance, price, and specimen size.
+- Use Seen at... to record the seller, sales channel, observed price, size, condition, availability, and notes.
+- Open Provenance to create reusable upstream sources, sellers, sales channels, and manager-defined sales-channel types.
+- On an observation, select who the plant came from and how it was sold or transferred. Use Acquire from this observation to prefill known provenance, price, and specimen size.
 - Use Acquire to create a permanent acquisition record, add an ordered source chain with roles, and optionally create one or more Plant Instances with generated IDs.
 - Enter the supplied acquisition label during acquisition when the nursery, seller, or source label should be preserved on each created specimen.
 - Choose whether an acquisition fulfills the intent, keeps it active, or marks it as a repeat-purchase target.
@@ -178,9 +178,11 @@ App route: `/acquisitions`
 - Acquisition status is stored on the Plant Definition and remains editable even after specimens exist, so owning one plant does not automatically remove future acquisition intent.
 - Acquisition Records are permanent historical records and can represent one plant, many plants, or a purchase/reservation that does not create Plant Instances yet.
 - Acquisition labels belong to Plant Instances, not Plant Definitions, because specimens of the same taxon may arrive under different labels.
-- Sources identify upstream origin. Sellers identify who actually sold or transferred the plant. Seller Storefronts identify that seller on a platform. Distributors identify the marketplace, retailer, nursery, auction platform, or sales channel; Outlets are branches or booths operated by that distributor.
-- Seller and distributor ratings and experience notes are collection-private. Source, seller, storefront, distributor, and outlet public visibility each default off.
-- Run the marketplace provenance migration in dry-run mode after deployment. Only obvious handle-like marketplace outlets are converted automatically; ambiguous records remain available in the reconciliation queue.
+- Sources identify upstream origin. Sellers identify who actually sold or transferred the plant. Sales Channels identify how that seller transacted, such as a website, marketplace profile, retail store, nursery, show, social account, or auction.
+- Seller ratings, experience notes, and sales-channel addresses are collection-private. Source, seller, and sales-channel public visibility each default off.
+- The Provenance cleanup panel merges duplicates, converts older outlet records with an affected-record preview, and only offers permanent deletion for records with no references.
+- Purchase History is the canonical acquisition browser. Wishlist and research records remain planning tools.
+- From a Plant Instance, use Manage acquisition to edit its date, supplied label, seller, sales channel, source chain, price, size, and notes. Saving creates a linked acquisition record automatically when an older specimen does not have one.
 - Archived provenance records remain visible on historical acquisitions but are not offered for new records. Managers can merge duplicates without breaking dependent history.
 - Collection Settings includes Acquisition visibility. It defaults to Private; public collection visitors only see the pipeline when managers explicitly set it to Public.
 - Managers can enable individual public wishlist fields. Every field is off by default, and exact locations, maximum prices, private journals/notes, distributor experience data, and non-public observations stay private.

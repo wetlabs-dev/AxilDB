@@ -10,6 +10,7 @@ import {
   PARTY_KINDS,
   SELLER_STOREFRONT_TYPES,
   SOURCE_TYPES,
+  ensureDefaultSalesChannelTypes,
   normalizeProvenanceName,
   validateCommerceSelection,
   validateDistributorSelection,
@@ -21,6 +22,7 @@ const value = (fd: FormData, key: string) => String(fd.get(key) || '').trim()
 const optional = (fd: FormData, key: string) => value(fd, key) || null
 const allowed = <T extends readonly string[]>(input: string, values: T, fallback: T[number]) => values.includes(input as T[number]) ? input as T[number] : fallback
 const page = (slug: string, suffix = '') => collectionPath(slug, `/provenance${suffix}`)
+const aliases = (fd: FormData) => value(fd, 'aliases').split(',').map((item) => item.trim()).filter(Boolean)
 
 function refresh(slug: string) {
   revalidatePath(page(slug))
@@ -44,7 +46,10 @@ export async function saveSource(fd: FormData) {
     locality: optional(fd, 'locality'),
     description: optional(fd, 'description'),
     notes: optional(fd, 'notes'),
+    aliasesJson: aliases(fd),
   }
+  const duplicate = await prisma.source.findFirst({ where: { collectionId: collection.id, normalizedName: data.normalizedName, ...(id ? { NOT: { id } } : {}) }, select: { name: true } })
+  if (duplicate) throw new Error(`Source “${duplicate.name}” already exists. Use the cleanup tools to merge duplicate records.`)
   const saved = id
     ? await prisma.source.update({ where: { id, collectionId: collection.id }, data })
     : await prisma.source.create({ data: { ...data, collectionId: collection.id, createdByUserId: user.id } })
@@ -77,6 +82,7 @@ export async function saveDistributor(fd: FormData) {
     description: optional(fd, 'description'),
     rating: Number.isInteger(ratingInput) && ratingInput >= 1 && ratingInput <= 5 ? ratingInput : null,
     experienceNotes: optional(fd, 'experienceNotes'),
+    aliasesJson: aliases(fd),
   }
   const previous = id ? await prisma.distributor.findFirstOrThrow({ where: { id, collectionId: collection.id } }) : null
   const saved = id
@@ -112,7 +118,13 @@ export async function saveSeller(fd: FormData) {
     description: optional(fd, 'description'),
     rating: Number.isInteger(ratingInput) && ratingInput >= 1 && ratingInput <= 5 ? ratingInput : null,
     experienceNotes: optional(fd, 'experienceNotes'),
+    aliasesJson: aliases(fd),
   }
+  const duplicate = await prisma.seller.findFirst({
+    where: { collectionId: collection.id, normalizedName: data.normalizedName, ...(id ? { NOT: { id } } : {}) },
+    select: { id: true, name: true },
+  })
+  if (duplicate) throw new Error(`Seller “${duplicate.name}” already exists. Use the cleanup tools to merge duplicate records.`)
   const previous = id ? await prisma.seller.findFirstOrThrow({ where: { id, collectionId: collection.id } }) : null
   const saved = await prisma.$transaction(async (tx) => {
     const seller = id
@@ -144,8 +156,11 @@ export async function saveSellerStorefront(fd: FormData) {
   const sellerId = value(fd, 'sellerId')
   const distributorId = optional(fd, 'distributorId')
   const handleOrName = value(fd, 'handleOrName')
-  if (!handleOrName) throw new Error('Storefront handle or name is required.')
+  if (!handleOrName) throw new Error('Sales channel name is required.')
   await validateCommerceSelection(prisma, collection.id, { sellerId, distributorId })
+  await ensureDefaultSalesChannelTypes(prisma, collection.id)
+  const salesChannelTypeId = value(fd, 'salesChannelTypeId')
+  if (salesChannelTypeId) await prisma.salesChannelType.findFirstOrThrow({ where: { id: salesChannelTypeId, collectionId: collection.id, active: true } })
   const normalizedName = normalizeProvenanceName(handleOrName)
   const duplicate = await prisma.sellerStorefront.findFirst({
     where: {
@@ -157,14 +172,22 @@ export async function saveSellerStorefront(fd: FormData) {
     },
     select: { id: true },
   })
-  if (duplicate) throw new Error('That seller storefront already exists for this channel.')
+  if (duplicate) throw new Error('That sales channel already exists for this seller. Use the cleanup tools to merge duplicates.')
   const data = {
     sellerId,
     distributorId,
     handleOrName,
     normalizedName,
     storefrontType: allowed(value(fd, 'storefrontType'), SELLER_STOREFRONT_TYPES, 'OTHER'),
+    salesChannelTypeId: salesChannelTypeId || null,
     profileUrl: optional(fd, 'profileUrl'),
+    addressLine1: optional(fd, 'addressLine1'),
+    addressLine2: optional(fd, 'addressLine2'),
+    city: optional(fd, 'city'),
+    region: optional(fd, 'region'),
+    postalCode: optional(fd, 'postalCode'),
+    country: optional(fd, 'country'),
+    phone: optional(fd, 'phone'),
     notes: optional(fd, 'notes'),
   }
   const saved = await prisma.$transaction(async (tx) => {
@@ -174,7 +197,7 @@ export async function saveSellerStorefront(fd: FormData) {
     await emitDomainEvent(tx, { eventType: id ? 'seller.storefront_updated' : 'seller.storefront_created', collectionId: collection.id, aggregateId: storefront.id, actor: { id: user.id, role: user.role }, idempotencyKey: `seller-storefront:${storefront.id}:${storefront.updatedAt.toISOString()}`, payload: { subjectId: storefront.id, displayName: storefront.handleOrName, sellerId: storefront.sellerId, distributorId: storefront.distributorId } })
     return storefront
   })
-  await audit(user, id ? 'UPDATE' : 'CREATE', 'SELLER_STOREFRONT', saved.id, `${id ? 'Updated' : 'Created'} seller storefront ${saved.handleOrName}`, { sellerId, distributorId }, collection.id)
+  await audit(user, id ? 'UPDATE' : 'CREATE', 'SALES_CHANNEL', saved.id, `${id ? 'Updated' : 'Created'} sales channel ${saved.handleOrName}`, { sellerId, salesChannelTypeId }, collection.id)
   refresh(collection.slug)
   redirect(page(collection.slug, `?seller=${sellerId}`))
 }
@@ -187,7 +210,32 @@ export async function toggleSellerStorefrontArchive(fd: FormData) {
     const updated = await tx.sellerStorefront.update({ where: { id: storefront.id }, data: { active, archivedAt: active ? null : new Date() } })
     await emitDomainEvent(tx, { eventType: active ? 'seller.storefront_restored' : 'seller.storefront_archived', collectionId: collection.id, aggregateId: storefront.id, actor: { id: user.id, role: user.role }, idempotencyKey: `seller-storefront:${storefront.id}:${active ? 'restored' : 'archived'}:${updated.updatedAt.toISOString()}`, payload: { subjectId: storefront.id, displayName: storefront.handleOrName, sellerId: storefront.sellerId } })
   })
-  await audit(user, 'UPDATE', 'SELLER_STOREFRONT', storefront.id, `${active ? 'Restored' : 'Archived'} seller storefront ${storefront.handleOrName}`, undefined, collection.id)
+  await audit(user, 'UPDATE', 'SALES_CHANNEL', storefront.id, `${active ? 'Restored' : 'Archived'} sales channel ${storefront.handleOrName}`, undefined, collection.id)
+  refresh(collection.slug)
+}
+
+export async function saveSalesChannelType(fd: FormData) {
+  const { user, collection } = await requireCollectionManager(value(fd, 'collectionSlug'))
+  const id = value(fd, 'id')
+  const name = value(fd, 'name')
+  if (!name) throw new Error('Channel type name is required.')
+  const normalizedName = normalizeProvenanceName(name)
+  const duplicate = await prisma.salesChannelType.findFirst({ where: { collectionId: collection.id, normalizedName, ...(id ? { NOT: { id } } : {}) } })
+  if (duplicate) throw new Error(`Channel type “${duplicate.name}” already exists.`)
+  const saved = id
+    ? await prisma.salesChannelType.update({ where: { id, collectionId: collection.id }, data: { name, normalizedName } })
+    : await prisma.salesChannelType.create({ data: { collectionId: collection.id, name, normalizedName, sortOrder: 100 } })
+  await audit(user, id ? 'UPDATE' : 'CREATE', 'SALES_CHANNEL_TYPE', saved.id, `${id ? 'Updated' : 'Created'} sales channel type ${saved.name}`, undefined, collection.id)
+  refresh(collection.slug)
+}
+
+export async function toggleSalesChannelTypeArchive(fd: FormData) {
+  const { user, collection } = await requireCollectionManager(value(fd, 'collectionSlug'))
+  const channelType = await prisma.salesChannelType.findFirstOrThrow({ where: { id: value(fd, 'id'), collectionId: collection.id } })
+  if (channelType.isBuiltIn && channelType.active) throw new Error('Built-in channel types cannot be archived.')
+  const active = !channelType.active
+  await prisma.salesChannelType.update({ where: { id: channelType.id }, data: { active, archivedAt: active ? null : new Date() } })
+  await audit(user, 'UPDATE', 'SALES_CHANNEL_TYPE', channelType.id, `${active ? 'Restored' : 'Archived'} sales channel type ${channelType.name}`, undefined, collection.id)
   refresh(collection.slug)
 }
 
@@ -360,6 +408,90 @@ export async function mergeSellers(fd: FormData) {
   refresh(collection.slug)
 }
 
+export async function mergeSalesChannels(fd: FormData) {
+  const { user, collection } = await requireCollectionManager(value(fd, 'collectionSlug'))
+  const canonicalId = value(fd, 'canonicalId')
+  const duplicateId = value(fd, 'duplicateId')
+  if (!canonicalId || !duplicateId || canonicalId === duplicateId) throw new Error('Choose two different sales channels.')
+  const [canonical, duplicate] = await Promise.all([
+    prisma.sellerStorefront.findFirstOrThrow({ where: { id: canonicalId, collectionId: collection.id } }),
+    prisma.sellerStorefront.findFirstOrThrow({ where: { id: duplicateId, collectionId: collection.id } }),
+  ])
+  await prisma.$transaction(async (tx) => {
+    await tx.plantObservation.updateMany({ where: { sellerStorefrontId: duplicate.id }, data: { sellerStorefrontId: canonical.id, sellerId: canonical.sellerId } })
+    await tx.plantAcquisitionRecord.updateMany({ where: { sellerStorefrontId: duplicate.id }, data: { sellerStorefrontId: canonical.id, sellerId: canonical.sellerId } })
+    await tx.acquisitionBatch.updateMany({ where: { sellerStorefrontId: duplicate.id }, data: { sellerStorefrontId: canonical.id, sellerId: canonical.sellerId } })
+    const preferences = await tx.plantDefinitionPreferredSeller.findMany({ where: { sellerStorefrontId: duplicate.id } })
+    for (const preference of preferences) {
+      const existing = await tx.plantDefinitionPreferredSeller.findFirst({ where: { plantDefinitionId: preference.plantDefinitionId, sellerId: canonical.sellerId, sellerStorefrontId: canonical.id } })
+      if (existing) await tx.plantDefinitionPreferredSeller.delete({ where: { id: preference.id } })
+      else await tx.plantDefinitionPreferredSeller.update({ where: { id: preference.id }, data: { sellerId: canonical.sellerId, sellerStorefrontId: canonical.id } })
+    }
+    await tx.sellerStorefront.delete({ where: { id: duplicate.id } })
+  })
+  await audit(user, 'MERGE', 'SALES_CHANNEL', canonical.id, `Merged sales channel ${duplicate.handleOrName} into ${canonical.handleOrName}`, { duplicateId }, collection.id)
+  refresh(collection.slug)
+}
+
+export async function deleteUnusedProvenanceRecord(fd: FormData) {
+  const { user, collection } = await requireCollectionManager(value(fd, 'collectionSlug'))
+  const recordType = value(fd, 'recordType')
+  const id = value(fd, 'id')
+  if (value(fd, 'confirmation') !== 'DELETE') throw new Error('Type DELETE to confirm permanent removal.')
+  let displayName = ''
+  if (recordType === 'SOURCE') {
+    const record = await prisma.source.findFirstOrThrow({ where: { id, collectionId: collection.id }, include: { _count: { select: { acquisitions: true } } } })
+    if (record._count.acquisitions) throw new Error('This source is referenced. Merge or archive it instead.')
+    displayName = record.name
+    await prisma.source.delete({ where: { id } })
+  } else if (recordType === 'SELLER') {
+    const record = await prisma.seller.findFirstOrThrow({ where: { id, collectionId: collection.id }, include: { _count: { select: { acquisitions: true, observations: true, acquisitionBatches: true, preferredBy: true, storefronts: true } } } })
+    if (Object.values(record._count).some(Boolean)) throw new Error('This seller is referenced. Merge or archive it instead.')
+    displayName = record.name
+    await prisma.seller.delete({ where: { id } })
+  } else if (recordType === 'SALES_CHANNEL') {
+    const record = await prisma.sellerStorefront.findFirstOrThrow({ where: { id, collectionId: collection.id }, include: { _count: { select: { acquisitions: true, observations: true, acquisitionBatches: true, preferredBy: true } } } })
+    if (Object.values(record._count).some(Boolean)) throw new Error('This sales channel is referenced. Merge or archive it instead.')
+    displayName = record.handleOrName
+    await prisma.sellerStorefront.delete({ where: { id } })
+  } else {
+    throw new Error('Unsupported provenance record type.')
+  }
+  await audit(user, 'DELETE', recordType, id, `Permanently deleted unused ${recordType.toLowerCase().replaceAll('_', ' ')} ${displayName}`, undefined, collection.id)
+  refresh(collection.slug)
+}
+
+export async function convertLegacyOutletToSalesChannel(fd: FormData) {
+  const { user, collection } = await requireCollectionManager(value(fd, 'collectionSlug'))
+  if (value(fd, 'confirmation') !== 'CONVERT') throw new Error('Type CONVERT to confirm this conversion.')
+  const outlet = await prisma.distributorOutlet.findFirstOrThrow({
+    where: { id: value(fd, 'outletId'), collectionId: collection.id },
+    include: { distributor: true },
+  })
+  const sellerId = value(fd, 'sellerId')
+  const seller = await prisma.seller.findFirstOrThrow({ where: { id: sellerId, collectionId: collection.id } })
+  await ensureDefaultSalesChannelTypes(prisma, collection.id)
+  const normalizedName = normalizeProvenanceName(outlet.name)
+  const typeName = outlet.outletType === 'PHYSICAL_BRANCH' ? 'retail store' : outlet.outletType === 'SHOW_EVENT_BOOTH' ? 'plant show' : 'website'
+  const channelType = await prisma.salesChannelType.findUniqueOrThrow({ where: { collectionId_normalizedName: { collectionId: collection.id, normalizedName: typeName } } })
+  const channel = await prisma.$transaction(async (tx) => {
+    const existing = await tx.sellerStorefront.findFirst({ where: { sellerId, normalizedName } })
+    const target = existing || await tx.sellerStorefront.create({ data: {
+      collectionId: collection.id, sellerId, distributorId: outlet.distributorId, handleOrName: outlet.name,
+      normalizedName, storefrontType: 'OTHER', salesChannelTypeId: channelType.id, profileUrl: outlet.url,
+      addressLine1: outlet.addressLine1, addressLine2: outlet.addressLine2, city: outlet.city, region: outlet.region,
+      postalCode: outlet.postalCode, country: outlet.country, phone: outlet.phone, notes: outlet.notes,
+    } })
+    await tx.plantObservation.updateMany({ where: { distributorOutletId: outlet.id }, data: { sellerId: seller.id, sellerStorefrontId: target.id } })
+    await tx.plantAcquisitionRecord.updateMany({ where: { distributorOutletId: outlet.id }, data: { sellerId: seller.id, sellerStorefrontId: target.id } })
+    await tx.acquisitionBatch.updateMany({ where: { distributorOutletId: outlet.id }, data: { sellerId: seller.id, sellerStorefrontId: target.id } })
+    await tx.distributorOutlet.update({ where: { id: outlet.id }, data: { active: false, archivedAt: new Date() } })
+    return target
+  })
+  await audit(user, 'MIGRATE', 'DISTRIBUTOR_OUTLET', outlet.id, `Converted legacy outlet ${outlet.name} to sales channel ${channel.handleOrName}`, { sellerId, salesChannelId: channel.id }, collection.id)
+  refresh(collection.slug)
+}
+
 export async function resolveProvenanceItem(fd: FormData) {
   const { user, collection } = await requireCollectionGardener(value(fd, 'collectionSlug'))
   const item = await prisma.provenanceReconciliationItem.findFirstOrThrow({ where: { id: value(fd, 'id'), collectionId: collection.id, status: 'PENDING' } })
@@ -401,7 +533,7 @@ export async function updateProvenanceVisibility(fd: FormData) {
     showDistributorIdentity: fd.get('showDistributorIdentity') === '1',
     showDistributorOutlet: fd.get('showDistributorIdentity') === '1' && fd.get('showDistributorOutlet') === '1',
     showSellerIdentity: fd.get('showSellerIdentity') === '1',
-    showSellerStorefront: fd.get('showSellerIdentity') === '1' && fd.get('showSellerStorefront') === '1',
+    showSellerStorefront: fd.get('showSellerStorefront') === '1',
   }
   await prisma.collection.update({ where: { id: collection.id }, data })
   await audit(user, 'UPDATE', 'COLLECTION', collection.id, 'Updated public provenance visibility', data, collection.id)

@@ -7,9 +7,10 @@ import { SOURCE_ROLES, provenanceLabel } from '@/lib/provenance'
 type SourceOption = { id: string; name: string; sourceType: string }
 type Row = { key: number; sourceId: string; role: string; notes: string; primary: boolean }
 
-export function AcquisitionSourceChainFields({ sources }: { sources: SourceOption[] }) {
-  const [nextKey, setNextKey] = useState(1)
-  const [rows, setRows] = useState<Row[]>([])
+export function AcquisitionSourceChainFields({ sources, initialRows = [] }: { sources: SourceOption[]; initialRows?: Array<{ sourceId: string; role: string; notes?: string | null; isPrimary?: boolean }> }) {
+  const seededRows = initialRows.map((row, index) => ({ key: index + 1, sourceId: row.sourceId, role: row.role, notes: row.notes || '', primary: Boolean(row.isPrimary) }))
+  const [nextKey, setNextKey] = useState(seededRows.length + 1)
+  const [rows, setRows] = useState<Row[]>(seededRows)
   const update = (key: number, changes: Partial<Row>) => setRows((current) => current.map((row) => row.key === key ? { ...row, ...changes } : row))
   const move = (index: number, direction: -1 | 1) => setRows((current) => {
     const target = index + direction

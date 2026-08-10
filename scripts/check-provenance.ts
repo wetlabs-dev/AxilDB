@@ -4,6 +4,7 @@ import { acquisitionProvenanceDisplay, distributorDisplay, isSimpleLegacyProvena
 
 async function main() {
   assert.equal(normalizeProvenanceName('  Costa   Farms '), 'costa farms')
+  assert.equal(normalizeProvenanceName('  Lowe’s  '), "lowe's")
   assert.equal(isSimpleLegacyProvenance('Costa Farms'), true)
   assert.equal(isSimpleLegacyProvenance('Costa Farms via Lowe’s'), false)
   assert.equal(isSimpleLegacyProvenance('Lowe’s / Costa'), false)
@@ -47,6 +48,17 @@ async function main() {
   assert.match(marketplaceMigration, /--dry-run/)
   assert.match(marketplaceMigration, /hasPhysicalEvidence/)
   assert.match(marketplaceMigration, /provenanceReconciliationItem\.upsert/)
+  const channelMigration = readFileSync('prisma/migrations/20260810210000_provenance_sales_channels/migration.sql', 'utf8')
+  assert.match(channelMigration, /CREATE TABLE "SalesChannelType"/)
+  assert.match(channelMigration, /UPDATE "PlantAcquisitionRecord"/)
+  assert.match(channelMigration, /AND ar\."sellerId" IS NULL/)
+  const acquisitionFields = readFileSync('components/DistributorFields.tsx', 'utf8')
+  assert.match(acquisitionFields, /Who did you get this from\?/)
+  assert.match(acquisitionFields, /How did you buy or receive it\?/)
+  assert.doesNotMatch(acquisitionFields, />Distributor outlet</)
+  const instanceEditor = readFileSync('app/instances/[id]/acquisition/page.tsx', 'utf8')
+  assert.match(instanceEditor, /Edit Acquisition &amp; Provenance/)
+  assert.match(instanceEditor, /savePlantInstanceAcquisition/)
   console.log('Provenance checks passed.')
 }
 

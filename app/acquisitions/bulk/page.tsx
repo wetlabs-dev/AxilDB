@@ -39,7 +39,7 @@ export default async function BulkAcquisitionPage({ searchParams }: {
     prisma.plantDefinition.findMany({ where: { collectionId: context.collection.id, id: { in: definitionIds }, acquisitionStatus: { not: null } }, include: { desiredLocation: true }, orderBy: { genus: 'asc' } }),
     prisma.location.findMany({ where: { collectionId: context.collection.id, status: 'ACTIVE' }, include: { locationType: true }, orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }] }),
     prisma.distributor.findMany({ where: { collectionId: context.collection.id, active: true }, include: { outlets: { where: { active: true }, orderBy: { name: 'asc' } } }, orderBy: { name: 'asc' } }),
-    prisma.seller.findMany({ where: { collectionId: context.collection.id, active: true }, include: { storefronts: { where: { active: true }, orderBy: { handleOrName: 'asc' } } }, orderBy: { name: 'asc' } }),
+    prisma.seller.findMany({ where: { collectionId: context.collection.id, active: true }, include: { storefronts: { where: { active: true }, include: { salesChannelType: true }, orderBy: { handleOrName: 'asc' } } }, orderBy: { name: 'asc' } }),
     prisma.acquisitionBatch.findMany({ where: { collectionId: context.collection.id }, include: { _count: { select: { items: true } }, distributor: true }, orderBy: { acquisitionDate: 'desc' }, take: 12 }),
   ])
   const nodes = locations.map((item) => ({ id: item.id, parentLocationId: item.parentLocationId, name: item.name, code: item.code, status: item.status, sortOrder: item.sortOrder, locationType: item.locationType }))

@@ -63,7 +63,7 @@ import { ensureStarterWorkflowTemplates } from '@/lib/workflows'
 import Link from 'next/link'
 import QRCode from 'qrcode'
 import { RefreshCw } from 'lucide-react'
-import { acquisitionProvenanceDisplay, sourceChainDisplay } from '@/lib/provenance'
+import { sourceChainDisplay } from '@/lib/provenance'
 import { labelizeTreatment } from '@/lib/treatments'
 import { assignPlantSubstrate } from '@/app/substrate-actions'
 import { compactRecipeComposition, substrateAssignmentLabel, substrateLabel, substrateModes } from '@/lib/substrates'
@@ -923,12 +923,24 @@ export default async function InstanceDetail({
         <img src={qr} className="h-28 w-28" alt="QR code" />
       </div>
 
+      <Card>
+        <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-bold">Acquisition &amp; provenance</h3><p className="mt-1 text-sm text-stone-600">The canonical record of how this specimen entered the collection.</p></div>{canCreateRecords && <Link className="text-sm font-semibold text-[#2f6b45] underline" href={collectionPath(collection.slug, `/instances/${i.id}/acquisition`)}>Manage acquisition</Link>}</div>
+        <div className="mt-3 grid gap-x-5 gap-y-1 text-sm sm:grid-cols-2 lg:grid-cols-3">
+          <p><span className="font-semibold">Acquired:</span> {fmtDate(i.acquisitionRecordLinks[0]?.acquisitionRecord.acquiredAt || i.acquisitionDate, timezone)}</p>
+          <p><span className="font-semibold">Acquisition label:</span> {i.acquisitionLabel || '—'}</p>
+          <p><span className="font-semibold">Seller:</span> {i.acquisitionRecordLinks[0]?.acquisitionRecord.seller?.name || 'Unknown'}</p>
+          <p><span className="font-semibold">Channel:</span> {i.acquisitionRecordLinks[0]?.acquisitionRecord.sellerStorefront?.handleOrName || 'Not specified'}</p>
+          <p><span className="font-semibold">Sources:</span> {sourceChainDisplay(i.acquisitionRecordLinks[0]?.acquisitionRecord.sources || [], i.source)}</p>
+          <p><span className="font-semibold">Price:</span> {i.acquisitionRecordLinks[0]?.acquisitionRecord.price ? `${i.acquisitionRecordLinks[0].acquisitionRecord.currency} ${i.acquisitionRecordLinks[0].acquisitionRecord.price}` : i.purchasePrice ? `$${i.purchasePrice}` : '—'}</p>
+          <p className="sm:col-span-2 lg:col-span-3"><span className="font-semibold">Linked acquisition:</span> {i.acquisitionRecordLinks[0]?.acquisitionRecord.id || 'No canonical record yet'}</p>
+        </div>
+      </Card>
+
       <div className="grid gap-4 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.35fr)]">
         <Card>
           <h3 className="font-bold">Identity</h3>
           <p className="font-medium">{plantName(i.plantDefinition)}</p>
           <p>Confidence: {taxonomyLabel(i.plantDefinition.confidence)}</p>
-          <p>Acquisition label: {i.acquisitionLabel || '—'}</p>
           {plantNeedsIdentification(i.plantDefinition) && (
             <div className="my-2 rounded-md border border-amber-300 bg-amber-50 p-2 text-amber-950">
               <p className="font-semibold">Needs identification review</p>
@@ -948,10 +960,7 @@ export default async function InstanceDetail({
           <p>Status: {i.status}</p>
           <p>Type: {i.instanceType}</p>
           <p>Location: {i.currentLocation ? `${i.currentLocation.code} · ${i.currentLocation.name}` : i.location || '—'}</p>
-          <p>Acquired: {fmtDate(i.acquisitionDate, timezone)}</p>
           <p>Propagated: {fmtDate(i.propagationDate, timezone)}</p>
-          <p>Source: {sourceChainDisplay(i.acquisitionRecordLinks[0]?.acquisitionRecord.sources || [], i.source)}</p>
-          <p>Acquired through: {acquisitionProvenanceDisplay({ seller: i.acquisitionRecordLinks[0]?.acquisitionRecord.seller, storefront: i.acquisitionRecordLinks[0]?.acquisitionRecord.sellerStorefront, distributor: i.acquisitionRecordLinks[0]?.acquisitionRecord.distributor, outlet: i.acquisitionRecordLinks[0]?.acquisitionRecord.distributorOutlet, legacy: i.distributor })}</p>
           <p>Stock: {i.stockNumber || '—'}</p>
           <Link className="mt-3 inline-block underline" href={collectionPath(collection.slug, `/graphs?root=${i.id}`)}>
             View lineage graph

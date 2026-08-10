@@ -62,10 +62,8 @@ function preferredVendors(value: unknown) {
 
 function PreferredProvenanceFields({
   sellers,
-  distributors,
   defaultSellerIds = [],
   defaultStorefrontIds = [],
-  defaultDistributorIds = [],
 }: {
   sellers: Array<{ id: string; name: string; storefronts: Array<{ id: string; handleOrName: string; distributor: { name: string } | null }> }>
   distributors: Array<{ id: string; name: string }>
@@ -74,7 +72,7 @@ function PreferredProvenanceFields({
   defaultDistributorIds?: string[]
 }) {
   return (
-    <div className="grid gap-3 rounded-lg border border-stone-200 bg-white/45 p-3 md:col-span-4 md:grid-cols-3">
+    <div className="grid gap-3 rounded-lg border border-stone-200 bg-white/45 p-3 md:col-span-4 md:grid-cols-2">
       <label className="grid gap-1 text-sm font-medium">
         Preferred sellers
         <select name="preferredSellerId" multiple defaultValue={defaultSellerIds} className="min-h-28 rounded-md border border-stone-300 bg-white px-3 py-2">
@@ -82,20 +80,14 @@ function PreferredProvenanceFields({
         </select>
       </label>
       <label className="grid gap-1 text-sm font-medium">
-        Preferred storefronts
+        Preferred sales channels
         <select name="preferredStorefrontId" multiple defaultValue={defaultStorefrontIds} className="min-h-28 rounded-md border border-stone-300 bg-white px-3 py-2">
           {sellers.flatMap((seller) => seller.storefronts.map((storefront) => (
-            <option key={storefront.id} value={storefront.id}>{seller.name} · {storefront.handleOrName}{storefront.distributor ? ` on ${storefront.distributor.name}` : ''}</option>
+            <option key={storefront.id} value={storefront.id}>{seller.name} · {storefront.handleOrName}</option>
           )))}
         </select>
       </label>
-      <label className="grid gap-1 text-sm font-medium">
-        Preferred platforms or channels
-        <select name="preferredDistributorId" multiple defaultValue={defaultDistributorIds} className="min-h-28 rounded-md border border-stone-300 bg-white px-3 py-2">
-          {distributors.map((distributor) => <option key={distributor.id} value={distributor.id}>{distributor.name}</option>)}
-        </select>
-      </label>
-      <p className="text-xs text-stone-600 md:col-span-3">Use Command or Control to select several entries. A storefront preference already identifies its seller.</p>
+      <p className="text-xs text-stone-600 md:col-span-2">Use Command or Control to select several entries. A sales-channel preference already identifies its seller.</p>
     </div>
   )
 }
@@ -158,7 +150,7 @@ export default async function AcquisitionPipelinePage({
     )
   }
 
-  const [definitions, locations, sources, distributors, sellers, substrateVersions] = await Promise.all([
+  const [definitions, locations, sources, distributors, sellers, substrateVersions, purchaseHistory] = await Promise.all([
     prisma.plantDefinition.findMany({
       where: {
         ...collectionWhere,
@@ -172,8 +164,8 @@ export default async function AcquisitionPipelinePage({
             { instances: { some: { acquisitionLabel: { contains: q, mode: 'insensitive' } } } },
             { acquisitionInterestNotes: { contains: q, mode: 'insensitive' } },
             { acquisitionResearchSummary: { contains: q, mode: 'insensitive' } },
-            { plantObservations: { some: { OR: [{ vendor: { contains: q, mode: 'insensitive' } }, { seller: { name: { contains: q, mode: 'insensitive' } } }, { sellerStorefront: { handleOrName: { contains: q, mode: 'insensitive' } } }, { distributor: { name: { contains: q, mode: 'insensitive' } } }, { distributorOutlet: { name: { contains: q, mode: 'insensitive' } } }] } } },
-            { acquisitionRecords: { some: { OR: [{ vendor: { contains: q, mode: 'insensitive' } }, { seller: { name: { contains: q, mode: 'insensitive' } } }, { sellerStorefront: { handleOrName: { contains: q, mode: 'insensitive' } } }, { distributor: { name: { contains: q, mode: 'insensitive' } } }, { distributorOutlet: { name: { contains: q, mode: 'insensitive' } } }, { sources: { some: { source: { name: { contains: q, mode: 'insensitive' } } } } }] } } },
+            { plantObservations: { some: { OR: [{ vendor: { contains: q, mode: 'insensitive' } }, { seller: { OR: [{ name: { contains: q, mode: 'insensitive' } }, { websiteUrl: { contains: q, mode: 'insensitive' } }] } }, { sellerStorefront: { OR: [{ handleOrName: { contains: q, mode: 'insensitive' } }, { profileUrl: { contains: q, mode: 'insensitive' } }] } }, { distributor: { name: { contains: q, mode: 'insensitive' } } }, { distributorOutlet: { name: { contains: q, mode: 'insensitive' } } }] } } },
+            { acquisitionRecords: { some: { OR: [{ vendor: { contains: q, mode: 'insensitive' } }, { seller: { OR: [{ name: { contains: q, mode: 'insensitive' } }, { websiteUrl: { contains: q, mode: 'insensitive' } }] } }, { sellerStorefront: { OR: [{ handleOrName: { contains: q, mode: 'insensitive' } }, { profileUrl: { contains: q, mode: 'insensitive' } }] } }, { distributor: { name: { contains: q, mode: 'insensitive' } } }, { distributorOutlet: { name: { contains: q, mode: 'insensitive' } } }, { sources: { some: { source: { OR: [{ name: { contains: q, mode: 'insensitive' } }, { websiteUrl: { contains: q, mode: 'insensitive' } }] } } } }] } } },
           ],
         } : {}),
       },
@@ -195,8 +187,9 @@ export default async function AcquisitionPipelinePage({
     }),
     prisma.source.findMany({ where: { collectionId: collection.id, active: true }, orderBy: { name: 'asc' } }),
     prisma.distributor.findMany({ where: { collectionId: collection.id, active: true }, include: { outlets: { where: { active: true }, orderBy: { name: 'asc' } } }, orderBy: { name: 'asc' } }),
-    prisma.seller.findMany({ where: { collectionId: collection.id, active: true }, include: { storefronts: { where: { active: true }, include: { distributor: true }, orderBy: { handleOrName: 'asc' } } }, orderBy: { name: 'asc' } }),
+    prisma.seller.findMany({ where: { collectionId: collection.id, active: true }, include: { storefronts: { where: { active: true }, include: { distributor: true, salesChannelType: true }, orderBy: { handleOrName: 'asc' } } }, orderBy: { name: 'asc' } }),
     prisma.substrateRecipeVersion.findMany({ where: { collectionId: collection.id, status: 'ACTIVE', recipe: { archivedAt: null } }, include: { recipe: true }, orderBy: { recipe: { name: 'asc' } } }),
+    prisma.plantAcquisitionRecord.findMany({ where: { collectionId: collection.id }, include: { plantDefinition: true, seller: true, sellerStorefront: true, sources: { include: { source: true }, orderBy: { sortOrder: 'asc' } }, plantInstances: { include: { plantInstance: true } } }, orderBy: { acquiredAt: 'desc' }, take: 50 }),
   ])
   const locationNodes = locations.map((location) => ({
     id: location.id,
@@ -247,6 +240,15 @@ export default async function AcquisitionPipelinePage({
           <span className="rounded-full border border-stone-200 bg-white/70 px-3 py-1 text-sm font-semibold text-stone-700">{definitions.length} tracked</span>
         </div>
       </div>
+
+      <Card>
+        <h3 className="font-serif text-xl font-semibold">Purchase History</h3>
+        <p className="mt-1 text-sm text-stone-600">Canonical acquisition records are kept here; wishlist and research tools below are planning aids.</p>
+        <div className="mt-3 grid gap-2 lg:grid-cols-2">
+          {purchaseHistory.map((record) => <article key={record.id} className="rounded-lg border border-stone-200 bg-white/50 p-3 text-sm"><p className="text-xs text-stone-500">{formatDate(record.acquiredAt)} · {record.quantity} specimen{record.quantity === 1 ? '' : 's'}</p><h4 className="font-semibold">{plantName(record.plantDefinition)}</h4><p>{record.seller?.name || 'Seller unknown'}{record.sellerStorefront ? ` · ${record.sellerStorefront.handleOrName}` : ''} · {money(record.price, record.currency)}</p><p className="text-xs text-stone-600">Sources: {sourceChainDisplay(record.sources)}</p>{record.plantInstances.length > 0 && <div className="mt-2 flex flex-wrap gap-2">{record.plantInstances.map(({ plantInstance }) => <Link key={plantInstance.id} className="font-mono text-xs font-semibold text-[#2f6b45] underline" href={collectionPath(collection.slug, `/instances/${plantInstance.id}/acquisition`)}>{plantInstance.plantId}</Link>)}</div>}</article>)}
+          {!purchaseHistory.length && <p className="text-sm text-stone-600">No purchases recorded yet.</p>}
+        </div>
+      </Card>
 
       {canEdit && (
         <AddPanel label="Add acquisition target">

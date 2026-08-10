@@ -474,6 +474,59 @@ export async function createPlantAcquisitionRecord(fd: FormData) {
   redirect(back(fd, collectionPath(collection.slug, `/acquisitions?definition=${plantDefinitionId}`)))
 }
 
+export async function savePlantInstanceAcquisition(fd: FormData) {
+  const { user, collection } = await requireCollectionLogger(val(fd, 'collectionSlug'))
+  const plantInstanceId = val(fd, 'plantInstanceId')!
+  const instance = await prisma.plantInstance.findFirstOrThrow({ where: { id: plantInstanceId, collectionId: collection.id } })
+  const sellerId = clearableVal(fd, 'sellerId')
+  const sellerStorefrontId = clearableVal(fd, 'sellerStorefrontId')
+  const distributorId = clearableVal(fd, 'distributorId')
+  const distributorOutletId = clearableVal(fd, 'distributorOutletId')
+  const { seller, storefront, distributor, outlet } = await validateCommerceSelection(prisma, collection.id, { sellerId, sellerStorefrontId, distributorId, distributorOutletId })
+  const sourceRows = sourceRowsFromForm(fd)
+  const sourceRecords = await validateSourceRows(prisma, collection.id, sourceRows)
+  const sourceNames = new Map(sourceRecords.map((source) => [source.id, source.name]))
+  const primary = sourceRows.find((row) => row.isPrimary) || sourceRows[0]
+  const acquiredAt = date(val(fd, 'acquiredAt')) || instance.acquisitionDate || new Date()
+
+  const record = await prisma.$transaction(async (tx) => {
+    const requestedId = val(fd, 'acquisitionRecordId')
+    const linked = requestedId
+      ? await tx.plantAcquisitionRecord.findFirst({ where: { id: requestedId, collectionId: collection.id, plantInstances: { some: { plantInstanceId } } } })
+      : await tx.plantAcquisitionRecord.findFirst({ where: { collectionId: collection.id, plantInstances: { some: { plantInstanceId } } }, orderBy: { acquiredAt: 'desc' } })
+    const data = {
+      vendor: seller?.name || distributor?.name || null,
+      sellerId: seller?.id || null,
+      sellerStorefrontId: storefront?.id || null,
+      distributorId: distributor?.id || storefront?.distributorId || null,
+      distributorOutletId: outlet?.id || null,
+      acquiredAt,
+      price: dec(val(fd, 'price')) as any || null,
+      currency: val(fd, 'currency') || 'USD',
+      specimenSize: clearableVal(fd, 'specimenSize'),
+      potSize: clearableVal(fd, 'potSize'),
+      notes: clearableVal(fd, 'notes'),
+    }
+    const saved = linked
+      ? await tx.plantAcquisitionRecord.update({ where: { id: linked.id }, data })
+      : await tx.plantAcquisitionRecord.create({ data: { ...data, collectionId: collection.id, plantDefinitionId: instance.plantDefinitionId, createdByUserId: user.id, quantity: 1, plantInstances: { create: { plantInstanceId } } } })
+    await tx.acquisitionSource.deleteMany({ where: { acquisitionRecordId: saved.id } })
+    if (sourceRows.length) await tx.acquisitionSource.createMany({ data: sourceRows.map((row, sortOrder) => ({ collectionId: collection.id, acquisitionRecordId: saved.id, sourceId: row.sourceId, role: row.role, sortOrder, isPrimary: row.isPrimary || (sortOrder === 0 && !sourceRows.some((item) => item.isPrimary)), notes: row.notes })) })
+    await tx.plantInstance.update({ where: { id: instance.id }, data: {
+      acquisitionDate: acquiredAt,
+      acquisitionLabel: clearableVal(fd, 'acquisitionLabel'),
+      purchasePrice: dec(val(fd, 'price')) as any || null,
+      source: primary ? sourceNames.get(primary.sourceId) : seller?.name || null,
+      distributor: storefront?.handleOrName || seller?.name || distributor?.name || null,
+    } })
+    await emitDomainEvent(tx, { eventType: 'acquisition.recorded', collectionId: collection.id, aggregateId: saved.id, actor: { id: user.id, role: user.role }, idempotencyKey: `acquisition:${saved.id}:${saved.updatedAt.toISOString()}`, payload: { subjectId: instance.id, plantInstanceId: instance.id, recordId: saved.id, recordType: 'PlantAcquisitionRecord', sellerId: seller?.id, salesChannelId: storefront?.id, summary: linked ? 'Acquisition provenance updated.' : 'Acquisition record created.' } })
+    return saved
+  })
+  await audit(user, 'UPDATE', 'PLANT_ACQUISITION_RECORD', record.id, `Updated acquisition and provenance for ${instance.plantId}`, { plantInstanceId }, collection.id)
+  revalidatePath(collectionPath(collection.slug, `/instances/${instance.id}`))
+  redirect(collectionPath(collection.slug, `/instances/${instance.id}`))
+}
+
 export async function createAcquisitionBatch(fd: FormData) {
   const { user, collection } = await requireCollectionLogger(val(fd, 'collectionSlug'))
   const definitionIds = Array.from(new Set(fd.getAll('definitionId').map(String).filter(Boolean)))

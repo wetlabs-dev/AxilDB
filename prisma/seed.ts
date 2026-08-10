@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client'
 import { randomBytes, scryptSync } from 'crypto'
 import { ensureStarterSubstrates } from '../lib/substrates'
+import { ensureDefaultSalesChannelTypes } from '../lib/provenance'
 const prisma = new PrismaClient()
 function hashPassword(password:string){ const salt=randomBytes(16).toString('hex'); const hash=scryptSync(password,salt,64).toString('hex'); return `${salt}:${hash}` }
 async function main(){
@@ -8,6 +9,7 @@ async function main(){
  const admin=await prisma.user.create({data:{email:'admin@axildb.com',emailVerifiedAt:new Date(),passwordHash:hashPassword('password'),role:'SERVER_ADMIN'}})
  const collection=await prisma.collection.create({data:{name:'AxilDB',slug:'axildb',visibility:'PRIVATE',status:'ACTIVE',description:'Default AxilDB collection.'}})
  await ensureStarterSubstrates(prisma,collection.id,admin.id)
+ await ensureDefaultSalesChannelTypes(prisma,collection.id)
  await prisma.collectionMembership.create({data:{collectionId:collection.id,userId:admin.id,role:'MANAGER',status:'ACTIVE'}})
  const palmstreet=await prisma.distributor.create({data:{collectionId:collection.id,name:'Palmstreet',normalizedName:'palmstreet',distributorType:'MARKETPLACE'}})
  const etsy=await prisma.distributor.create({data:{collectionId:collection.id,name:'Etsy',normalizedName:'etsy',distributorType:'MARKETPLACE'}})

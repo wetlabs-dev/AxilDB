@@ -283,6 +283,7 @@ model Collection {
   distributorOutlets                  DistributorOutlet[]
   sellers                             Seller[]
   sellerStorefronts                   SellerStorefront[]
+  salesChannelTypes                   SalesChannelType[]
   preferredSellers                    PlantDefinitionPreferredSeller[]
   preferredDistributors               PlantDefinitionPreferredDistributor[]
   provenanceReconciliationItems       ProvenanceReconciliationItem[]
@@ -1628,7 +1629,15 @@ model SellerStorefront {
   handleOrName   String
   normalizedName String
   storefrontType String    @default("OTHER")
+  salesChannelTypeId String?
   profileUrl     String?
+  addressLine1   String?
+  addressLine2   String?
+  city           String?
+  region         String?
+  postalCode     String?
+  country        String?
+  phone          String?
   notes          String?
   active         Boolean   @default(true)
   archivedAt     DateTime?
@@ -1638,6 +1647,7 @@ model SellerStorefront {
   collection         Collection                       @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   seller             Seller                           @relation(fields: [sellerId], references: [id], onDelete: Cascade)
   distributor        Distributor?                     @relation(fields: [distributorId], references: [id], onDelete: SetNull)
+  salesChannelType   SalesChannelType?                @relation(fields: [salesChannelTypeId], references: [id], onDelete: SetNull)
   acquisitions       PlantAcquisitionRecord[]
   observations       PlantObservation[]
   acquisitionBatches AcquisitionBatch[]
@@ -1647,6 +1657,26 @@ model SellerStorefront {
   @@index([collectionId, active])
   @@index([sellerId])
   @@index([distributorId])
+  @@index([salesChannelTypeId])
+}
+
+model SalesChannelType {
+  id             String    @id @default(cuid())
+  collectionId   String
+  name           String
+  normalizedName String
+  isBuiltIn      Boolean   @default(false)
+  active         Boolean   @default(true)
+  archivedAt     DateTime?
+  sortOrder      Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  collection Collection         @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  channels   SellerStorefront[]
+
+  @@unique([collectionId, normalizedName])
+  @@index([collectionId, active, sortOrder])
 }
 
 model PlantDefinitionPreferredSeller {

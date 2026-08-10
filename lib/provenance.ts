@@ -21,11 +21,25 @@ export const DISTRIBUTOR_OUTLET_TYPES = [
 export const SELLER_STOREFRONT_TYPES = [
   'MARKETPLACE_SELLER', 'DIRECT_ONLINE_STORE', 'SOCIAL_MEDIA_STORE', 'AUCTION_PROFILE', 'SHOW_VENDOR', 'OTHER',
 ] as const
+export const DEFAULT_SALES_CHANNEL_TYPES = [
+  'Website', 'Palmstreet', 'Etsy', 'Retail Store', 'Nursery', 'Plant Show',
+  'Facebook Marketplace', 'Instagram', 'Auction', 'Other',
+] as const
 
 type Db = PrismaClient | Prisma.TransactionClient
 
 export function normalizeProvenanceName(value: string) {
-  return value.trim().replace(/\s+/g, ' ').toLocaleLowerCase('en-US')
+  return value.trim().replace(/\s+/g, ' ').replace(/[’‘]/g, "'").toLocaleLowerCase('en-US')
+}
+
+export async function ensureDefaultSalesChannelTypes(db: Db, collectionId: string) {
+  for (const [sortOrder, name] of DEFAULT_SALES_CHANNEL_TYPES.entries()) {
+    await db.salesChannelType.upsert({
+      where: { collectionId_normalizedName: { collectionId, normalizedName: normalizeProvenanceName(name) } },
+      update: { isBuiltIn: true, sortOrder },
+      create: { collectionId, name, normalizedName: normalizeProvenanceName(name), isBuiltIn: true, sortOrder },
+    })
+  }
 }
 
 export function provenanceLabel(value: string | null | undefined) {
@@ -63,11 +77,12 @@ export async function validateCommerceSelection(db: Db, collectionId: string, in
   const storefront = input.sellerStorefrontId
     ? await db.sellerStorefront.findFirstOrThrow({ where: { id: input.sellerStorefrontId, collectionId } })
     : null
-  if (storefront && !seller) throw new Error('Choose the seller that owns this storefront.')
-  if (storefront && storefront.sellerId !== seller?.id) throw new Error('The selected storefront does not belong to this seller.')
-  const { distributor, outlet } = await validateDistributorSelection(db, collectionId, input.distributorId, input.distributorOutletId)
+  if (storefront && !seller) throw new Error('Choose the seller that owns this sales channel.')
+  if (storefront && storefront.sellerId !== seller?.id) throw new Error('The selected sales channel does not belong to this seller.')
+  const inferredDistributorId = input.distributorId || storefront?.distributorId || null
+  const { distributor, outlet } = await validateDistributorSelection(db, collectionId, inferredDistributorId, input.distributorOutletId)
   if (storefront?.distributorId && storefront.distributorId !== distributor?.id) {
-    throw new Error('The selected storefront belongs to a different sales channel.')
+    throw new Error('The selected channel belongs to a different legacy platform.')
   }
   return { seller, storefront, distributor, outlet }
 }

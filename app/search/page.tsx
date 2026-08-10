@@ -99,9 +99,9 @@ export default async function SearchPage({
                 { acquisitionRecordLinks: { some: { acquisitionRecord: { OR: [
                   { distributor: { name: contains(q) } },
                   { distributorOutlet: { name: contains(q) } },
-                  { seller: { name: contains(q) } },
-                  { sellerStorefront: { handleOrName: contains(q) } },
-                  { sources: { some: { OR: [{ role: contains(q) }, { source: { name: contains(q) } }] } } },
+                  { seller: { OR: [{ name: contains(q) }, { websiteUrl: contains(q) }] } },
+                  { sellerStorefront: { OR: [{ handleOrName: contains(q) }, { profileUrl: contains(q) }, { salesChannelType: { name: contains(q) } }] } },
+                  { sources: { some: { OR: [{ role: contains(q) }, { source: { OR: [{ name: contains(q) }, { websiteUrl: contains(q) }] } }] } } },
                 ] } } } },
                 { plantDefinition: { AND: [definitionSearch, tagWhere] } },
               ],
