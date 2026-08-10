@@ -8,6 +8,8 @@ import { prisma } from '@/lib/prisma'
 import { formatDate, formatDateTime } from '@/lib/time'
 import { plantName } from '@/lib/utils'
 import { LocationCompatibilitySelect } from '@/components/LocationCompatibilitySelect'
+import { DistributorFields } from '@/components/DistributorFields'
+import { acquisitionProvenanceDisplay } from '@/lib/provenance'
 
 export default async function BulkAcquisitionPage({ searchParams }: {
   searchParams: Promise<{ definition?: string | string[]; batch?: string }>
@@ -17,13 +19,13 @@ export default async function BulkAcquisitionPage({ searchParams }: {
   if (sp.batch) {
     const batch = await prisma.acquisitionBatch.findFirst({
       where: { id: sp.batch, collectionId: context.collection.id },
-      include: { distributor: true, distributorLocation: true, items: { include: { plantDefinition: true, acquisitionRecord: { include: { plantInstances: true } } } } },
+      include: { seller: true, sellerStorefront: true, distributor: true, distributorOutlet: true, items: { include: { plantDefinition: true, acquisitionRecord: { include: { plantInstances: true } } } } },
     })
     if (batch) return (
       <div className="space-y-5">
         <div><h1 className="font-serif text-3xl font-semibold">Acquisition batch complete</h1><p className="mt-1 text-sm text-stone-600">Recorded {formatDateTime(batch.createdAt)} with {batch.items.length} definition{batch.items.length === 1 ? '' : 's'}.</p></div>
         <Card className="grid gap-3">
-          <p className="text-sm"><span className="font-semibold">Source:</span> {batch.distributor?.name || 'Not specified'}{batch.distributorLocation ? ` · ${batch.distributorLocation.name}` : ''}</p>
+          <p className="text-sm"><span className="font-semibold">Source:</span> {acquisitionProvenanceDisplay({ seller: batch.seller, storefront: batch.sellerStorefront, distributor: batch.distributor, outlet: batch.distributorOutlet })}</p>
           {batch.orderNumber && <p className="text-sm"><span className="font-semibold">Order:</span> {batch.orderNumber}</p>}
           {batch.items.map((item) => <div key={item.id} className="rounded-md border border-stone-200 bg-white/55 p-3"><p className="font-serif text-lg font-semibold">{plantName(item.plantDefinition)}</p><p className="text-sm text-stone-600">{item.quantity} acquired · {item.acquisitionRecord?.plantInstances.length || 0} specimen records created · {item.fulfillmentChoice.toLowerCase().replaceAll('_', ' ')}</p></div>)}
           <Link className="font-semibold text-[#2f6b45] underline" href={collectionPath(context.collection.slug, '/acquisitions')}>Return to Acquisition Pipeline</Link>
@@ -33,10 +35,11 @@ export default async function BulkAcquisitionPage({ searchParams }: {
   }
 
   const definitionIds = Array.from(new Set((Array.isArray(sp.definition) ? sp.definition : sp.definition ? [sp.definition] : []).filter(Boolean)))
-  const [definitions, locations, distributors, recentBatches] = await Promise.all([
+  const [definitions, locations, distributors, sellers, recentBatches] = await Promise.all([
     prisma.plantDefinition.findMany({ where: { collectionId: context.collection.id, id: { in: definitionIds }, acquisitionStatus: { not: null } }, include: { desiredLocation: true }, orderBy: { genus: 'asc' } }),
     prisma.location.findMany({ where: { collectionId: context.collection.id, status: 'ACTIVE' }, include: { locationType: true }, orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }] }),
-    prisma.distributor.findMany({ where: { collectionId: context.collection.id, active: true }, include: { locations: { where: { active: true }, orderBy: { name: 'asc' } } }, orderBy: { name: 'asc' } }),
+    prisma.distributor.findMany({ where: { collectionId: context.collection.id, active: true }, include: { outlets: { where: { active: true }, orderBy: { name: 'asc' } } }, orderBy: { name: 'asc' } }),
+    prisma.seller.findMany({ where: { collectionId: context.collection.id, active: true }, include: { storefronts: { where: { active: true }, orderBy: { handleOrName: 'asc' } } }, orderBy: { name: 'asc' } }),
     prisma.acquisitionBatch.findMany({ where: { collectionId: context.collection.id }, include: { _count: { select: { items: true } }, distributor: true }, orderBy: { acquisitionDate: 'desc' }, take: 12 }),
   ])
   const nodes = locations.map((item) => ({ id: item.id, parentLocationId: item.parentLocationId, name: item.name, code: item.code, status: item.status, sortOrder: item.sortOrder, locationType: item.locationType }))
@@ -51,8 +54,7 @@ export default async function BulkAcquisitionPage({ searchParams }: {
           <Card className="grid gap-3 md:grid-cols-4">
             <Field label="Acquisition date" name="acquisitionDate" type="date" defaultValue={new Date().toISOString().slice(0, 10)} required />
             <Field label="Order / receipt number" name="orderNumber" />
-            <Select label="Distributor" name="distributorId"><option value="">Not specified</option>{distributors.map((distributor) => <option key={distributor.id} value={distributor.id}>{distributor.name}</option>)}</Select>
-            <Select label="Branch / outlet" name="distributorLocationId"><option value="">Not specified</option>{distributors.flatMap((distributor) => distributor.locations.map((location) => <option key={location.id} value={location.id}>{distributor.name} · {location.name}</option>))}</Select>
+            <div className="md:col-span-2"><DistributorFields distributors={distributors} sellers={sellers} /></div>
             <Field label="Currency" name="currency" defaultValue="USD" />
             <Field label="Subtotal" name="subtotal" type="number" step="0.01" />
             <Field label="Shipping" name="shippingCost" type="number" step="0.01" />

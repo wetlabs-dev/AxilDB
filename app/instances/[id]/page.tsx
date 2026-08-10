@@ -63,7 +63,7 @@ import { ensureStarterWorkflowTemplates } from '@/lib/workflows'
 import Link from 'next/link'
 import QRCode from 'qrcode'
 import { RefreshCw } from 'lucide-react'
-import { distributorDisplay, sourceChainDisplay } from '@/lib/provenance'
+import { acquisitionProvenanceDisplay, sourceChainDisplay } from '@/lib/provenance'
 import { labelizeTreatment } from '@/lib/treatments'
 
 const conditionCategories = [
@@ -118,7 +118,7 @@ export default async function InstanceDetail({
     where: { id, ...collectionWhere },
     include: {
       acquisitionRecordLinks: {
-        include: { acquisitionRecord: { include: { distributor: true, distributorLocation: true, sources: { include: { source: true }, orderBy: { sortOrder: 'asc' } } } } },
+        include: { acquisitionRecord: { include: { seller: true, sellerStorefront: true, distributor: true, distributorOutlet: true, sources: { include: { source: true }, orderBy: { sortOrder: 'asc' } } } } },
         orderBy: { createdAt: 'desc' },
       },
       plantDefinition: { include: { aliases: { orderBy: { name: 'asc' } }, husbandryGuide: { include: { fertilizerRecipe: true } } } },
@@ -944,7 +944,7 @@ export default async function InstanceDetail({
           <p>Acquired: {fmtDate(i.acquisitionDate, timezone)}</p>
           <p>Propagated: {fmtDate(i.propagationDate, timezone)}</p>
           <p>Source: {sourceChainDisplay(i.acquisitionRecordLinks[0]?.acquisitionRecord.sources || [], i.source)}</p>
-          <p>Distributor: {distributorDisplay(i.acquisitionRecordLinks[0]?.acquisitionRecord.distributor, i.acquisitionRecordLinks[0]?.acquisitionRecord.distributorLocation, i.distributor)}</p>
+          <p>Acquired through: {acquisitionProvenanceDisplay({ seller: i.acquisitionRecordLinks[0]?.acquisitionRecord.seller, storefront: i.acquisitionRecordLinks[0]?.acquisitionRecord.sellerStorefront, distributor: i.acquisitionRecordLinks[0]?.acquisitionRecord.distributor, outlet: i.acquisitionRecordLinks[0]?.acquisitionRecord.distributorOutlet, legacy: i.distributor })}</p>
           <p>Stock: {i.stockNumber || '—'}</p>
           <Link className="mt-3 inline-block underline" href={collectionPath(collection.slug, `/graphs?root=${i.id}`)}>
             View lineage graph

@@ -25,7 +25,9 @@ export type CollectionContext = {
     wishlistPublicSettingsJson: unknown
     showSourceProvenance: boolean
     showDistributorIdentity: boolean
-    showDistributorLocation: boolean
+    showDistributorOutlet: boolean
+    showSellerIdentity: boolean
+    showSellerStorefront: boolean
     description: string | null
   }
   user: AuthUser | null
@@ -166,7 +168,7 @@ export async function getCollectionContext(slug?: string): Promise<CollectionCon
   const resolvedSlug = slug || (await getCurrentCollectionSlug())
   const collection = await prisma.collection.findUnique({
     where: { slug: resolvedSlug },
-    select: { id: true, name: true, slug: true, visibility: true, status: true, aiFeaturesEnabled: true, aiBriefingEnabled: true, acquisitionVisibility: true, wishlistIntro: true, wishlistPublicSettingsJson: true, showSourceProvenance: true, showDistributorIdentity: true, showDistributorLocation: true, description: true },
+    select: { id: true, name: true, slug: true, visibility: true, status: true, aiFeaturesEnabled: true, aiBriefingEnabled: true, acquisitionVisibility: true, wishlistIntro: true, wishlistPublicSettingsJson: true, showSourceProvenance: true, showDistributorIdentity: true, showDistributorOutlet: true, showSellerIdentity: true, showSellerStorefront: true, description: true },
   })
 
   if (!collection) {

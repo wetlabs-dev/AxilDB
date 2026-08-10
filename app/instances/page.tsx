@@ -46,7 +46,7 @@ export default async function Instances({
   const tagFilter = sp.tag || ''
   const sortKey = await sortPreference(user?.id, 'instances', 'plantIdAsc', instanceSortOptions.map((option) => option.value))
   await ensureStarterWorkflowTemplates(prisma, collection.id)
-  const [defs, instanceSuggestionRows, locations, locationTypes, workflowTemplates, sources, distributors, activeTags] = await Promise.all([
+  const [defs, instanceSuggestionRows, locations, locationTypes, workflowTemplates, sources, distributors, sellers, activeTags] = await Promise.all([
     prisma.plantDefinition.findMany({
       where: { OR: [collectionWhere, { collectionId: null, isValidated: true }] },
       orderBy: [{ isValidated: 'desc' }, { genus: 'asc' }, { species: 'asc' }, { cultivarName: 'asc' }],
@@ -70,7 +70,8 @@ export default async function Instances({
       take: 12,
     }),
     prisma.source.findMany({ where: { collectionId: collection.id, active: true }, orderBy: { name: 'asc' } }),
-    prisma.distributor.findMany({ where: { collectionId: collection.id, active: true }, include: { locations: { where: { active: true }, orderBy: { name: 'asc' } } }, orderBy: { name: 'asc' } }),
+    prisma.distributor.findMany({ where: { collectionId: collection.id, active: true }, include: { outlets: { where: { active: true }, orderBy: { name: 'asc' } } }, orderBy: { name: 'asc' } }),
+    prisma.seller.findMany({ where: { collectionId: collection.id, active: true }, include: { storefronts: { where: { active: true }, orderBy: { handleOrName: 'asc' } } }, orderBy: { name: 'asc' } }),
     prisma.plantTag.findMany({ where: { collectionId: collection.id, active: true }, orderBy: { name: 'asc' } }),
   ])
   const locationNodes = locations.map((location) => ({
@@ -243,7 +244,7 @@ export default async function Instances({
             <Field label="Acquisition date" help="When this physical plant entered your collection." name="acquisitionDate" type="date" />
             <Field label="Propagation date" help="When this plant was propagated, if it was created from another plant." name="propagationDate" type="date" />
             <Field label="Acquisition label" help="The name or identification written on this particular specimen when it entered the collection. It does not change the shared plant definition." name="acquisitionLabel" list="instance-acquisition-label-suggestions" wrapperClassName="lg:col-span-2" />
-            <div className="lg:col-span-4"><DistributorFields distributors={distributors} /></div>
+            <div className="lg:col-span-4"><DistributorFields distributors={distributors} sellers={sellers} /></div>
             <div className="lg:col-span-4"><AcquisitionSourceChainFields sources={sources} /></div>
             <Field label="Stock number" help="Optional vendor, nursery, or collection stock number from the original source." name="stockNumber" list="instance-stock-number-suggestions" />
             <Field label="Purchase price" help="Optional cost record for your own collection tracking." name="purchasePrice" type="number" min="0" step="0.01" />

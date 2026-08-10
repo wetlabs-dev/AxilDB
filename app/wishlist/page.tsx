@@ -156,6 +156,12 @@ export default async function WishlistPage({ searchParams }: {
                 (!publicVisitor || settings.showDifficulty) && entry.husbandryGuide?.propagationDifficulty ? `Difficulty: ${entry.husbandryGuide.propagationDifficulty}` : null,
                 !publicVisitor && entry.maximumPurchasePrice ? `Ceiling ${money(Number(entry.maximumPurchasePrice), 'USD')}` : null,
               ]).slice(0, 3)
+              const preferred = !publicVisitor ? [
+                ...entry.preferredSellers.map((item) => item.sellerStorefront
+                  ? `${item.seller.name} via ${item.sellerStorefront.distributor?.name || item.sellerStorefront.handleOrName}`
+                  : item.seller.name),
+                ...entry.preferredDistributors.map((item) => item.distributor.name),
+              ] : []
               return (
                 <article key={entry.id} className={`relative min-w-0 overflow-hidden rounded-lg border border-stone-200 bg-white/80 shadow-sm ${compact ? 'grid grid-cols-[6rem_minmax(0,1fr)]' : ''}`}>
                   <div className={compact ? 'h-full min-h-32 overflow-hidden bg-[#edf3e6]' : 'aspect-[16/11] max-h-64 overflow-hidden bg-[#edf3e6]'}>
@@ -187,6 +193,7 @@ export default async function WishlistPage({ searchParams }: {
                     )}
                     {(!publicVisitor || settings.showPublicResearchSummary) && entry.acquisitionResearchSummary && <p className="mt-3 line-clamp-3 text-sm leading-5 text-stone-700">{entry.acquisitionResearchSummary}</p>}
                     {environment && <p className="mt-2 line-clamp-2 text-xs leading-5 text-stone-500">Environment: {environment}</p>}
+                    {preferred.length > 0 && <p className="mt-2 line-clamp-2 text-xs leading-5 text-stone-600"><span className="font-semibold">Preferred:</span> {preferred.join(', ')}</p>}
                     {(!publicVisitor || settings.showLatestPublicObservation) && latest && <p className="mt-2 text-xs text-stone-500">Last observed {formatDate(latest.observedAt)} · {latest.availability.toLowerCase().replaceAll('_', ' ')}</p>}
                   </div>
                 </article>

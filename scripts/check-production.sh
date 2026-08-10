@@ -22,6 +22,9 @@ npm run check:plant-identity
 echo "==> Checking Plant Definition Tag invariants"
 npm run check:plant-tags
 
+echo "==> Checking provenance model invariants"
+npm run check:provenance
+
 echo "==> Checking treatment management invariants"
 npm run check:treatments
 
@@ -37,6 +40,7 @@ npm run check:collection-defaults
 if [ -n "${DATABASE_URL:-}" ]; then
   echo "==> Checking database collection integrity"
   npm run check:collection-integrity
+  npm run provenance:check
 else
   echo "==> Skipping database collection integrity: DATABASE_URL is not set"
 fi

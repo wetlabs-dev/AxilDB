@@ -34,6 +34,7 @@
     "check:location-compatibility": "tsx scripts/check-location-compatibility.ts",
     "check:units": "tsx scripts/check-units.ts",
     "provenance:migrate": "tsx scripts/migrate-provenance.ts",
+    "provenance:marketplace-migrate": "tsx scripts/migrate-marketplace-provenance.ts",
     "provenance:check": "tsx scripts/check-provenance-integrity.ts",
     "check:provenance": "tsx scripts/check-provenance.ts",
     "check:wishlist": "node scripts/check-wishlist-features.mjs",

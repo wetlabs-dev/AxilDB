@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
-import { distributorDisplay, isSimpleLegacyProvenance, normalizeProvenanceName, sourceChainDisplay, sourceRowsFromForm, validateDistributorSelection, validateSourceRows } from '../lib/provenance'
+import { readFileSync } from 'node:fs'
+import { acquisitionProvenanceDisplay, distributorDisplay, isSimpleLegacyProvenance, normalizeProvenanceName, sourceChainDisplay, sourceRowsFromForm, validateCommerceSelection, validateDistributorSelection, validateSourceRows } from '../lib/provenance'
 
 async function main() {
   assert.equal(normalizeProvenanceName('  Costa   Farms '), 'costa farms')
@@ -17,9 +18,13 @@ async function main() {
 
   let distributorWhere: any
   let locationWhere: any
+  let sellerWhere: any
+  let storefrontWhere: any
   const scopedClient = {
     distributor: { findFirstOrThrow: async ({ where }: any) => { distributorWhere = where; return { id: where.id, name: 'Distributor' } } },
-    distributorLocation: { findFirstOrThrow: async ({ where }: any) => { locationWhere = where; return { id: where.id, name: 'Branch' } } },
+    distributorOutlet: { findFirstOrThrow: async ({ where }: any) => { locationWhere = where; return { id: where.id, name: 'Branch' } } },
+    seller: { findFirstOrThrow: async ({ where }: any) => { sellerWhere = where; return { id: where.id, name: 'Seller' } } },
+    sellerStorefront: { findFirstOrThrow: async ({ where }: any) => { storefrontWhere = where; return { id: where.id, sellerId: 'seller-a', distributorId: 'distributor-a' } } },
     source: { findMany: async ({ where }: any) => where.collectionId === 'collection-a' ? [{ id: 'source-a', name: 'A' }, { id: 'source-b', name: 'B' }] : [] },
   } as any
   await validateDistributorSelection(scopedClient, 'collection-a', 'distributor-a', 'location-a')
@@ -30,6 +35,18 @@ async function main() {
 
   assert.equal(sourceChainDisplay([{ role: 'ORIGINATOR', source: { name: 'Hybridizer' } }, { role: 'GROWER', source: { name: 'Nursery' } }]), 'Hybridizer (Originator) → Nursery (Grower)')
   assert.equal(distributorDisplay({ name: 'Lowe’s' }, { name: 'Glen Burnie' }), 'Lowe’s — Glen Burnie')
+  await validateCommerceSelection(scopedClient, 'collection-a', { sellerId: 'seller-a', sellerStorefrontId: 'storefront-a', distributorId: 'distributor-a' })
+  assert.deepEqual(sellerWhere, { id: 'seller-a', collectionId: 'collection-a' })
+  assert.deepEqual(storefrontWhere, { id: 'storefront-a', collectionId: 'collection-a' })
+  assert.equal(acquisitionProvenanceDisplay({ seller: { name: 'Aerial Roots' }, storefront: { handleOrName: '@AerialRootsFL' }, distributor: { name: 'Palmstreet' } }), 'Purchased from Aerial Roots via Palmstreet')
+  assert.equal(acquisitionProvenanceDisplay({ distributor: { name: 'Lowe’s' }, outlet: { name: 'Glen Burnie' } }), 'Purchased from Lowe’s — Glen Burnie')
+  const migration = readFileSync('prisma/migrations/20260810160000_normalized_seller_storefronts/migration.sql', 'utf8')
+  assert.match(migration, /ALTER TABLE "DistributorLocation" RENAME TO "DistributorOutlet"/)
+  assert.match(migration, /ADD COLUMN "showSellerIdentity" BOOLEAN NOT NULL DEFAULT false/)
+  const marketplaceMigration = readFileSync('scripts/migrate-marketplace-provenance.ts', 'utf8')
+  assert.match(marketplaceMigration, /--dry-run/)
+  assert.match(marketplaceMigration, /hasPhysicalEvidence/)
+  assert.match(marketplaceMigration, /provenanceReconciliationItem\.upsert/)
   console.log('Provenance checks passed.')
 }
 

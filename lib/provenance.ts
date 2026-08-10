@@ -11,9 +11,15 @@ export const SOURCE_ROLES = [
   'TISSUE_CULTURE_PRODUCER', 'SEED_PRODUCER', 'COLLECTOR', 'UNKNOWN', 'OTHER',
 ] as const
 export const DISTRIBUTOR_TYPES = [
-  'BIG_BOX_STORE', 'INDEPENDENT_NURSERY', 'ONLINE_NURSERY', 'MARKETPLACE_SELLER',
-  'PLANT_SHOW_VENDOR', 'BOTANICAL_GARDEN_SALE', 'PLANT_SOCIETY_SALE', 'PRIVATE_SELLER',
-  'TRADE_SWAP', 'GIFT', 'AUCTION', 'WHOLESALER', 'FARM_STAND', 'OTHER',
+  'MARKETPLACE', 'BIG_BOX_STORE', 'INDEPENDENT_NURSERY', 'ONLINE_NURSERY',
+  'AUCTION_PLATFORM', 'PLANT_SHOW', 'BOTANICAL_GARDEN_SALE', 'PLANT_SOCIETY_SALE',
+  'PRIVATE_SALE_CHANNEL', 'TRADE_SWAP', 'GIFT', 'WHOLESALER', 'FARM_STAND', 'OTHER',
+] as const
+export const DISTRIBUTOR_OUTLET_TYPES = [
+  'PHYSICAL_BRANCH', 'ONLINE_STOREFRONT', 'SHOW_EVENT_BOOTH', 'MAIL_ORDER', 'POP_UP', 'OTHER',
+] as const
+export const SELLER_STOREFRONT_TYPES = [
+  'MARKETPLACE_SELLER', 'DIRECT_ONLINE_STORE', 'SOCIAL_MEDIA_STORE', 'AUCTION_PROFILE', 'SHOW_VENDOR', 'OTHER',
 ] as const
 
 type Db = PrismaClient | Prisma.TransactionClient
@@ -33,16 +39,37 @@ export function isSimpleLegacyProvenance(value: string) {
   return !/[\/|;?]|—|\s-\s|\b(via|from|originally|unknown|maybe|perhaps)\b/i.test(clean)
 }
 
-export async function validateDistributorSelection(db: Db, collectionId: string, distributorId?: string | null, locationId?: string | null) {
+export async function validateDistributorSelection(db: Db, collectionId: string, distributorId?: string | null, outletId?: string | null) {
   if (!distributorId) {
-    if (locationId) throw new Error('Choose a distributor before choosing a distributor location.')
-    return { distributor: null, location: null }
+    if (outletId) throw new Error('Choose a distributor before choosing a distributor outlet.')
+    return { distributor: null, outlet: null }
   }
   const distributor = await db.distributor.findFirstOrThrow({ where: { id: distributorId, collectionId } })
-  const location = locationId
-    ? await db.distributorLocation.findFirstOrThrow({ where: { id: locationId, distributorId, collectionId } })
+  const outlet = outletId
+    ? await db.distributorOutlet.findFirstOrThrow({ where: { id: outletId, distributorId, collectionId } })
     : null
-  return { distributor, location }
+  return { distributor, outlet }
+}
+
+export async function validateCommerceSelection(db: Db, collectionId: string, input: {
+  sellerId?: string | null
+  sellerStorefrontId?: string | null
+  distributorId?: string | null
+  distributorOutletId?: string | null
+}) {
+  const seller = input.sellerId
+    ? await db.seller.findFirstOrThrow({ where: { id: input.sellerId, collectionId } })
+    : null
+  const storefront = input.sellerStorefrontId
+    ? await db.sellerStorefront.findFirstOrThrow({ where: { id: input.sellerStorefrontId, collectionId } })
+    : null
+  if (storefront && !seller) throw new Error('Choose the seller that owns this storefront.')
+  if (storefront && storefront.sellerId !== seller?.id) throw new Error('The selected storefront does not belong to this seller.')
+  const { distributor, outlet } = await validateDistributorSelection(db, collectionId, input.distributorId, input.distributorOutletId)
+  if (storefront?.distributorId && storefront.distributorId !== distributor?.id) {
+    throw new Error('The selected storefront belongs to a different sales channel.')
+  }
+  return { seller, storefront, distributor, outlet }
 }
 
 export async function validateSourceRows(db: Db, collectionId: string, rows: Array<{ sourceId: string; role: string; isPrimary: boolean; notes?: string }>) {
@@ -70,9 +97,27 @@ export function sourceRowsFromForm(fd: FormData) {
   })).filter((row) => row.sourceId)
 }
 
-export function distributorDisplay(distributor?: { name: string } | null, location?: { name: string } | null, legacy?: string | null) {
+export function distributorDisplay(distributor?: { name: string } | null, outlet?: { name: string } | null, legacy?: string | null) {
   if (!distributor) return legacy || 'Distributor unknown'
-  return location ? `${distributor.name} — ${location.name}` : distributor.name
+  return outlet ? `${distributor.name} — ${outlet.name}` : distributor.name
+}
+
+export function acquisitionProvenanceDisplay(input: {
+  seller?: { name: string; kind?: string | null } | null
+  storefront?: { handleOrName: string } | null
+  distributor?: { name: string } | null
+  outlet?: { name: string } | null
+  legacy?: string | null
+}, compact = true) {
+  const { seller, storefront, distributor, outlet, legacy } = input
+  if (seller && distributor) {
+    return compact
+      ? `Purchased from ${seller.name} via ${distributor.name}`
+      : `Purchased from: ${seller.name}\nVia: ${distributor.name}${storefront ? ` · ${storefront.handleOrName}` : ''}`
+  }
+  if (seller) return `${seller.kind === 'PERSON' ? 'Received' : 'Purchased'} from ${seller.name}`
+  if (distributor) return `Purchased ${outlet ? 'from' : 'via'} ${outlet ? `${distributor.name} — ${outlet.name}` : distributor.name}`
+  return legacy ? `Acquired from ${legacy}` : 'Seller or sales channel unknown'
 }
 
 export function sourceChainDisplay(sources: Array<{ role: string; source: { name: string } }>, legacy?: string | null) {

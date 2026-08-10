@@ -99,7 +99,7 @@ const collectionAdminItems = [
   ['/fertilizers', 'Fertilizers', FlaskConical, 'GARDENER'],
   ['/treatments', 'Treatments', ShieldCheck, 'GARDENER'],
   ['/plant-tags', 'Plant Tags', Tag, 'GARDENER'],
-  ['/provenance', 'Sources & Distributors', ShoppingBag, 'GARDENER'],
+  ['/provenance', 'Provenance', ShoppingBag, 'GARDENER'],
   ['/exhibits', 'Collection Exhibits', GalleryHorizontalEnd, 'GARDENER'],
   ['/transfers', 'Collection Transfers', ArrowRightLeft, 'GARDENER'],
   ['/admin-tools', 'Collection Tools', FlaskConical, 'GARDENER'],

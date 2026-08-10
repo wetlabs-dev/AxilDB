@@ -41,7 +41,7 @@ import { collectionRoleAtLeast, isServerAdminRole } from '@/lib/roles'
 import { assertLocationParentAllowed, descendantLocationIds, isQuarantineLocation, nextLocationCode, normalizeQuarantineRiskLevel, quarantineChecklistItems } from '@/lib/locations'
 import { evaluatePlantLocationCompatibility, getEffectiveLocationEnvironment, getEffectivePlantEnvironmentRequirements } from '@/lib/location-compatibility'
 import { emitDomainEvent } from '@/lib/events/emit'
-import { sourceRowsFromForm, validateDistributorSelection, validateSourceRows } from '@/lib/provenance'
+import { sourceRowsFromForm, validateCommerceSelection, validateSourceRows } from '@/lib/provenance'
 import { parseTagIds } from '@/lib/plant-tags'
 
 const val = (fd: FormData, k: string) =>
@@ -2212,8 +2212,10 @@ export async function createPlantInstance(fd: FormData) {
     ? await prisma.location.findFirstOrThrow({ where: { id: currentLocationId, collectionId: collection.id, status: 'ACTIVE' } })
     : null
   const distributorId = clearableVal(fd, 'distributorId')
-  const distributorLocationId = clearableVal(fd, 'distributorLocationId')
-  const { distributor, location: distributorLocation } = await validateDistributorSelection(prisma, collection.id, distributorId, distributorLocationId)
+  const distributorOutletId = clearableVal(fd, 'distributorOutletId')
+  const sellerId = clearableVal(fd, 'sellerId')
+  const sellerStorefrontId = clearableVal(fd, 'sellerStorefrontId')
+  const { distributor, outlet: distributorOutlet, seller, storefront } = await validateCommerceSelection(prisma, collection.id, { distributorId, distributorOutletId, sellerId, sellerStorefrontId })
   const sourceRows = sourceRowsFromForm(fd)
   const sourceRecords = await validateSourceRows(prisma, collection.id, sourceRows)
   const sourceNames = new Map(sourceRecords.map((source) => [source.id, source.name]))
@@ -2237,7 +2239,7 @@ export async function createPlantInstance(fd: FormData) {
       acquisitionDate,
       propagationDate,
       source: primarySource ? sourceNames.get(primarySource.sourceId) : val(fd, 'source'),
-      distributor: distributor?.name || val(fd, 'distributor'),
+      distributor: seller?.name || distributor?.name || val(fd, 'distributor'),
       stockNumber: val(fd, 'stockNumber'),
       acquisitionLabel: val(fd, 'acquisitionLabel'),
       purchasePrice: dec(val(fd, 'purchasePrice')) as any,
@@ -2246,14 +2248,16 @@ export async function createPlantInstance(fd: FormData) {
     if (note) await tx.note.create({
       data: { collectionId: collection.id, entityType: 'PLANT_INSTANCE', entityId: created.id, note },
     })
-    if (acquisitionDate || distributor || sourceRows.length || val(fd, 'purchasePrice')) {
+    if (acquisitionDate || seller || distributor || sourceRows.length || val(fd, 'purchasePrice')) {
       const acquisition = await tx.plantAcquisitionRecord.create({ data: {
         collectionId: collection.id,
         plantDefinitionId,
         createdByUserId: user.id,
-        vendor: distributor ? (distributorLocation ? `${distributor.name} — ${distributorLocation.name}` : distributor.name) : null,
+        vendor: seller?.name || distributor?.name || null,
         distributorId: distributor?.id || null,
-        distributorLocationId: distributorLocation?.id || null,
+        distributorOutletId: distributorOutlet?.id || null,
+        sellerId: seller?.id || null,
+        sellerStorefrontId: storefront?.id || null,
         acquiredAt: acquisitionDate || new Date(),
         price: dec(val(fd, 'purchasePrice')) as any,
         quantity: 1,

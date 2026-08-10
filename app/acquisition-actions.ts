@@ -9,7 +9,7 @@ import { emitDomainEvent } from '@/lib/events/emit'
 import { generatePlantId } from '@/lib/plant-id'
 import { plantName } from '@/lib/utils'
 import { normalizePlantDefinitionIdentity } from '@/lib/plant-identity'
-import { sourceRowsFromForm, validateDistributorSelection, validateSourceRows } from '@/lib/provenance'
+import { acquisitionProvenanceDisplay, sourceRowsFromForm, validateCommerceSelection, validateSourceRows } from '@/lib/provenance'
 import type { AcquisitionAvailability, AcquisitionFulfillmentChoice, AcquisitionStatus } from '@prisma/client'
 
 const val = (fd: FormData, key: string) => String(fd.get(key) || '').trim() || undefined
@@ -65,6 +65,26 @@ async function scopedDefinition(collectionId: string, id: string) {
   })
 }
 
+async function preferredProvenanceFromForm(collectionId: string, fd: FormData) {
+  const sellerIds = [...new Set(fd.getAll('preferredSellerId').map(String).filter(Boolean))]
+  const storefrontIds = [...new Set(fd.getAll('preferredStorefrontId').map(String).filter(Boolean))]
+  const distributorIds = [...new Set(fd.getAll('preferredDistributorId').map(String).filter(Boolean))]
+  const [sellers, storefronts, distributors] = await Promise.all([
+    sellerIds.length ? prisma.seller.findMany({ where: { collectionId, id: { in: sellerIds } }, select: { id: true } }) : [],
+    storefrontIds.length ? prisma.sellerStorefront.findMany({ where: { collectionId, id: { in: storefrontIds } }, select: { id: true, sellerId: true } }) : [],
+    distributorIds.length ? prisma.distributor.findMany({ where: { collectionId, id: { in: distributorIds } }, select: { id: true } }) : [],
+  ])
+  if (sellers.length !== sellerIds.length || storefronts.length !== storefrontIds.length || distributors.length !== distributorIds.length) {
+    throw new Error('One or more preferred provenance records are outside this collection.')
+  }
+  const sellersWithStorefronts = new Set(storefronts.map((storefront) => storefront.sellerId))
+  const preferredSellers = [
+    ...sellers.filter((seller) => !sellersWithStorefronts.has(seller.id)).map((seller) => ({ sellerId: seller.id, sellerStorefrontId: null as string | null })),
+    ...storefronts.map((storefront) => ({ sellerId: storefront.sellerId, sellerStorefrontId: storefront.id })),
+  ]
+  return { preferredSellers, preferredDistributorIds: distributors.map((item) => item.id) }
+}
+
 export async function createAcquisitionTarget(fd: FormData) {
   const { user, collection } = await requireCollectionLogger(val(fd, 'collectionSlug'))
   const identity = normalizePlantDefinitionIdentity({ genus: val(fd, 'genus'), species: val(fd, 'species'), provisionalTaxon: val(fd, 'provisionalTaxon') })
@@ -74,6 +94,7 @@ export async function createAcquisitionTarget(fd: FormData) {
   if (desiredLocationId) {
     await prisma.location.findFirstOrThrow({ where: { id: desiredLocationId, collectionId: collection.id, status: 'ACTIVE' }, select: { id: true } })
   }
+  const preferred = await preferredProvenanceFromForm(collection.id, fd)
 
   const created = await prisma.$transaction(async (tx) => {
     const definition = await tx.plantDefinition.create({
@@ -96,6 +117,8 @@ export async function createAcquisitionTarget(fd: FormData) {
         acquisitionResearchSummary: clearableVal(fd, 'acquisitionResearchSummary'),
       },
     })
+    if (preferred.preferredSellers.length) await tx.plantDefinitionPreferredSeller.createMany({ data: preferred.preferredSellers.map((item, sortOrder) => ({ collectionId: collection.id, plantDefinitionId: definition.id, sellerId: item.sellerId, sellerStorefrontId: item.sellerStorefrontId, sortOrder })) })
+    if (preferred.preferredDistributorIds.length) await tx.plantDefinitionPreferredDistributor.createMany({ data: preferred.preferredDistributorIds.map((distributorId, sortOrder) => ({ collectionId: collection.id, plantDefinitionId: definition.id, distributorId, sortOrder })) })
     await emitDomainEvent(tx, {
       eventType: 'acquisition.intent_updated',
       collectionId: collection.id,
@@ -132,6 +155,7 @@ export async function updateAcquisitionIntent(fd: FormData) {
   if (desiredLocationId) {
     await prisma.location.findFirstOrThrow({ where: { id: desiredLocationId, collectionId: collection.id, status: 'ACTIVE' }, select: { id: true } })
   }
+  const preferred = await preferredProvenanceFromForm(collection.id, fd)
 
   const updated = await prisma.$transaction(async (tx) => {
     const definition = await tx.plantDefinition.update({
@@ -148,6 +172,10 @@ export async function updateAcquisitionIntent(fd: FormData) {
         acquisitionResearchSummary: clearableVal(fd, 'acquisitionResearchSummary'),
       },
     })
+    await tx.plantDefinitionPreferredSeller.deleteMany({ where: { plantDefinitionId: id } })
+    await tx.plantDefinitionPreferredDistributor.deleteMany({ where: { plantDefinitionId: id } })
+    if (preferred.preferredSellers.length) await tx.plantDefinitionPreferredSeller.createMany({ data: preferred.preferredSellers.map((item, sortOrder) => ({ collectionId: collection.id, plantDefinitionId: id, sellerId: item.sellerId, sellerStorefrontId: item.sellerStorefrontId, sortOrder })) })
+    if (preferred.preferredDistributorIds.length) await tx.plantDefinitionPreferredDistributor.createMany({ data: preferred.preferredDistributorIds.map((distributorId, sortOrder) => ({ collectionId: collection.id, plantDefinitionId: id, distributorId, sortOrder })) })
     await emitDomainEvent(tx, {
       eventType: 'acquisition.intent_updated',
       collectionId: collection.id,
@@ -225,17 +253,21 @@ export async function createPlantObservation(fd: FormData) {
   const definition = await scopedDefinition(collection.id, plantDefinitionId)
   const observedAt = date(val(fd, 'observedAt')) || new Date()
   const distributorId = clearableVal(fd, 'distributorId')
-  const distributorLocationId = clearableVal(fd, 'distributorLocationId')
-  const { distributor, location: distributorLocation } = await validateDistributorSelection(prisma, collection.id, distributorId, distributorLocationId)
+  const distributorOutletId = clearableVal(fd, 'distributorOutletId')
+  const sellerId = clearableVal(fd, 'sellerId')
+  const sellerStorefrontId = clearableVal(fd, 'sellerStorefrontId')
+  const { distributor, outlet: distributorOutlet, seller, storefront } = await validateCommerceSelection(prisma, collection.id, { distributorId, distributorOutletId, sellerId, sellerStorefrontId })
   const observation = await prisma.$transaction(async (tx) => {
     const created = await tx.plantObservation.create({
       data: {
         collectionId: collection.id,
         plantDefinitionId,
         createdByUserId: user.id,
-        vendor: distributor ? (distributorLocation ? `${distributor.name} — ${distributorLocation.name}` : distributor.name) : clearableVal(fd, 'vendor'),
+        vendor: seller?.name || distributor?.name || clearableVal(fd, 'vendor'),
         distributorId: distributor?.id || null,
-        distributorLocationId: distributorLocation?.id || null,
+        distributorOutletId: distributorOutlet?.id || null,
+        sellerId: seller?.id || null,
+        sellerStorefrontId: storefront?.id || null,
         observedAt,
         observedPrice: dec(val(fd, 'observedPrice')) as any,
         currency: val(fd, 'currency') || 'USD',
@@ -289,8 +321,10 @@ export async function createPlantAcquisitionRecord(fd: FormData) {
   }
   const fulfillmentChoice = fulfillmentValue(val(fd, 'fulfillmentChoice'))
   const distributorId = clearableVal(fd, 'distributorId')
-  const distributorLocationId = clearableVal(fd, 'distributorLocationId')
-  const { distributor, location: distributorLocation } = await validateDistributorSelection(prisma, collection.id, distributorId, distributorLocationId)
+  const distributorOutletId = clearableVal(fd, 'distributorOutletId')
+  const sellerId = clearableVal(fd, 'sellerId')
+  const sellerStorefrontId = clearableVal(fd, 'sellerStorefrontId')
+  const { distributor, outlet: distributorOutlet, seller, storefront } = await validateCommerceSelection(prisma, collection.id, { distributorId, distributorOutletId, sellerId, sellerStorefrontId })
   const sourceRows = sourceRowsFromForm(fd)
   const sourceRecords = await validateSourceRows(prisma, collection.id, sourceRows)
   const sourceNames = new Map(sourceRecords.map((source) => [source.id, source.name]))
@@ -303,9 +337,11 @@ export async function createPlantAcquisitionRecord(fd: FormData) {
         plantDefinitionId,
         createdByUserId: user.id,
         observationId,
-        vendor: distributor ? (distributorLocation ? `${distributor.name} — ${distributorLocation.name}` : distributor.name) : clearableVal(fd, 'vendor'),
+        vendor: seller?.name || distributor?.name || clearableVal(fd, 'vendor'),
         distributorId: distributor?.id || null,
-        distributorLocationId: distributorLocation?.id || null,
+        distributorOutletId: distributorOutlet?.id || null,
+        sellerId: seller?.id || null,
+        sellerStorefrontId: storefront?.id || null,
         acquiredAt,
         price: dec(val(fd, 'price')) as any,
         currency: val(fd, 'currency') || 'USD',
@@ -352,8 +388,8 @@ export async function createPlantAcquisitionRecord(fd: FormData) {
             currentLocationId: location?.id || null,
             acquisitionDate: acquiredAt,
             acquisitionLabel: clearableVal(fd, 'acquisitionLabel'),
-            source: primarySource ? sourceNames.get(primarySource.sourceId) : distributor?.name || val(fd, 'source') || val(fd, 'vendor'),
-            distributor: distributor?.name || val(fd, 'vendor'),
+            source: primarySource ? sourceNames.get(primarySource.sourceId) : seller?.name || distributor?.name || val(fd, 'source') || val(fd, 'vendor'),
+            distributor: seller?.name || distributor?.name || val(fd, 'vendor'),
             purchasePrice: dec(val(fd, 'price')) as any,
           },
         })
@@ -408,10 +444,12 @@ export async function createPlantAcquisitionRecord(fd: FormData) {
         title: 'Acquisition recorded',
         quantity,
         distributorId: distributor?.id,
-        distributorLocationId: distributorLocation?.id,
+        distributorOutletId: distributorOutlet?.id,
+        sellerId: seller?.id,
+        sellerStorefrontId: storefront?.id,
         sourceIds: sourceRows.map((row) => row.sourceId),
         createdPlantInstanceIds: createdInstances.map((instance) => instance.id),
-        summary: val(fd, 'notes') || val(fd, 'vendor') || undefined,
+        summary: val(fd, 'notes') || acquisitionProvenanceDisplay({ seller, storefront, distributor, outlet: distributorOutlet, legacy: val(fd, 'vendor') }),
       },
     })
     return { record, createdInstances }
@@ -441,8 +479,10 @@ export async function createAcquisitionBatch(fd: FormData) {
   })
   if (definitions.length !== definitionIds.length) throw new Error('One or more selected definitions are unavailable in this collection.')
   const distributorId = clearableVal(fd, 'distributorId')
-  const distributorLocationId = clearableVal(fd, 'distributorLocationId')
-  const { distributor, location: distributorLocation } = await validateDistributorSelection(prisma, collection.id, distributorId, distributorLocationId)
+  const distributorOutletId = clearableVal(fd, 'distributorOutletId')
+  const sellerId = clearableVal(fd, 'sellerId')
+  const sellerStorefrontId = clearableVal(fd, 'sellerStorefrontId')
+  const { distributor, outlet: distributorOutlet, seller, storefront } = await validateCommerceSelection(prisma, collection.id, { distributorId, distributorOutletId, sellerId, sellerStorefrontId })
   const acquiredAt = date(val(fd, 'acquisitionDate')) || new Date()
   const currency = val(fd, 'currency') || 'USD'
   const requestedLocationIds = definitionIds.map((id) => clearableVal(fd, `initialLocationId:${id}`)).filter(Boolean) as string[]
@@ -457,7 +497,9 @@ export async function createAcquisitionBatch(fd: FormData) {
     const batch = await tx.acquisitionBatch.create({ data: {
       collectionId: collection.id,
       distributorId: distributor?.id || null,
-      distributorLocationId: distributorLocation?.id || null,
+      distributorOutletId: distributorOutlet?.id || null,
+      sellerId: seller?.id || null,
+      sellerStorefrontId: storefront?.id || null,
       acquisitionDate: acquiredAt,
       orderNumber: clearableVal(fd, 'orderNumber'),
       currency,
@@ -499,9 +541,11 @@ export async function createAcquisitionBatch(fd: FormData) {
         collectionId: collection.id,
         plantDefinitionId: definition.id,
         createdByUserId: user.id,
-        vendor: distributor ? (distributorLocation ? `${distributor.name} — ${distributorLocation.name}` : distributor.name) : null,
+        vendor: seller?.name || distributor?.name || null,
         distributorId: distributor?.id || null,
-        distributorLocationId: distributorLocation?.id || null,
+        distributorOutletId: distributorOutlet?.id || null,
+        sellerId: seller?.id || null,
+        sellerStorefrontId: storefront?.id || null,
         acquiredAt,
         price: dec(val(fd, `unitPrice:${definition.id}`)) as any,
         currency,
@@ -520,7 +564,7 @@ export async function createAcquisitionBatch(fd: FormData) {
           const instance = await tx.plantInstance.create({ data: {
             collectionId: collection.id, plantDefinitionId: definition.id, plantId, instanceType: 'MOTHER',
             location: location?.name || null, legacyLocationText: location?.name || null, currentLocationId: location?.id || null,
-            acquisitionDate: acquiredAt, distributor: distributor?.name || null, purchasePrice: dec(val(fd, `unitPrice:${definition.id}`)) as any,
+            acquisitionDate: acquiredAt, distributor: seller?.name || distributor?.name || null, purchasePrice: dec(val(fd, `unitPrice:${definition.id}`)) as any,
             acquisitionLabel: clearableVal(fd, `acquisitionLabel:${definition.id}`),
           } })
           await tx.plantAcquisitionRecordInstance.create({ data: { acquisitionRecordId: record.id, plantInstanceId: instance.id } })

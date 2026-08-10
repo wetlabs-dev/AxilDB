@@ -107,7 +107,9 @@ function PlantCard({ entry, settings, collectionSlug, visibility }: { entry: any
           ['Location', settings.location ? entry.locationPath || 'No location set' : null],
           ['Acquired', settings.acquisitionSource ? formatDate(plant.acquisitionDate) : null],
           ['Source', settings.acquisitionSource && visibility.showSourceProvenance ? sourceChainDisplay(acquisition?.sources || [], plant.source) : null],
-          ['Distributor', settings.acquisitionSource && visibility.showDistributorIdentity ? distributorDisplay(acquisition?.distributor, visibility.showDistributorLocation ? acquisition?.distributorLocation : null, plant.distributor) : null],
+          ['Seller', settings.acquisitionSource && visibility.showSellerIdentity ? acquisition?.seller?.name || null : null],
+          ['Storefront', settings.acquisitionSource && visibility.showSellerStorefront ? acquisition?.sellerStorefront?.handleOrName || null : null],
+          ['Distributor', settings.acquisitionSource && visibility.showDistributorIdentity ? distributorDisplay(acquisition?.distributor, visibility.showDistributorOutlet ? acquisition?.distributorOutlet : null, plant.distributor) : null],
           ['Status', settings.archivedStatus ? formatStatus(plant.status) : null],
           ['Sunshine', settings.sunshine ? String(entry.sunshineCount || 0) : null],
         ]}

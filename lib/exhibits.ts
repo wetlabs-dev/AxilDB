@@ -210,7 +210,24 @@ export async function loadExhibitForDisplay(prisma: PrismaClient, slug: string) 
                 },
               },
               currentLocation: { include: { locationType: true } },
-              acquisitionRecordLinks: { include: { acquisitionRecord: { include: { distributor: true, distributorLocation: true, sources: { include: { source: true }, orderBy: { sortOrder: 'asc' } } } } }, orderBy: { createdAt: 'desc' }, take: 1 },
+              acquisitionRecordLinks: {
+                include: {
+                  acquisitionRecord: {
+                    select: {
+                      seller: { select: { name: true } },
+                      sellerStorefront: { select: { handleOrName: true } },
+                      distributor: { select: { name: true, distributorType: true } },
+                      distributorOutlet: { select: { name: true } },
+                      sources: {
+                        select: { role: true, source: { select: { name: true } } },
+                        orderBy: { sortOrder: 'asc' },
+                      },
+                    },
+                  },
+                },
+                orderBy: { createdAt: 'desc' },
+                take: 1,
+              },
               blooms: { orderBy: { bloomStartDate: 'desc' }, take: 8 },
               conditions: { orderBy: { observedAt: 'desc' }, take: 8 },
               careEvents: { orderBy: { performedAt: 'desc' }, take: 8 },

@@ -340,7 +340,9 @@ function drawSpecimenCard(doc: PDFKit.PDFDocument, data: NonNullable<Awaited<Ret
   const meta = [
     data.settings.location ? entry.locationPath || 'No location set' : null,
     data.settings.acquisitionSource && data.exhibit.collection.showSourceProvenance ? `Source: ${sourceChainDisplay(acquisition?.sources || [], plant.source)}` : null,
-    data.settings.acquisitionSource && data.exhibit.collection.showDistributorIdentity ? `Distributor: ${distributorDisplay(acquisition?.distributor, data.exhibit.collection.showDistributorLocation ? acquisition?.distributorLocation : null, plant.distributor)}` : null,
+    data.settings.acquisitionSource && data.exhibit.collection.showSellerIdentity && acquisition?.seller ? `Seller: ${acquisition.seller.name}` : null,
+    data.settings.acquisitionSource && data.exhibit.collection.showSellerStorefront && acquisition?.sellerStorefront ? `Storefront: ${acquisition.sellerStorefront.handleOrName}` : null,
+    data.settings.acquisitionSource && data.exhibit.collection.showDistributorIdentity ? `Distributor: ${distributorDisplay(acquisition?.distributor, data.exhibit.collection.showDistributorOutlet ? acquisition?.distributorOutlet : null, plant.distributor)}` : null,
     data.settings.archivedStatus ? `Status: ${String(plant.status).toLowerCase()}` : null,
     data.settings.sunshine ? `Sunshine: ${entry.sunshineCount || 0}` : null,
   ].filter(Boolean)

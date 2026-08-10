@@ -51,6 +51,9 @@ function privateRows(entries: Awaited<ReturnType<typeof loadWishlistEntries>>) {
       observedRange: range ? `${range.low}-${range.high} ${range.currency}` : '',
       latestObservation: entry.plantObservations[0] ? formatDate(entry.plantObservations[0].observedAt) : '',
       plannedLocation: entry.desiredLocation?.name || '', interestNotes: entry.acquisitionInterestNotes || '',
+      preferredSellers: entry.preferredSellers.map((item) => item.seller.name).join('; '),
+      preferredStorefronts: entry.preferredSellers.flatMap((item) => item.sellerStorefront ? [item.sellerStorefront.handleOrName] : []).join('; '),
+      preferredDistributors: entry.preferredDistributors.map((item) => item.distributor.name).join('; '),
       tags: entry.tags.map((item) => item.plantTag.name).join('; '),
     }
   })

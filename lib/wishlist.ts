@@ -85,6 +85,8 @@ export async function loadWishlistEntries(
       husbandryGuide: true,
       desiredLocation: { include: { locationType: true } },
       instances: { select: { id: true, status: true } },
+      preferredSellers: { select: { seller: { select: { name: true } }, sellerStorefront: { select: { handleOrName: true, distributor: { select: { name: true } } } } }, orderBy: { sortOrder: 'asc' } },
+      preferredDistributors: { select: { distributor: { select: { name: true } } }, orderBy: { sortOrder: 'asc' } },
       plantObservations: {
         where: options.publicOnly ? { isPublic: true } : undefined,
         orderBy: { observedAt: 'desc' },

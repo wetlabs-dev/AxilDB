@@ -19,7 +19,7 @@ import { prisma } from '@/lib/prisma'
 import { formatDate } from '@/lib/time'
 import { acceptedPlantName, cn, plantName, plantNeedsIdentification } from '@/lib/utils'
 import { getCurrentUser } from '@/lib/auth'
-import { distributorDisplay, sourceChainDisplay } from '@/lib/provenance'
+import { acquisitionProvenanceDisplay, sourceChainDisplay } from '@/lib/provenance'
 import { getUserUnitPreferences } from '@/lib/units'
 
 const acquisitionStatuses = [
@@ -57,6 +57,46 @@ function stars(priority?: number | null) {
 
 function preferredVendors(value: unknown) {
   return Array.isArray(value) ? value.map((item) => String(item)).filter(Boolean) : []
+}
+
+function PreferredProvenanceFields({
+  sellers,
+  distributors,
+  defaultSellerIds = [],
+  defaultStorefrontIds = [],
+  defaultDistributorIds = [],
+}: {
+  sellers: Array<{ id: string; name: string; storefronts: Array<{ id: string; handleOrName: string; distributor: { name: string } | null }> }>
+  distributors: Array<{ id: string; name: string }>
+  defaultSellerIds?: string[]
+  defaultStorefrontIds?: string[]
+  defaultDistributorIds?: string[]
+}) {
+  return (
+    <div className="grid gap-3 rounded-lg border border-stone-200 bg-white/45 p-3 md:col-span-4 md:grid-cols-3">
+      <label className="grid gap-1 text-sm font-medium">
+        Preferred sellers
+        <select name="preferredSellerId" multiple defaultValue={defaultSellerIds} className="min-h-28 rounded-md border border-stone-300 bg-white px-3 py-2">
+          {sellers.map((seller) => <option key={seller.id} value={seller.id}>{seller.name}</option>)}
+        </select>
+      </label>
+      <label className="grid gap-1 text-sm font-medium">
+        Preferred storefronts
+        <select name="preferredStorefrontId" multiple defaultValue={defaultStorefrontIds} className="min-h-28 rounded-md border border-stone-300 bg-white px-3 py-2">
+          {sellers.flatMap((seller) => seller.storefronts.map((storefront) => (
+            <option key={storefront.id} value={storefront.id}>{seller.name} · {storefront.handleOrName}{storefront.distributor ? ` on ${storefront.distributor.name}` : ''}</option>
+          )))}
+        </select>
+      </label>
+      <label className="grid gap-1 text-sm font-medium">
+        Preferred platforms or channels
+        <select name="preferredDistributorId" multiple defaultValue={defaultDistributorIds} className="min-h-28 rounded-md border border-stone-300 bg-white px-3 py-2">
+          {distributors.map((distributor) => <option key={distributor.id} value={distributor.id}>{distributor.name}</option>)}
+        </select>
+      </label>
+      <p className="text-xs text-stone-600 md:col-span-3">Use Command or Control to select several entries. A storefront preference already identifies its seller.</p>
+    </div>
+  )
 }
 
 function urlList(value: unknown) {
@@ -117,7 +157,7 @@ export default async function AcquisitionPipelinePage({
     )
   }
 
-  const [definitions, locations, sources, distributors] = await Promise.all([
+  const [definitions, locations, sources, distributors, sellers] = await Promise.all([
     prisma.plantDefinition.findMany({
       where: {
         ...collectionWhere,
@@ -131,16 +171,18 @@ export default async function AcquisitionPipelinePage({
             { instances: { some: { acquisitionLabel: { contains: q, mode: 'insensitive' } } } },
             { acquisitionInterestNotes: { contains: q, mode: 'insensitive' } },
             { acquisitionResearchSummary: { contains: q, mode: 'insensitive' } },
-            { plantObservations: { some: { OR: [{ vendor: { contains: q, mode: 'insensitive' } }, { distributor: { name: { contains: q, mode: 'insensitive' } } }, { distributorLocation: { name: { contains: q, mode: 'insensitive' } } }] } } },
-            { acquisitionRecords: { some: { OR: [{ vendor: { contains: q, mode: 'insensitive' } }, { distributor: { name: { contains: q, mode: 'insensitive' } } }, { sources: { some: { source: { name: { contains: q, mode: 'insensitive' } } } } }] } } },
+            { plantObservations: { some: { OR: [{ vendor: { contains: q, mode: 'insensitive' } }, { seller: { name: { contains: q, mode: 'insensitive' } } }, { sellerStorefront: { handleOrName: { contains: q, mode: 'insensitive' } } }, { distributor: { name: { contains: q, mode: 'insensitive' } } }, { distributorOutlet: { name: { contains: q, mode: 'insensitive' } } }] } } },
+            { acquisitionRecords: { some: { OR: [{ vendor: { contains: q, mode: 'insensitive' } }, { seller: { name: { contains: q, mode: 'insensitive' } } }, { sellerStorefront: { handleOrName: { contains: q, mode: 'insensitive' } } }, { distributor: { name: { contains: q, mode: 'insensitive' } } }, { distributorOutlet: { name: { contains: q, mode: 'insensitive' } } }, { sources: { some: { source: { name: { contains: q, mode: 'insensitive' } } } } }] } } },
           ],
         } : {}),
       },
       include: {
         desiredLocation: { include: { locationType: true } },
         instances: { select: { id: true, status: true } },
-        plantObservations: { include: { distributor: true, distributorLocation: true }, orderBy: { observedAt: 'desc' } },
-        acquisitionRecords: { include: { distributor: true, distributorLocation: true, sources: { include: { source: true }, orderBy: { sortOrder: 'asc' } }, plantInstances: { include: { plantInstance: true } } }, orderBy: { acquiredAt: 'desc' } },
+        plantObservations: { include: { seller: true, sellerStorefront: true, distributor: true, distributorOutlet: true }, orderBy: { observedAt: 'desc' } },
+        acquisitionRecords: { include: { seller: true, sellerStorefront: true, distributor: true, distributorOutlet: true, sources: { include: { source: true }, orderBy: { sortOrder: 'asc' } }, plantInstances: { include: { plantInstance: true } } }, orderBy: { acquiredAt: 'desc' } },
+        preferredSellers: { include: { seller: true, sellerStorefront: true }, orderBy: { sortOrder: 'asc' } },
+        preferredDistributors: { include: { distributor: true }, orderBy: { sortOrder: 'asc' } },
         acquisitionResearchEntries: { orderBy: { occurredAt: 'desc' } },
       },
       orderBy: [{ updatedAt: 'desc' }],
@@ -151,7 +193,8 @@ export default async function AcquisitionPipelinePage({
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     }),
     prisma.source.findMany({ where: { collectionId: collection.id, active: true }, orderBy: { name: 'asc' } }),
-    prisma.distributor.findMany({ where: { collectionId: collection.id, active: true }, include: { locations: { where: { active: true }, orderBy: { name: 'asc' } } }, orderBy: { name: 'asc' } }),
+    prisma.distributor.findMany({ where: { collectionId: collection.id, active: true }, include: { outlets: { where: { active: true }, orderBy: { name: 'asc' } } }, orderBy: { name: 'asc' } }),
+    prisma.seller.findMany({ where: { collectionId: collection.id, active: true }, include: { storefronts: { where: { active: true }, include: { distributor: true }, orderBy: { handleOrName: 'asc' } } }, orderBy: { name: 'asc' } }),
   ])
   const locationNodes = locations.map((location) => ({
     id: location.id,
@@ -224,7 +267,8 @@ export default async function AcquisitionPipelinePage({
               <option value="">No desired location</option>
               {locationNodes.map((location) => <option key={location.id} value={location.id}>{location.code} · {locationPath(location.id, locationNodes)}</option>)}
             </Select>
-            <Field label="Preferred vendors" name="preferredVendors" placeholder="One per line or comma separated" wrapperClassName="md:col-span-2" />
+            <PreferredProvenanceFields sellers={sellers} distributors={distributors} />
+            <Field label="Other preferred vendor notes" name="preferredVendors" placeholder="Unlisted sellers or useful buying notes" wrapperClassName="md:col-span-2" />
             <TextArea label="Interest notes" name="acquisitionInterestNotes" wrapperClassName="md:col-span-2" />
             <TextArea label="Research summary" name="acquisitionResearchSummary" wrapperClassName="md:col-span-2" />
             <Button className="w-fit md:col-span-4">Add target</Button>
@@ -306,7 +350,18 @@ export default async function AcquisitionPipelinePage({
                     <div className="rounded-lg border border-stone-200 bg-white/50 p-3"><dt className="text-xs uppercase tracking-wide text-stone-500">Desired location</dt><dd className="font-semibold">{selected.desiredLocation ? `${selected.desiredLocation.code} · ${locationPath(selected.desiredLocation.id, locationNodes)}` : '—'}</dd></div>
                     <div className="rounded-lg border border-stone-200 bg-white/50 p-3"><dt className="text-xs uppercase tracking-wide text-stone-500">Observations</dt><dd className="font-semibold">{selected.plantObservations.length}</dd></div>
                     <div className="rounded-lg border border-stone-200 bg-white/50 p-3"><dt className="text-xs uppercase tracking-wide text-stone-500">Observed price</dt><dd className="font-semibold">{selectedStats ? `${money(selectedStats.lowest, selectedStats.currency)} low · ${money(selectedStats.average, selectedStats.currency)} avg` : '—'}</dd></div>
-                    <div className="rounded-lg border border-stone-200 bg-white/50 p-3"><dt className="text-xs uppercase tracking-wide text-stone-500">Preferred vendor</dt><dd className="font-semibold">{selectedStats?.preferredVendor || preferredVendors(selected.preferredVendorsJson).join(', ') || '—'}</dd></div>
+                    <div className="rounded-lg border border-stone-200 bg-white/50 p-3">
+                      <dt className="text-xs uppercase tracking-wide text-stone-500">Preferred sellers / channels</dt>
+                      <dd className="font-semibold">
+                        {[
+                          ...selected.preferredSellers.map((preference) => preference.sellerStorefront
+                            ? `${preference.seller.name} · ${preference.sellerStorefront.handleOrName}`
+                            : preference.seller.name),
+                          ...selected.preferredDistributors.map((preference) => preference.distributor.name),
+                          ...preferredVendors(selected.preferredVendorsJson),
+                        ].join(', ') || selectedStats?.preferredVendor || '—'}
+                      </dd>
+                    </div>
                   </div>
                   {selected.acquisitionResearchSummary && <p className="mt-4 rounded-lg border border-[#d6dfc9] bg-[#f7f4e8]/80 p-3 text-sm">{selected.acquisitionResearchSummary}</p>}
                 </div>
@@ -349,7 +404,14 @@ export default async function AcquisitionPipelinePage({
                         locations={locationNodes.map((location) => ({ id: location.id, label: `${location.code} · ${locationPath(location.id, locationNodes)}` }))}
                       />
                     </div>
-                    <TextArea label="Preferred vendors" name="preferredVendors" defaultValue={preferredVendors(selected.preferredVendorsJson).join('\n')} wrapperClassName="md:col-span-2" />
+                    <PreferredProvenanceFields
+                      sellers={sellers}
+                      distributors={distributors}
+                      defaultSellerIds={selected.preferredSellers.filter((preference) => !preference.sellerStorefrontId).map((preference) => preference.sellerId)}
+                      defaultStorefrontIds={selected.preferredSellers.flatMap((preference) => preference.sellerStorefrontId ? [preference.sellerStorefrontId] : [])}
+                      defaultDistributorIds={selected.preferredDistributors.map((preference) => preference.distributorId)}
+                    />
+                    <TextArea label="Other preferred vendor notes" name="preferredVendors" defaultValue={preferredVendors(selected.preferredVendorsJson).join('\n')} wrapperClassName="md:col-span-2" />
                     <TextArea label="Interest notes" name="acquisitionInterestNotes" defaultValue={selected.acquisitionInterestNotes} wrapperClassName="md:col-span-2" />
                     <TextArea label="Research summary" name="acquisitionResearchSummary" defaultValue={selected.acquisitionResearchSummary} wrapperClassName="md:col-span-4" />
                     <Button className="w-fit md:col-span-4">Save intent</Button>
@@ -381,7 +443,7 @@ export default async function AcquisitionPipelinePage({
                     <input type="hidden" name="plantDefinitionId" value={selected.id} />
                     <input type="hidden" name="back" value={selectedBack} />
                     <Field label="Date" name="observedAt" type="date" />
-                    <DistributorFields distributors={distributors} />
+                    <DistributorFields distributors={distributors} sellers={sellers} />
                     <Field label="Observed price" name="observedPrice" type="number" step="0.01" />
                     <Field label="Currency" name="currency" defaultValue="USD" />
                     <Field label="Specimen size" name="specimenSize" />
@@ -390,7 +452,7 @@ export default async function AcquisitionPipelinePage({
                       {availabilities.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                     </Select>
                     <TextArea label="Notes" name="notes" />
-                    <label className="flex items-start gap-2 rounded-md border border-stone-200 bg-white/55 p-3 text-sm"><input className="mt-1" type="checkbox" name="isPublic" /><span><span className="block font-semibold">Public observation</span><span className="block text-xs text-stone-600">Allow its date, price, size, condition, and availability in public-safe wishlist summaries. Distributor identity and notes remain private.</span></span></label>
+                    <label className="flex items-start gap-2 rounded-md border border-stone-200 bg-white/55 p-3 text-sm"><input className="mt-1" type="checkbox" name="isPublic" /><span><span className="block font-semibold">Public observation</span><span className="block text-xs text-stone-600">Allow its date, price, size, condition, and availability in public-safe summaries. Seller and channel identity still follow the collection's separate visibility settings.</span></span></label>
                     <Button>Add observation</Button>
                   </form>
                 </Card>
@@ -402,10 +464,17 @@ export default async function AcquisitionPipelinePage({
                     <input type="hidden" name="back" value={selectedBack} />
                     <Field label="Purchase date" name="acquiredAt" type="date" />
                     {selectedObservation && <input type="hidden" name="observationId" value={selectedObservation.id} />}
-                    <DistributorFields distributors={distributors} defaultDistributorId={selectedObservation?.distributorId || ''} defaultLocationId={selectedObservation?.distributorLocationId || ''} />
+                    <DistributorFields
+                      distributors={distributors}
+                      sellers={sellers}
+                      defaultSellerId={selectedObservation?.sellerId || ''}
+                      defaultStorefrontId={selectedObservation?.sellerStorefrontId || ''}
+                      defaultDistributorId={selectedObservation?.distributorId || ''}
+                      defaultOutletId={selectedObservation?.distributorOutletId || ''}
+                    />
                     <AcquisitionSourceChainFields sources={sources} />
                     <Field label="Price" name="price" type="number" step="0.01" defaultValue={selectedObservation?.observedPrice ? String(selectedObservation.observedPrice) : ''} />
-                    <Field label="Currency" name="currency" defaultValue="USD" />
+                    <Field label="Currency" name="currency" defaultValue={selectedObservation?.currency || 'USD'} />
                     <Field label="Quantity" name="quantity" type="number" min="1" max="50" defaultValue="1" />
                     <Field label="Specimen size" name="specimenSize" defaultValue={selectedObservation?.specimenSize || selected.desiredSpecimenSize || ''} />
                     <Field label="Acquisition label" help="The label supplied with these specimens. It is saved on each created plant instance." name="acquisitionLabel" />
@@ -465,7 +534,7 @@ export default async function AcquisitionPipelinePage({
                   {selected.plantObservations.map((observation) => (
                     <article key={observation.id} className="rounded-lg border border-stone-200 bg-white/50 p-3 text-sm">
                       <p className="text-xs text-stone-500">{formatDate(observation.observedAt)} · {observation.availability.toLowerCase().replaceAll('_', ' ')}</p>
-                      <h4 className="font-semibold">{distributorDisplay(observation.distributor, observation.distributorLocation, observation.vendor)}</h4>
+                      <h4 className="font-semibold">{acquisitionProvenanceDisplay({ seller: observation.seller, storefront: observation.sellerStorefront, distributor: observation.distributor, outlet: observation.distributorOutlet, legacy: observation.vendor })}</h4>
                       <p>{money(observation.observedPrice, observation.currency)} · {observation.specimenSize || 'size not recorded'}</p>
                       {observation.condition && <p className="text-stone-600">Condition: {observation.condition}</p>}
                       {observation.notes && <p className="mt-1 whitespace-pre-wrap">{observation.notes}</p>}
@@ -481,7 +550,7 @@ export default async function AcquisitionPipelinePage({
                   {selected.acquisitionRecords.map((record) => (
                     <article key={record.id} className="rounded-lg border border-stone-200 bg-white/50 p-3 text-sm">
                       <p className="text-xs text-stone-500">{formatDate(record.acquiredAt)} · {record.fulfillmentChoice.toLowerCase().replaceAll('_', ' ')}</p>
-                      <h4 className="font-semibold">{distributorDisplay(record.distributor, record.distributorLocation, record.vendor)}</h4>
+                      <h4 className="font-semibold">{acquisitionProvenanceDisplay({ seller: record.seller, storefront: record.sellerStorefront, distributor: record.distributor, outlet: record.distributorOutlet, legacy: record.vendor })}</h4>
                       <p>{record.quantity} item{record.quantity === 1 ? '' : 's'} · {money(record.price, record.currency)}</p>
                       <p className="mt-1 text-xs text-stone-600">Produced by: {sourceChainDisplay(record.sources, record.plantInstances[0]?.plantInstance.source)}</p>
                       {record.notes && <p className="mt-1 whitespace-pre-wrap">{record.notes}</p>}

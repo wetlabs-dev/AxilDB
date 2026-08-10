@@ -91,7 +91,9 @@ export default async function SearchPage({
                 { acquisitionLabel: contains(q) },
                 { acquisitionRecordLinks: { some: { acquisitionRecord: { OR: [
                   { distributor: { name: contains(q) } },
-                  { distributorLocation: { name: contains(q) } },
+                  { distributorOutlet: { name: contains(q) } },
+                  { seller: { name: contains(q) } },
+                  { sellerStorefront: { handleOrName: contains(q) } },
                   { sources: { some: { OR: [{ role: contains(q) }, { source: { name: contains(q) } }] } } },
                 ] } } } },
                 { plantDefinition: { AND: [definitionSearch, tagWhere] } },

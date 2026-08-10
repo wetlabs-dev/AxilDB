@@ -182,6 +182,7 @@ model User {
   createdAcquisitionBatches AcquisitionBatch[] @relation("AcquisitionBatchCreatedBy")
   createdSources Source[] @relation("SourceCreatedBy")
   createdDistributors Distributor[] @relation("DistributorCreatedBy")
+  createdSellers Seller[] @relation("SellerCreatedBy")
   resolvedProvenanceItems ProvenanceReconciliationItem[] @relation("ProvenanceReconciliationResolvedBy")
 
   @@index([role])
@@ -201,9 +202,11 @@ model Collection {
   acquisitionVisibility String                @default("PRIVATE")
   wishlistIntro       String?
   wishlistPublicSettingsJson Json?
-  showSourceProvenance Boolean                @default(true)
+  showSourceProvenance Boolean                @default(false)
   showDistributorIdentity Boolean             @default(false)
-  showDistributorLocation Boolean             @default(false)
+  showDistributorOutlet Boolean               @default(false)
+  showSellerIdentity     Boolean               @default(false)
+  showSellerStorefront   Boolean               @default(false)
   description         String?
   archivedAt          DateTime?
   archivedById        String?
@@ -270,7 +273,11 @@ model Collection {
   sources             Source[]
   acquisitionSources  AcquisitionSource[]
   distributors        Distributor[]
-  distributorLocations DistributorLocation[]
+  distributorOutlets  DistributorOutlet[]
+  sellers             Seller[]
+  sellerStorefronts   SellerStorefront[]
+  preferredSellers    PlantDefinitionPreferredSeller[]
+  preferredDistributors PlantDefinitionPreferredDistributor[]
   provenanceReconciliationItems ProvenanceReconciliationItem[]
   outgoingTransferConnections CollectionTransferConnection[] @relation("TransferConnectionSource")
   incomingTransferConnections CollectionTransferConnection[] @relation("TransferConnectionTarget")
@@ -1261,6 +1268,8 @@ model PlantDefinition {
   acquisitionBatchItems AcquisitionBatchItem[]
   exhibitWishlistItems CollectionExhibitWishlistItem[]
   tags PlantDefinitionTag[]
+  preferredSellers PlantDefinitionPreferredSeller[]
+  preferredDistributors PlantDefinitionPreferredDistributor[]
 
   @@index([collectionId])
   @@index([governingBodyId])
@@ -1306,7 +1315,9 @@ model PlantObservation {
   createdByUserId   String?
   vendor            String?
   distributorId     String?
-  distributorLocationId String?
+  distributorOutletId String?
+  sellerId          String?
+  sellerStorefrontId String?
   observedAt        DateTime @default(now())
   observedPrice     Decimal?
   currency          String   @default("USD")
@@ -1322,7 +1333,9 @@ model PlantObservation {
   plantDefinition PlantDefinition @relation(fields: [plantDefinitionId], references: [id], onDelete: Cascade)
   createdBy       User?           @relation("PlantObservationCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
   distributor     Distributor? @relation(fields: [distributorId], references: [id], onDelete: SetNull)
-  distributorLocation DistributorLocation? @relation(fields: [distributorLocationId], references: [id], onDelete: SetNull)
+  distributorOutlet DistributorOutlet? @relation(fields: [distributorOutletId], references: [id], onDelete: SetNull)
+  seller          Seller? @relation(fields: [sellerId], references: [id], onDelete: SetNull)
+  sellerStorefront SellerStorefront? @relation(fields: [sellerStorefrontId], references: [id], onDelete: SetNull)
   acquisitionRecords PlantAcquisitionRecord[]
   acquisitionBatchItems AcquisitionBatchItem[]
 
@@ -1330,7 +1343,9 @@ model PlantObservation {
   @@index([plantDefinitionId])
   @@index([createdByUserId])
   @@index([distributorId])
-  @@index([distributorLocationId])
+  @@index([distributorOutletId])
+  @@index([sellerId])
+  @@index([sellerStorefrontId])
   @@index([observedAt])
   @@index([availability])
 }
@@ -1339,7 +1354,9 @@ model AcquisitionBatch {
   id                    String   @id @default(cuid())
   collectionId          String
   distributorId         String?
-  distributorLocationId String?
+  distributorOutletId   String?
+  sellerId               String?
+  sellerStorefrontId     String?
   acquisitionDate       DateTime @default(now())
   orderNumber           String?
   currency              String   @default("USD")
@@ -1357,7 +1374,9 @@ model AcquisitionBatch {
 
   collection          Collection           @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   distributor         Distributor?          @relation(fields: [distributorId], references: [id], onDelete: SetNull)
-  distributorLocation DistributorLocation?  @relation(fields: [distributorLocationId], references: [id], onDelete: SetNull)
+  distributorOutlet   DistributorOutlet?    @relation(fields: [distributorOutletId], references: [id], onDelete: SetNull)
+  seller              Seller?               @relation(fields: [sellerId], references: [id], onDelete: SetNull)
+  sellerStorefront    SellerStorefront?      @relation(fields: [sellerStorefrontId], references: [id], onDelete: SetNull)
   receiptPhoto        Photo?                 @relation("AcquisitionBatchReceiptPhoto", fields: [receiptPhotoId], references: [id], onDelete: SetNull)
   createdBy           User?                  @relation("AcquisitionBatchCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
   items               AcquisitionBatchItem[]
@@ -1366,7 +1385,9 @@ model AcquisitionBatch {
   @@unique([collectionId, idempotencyKey])
   @@index([collectionId, acquisitionDate])
   @@index([distributorId])
-  @@index([distributorLocationId])
+  @@index([distributorOutletId])
+  @@index([sellerId])
+  @@index([sellerStorefrontId])
   @@index([receiptPhotoId])
   @@index([createdByUserId])
 }
@@ -1408,7 +1429,9 @@ model PlantAcquisitionRecord {
   observationId     String?
   vendor            String?
   distributorId     String?
-  distributorLocationId String?
+  distributorOutletId String?
+  sellerId          String?
+  sellerStorefrontId String?
   acquiredAt        DateTime @default(now())
   price             Decimal?
   currency          String   @default("USD")
@@ -1429,7 +1452,9 @@ model PlantAcquisitionRecord {
   initialLocation Location?       @relation("PlantAcquisitionInitialLocation", fields: [initialLocationId], references: [id], onDelete: SetNull)
   plantInstances  PlantAcquisitionRecordInstance[]
   distributor     Distributor? @relation(fields: [distributorId], references: [id], onDelete: SetNull)
-  distributorLocation DistributorLocation? @relation(fields: [distributorLocationId], references: [id], onDelete: SetNull)
+  distributorOutlet DistributorOutlet? @relation(fields: [distributorOutletId], references: [id], onDelete: SetNull)
+  seller          Seller? @relation(fields: [sellerId], references: [id], onDelete: SetNull)
+  sellerStorefront SellerStorefront? @relation(fields: [sellerStorefrontId], references: [id], onDelete: SetNull)
   sources         AcquisitionSource[]
   acquisitionBatch AcquisitionBatch? @relation(fields: [acquisitionBatchId], references: [id], onDelete: SetNull)
   acquisitionBatchItem AcquisitionBatchItem? @relation("AcquisitionBatchItemRecord")
@@ -1440,7 +1465,9 @@ model PlantAcquisitionRecord {
   @@index([observationId])
   @@index([initialLocationId])
   @@index([distributorId])
-  @@index([distributorLocationId])
+  @@index([distributorOutletId])
+  @@index([sellerId])
+  @@index([sellerStorefrontId])
   @@index([acquiredAt])
   @@index([acquisitionBatchId])
 }
@@ -1507,23 +1534,25 @@ model Distributor {
 
   collection      Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   createdBy       User? @relation("DistributorCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  locations       DistributorLocation[]
+  outlets         DistributorOutlet[]
+  sellerStorefronts SellerStorefront[]
   acquisitions    PlantAcquisitionRecord[]
   observations    PlantObservation[]
   acquisitionBatches AcquisitionBatch[]
+  preferredBy     PlantDefinitionPreferredDistributor[]
 
   @@unique([collectionId, normalizedName])
   @@index([collectionId, active])
   @@index([distributorType])
 }
 
-model DistributorLocation {
+model DistributorOutlet {
   id              String   @id @default(cuid())
   collectionId    String
   distributorId   String
   name            String
   normalizedName  String
-  locationType    String?
+  outletType      String   @default("OTHER")
   addressLine1    String?
   addressLine2    String?
   city            String?
@@ -1548,6 +1577,103 @@ model DistributorLocation {
 
   @@unique([distributorId, normalizedName])
   @@index([collectionId, active])
+  @@index([distributorId])
+}
+
+model Seller {
+  id              String   @id @default(cuid())
+  collectionId    String
+  kind            String   @default("ORGANIZATION")
+  name            String
+  normalizedName  String
+  websiteUrl      String?
+  region          String?
+  country         String?
+  description     String?
+  rating          Int?
+  experienceNotes String?
+  aliasesJson     Json?
+  active          Boolean  @default(true)
+  archivedAt      DateTime?
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  collection      Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  createdBy       User? @relation("SellerCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  storefronts     SellerStorefront[]
+  acquisitions    PlantAcquisitionRecord[]
+  observations    PlantObservation[]
+  acquisitionBatches AcquisitionBatch[]
+  preferredBy     PlantDefinitionPreferredSeller[]
+
+  @@unique([collectionId, normalizedName])
+  @@index([collectionId, active])
+}
+
+model SellerStorefront {
+  id              String   @id @default(cuid())
+  collectionId    String
+  sellerId        String
+  distributorId   String?
+  handleOrName    String
+  normalizedName  String
+  storefrontType  String   @default("OTHER")
+  profileUrl      String?
+  notes           String?
+  active          Boolean  @default(true)
+  archivedAt      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  collection      Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  seller          Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  distributor     Distributor? @relation(fields: [distributorId], references: [id], onDelete: SetNull)
+  acquisitions    PlantAcquisitionRecord[]
+  observations    PlantObservation[]
+  acquisitionBatches AcquisitionBatch[]
+  preferredBy     PlantDefinitionPreferredSeller[]
+
+  @@unique([sellerId, normalizedName, distributorId])
+  @@index([collectionId, active])
+  @@index([sellerId])
+  @@index([distributorId])
+}
+
+model PlantDefinitionPreferredSeller {
+  id                 String   @id @default(cuid())
+  collectionId       String
+  plantDefinitionId  String
+  sellerId           String
+  sellerStorefrontId String?
+  sortOrder          Int      @default(0)
+  createdAt          DateTime @default(now())
+
+  collection       Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  plantDefinition  PlantDefinition @relation(fields: [plantDefinitionId], references: [id], onDelete: Cascade)
+  seller           Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  sellerStorefront SellerStorefront? @relation(fields: [sellerStorefrontId], references: [id], onDelete: SetNull)
+
+  @@unique([plantDefinitionId, sellerId, sellerStorefrontId])
+  @@index([collectionId])
+  @@index([sellerId])
+  @@index([sellerStorefrontId])
+}
+
+model PlantDefinitionPreferredDistributor {
+  id                String   @id @default(cuid())
+  collectionId      String
+  plantDefinitionId String
+  distributorId     String
+  sortOrder         Int      @default(0)
+  createdAt         DateTime @default(now())
+
+  collection      Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  plantDefinition PlantDefinition @relation(fields: [plantDefinitionId], references: [id], onDelete: Cascade)
+  distributor    Distributor @relation(fields: [distributorId], references: [id], onDelete: Cascade)
+
+  @@unique([plantDefinitionId, distributorId])
+  @@index([collectionId])
   @@index([distributorId])
 }
 
@@ -1582,7 +1708,9 @@ model ProvenanceReconciliationItem {
   legacyValue                   String
   suggestedSourceId             String?
   suggestedDistributorId        String?
-  suggestedDistributorLocationId String?
+  suggestedDistributorOutletId  String?
+  suggestedSellerId             String?
+  suggestedSellerStorefrontId   String?
   status                        String   @default("PENDING")
   resolutionJson                Json?
   resolvedByUserId              String?

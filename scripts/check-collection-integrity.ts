@@ -34,7 +34,11 @@ const requiredCollectionModels = [
   ['CareSheetAccessLog', 'careSheetAccessLog'],
   ['Source', 'source'],
   ['Distributor', 'distributor'],
-  ['DistributorLocation', 'distributorLocation'],
+  ['DistributorOutlet', 'distributorOutlet'],
+  ['Seller', 'seller'],
+  ['SellerStorefront', 'sellerStorefront'],
+  ['PlantDefinitionPreferredSeller', 'plantDefinitionPreferredSeller'],
+  ['PlantDefinitionPreferredDistributor', 'plantDefinitionPreferredDistributor'],
   ['AcquisitionSource', 'acquisitionSource'],
   ['ProvenanceReconciliationItem', 'provenanceReconciliationItem'],
 ] as const
