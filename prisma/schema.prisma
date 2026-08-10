@@ -2146,7 +2146,7 @@ model SubstrateRecipeComponent {
   recipeVersion SubstrateRecipeVersion @relation(fields: [substrateRecipeVersionId], references: [id], onDelete: Cascade)
   component     SubstrateComponent     @relation(fields: [substrateComponentId], references: [id], onDelete: Restrict)
 
-  @@unique([substrateRecipeVersionId, substrateComponentId])
+  @@unique([substrateRecipeVersionId, substrateComponentId], map: "SubstrateRecipeComponent_version_component_key")
   @@index([collectionId])
   @@index([substrateComponentId])
   @@index([substrateRecipeVersionId, sortOrder])
@@ -2167,11 +2167,11 @@ model PlantDefinitionSubstrateRecommendation {
 
   collection      Collection             @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   plantDefinition PlantDefinition        @relation(fields: [plantDefinitionId], references: [id], onDelete: Cascade)
-  recipeVersion   SubstrateRecipeVersion @relation(fields: [substrateRecipeVersionId], references: [id], onDelete: Restrict)
+  recipeVersion   SubstrateRecipeVersion @relation(fields: [substrateRecipeVersionId], references: [id], onDelete: Restrict, map: "PlantDefSubstrateRec_recipe_fkey")
 
-  @@unique([collectionId, plantDefinitionId, substrateRecipeVersionId])
-  @@index([collectionId, plantDefinitionId, rank])
-  @@index([collectionId, substrateRecipeVersionId])
+  @@unique([collectionId, plantDefinitionId, substrateRecipeVersionId], map: "PlantDefSubstrateRec_scope_recipe_key")
+  @@index([collectionId, plantDefinitionId, rank], map: "PlantDefSubstrateRec_scope_rank_idx")
+  @@index([collectionId, substrateRecipeVersionId], map: "PlantDefSubstrateRec_collection_recipe_idx")
 }
 
 model PlantInstanceSubstrate {
@@ -2191,7 +2191,7 @@ model PlantInstanceSubstrate {
   recipeVersion SubstrateRecipeVersion? @relation(fields: [substrateRecipeVersionId], references: [id], onDelete: Restrict)
 
   @@index([collectionId, substrateMode])
-  @@index([collectionId, substrateRecipeVersionId])
+  @@index([collectionId, substrateRecipeVersionId], map: "PlantInstanceSubstrate_collection_recipe_idx")
 }
 
 model PlantSubstrateHistory {
@@ -2217,7 +2217,7 @@ model PlantSubstrateHistory {
   newRecipeVersion      SubstrateRecipeVersion? @relation("NewSubstrateRecipeVersion", fields: [newRecipeVersionId], references: [id], onDelete: Restrict)
   repottingCareEvent    PlantCareEvent?         @relation(fields: [repottingCareEventId], references: [id], onDelete: SetNull)
 
-  @@index([collectionId, plantInstanceId, changedAt])
+  @@index([collectionId, plantInstanceId, changedAt], map: "PlantSubstrateHistory_plant_changed_idx")
   @@index([collectionId, newMode])
   @@index([newRecipeVersionId])
 }

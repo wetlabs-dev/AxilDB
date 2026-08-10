@@ -1,3 +1,15 @@
+-- This migration may be retried after PostgreSQL rejected an overlong generated
+-- index name. These objects are new to this migration and cannot contain live
+-- application data until the migrate service completes successfully.
+DROP TABLE IF EXISTS "PlantSubstrateHistory" CASCADE;
+DROP TABLE IF EXISTS "PlantInstanceSubstrate" CASCADE;
+DROP TABLE IF EXISTS "PlantDefinitionSubstrateRecommendation" CASCADE;
+DROP TABLE IF EXISTS "SubstrateRecipeComponent" CASCADE;
+DROP TABLE IF EXISTS "SubstrateRecipeVersion" CASCADE;
+DROP TABLE IF EXISTS "SubstrateRecipe" CASCADE;
+DROP TABLE IF EXISTS "SubstrateComponent" CASCADE;
+ALTER TABLE "PlantCareEvent" DROP COLUMN IF EXISTS "substrateRecipeVersionId" CASCADE;
+
 -- CreateTable
 CREATE TABLE "SubstrateComponent" (
     "id" TEXT NOT NULL,
@@ -130,18 +142,18 @@ CREATE INDEX "SubstrateRecipe_collectionId_archivedAt_idx" ON "SubstrateRecipe"(
 CREATE UNIQUE INDEX "SubstrateRecipeVersion_substrateRecipeId_versionNumber_key" ON "SubstrateRecipeVersion"("substrateRecipeId", "versionNumber");
 CREATE INDEX "SubstrateRecipeVersion_collectionId_status_idx" ON "SubstrateRecipeVersion"("collectionId", "status");
 CREATE INDEX "SubstrateRecipeVersion_collectionId_substrateRecipeId_idx" ON "SubstrateRecipeVersion"("collectionId", "substrateRecipeId");
-CREATE UNIQUE INDEX "SubstrateRecipeComponent_substrateRecipeVersionId_substrateComponentId_key" ON "SubstrateRecipeComponent"("substrateRecipeVersionId", "substrateComponentId");
+CREATE UNIQUE INDEX "SubstrateRecipeComponent_version_component_key" ON "SubstrateRecipeComponent"("substrateRecipeVersionId", "substrateComponentId");
 CREATE INDEX "SubstrateRecipeComponent_collectionId_idx" ON "SubstrateRecipeComponent"("collectionId");
 CREATE INDEX "SubstrateRecipeComponent_substrateComponentId_idx" ON "SubstrateRecipeComponent"("substrateComponentId");
 CREATE INDEX "SubstrateRecipeComponent_substrateRecipeVersionId_sortOrder_idx" ON "SubstrateRecipeComponent"("substrateRecipeVersionId", "sortOrder");
-CREATE UNIQUE INDEX "PlantDefinitionSubstrateRecommendation_collectionId_plantDefinitionId_substrateRecipeVersionId_key" ON "PlantDefinitionSubstrateRecommendation"("collectionId", "plantDefinitionId", "substrateRecipeVersionId");
-CREATE INDEX "PlantDefinitionSubstrateRecommendation_collectionId_plantDefinitionId_rank_idx" ON "PlantDefinitionSubstrateRecommendation"("collectionId", "plantDefinitionId", "rank");
-CREATE INDEX "PlantDefinitionSubstrateRecommendation_collectionId_substrateRecipeVersionId_idx" ON "PlantDefinitionSubstrateRecommendation"("collectionId", "substrateRecipeVersionId");
+CREATE UNIQUE INDEX "PlantDefSubstrateRec_scope_recipe_key" ON "PlantDefinitionSubstrateRecommendation"("collectionId", "plantDefinitionId", "substrateRecipeVersionId");
+CREATE INDEX "PlantDefSubstrateRec_scope_rank_idx" ON "PlantDefinitionSubstrateRecommendation"("collectionId", "plantDefinitionId", "rank");
+CREATE INDEX "PlantDefSubstrateRec_collection_recipe_idx" ON "PlantDefinitionSubstrateRecommendation"("collectionId", "substrateRecipeVersionId");
 CREATE UNIQUE INDEX "PlantInstanceSubstrate_plantInstanceId_key" ON "PlantInstanceSubstrate"("plantInstanceId");
 CREATE INDEX "PlantInstanceSubstrate_collectionId_substrateMode_idx" ON "PlantInstanceSubstrate"("collectionId", "substrateMode");
-CREATE INDEX "PlantInstanceSubstrate_collectionId_substrateRecipeVersionId_idx" ON "PlantInstanceSubstrate"("collectionId", "substrateRecipeVersionId");
+CREATE INDEX "PlantInstanceSubstrate_collection_recipe_idx" ON "PlantInstanceSubstrate"("collectionId", "substrateRecipeVersionId");
 CREATE UNIQUE INDEX "PlantSubstrateHistory_repottingCareEventId_key" ON "PlantSubstrateHistory"("repottingCareEventId");
-CREATE INDEX "PlantSubstrateHistory_collectionId_plantInstanceId_changedAt_idx" ON "PlantSubstrateHistory"("collectionId", "plantInstanceId", "changedAt");
+CREATE INDEX "PlantSubstrateHistory_plant_changed_idx" ON "PlantSubstrateHistory"("collectionId", "plantInstanceId", "changedAt");
 CREATE INDEX "PlantSubstrateHistory_collectionId_newMode_idx" ON "PlantSubstrateHistory"("collectionId", "newMode");
 CREATE INDEX "PlantSubstrateHistory_newRecipeVersionId_idx" ON "PlantSubstrateHistory"("newRecipeVersionId");
 CREATE INDEX "PlantCareEvent_substrateRecipeVersionId_idx" ON "PlantCareEvent"("substrateRecipeVersionId");
@@ -156,7 +168,7 @@ ALTER TABLE "SubstrateRecipeComponent" ADD CONSTRAINT "SubstrateRecipeComponent_
 ALTER TABLE "SubstrateRecipeComponent" ADD CONSTRAINT "SubstrateRecipeComponent_substrateComponentId_fkey" FOREIGN KEY ("substrateComponentId") REFERENCES "SubstrateComponent"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE "PlantDefinitionSubstrateRecommendation" ADD CONSTRAINT "PlantDefinitionSubstrateRecommendation_collectionId_fkey" FOREIGN KEY ("collectionId") REFERENCES "Collection"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "PlantDefinitionSubstrateRecommendation" ADD CONSTRAINT "PlantDefinitionSubstrateRecommendation_plantDefinitionId_fkey" FOREIGN KEY ("plantDefinitionId") REFERENCES "PlantDefinition"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "PlantDefinitionSubstrateRecommendation" ADD CONSTRAINT "PlantDefinitionSubstrateRecommendation_substrateRecipeVersionId_fkey" FOREIGN KEY ("substrateRecipeVersionId") REFERENCES "SubstrateRecipeVersion"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "PlantDefinitionSubstrateRecommendation" ADD CONSTRAINT "PlantDefSubstrateRec_recipe_fkey" FOREIGN KEY ("substrateRecipeVersionId") REFERENCES "SubstrateRecipeVersion"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE "PlantInstanceSubstrate" ADD CONSTRAINT "PlantInstanceSubstrate_collectionId_fkey" FOREIGN KEY ("collectionId") REFERENCES "Collection"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "PlantInstanceSubstrate" ADD CONSTRAINT "PlantInstanceSubstrate_plantInstanceId_fkey" FOREIGN KEY ("plantInstanceId") REFERENCES "PlantInstance"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "PlantInstanceSubstrate" ADD CONSTRAINT "PlantInstanceSubstrate_substrateRecipeVersionId_fkey" FOREIGN KEY ("substrateRecipeVersionId") REFERENCES "SubstrateRecipeVersion"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
