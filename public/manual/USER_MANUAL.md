@@ -19,6 +19,7 @@ AXILDB_DOCS_BASE_URL=https://app.axildb.com AXILDB_DOCS_COLLECTION_SLUG=axildb n
 - [Locations](#locations)
 - [Photos and Gallery](#photos-gallery)
 - [Plant Husbandry](#husbandry)
+- [Substrates and Potting History](#substrates)
 - [Care Queue and Green Thumb](#care-queue)
 - [Treatment Management](#treatment-management)
 - [Greenhouse Workflows](#greenhouse-workflows)
@@ -322,6 +323,34 @@ App route: `/plants`
 
 - Husbandry is collection-local in this version. Linked guides cannot cross collections.
 
+## Substrates and Potting History
+
+The Substrate Library keeps reusable components, versioned recipes, plant recommendations, current specimen substrate, and repotting history together without treating substrate as inventory.
+
+App route: `/substrates`
+
+### How It Is Used
+
+- Open Substrates from the collection sidebar to browse the starter component and recipe library, create local records, and review usage.
+- Build a recipe draft by percentage by volume. The component total must equal exactly 100% before the version can be activated.
+- Create a new version when a formulation changes. Activated and historical versions remain read-only so existing plant and care records keep their exact formulation.
+- On a Plant Definition, rank one or more recipe versions as Preferred, Recommended, Acceptable, or Special purpose.
+- On a Plant Instance, record the current recipe version or choose Received Substrate, Custom / Unknown Mix, No Substrate, or Unknown. Each change adds a history entry.
+- Use Bulk care by location for a reviewed multi-plant repot. Plants with a parseable husbandry repotting interval also receive derived Repot tasks in the Care Queue.
+- Use the recipe and plant-history CSV exports for formulation and Received Substrate review.
+
+### Notes
+
+- Each collection has its own library. Starter records can be archived or extended without changing another collection.
+- Acquired plants default to Received Substrate when the exact seller mix is unknown.
+- Magic Fill husbandry can suggest ranked existing recipes or prepare a new recipe draft, but it never assigns or activates one automatically.
+- Green Thumb may consider current substrate, recent changes, and recommendations as context. It treats correlations cautiously and does not diagnose solely from substrate.
+
+### Warnings
+
+- Recipe percentages are horticultural formulation records, not inventory quantities or exact chemical calculations.
+- Published recipe versions are immutable. Correct or refine them with a new version.
+
 ## Care Queue and Green Thumb
 
 The Care Queue answers “what needs attention today, and why?” by combining husbandry guidance, watering history, propagation stage, open conditions, bloom follow-ups, pest checks, and manual reminders.
@@ -332,7 +361,8 @@ App route: `/care`
 
 ### How It Is Used
 
-- Open Care Queue from the sidebar to review today’s tasks, overdue work, watering, fertilizing, treatment plan steps, propagation checks, health issues, pest checks, bloom follow-ups, custom reminders, and completed care.
+- Open Care Queue from the sidebar to review today’s tasks, overdue work, watering, fertilizing, repotting, treatment plan steps, propagation checks, health issues, pest checks, bloom follow-ups, custom reminders, and completed care.
+- Expand a repot task to compare the current substrate with the top-ranked recommendation, then record the new recipe or explicit non-recipe substrate state when completing it.
 - Complete or snooze generated care tasks from the queue.
 - For condition-related queue items, use the condition actions to resolve the condition, update severity/status/follow-up details, or mark that it still needs attention with a follow-up date.
 - Use Bulk care by location to record one care event per selected plant in a location, with direct-only or nested-location scope and a required review step before submit. Fertilizing bulk care can include a recipe, strength, dose, and water volume.

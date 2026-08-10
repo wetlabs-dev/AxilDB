@@ -109,6 +109,7 @@ function objectValue(value: unknown): Record<string, unknown> {
 }
 
 function domainEventPresentation(type: string): Pick<PlantTimelineEvent, 'category' | 'icon' | 'colorVariant'> {
+  if (type.startsWith('plant.substrate') || type === 'plant.received_substrate_recorded') return { category: 'care', icon: '🪴', colorVariant: 'sage' }
   if (type.startsWith('care.')) return { category: 'care', icon: '✅', colorVariant: 'sage' }
   if (type.startsWith('condition.') || type.startsWith('quarantine.')) return { category: 'health', icon: type.endsWith('resolved') || type.endsWith('released') ? '✅' : '⚠️', colorVariant: type.endsWith('resolved') || type.endsWith('released') ? 'green' : 'amber' }
   if (type.startsWith('bloom.')) return { category: 'growth', icon: '🌸', colorVariant: 'mauve' }
@@ -117,6 +118,13 @@ function domainEventPresentation(type: string): Pick<PlantTimelineEvent, 'catego
   if (type.startsWith('treatment.')) return { category: 'health', icon: '🧪', colorVariant: type.endsWith('completed') ? 'green' : 'amber' }
   if (type === 'plant.archived') return { category: 'archive', icon: '📁', colorVariant: 'gray' }
   return { category: 'accession', icon: '🌱', colorVariant: 'green' }
+}
+
+function domainEventTitle(type: string) {
+  if (type === 'plant.substrate_assigned') return 'Substrate assigned'
+  if (type === 'plant.substrate_changed') return 'Substrate changed'
+  if (type === 'plant.received_substrate_recorded') return 'Received substrate recorded'
+  return type.replaceAll('.', ' · ').replaceAll('_', ' ')
 }
 
 function semanticType(type: string) {
@@ -685,7 +693,7 @@ export async function collectPlantTimelineEvents(
     const indicators = [event.reconstructed ? 'Reconstructed' : null, event.source === 'MANUAL' ? 'Manual historical entry' : null].filter(Boolean)
     return {
       id: `domain-event-${event.id}`, type: event.eventType, ...presentation, date: event.occurredAt,
-      title: String(summary.title || event.eventType.replaceAll('.', ' · ').replaceAll('_', ' ')),
+      title: String(summary.title || domainEventTitle(event.eventType)),
       summary: [String(summary.summary || payload.summary || payload.displayName || ''), ...indicators].filter(Boolean).join(' · '),
       href: eventHref(input.collectionSlug, input.plantInstanceId), sourceModel: recordType, sourceId: recordId,
       metadata: { reconstructed: event.reconstructed, manual: event.source === 'MANUAL', eventVersion: event.eventVersion },

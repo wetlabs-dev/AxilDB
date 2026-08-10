@@ -109,12 +109,14 @@ export async function POST(req: Request) {
   const plant = await prisma.plantInstance.findFirst({
     where: { id: plantInstanceId, collectionId: collection.id },
     include: {
-      plantDefinition: { include: { aliases: { orderBy: { name: 'asc' } }, husbandryGuide: true } },
+      plantDefinition: { include: { aliases: { orderBy: { name: 'asc' } }, husbandryGuide: true, substrateRecommendations: { where: { collectionId: collection.id }, include: { recipeVersion: { include: { recipe: true, components: { include: { component: true }, orderBy: { sortOrder: 'asc' } } } } }, orderBy: { rank: 'asc' }, take: 4 } } },
       husbandryOverride: true,
       blooms: { orderBy: { bloomStartDate: 'desc' }, take: 3 },
       conditions: { where: { status: { in: ['OPEN', 'IMPROVING'] } }, orderBy: { observedAt: 'desc' }, take: 5 },
       currentLocation: true,
       quarantines: { where: { status: 'ACTIVE' }, orderBy: { startDate: 'desc' }, take: 1 },
+      currentSubstrate: { include: { recipeVersion: { include: { recipe: true, components: { include: { component: true }, orderBy: { sortOrder: 'asc' } } } } } },
+      substrateHistory: { include: { newRecipeVersion: { include: { recipe: true, components: { include: { component: true }, orderBy: { sortOrder: 'asc' } } } } }, orderBy: { changedAt: 'desc' }, take: 5 },
     },
   })
 
@@ -220,6 +222,17 @@ export async function POST(req: Request) {
       toxicity: plant.husbandryOverride?.summaryToxicity || baseHusbandryGuide?.summaryToxicity || null,
       care: plant.husbandryOverride?.summaryCare || baseHusbandryGuide?.summaryCare || null,
     },
+    substrate: {
+      current: plant.currentSubstrate ? {
+        mode: plant.currentSubstrate.substrateMode,
+        recipe: plant.currentSubstrate.recipeVersion ? `${plant.currentSubstrate.recipeVersion.recipe.name} v${plant.currentSubstrate.recipeVersion.versionNumber}` : null,
+        composition: plant.currentSubstrate.recipeVersion?.components.map((row) => ({ component: row.component.name, percentByVolume: Number(row.percentByVolume) })) || [],
+        startedAt: fmtDate(plant.currentSubstrate.startedAt, timezone),
+        description: plant.currentSubstrate.receivedSubstrateDescription,
+      } : null,
+      definitionRecommendations: plant.plantDefinition.substrateRecommendations.map((item) => ({ rank: item.rank, suitability: item.suitability, recipe: `${item.recipeVersion.recipe.name} v${item.recipeVersion.versionNumber}`, composition: item.recipeVersion.components.map((row) => ({ component: row.component.name, percentByVolume: Number(row.percentByVolume) })), notes: item.notes })),
+      recentChanges: plant.substrateHistory.map((item) => ({ changedAt: fmtDate(item.changedAt, timezone), mode: item.newMode, recipe: item.newRecipeVersion ? `${item.newRecipeVersion.recipe.name} v${item.newRecipeVersion.versionNumber}` : null, reason: item.reason })),
+    },
     openConditions: plant.conditions.map((condition) => ({
       category: condition.category,
       severity: condition.severity,
@@ -281,7 +294,7 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         model,
         instructions:
-          'You are AxilDB Green Thumb, a concise horticultural care assistant. Answer under 50 words. Directly address the user question for this exact plant scenario. Be practical and cautious. If relevant, prefer a named collectionTreatmentOption over inventing a treatment, mention its safety constraints, and treat collection outcomes as descriptive local records rather than scientific evidence. If no saved treatment fits, you may suggest a short reviewable treatment-definition idea, but never claim it was created, applied, or scheduled. If a photo is provided, use it only as supporting context and do not overstate certainty. Return plain text only, no markdown.',
+          'You are AxilDB Green Thumb, a concise horticultural care assistant. Answer under 50 words. Directly address the user question for this exact plant scenario. Be practical and cautious. If substrate is relevant, use the exact current recipe/version and ranked collection recommendations, prefer an existing defined recipe when suggesting repotting, and never claim substrate is definitively causal from correlation alone. If relevant, prefer a named collectionTreatmentOption over inventing a treatment, mention its safety constraints, and treat collection outcomes as descriptive local records rather than scientific evidence. If no saved treatment fits, you may suggest a short reviewable treatment-definition idea, but never claim it was created, applied, or scheduled. If a photo is provided, use it only as supporting context and do not overstate certainty. Return plain text only, no markdown.',
         input: [{ role: 'user', content: inputContent }],
         max_output_tokens: 150,
         store: false,

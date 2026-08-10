@@ -19,6 +19,10 @@ export const DOMAIN_EVENT_TYPES = [
   'provenance.marketplace_migrated', 'provenance.reconciliation_resolved',
   'exhibit.wishlist_item_added', 'exhibit.wishlist_item_removed',
   'fertilizer.product_created', 'fertilizer.product_updated', 'fertilizer.recipe_created', 'fertilizer.recipe_updated', 'fertilizer.assigned',
+  'substrate.component_created', 'substrate.component_updated', 'substrate.component_archived',
+  'substrate.recipe_created', 'substrate.recipe_version_created', 'substrate.recipe_version_activated', 'substrate.recipe_archived',
+  'plant_definition.substrate_recommendation_added', 'plant_definition.substrate_recommendation_removed',
+  'plant.substrate_assigned', 'plant.substrate_changed', 'plant.received_substrate_recorded',
   'treatment.definition_created', 'treatment.definition_updated', 'treatment.definition_archived', 'treatment.product_created', 'treatment.product_updated',
   'treatment.plan_started', 'treatment.plan_step_completed', 'treatment.applied', 'treatment.batch_applied', 'treatment.application_corrected', 'treatment.outcome_recorded', 'treatment.application_outcome_recorded', 'treatment.adverse_reaction_recorded', 'treatment.plan_completed', 'treatment.plan_cancelled',
   'collection.created', 'collection.updated', 'collection.archived',
@@ -78,6 +82,8 @@ const aggregateFor = (type: DomainEventType) => {
   if (type.startsWith('provenance.')) return 'ProvenanceReconciliationItem'
   if (type.startsWith('fertilizer.product')) return 'FertilizerProduct'
   if (type.startsWith('fertilizer.recipe') || type === 'fertilizer.assigned') return 'FertilizerRecipe'
+  if (type.startsWith('substrate.component')) return 'SubstrateComponent'
+  if (type.startsWith('substrate.recipe')) return 'SubstrateRecipe'
   if (type.startsWith('treatment.definition')) return 'TreatmentDefinition'
   if (type.startsWith('treatment.product')) return 'TreatmentProduct'
   if (type.startsWith('treatment.plan')) return 'TreatmentPlan'

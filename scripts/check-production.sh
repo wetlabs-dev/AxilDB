@@ -28,6 +28,9 @@ npm run check:provenance
 echo "==> Checking treatment management invariants"
 npm run check:treatments
 
+echo "==> Checking substrate management invariants"
+npm run check:substrates
+
 echo "==> Checking event engine invariants"
 npm run check:events
 

@@ -79,6 +79,28 @@ function normalizeFertilizerRecommendation(raw: any, recipeIds: Set<string>) {
   }
 }
 
+function normalizeSubstrateRecommendation(raw: any, recipeIds: Set<string>, componentIds: Set<string>) {
+  const seen = new Set<string>()
+  const substrateRecommendations = (Array.isArray(raw?.substrateRecommendations) ? raw.substrateRecommendations : [])
+    .map((item: any, index: number) => ({
+      recipeVersionId: String(item?.recipeVersionId || ''),
+      rank: index + 1,
+      suitability: ['PREFERRED', 'RECOMMENDED', 'ACCEPTABLE', 'SPECIAL_PURPOSE'].includes(item?.suitability) ? item.suitability : 'RECOMMENDED',
+      confidence: Number.isFinite(Number(item?.confidence)) ? Math.max(0, Math.min(1, Number(item.confidence))) : null,
+      reason: trimmedString(item?.reason, 500) || null,
+    }))
+    .filter((item: any) => recipeIds.has(item.recipeVersionId) && !seen.has(item.recipeVersionId) && seen.add(item.recipeVersionId))
+    .slice(0, 4)
+  const suggestedComponents = (Array.isArray(raw?.newRecipeSuggestion?.components) ? raw.newRecipeSuggestion.components : [])
+    .map((item: any) => ({ componentId: String(item?.componentId || ''), percentByVolume: Number(item?.percentByVolume) }))
+    .filter((item: any) => componentIds.has(item.componentId) && Number.isFinite(item.percentByVolume) && item.percentByVolume > 0 && item.percentByVolume <= 100)
+  const total = suggestedComponents.reduce((sum: number, item: any) => sum + item.percentByVolume, 0)
+  const newRecipeSuggestion = suggestedComponents.length && Math.abs(total - 100) <= 0.001
+    ? { name: trimmedString(raw?.newRecipeSuggestion?.name, 160) || 'Suggested substrate recipe', reason: trimmedString(raw?.newRecipeSuggestion?.reason, 600) || null, components: suggestedComponents }
+    : null
+  return { substrateRecommendations, newRecipeSuggestion }
+}
+
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}))
   const access = await requireAiFeatureAccess(trimmedString(body.collectionSlug, 80))
@@ -95,13 +117,24 @@ export async function POST(req: Request) {
   const cultivarName = trimmedString(plant.cultivarName, 120)
   const name = `${genus} ${species}${cultivarName ? ` '${cultivarName}'` : ''}`.trim()
   if (!genus || !species) return NextResponse.json({ error: 'Genus and species are required.' }, { status: 400 })
-  const fertilizerRecipes = await prisma.fertilizerRecipe.findMany({
-    where: { collectionId: collection.id, active: true },
-    include: { products: { include: { product: true }, orderBy: { sortOrder: 'asc' } } },
-    orderBy: [{ draft: 'asc' }, { name: 'asc' }],
-    take: 20,
-  })
+  const [fertilizerRecipes, substrateVersions, substrateComponents] = await Promise.all([
+    prisma.fertilizerRecipe.findMany({
+      where: { collectionId: collection.id, active: true },
+      include: { products: { include: { product: true }, orderBy: { sortOrder: 'asc' } } },
+      orderBy: [{ draft: 'asc' }, { name: 'asc' }],
+      take: 20,
+    }),
+    prisma.substrateRecipeVersion.findMany({
+      where: { collectionId: collection.id, status: 'ACTIVE', recipe: { archivedAt: null } },
+      include: { recipe: true, components: { include: { component: true }, orderBy: { sortOrder: 'asc' } }, _count: { select: { currentAssignments: true, recommendations: true } } },
+      orderBy: { recipe: { name: 'asc' } },
+      take: 30,
+    }),
+    prisma.substrateComponent.findMany({ where: { collectionId: collection.id, active: true }, orderBy: { name: 'asc' }, take: 50 }),
+  ])
   const fertilizerRecipeIds = new Set(fertilizerRecipes.map((recipe) => recipe.id))
+  const substrateRecipeIds = new Set(substrateVersions.map((version) => version.id))
+  const substrateComponentIds = new Set(substrateComponents.map((component) => component.id))
 
   const model = process.env.OPENAI_HUSBANDRY_FILL_MODEL || process.env.OPENAI_MAGIC_FILL_MODEL || process.env.OPENAI_DESCRIPTION_MODEL || DEFAULT_MODEL
   const prompt = {
@@ -121,6 +154,17 @@ export async function POST(req: Request) {
       aliases: Array.isArray(plant.aliases) ? plant.aliases.slice(0, 8).map((alias: any) => trimmedString(alias.name, 160)).filter(Boolean) : [],
     },
     activeFertilizerRecipes: fertilizerRecipes.map(recipeAiContext),
+    activeSubstrateRecipes: substrateVersions.map((version) => ({
+      recipeVersionId: version.id,
+      familyName: version.recipe.name,
+      version: version.versionNumber,
+      intendedUse: version.recipe.intendedUse,
+      composition: version.components.map((row) => ({ componentId: row.component.id, name: row.component.name, percentByVolume: Number(row.percentByVolume), waterRetention: row.component.waterRetention, aeration: row.component.aeration, drainage: row.component.drainage, organicity: row.component.organicity })),
+      notes: version.notes,
+      currentPlantCount: version._count.currentAssignments,
+      recommendationCount: version._count.recommendations,
+    })),
+    activeSubstrateComponents: substrateComponents.map((component) => ({ id: component.id, name: component.name, category: component.category, particleSize: component.particleSize, waterRetention: component.waterRetention, aeration: component.aeration, drainage: component.drainage, phTendency: component.phTendency })),
     rules: [
       'Return only valid JSON, with no markdown.',
       'Attempt to fill every field with concise practical husbandry guidance.',
@@ -131,6 +175,8 @@ export async function POST(req: Request) {
       'If an active collection fertilizer recipe fits, use USE_EXISTING_RECIPE and return its exact id and name. Do not invent recipe ids.',
       'If no existing recipe fits but fertilizer is useful, choose CREATE_NEW_RECIPE and provide practical draft details without pretending exact chemical calculations are certain.',
       'Use unknown only when no useful inference can be made.',
+      'Rank up to four existing substrate recipe versions when suitable. Prefer existing recipes and use their exact recipeVersionId values.',
+      'Only propose a new substrate recipe when the existing recipes are unsuitable. Use only listed component IDs, total exactly 100 percent by volume, and explain the gap cautiously.',
       'summaryWater, summaryLight, and summaryToxicity must be short badge-friendly phrases.',
     ],
     jsonShape: {
@@ -151,6 +197,8 @@ export async function POST(req: Request) {
         productTypeSuggestions: 'string|null',
         cautionNotes: 'string|null',
       },
+      substrateRecommendations: [{ recipeVersionId: 'exact listed id', rank: 'number', suitability: 'PREFERRED|RECOMMENDED|ACCEPTABLE|SPECIAL_PURPOSE', confidence: 'number 0-1|null', reason: 'string|null' }],
+      newRecipeSuggestion: { name: 'string|null', reason: 'string|null', components: [{ componentId: 'exact listed id', percentByVolume: 'number' }] },
     },
   }
 
@@ -181,9 +229,16 @@ export async function POST(req: Request) {
     const raw = extractJson(outputText(payload))
     const fields = normalizeFields(raw, model)
     const fertilizerRecommendation = normalizeFertilizerRecommendation(raw, fertilizerRecipeIds)
+    const substrateRecommendation = normalizeSubstrateRecommendation(raw, substrateRecipeIds, substrateComponentIds)
+    const substrateNameById = new Map(substrateVersions.map((version) => [version.id, `${version.recipe.name} v${version.versionNumber}`]))
+    const componentNameById = new Map(substrateComponents.map((component) => [component.id, component.name]))
+    const displaySubstrateRecommendation = {
+      substrateRecommendations: substrateRecommendation.substrateRecommendations.map((item: any) => ({ ...item, displayName: substrateNameById.get(item.recipeVersionId) || 'Substrate recipe' })),
+      newRecipeSuggestion: substrateRecommendation.newRecipeSuggestion ? { ...substrateRecommendation.newRecipeSuggestion, components: substrateRecommendation.newRecipeSuggestion.components.map((item: any) => ({ ...item, componentName: componentNameById.get(item.componentId) || 'Component' })) } : null,
+    }
     await recordAiUsage({ collectionId: collection.id, userId: user.id, feature: 'AI_HUSBANDRY_FILL', model, usage: tokenUsage(payload) })
     await audit(user, 'GENERATE', 'AI_HUSBANDRY_FILL', null, `Generated husbandry fill for ${name}`, { model, applyMode }, collection.id)
-    return NextResponse.json({ fields, fertilizerRecommendation })
+    return NextResponse.json({ fields, fertilizerRecommendation, substrateRecommendation: displaySubstrateRecommendation })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'OpenAI husbandry fill request failed.'
     await recordAiUsage({ collectionId: collection.id, userId: user.id, feature: 'AI_HUSBANDRY_FILL', model, success: false, error: message })

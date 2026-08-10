@@ -6,6 +6,7 @@ import { MagicFillConflictDialog } from '@/components/MagicFillConflictDialog'
 import { husbandryFieldNames } from '@/lib/husbandry'
 import { applyMagicFillDraftToForm, getMagicFillConflictState, readMagicFillFormValues, type MagicFillApplyMode } from '@/lib/magic-fill'
 import { cn } from '@/lib/utils'
+import { createSubstrateRecipe } from '@/app/substrate-actions'
 
 const husbandryMagicFillFields = [...husbandryFieldNames, 'reviewNotes', 'aiModel'] as const
 const fertilizerAssignmentFields = ['fertilizerRecipeId', 'fertilizationFrequency', 'fertilizationStrength', 'fertilizationSeasonalSchedule', 'fertilizationCadenceDays'] as const
@@ -15,6 +16,7 @@ const fertilizerDraftFields = [
   'newFertilizerRecipeStrength', 'newFertilizerRecipeFrequency', 'newFertilizerRecipeSeasonalNotes',
   'newFertilizerRecipeProductSuggestions', 'newFertilizerRecipeCautionNotes', ...fertilizerAssignmentFields,
 ] as const
+const substrateRecommendationFields = ['existingSubstrateRecommendations', 'magicSubstrateRecommendationsJson', 'magicSubstrateApplyMode'] as const
 
 function setControlValue(form: HTMLFormElement, name: string, value?: string | null) {
   if (value === undefined || value === null) return
@@ -48,16 +50,21 @@ export function HusbandryMagicFillButton({
   className = '',
   autoSubmit = false,
   label = 'Magic Fill husbandry',
+  substrateRecommendationCount = 0,
+  collectionSlug,
 }: {
   plant: any
   className?: string
   autoSubmit?: boolean
   label?: string
+  substrateRecommendationCount?: number
+  collectionSlug: string
 }) {
   const buttonRef = useRef<HTMLButtonElement>(null)
   const [status, setStatus] = useState('')
   const [loading, setLoading] = useState(false)
   const [fertilizerRecommendation, setFertilizerRecommendation] = useState<any>(null)
+  const [substrateRecommendation, setSubstrateRecommendation] = useState<any>(null)
   const [draft, setDraft] = useState<any>(null)
   const [readyToSave, setReadyToSave] = useState(false)
   const [conflict, setConflict] = useState<(ReturnType<typeof getMagicFillConflictState> & { continueWith: (mode: MagicFillApplyMode) => void }) | null>(null)
@@ -112,6 +119,7 @@ export function HusbandryMagicFillButton({
       setControlValue(form, 'reviewStatus', 'DRAFT')
       setDraft(fillDraft)
       setFertilizerRecommendation(result.fertilizerRecommendation || null)
+      setSubstrateRecommendation(result.substrateRecommendation || null)
       if (autoSubmit) {
         setReadyToSave(true)
         setStatus(`${outcome.appliedCount} husbandry field${outcome.appliedCount === 1 ? '' : 's'} drafted. Review the preview, then save.`)
@@ -146,6 +154,19 @@ export function HusbandryMagicFillButton({
 
   function requestNewRecipeDraft() {
     requestMode(fertilizerDraftFields, applyNewRecipeDraft)
+  }
+
+  function requestSubstrateRecommendations() {
+    const form = buttonRef.current?.form
+    if (!form || !substrateRecommendation?.substrateRecommendations?.length) return
+    ensureControls(form, substrateRecommendationFields)
+    setControlValue(form, 'existingSubstrateRecommendations', substrateRecommendationCount ? String(substrateRecommendationCount) : '')
+    requestMode(substrateRecommendationFields, (mode) => {
+      setConflict(null)
+      setControlValue(form, 'magicSubstrateRecommendationsJson', JSON.stringify(substrateRecommendation.substrateRecommendations))
+      setControlValue(form, 'magicSubstrateApplyMode', mode)
+      setStatus('Substrate recommendations queued. Review and save to apply.')
+    })
   }
 
   function applyNewRecipeDraft(mode: MagicFillApplyMode) {
@@ -204,6 +225,14 @@ export function HusbandryMagicFillButton({
       )}
       {autoSubmit && readyToSave && (
         <button type="submit" className="rounded-md bg-[#2f6b45] px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[#28593b]">Save Magic Fill draft</button>
+      )}
+      {substrateRecommendation && (
+        <div className="w-full max-w-xl rounded-lg border border-[#d6dfc9] bg-[#f7f4e8] p-3 text-left text-sm text-stone-700 shadow-sm">
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#2f6b45]">Substrate recommendation</p>
+          {substrateRecommendation.substrateRecommendations?.length > 0 ? <div className="mt-2 grid gap-2">{substrateRecommendation.substrateRecommendations.map((item: any) => <div key={item.recipeVersionId} className="rounded-md border border-stone-200 bg-white/65 p-2"><p className="font-semibold text-stone-900">{item.rank}. {item.displayName} · {String(item.suitability).toLowerCase().replaceAll('_', ' ')}</p>{item.reason && <p className="mt-1 text-xs">{item.reason}</p>}</div>)}</div> : <p className="mt-1">No existing collection recipe was confidently recommended.</p>}
+          {substrateRecommendation.substrateRecommendations?.length > 0 && <button type="button" onClick={requestSubstrateRecommendations} className="mt-3 rounded-md bg-[#2f6b45] px-3 py-1.5 text-xs font-semibold text-white">Use these recommendations</button>}
+          {substrateRecommendation.newRecipeSuggestion && <div className="mt-3 rounded-md border border-stone-200 bg-white/65 p-2"><p className="font-semibold text-stone-900">Suggested draft: {substrateRecommendation.newRecipeSuggestion.name}</p>{substrateRecommendation.newRecipeSuggestion.reason && <p className="mt-1 text-xs">{substrateRecommendation.newRecipeSuggestion.reason}</p>}<p className="mt-2 text-xs">{substrateRecommendation.newRecipeSuggestion.components.map((item: any) => `${item.percentByVolume}% ${item.componentName}`).join(' · ')}</p><div className="mt-2"><input type="hidden" name="collectionSlug" value={collectionSlug} /><input type="hidden" name="name" value={substrateRecommendation.newRecipeSuggestion.name} /><input type="hidden" name="description" value={substrateRecommendation.newRecipeSuggestion.reason || ''} /><input type="hidden" name="status" value="DRAFT" />{substrateRecommendation.newRecipeSuggestion.components.map((item: any) => <span key={item.componentId}><input type="hidden" name="substrateComponentId" value={item.componentId} /><input type="hidden" name="percentByVolume" value={item.percentByVolume} /><input type="hidden" name="componentNotes" value="" /></span>)}<button type="submit" formAction={createSubstrateRecipe} className="rounded-md border border-[#2f6b45] px-3 py-1.5 text-xs font-semibold text-[#2f6b45]">Create recipe draft</button></div></div>}
+        </div>
       )}
       {fertilizerRecommendation && !autoSubmit && (
         <div className="max-w-xl rounded-lg border border-[#d6dfc9] bg-[#f7f4e8] p-3 text-left text-sm text-stone-700 shadow-sm">

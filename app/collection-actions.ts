@@ -12,6 +12,7 @@ import { collectionRoles, normalizeCollectionRole } from '@/lib/roles'
 import { getOrCreateTodaysCollectionBriefing } from '@/lib/briefing'
 import { emitDomainEvent } from '@/lib/events/emit'
 import { defaultWishlistPublicSettings, wishlistPublicSettingLabels } from '@/lib/wishlist'
+import { ensureStarterSubstrates } from '@/lib/substrates'
 
 const val = (fd: FormData, key: string) => String(fd.get(key) || '').trim()
 const validRoles = new Set<string>(collectionRoles)
@@ -74,6 +75,8 @@ export async function createCollection(fd: FormData) {
     })
     return created
   })
+
+  await ensureStarterSubstrates(prisma, collection.id, user.id)
 
   await audit(user, 'CREATE', 'COLLECTION', collection.id, `Created collection ${collection.name}`, collection, collection.id)
   redirect(collectionPath(collection.slug))

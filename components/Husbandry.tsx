@@ -297,7 +297,7 @@ export function HusbandryGuideForm({
       {includeMagicFill && plant && (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[#d6dfc9] bg-[#f7f4e8]/80 px-3 py-2 text-sm text-stone-700">
           <span className="min-w-0">Draft a complete care guide from the plant definition, then review before saving.</span>
-          <HusbandryMagicFillButton plant={plant} />
+          <HusbandryMagicFillButton plant={plant} collectionSlug={collectionSlug} />
         </div>
       )}
       <FertilizerAssignmentFields values={values as any} recipes={fertilizerRecipes} />

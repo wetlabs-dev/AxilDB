@@ -21,6 +21,7 @@ import { acceptedPlantName, cn, plantName, plantNeedsIdentification } from '@/li
 import { getCurrentUser } from '@/lib/auth'
 import { acquisitionProvenanceDisplay, sourceChainDisplay } from '@/lib/provenance'
 import { getUserUnitPreferences } from '@/lib/units'
+import { substrateLabel, substrateModes } from '@/lib/substrates'
 
 const acquisitionStatuses = [
   ['RESEARCHING', 'Researching'],
@@ -157,7 +158,7 @@ export default async function AcquisitionPipelinePage({
     )
   }
 
-  const [definitions, locations, sources, distributors, sellers] = await Promise.all([
+  const [definitions, locations, sources, distributors, sellers, substrateVersions] = await Promise.all([
     prisma.plantDefinition.findMany({
       where: {
         ...collectionWhere,
@@ -195,6 +196,7 @@ export default async function AcquisitionPipelinePage({
     prisma.source.findMany({ where: { collectionId: collection.id, active: true }, orderBy: { name: 'asc' } }),
     prisma.distributor.findMany({ where: { collectionId: collection.id, active: true }, include: { outlets: { where: { active: true }, orderBy: { name: 'asc' } } }, orderBy: { name: 'asc' } }),
     prisma.seller.findMany({ where: { collectionId: collection.id, active: true }, include: { storefronts: { where: { active: true }, include: { distributor: true }, orderBy: { handleOrName: 'asc' } } }, orderBy: { name: 'asc' } }),
+    prisma.substrateRecipeVersion.findMany({ where: { collectionId: collection.id, status: 'ACTIVE', recipe: { archivedAt: null } }, include: { recipe: true }, orderBy: { recipe: { name: 'asc' } } }),
   ])
   const locationNodes = locations.map((location) => ({
     id: location.id,
@@ -479,6 +481,15 @@ export default async function AcquisitionPipelinePage({
                     <Field label="Specimen size" name="specimenSize" defaultValue={selectedObservation?.specimenSize || selected.desiredSpecimenSize || ''} />
                     <Field label="Acquisition label" help="The label supplied with these specimens. It is saved on each created plant instance." name="acquisitionLabel" />
                     <Field label="Pot size" name="potSize" />
+                    <Select label="Initial substrate" name="substrateMode" defaultValue="RECEIVED_SUBSTRATE">
+                      {substrateModes.map((mode) => <option key={mode} value={mode}>{substrateLabel(mode)}</option>)}
+                    </Select>
+                    <Select label="Substrate recipe version" name="substrateRecipeVersionId" defaultValue="">
+                      <option value="">Choose when using Recipe</option>
+                      {substrateVersions.map((version) => <option key={version.id} value={version.id}>{version.recipe.name} v{version.versionNumber}</option>)}
+                    </Select>
+                    <Field label="Received/custom substrate description" name="receivedSubstrateDescription" />
+                    <Field label="Substrate notes" name="substrateNotes" />
                     <LocationCompatibilitySelect
                       collectionSlug={collection.slug}
                       name="initialLocationId"

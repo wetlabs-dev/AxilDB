@@ -8,6 +8,7 @@ import { plantName, fmtDate, taxonomyLabel } from '@/lib/utils'
 import Link from 'next/link'
 import { PlantTagRow } from '@/components/PlantTagChip'
 import { isServerAdminRole } from '@/lib/roles'
+import { compactRecipeComposition, substrateAssignmentLabel } from '@/lib/substrates'
 
 const control = 'rounded-md border border-stone-300 bg-[#fffdf7] px-3 py-2 text-sm shadow-inner shadow-stone-200/30 outline-none focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
 const contains = (value: string) => ({ contains: value, mode: 'insensitive' as const })
@@ -89,6 +90,12 @@ export default async function SearchPage({
                 { distributor: contains(q) },
                 { stockNumber: contains(q) },
                 { acquisitionLabel: contains(q) },
+                { currentSubstrate: { is: { OR: [
+                  { receivedSubstrateDescription: contains(q) },
+                  { notes: contains(q) },
+                  { recipeVersion: { recipe: { name: contains(q) } } },
+                  { recipeVersion: { components: { some: { component: { name: contains(q) } } } } },
+                ] } } },
                 { acquisitionRecordLinks: { some: { acquisitionRecord: { OR: [
                   { distributor: { name: contains(q) } },
                   { distributorOutlet: { name: contains(q) } },
@@ -102,7 +109,7 @@ export default async function SearchPage({
           : {},
       ],
     },
-    include: { plantDefinition: { include: { aliases: true, tags: { include: { plantTag: true } } } } },
+    include: { plantDefinition: { include: { aliases: true, tags: { include: { plantTag: true } } } }, currentSubstrate: { include: { recipeVersion: { include: { recipe: true } } } } },
     orderBy: { plantId: 'asc' },
   })
 
@@ -119,6 +126,23 @@ export default async function SearchPage({
     where: { collectionId: collection.id, OR: [{ name: contains(q) }, { description: contains(q) }, { targetSummary: contains(q) }, { instructions: contains(q) }, { products: { some: { product: { OR: [{ name: contains(q) }, { manufacturer: contains(q) }, { activeIngredient: contains(q) }] } } } }, { applications: { some: { notes: contains(q) } } }] },
     include: { products: { include: { product: true } }, conditionTypes: true, _count: { select: { applications: true, planSteps: true } } }, orderBy: { name: 'asc' }, take: 50,
   }) : []
+  const [substrateRecipes, substrateComponents] = q ? await Promise.all([
+    prisma.substrateRecipe.findMany({
+      where: {
+        collectionId: collection.id,
+        OR: [
+          { name: contains(q) },
+          { description: contains(q) },
+          { intendedUse: contains(q) },
+          { versions: { some: { OR: [{ notes: contains(q) }, { components: { some: { component: { name: contains(q) } } } }] } } },
+        ],
+      },
+      include: { activeVersion: { include: { components: { include: { component: true }, orderBy: { sortOrder: 'asc' } } } } },
+      orderBy: { name: 'asc' },
+      take: 50,
+    }),
+    prisma.substrateComponent.findMany({ where: { collectionId: collection.id, OR: [{ name: contains(q) }, { description: contains(q) }, { notes: contains(q) }, { particleSize: contains(q) }] }, orderBy: { name: 'asc' }, take: 50 }),
+  ]) : [[], []]
   const instanceSunshineTargets = instances.map((instance) => ({ targetType: 'PLANT_INSTANCE' as const, targetId: instance.id }))
   const [instanceSunshineCounts, currentUserSunshine] = await Promise.all([
     sunshineCounts(prisma, collection.id, instanceSunshineTargets),
@@ -168,6 +192,7 @@ export default async function SearchPage({
                 </Link>{' '}
                 · {plantName(instance.plantDefinition)} · {instance.status} · {fmtDate(instance.propagationDate || instance.acquisitionDate)}
               </p>
+              <p className="w-full text-xs text-stone-600">Substrate: {substrateAssignmentLabel(instance.currentSubstrate)}</p>
               <SunshineButton
                 collectionSlug={collection.slug}
                 targetId={instance.id}
@@ -199,6 +224,7 @@ export default async function SearchPage({
         </Card>
       </div>
       {q && canSearchTreatments && <Card><h3 className="mb-3 font-bold">Treatments and products</h3>{treatmentResults.map((treatment) => <div key={treatment.id} className="border-t border-stone-200 py-2 text-sm"><Link className="font-bold underline" href={collectionPath(collection.slug, `/treatments?selected=${treatment.id}`)}>{treatment.name}</Link><span> · {treatment.active ? 'active' : 'archived'} · {treatment._count.applications} applications</span><p className="text-stone-600">{treatment.conditionTypes.map((item) => taxonomyLabel(item.conditionType)).join(', ') || 'No condition links'}{treatment.products.length ? ` · Products: ${treatment.products.map((item) => item.product.name).join(', ')}` : ''}</p></div>)}{!treatmentResults.length && <p className="text-sm text-stone-600">No treatment results.</p>}</Card>}
+      {q && <Card><h3 className="mb-3 font-bold">Substrate recipes and components</h3>{substrateRecipes.map((recipe) => <div key={recipe.id} className="border-t border-stone-200 py-2 text-sm"><Link className="font-bold underline" href={collectionPath(collection.slug, `/substrates?recipe=${recipe.id}`)}>{recipe.name}</Link><span> · {recipe.archivedAt ? 'archived' : 'active family'}</span>{recipe.activeVersion && <p className="text-stone-600">v{recipe.activeVersion.versionNumber} · {compactRecipeComposition(recipe.activeVersion)}</p>}</div>)}{substrateComponents.map((component) => <div key={component.id} className="border-t border-stone-200 py-2 text-sm"><Link className="font-bold underline" href={collectionPath(collection.slug, '/substrates#components')}>{component.name}</Link><span> · {taxonomyLabel(component.category)} · {component.active ? 'active' : 'archived'}</span></div>)}{!substrateRecipes.length && !substrateComponents.length && <p className="text-sm text-stone-600">No substrate results.</p>}</Card>}
     </div>
   )
 }

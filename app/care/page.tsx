@@ -13,6 +13,7 @@ const filters = [
   ['overdue', 'Overdue'],
   ['water', 'Water'],
   ['fertilize', 'Fertilizer'],
+  ['repot', 'Repot'],
   ['treatment', 'Treatments'],
   ['propagation', 'Propagation'],
   ['health', 'Health'],
@@ -33,13 +34,21 @@ export default async function CareQueuePage({ searchParams }: { searchParams: Pr
   const timezone = preferences?.timezone
   const filter = params.filter || 'today'
   const back = `${collectionPath(context.collection.slug, '/care')}?filter=${encodeURIComponent(filter)}`
-  const allItems = await getCareQueue(prisma, {
-    collectionId: context.collection.id,
-    collectionSlug: context.collection.slug,
-    userId: context.user?.id,
-    includeCompleted: filter === 'completed',
-    timezone,
-  })
+  const [allItems, substrateRecipeVersions] = await Promise.all([
+    getCareQueue(prisma, {
+      collectionId: context.collection.id,
+      collectionSlug: context.collection.slug,
+      userId: context.user?.id,
+      includeCompleted: filter === 'completed',
+      timezone,
+    }),
+    prisma.substrateRecipeVersion.findMany({
+      where: { collectionId: context.collection.id, status: { in: ['ACTIVE', 'HISTORICAL'] }, recipe: { archivedAt: null } },
+      include: { recipe: true },
+      orderBy: [{ recipe: { name: 'asc' } }, { versionNumber: 'desc' }],
+    }),
+  ])
+  const substrateVersions = substrateRecipeVersions.map((version) => ({ id: version.id, label: `${version.recipe.name} v${version.versionNumber}` }))
   const summary = careQueueSummary(allItems, new Date(), timezone)
   const items = filterCareQueue(allItems, filter, new Date(), timezone)
   const workflowTemplates = canAct
@@ -142,6 +151,7 @@ export default async function CareQueuePage({ searchParams }: { searchParams: Pr
               back={back}
               canAct={canAct}
               timezone={timezone}
+              substrateVersions={substrateVersions}
             />
           ))}
         </div>

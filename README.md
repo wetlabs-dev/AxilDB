@@ -418,6 +418,8 @@ Core models:
 - `PlantDefinition`: taxonomic/cultivar definition and reference metadata.
 - `PlantAlias`: alternate names with type, source, confidence, and notes.
 - `PlantInstance`: an individual plant/specimen in the collection.
+- `SubstrateComponent`, `SubstrateRecipe`, `SubstrateRecipeVersion`, and `SubstrateRecipeComponent`: collection-scoped substrate libraries and immutable 100%-by-volume recipe formulations.
+- `PlantDefinitionSubstrateRecommendation`, `PlantInstanceSubstrate`, and `PlantSubstrateHistory`: ranked definition guidance, explicit current substrate state, and append-only specimen substrate history linked to repotting care events.
 - `LocationType`: collection-defined location categories such as Room, Cabinet, Shelf, or Greenhouse, with stable abbreviations used for location codes.
 - `Location`: collection-scoped hierarchical locations with stable generated codes such as `LOC-SH-01`; locations can contain other locations and direct plant assignments.
 - `PlantLocationMove`: move history for plants reassigned between structured locations.
@@ -447,6 +449,14 @@ Core models:
 Validated Plant Definitions are site-level `PlantDefinition` records with `collectionId = null` and `isValidated = true`. They are not owned by the collection that nominated them, so deleting or archiving a collection does not delete approved validated definitions or break plant instances linked to them. Collection managers can nominate a local definition for validation, server admins review nominations under Server Management, and approval creates a site-level validated definition with copied taxonomy, aliases, husbandry, type-image metadata, and governing body metadata. Managers can dispute validated definitions or create a local copy for selected specimens when they need to detach from future validated updates. Specimen-level husbandry overrides remain available, so collections do not need to detach solely for local care differences.
 
 Most domain records carry `collectionId`, including local plant definitions, aliases, plant instances, locations, location types, plant location moves, propagations, blooms, notes, photos, reminders, follows, sunshine, governing bodies, and audit logs. Suggestions/autocomplete, search, gallery, lineage graphs, labels, dashboard activity, follow counts, and sunshine counts are scoped per collection. Validated plant definitions, their aliases, husbandry guides, and type-image metadata intentionally remain site-level.
+
+## Substrate Library And Potting History
+
+Open **Substrates** from the collection sidebar to manage the collection's component library, versioned recipes, plant-definition recommendations, and usage. New collections receive 15 starter components and 12 complete starter recipes. Recipe drafts must total exactly 100% by volume before activation. Activated versions are immutable; revise a formulation by creating a new version so existing plant assignments and care history continue to identify the exact mix used.
+
+Each Plant Instance records one explicit current state: a recipe version, **Received Substrate**, **Custom / Unknown Mix**, **No Substrate**, or **Unknown**. Acquisitions default to Received Substrate when the seller's mix is not known. Repotting from a specimen, bulk care, or a derived Care Queue task updates the current state and writes append-only history linked to the repotting care event. Definition pages can rank several recipe versions by suitability, and the Care Queue shows the current and top-ranked recommended substrate when a husbandry repotting interval becomes due.
+
+Magic Fill husbandry can suggest ranked existing recipe versions or a new recipe draft using only compact active substrate metadata from the current collection. Suggestions require review and confirmation. Green Thumb receives the plant's current mix, recent substrate changes, and ranked recommendations as care context, but substrate correlation is not presented as a diagnosis. Search, Plant Instance filters, and collection-scoped CSV exports support substrate review and Received Substrate cleanup. See [docs/SUBSTRATE_SYSTEM.md](docs/SUBSTRATE_SYSTEM.md) for lifecycle and safety details.
 
 ## Greenhouse Workflows
 

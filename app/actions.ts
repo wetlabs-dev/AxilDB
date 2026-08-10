@@ -43,6 +43,7 @@ import { evaluatePlantLocationCompatibility, getEffectiveLocationEnvironment, ge
 import { emitDomainEvent } from '@/lib/events/emit'
 import { sourceRowsFromForm, validateCommerceSelection, validateSourceRows } from '@/lib/provenance'
 import { parseTagIds } from '@/lib/plant-tags'
+import { requireSubstrateRecipeVersion, setPlantSubstrate, substrateModes } from '@/lib/substrates'
 
 const val = (fd: FormData, k: string) =>
   String(fd.get(k) || '').trim() || undefined
@@ -118,6 +119,7 @@ const isSportLine = (status?: string | null) =>
 const careEventForTask = (taskType?: string | null) => {
   if (taskType === 'WATER') return 'WATERED'
   if (taskType === 'FERTILIZE') return 'FERTILIZED'
+  if (taskType === 'REPOT') return 'REPOTTED'
   if (taskType === 'PROPAGATION_CHECK') return 'PROPAGATION_CHECK'
   if (taskType === 'PEST_CHECK') return 'PEST_CHECK'
   if (taskType === 'HEALTH_CHECK') return 'HEALTH_CHECK'
@@ -1930,6 +1932,34 @@ export async function savePlantHusbandryGuide(fd: FormData) {
     } as any,
   })
 
+  const substrateJson = val(fd, 'magicSubstrateRecommendationsJson')
+  if (substrateJson) {
+    const raw = JSON.parse(substrateJson)
+    const requested = (Array.isArray(raw) ? raw : []).slice(0, 4).map((item: any, index: number) => ({
+      substrateRecipeVersionId: String(item?.recipeVersionId || ''),
+      rank: index + 1,
+      suitability: ['PREFERRED', 'RECOMMENDED', 'ACCEPTABLE', 'SPECIAL_PURPOSE'].includes(item?.suitability) ? item.suitability : 'RECOMMENDED',
+      confidence: Number.isFinite(Number(item?.confidence)) ? Math.max(0, Math.min(1, Number(item.confidence))) : null,
+      notes: String(item?.reason || '').trim().slice(0, 500) || null,
+    })).filter((item: any) => item.substrateRecipeVersionId)
+    const validVersions = await prisma.substrateRecipeVersion.findMany({ where: { collectionId: collection.id, id: { in: requested.map((item: any) => item.substrateRecipeVersionId) } }, select: { id: true } })
+    const validIds = new Set(validVersions.map((version) => version.id))
+    const existingCount = await prisma.plantDefinitionSubstrateRecommendation.count({ where: { collectionId: collection.id, plantDefinitionId } })
+    const replace = val(fd, 'magicSubstrateApplyMode') === 'REPLACE_ALL'
+    if (replace || existingCount === 0) {
+      if (replace) await prisma.plantDefinitionSubstrateRecommendation.deleteMany({ where: { collectionId: collection.id, plantDefinitionId, source: 'AI' } })
+      for (const item of requested.filter((candidate: any) => validIds.has(candidate.substrateRecipeVersionId))) {
+        const existing = await prisma.plantDefinitionSubstrateRecommendation.findUnique({ where: { collectionId_plantDefinitionId_substrateRecipeVersionId: { collectionId: collection.id, plantDefinitionId, substrateRecipeVersionId: item.substrateRecipeVersionId } } })
+        if (existing?.source !== 'AI') continue
+        await prisma.plantDefinitionSubstrateRecommendation.upsert({
+          where: { collectionId_plantDefinitionId_substrateRecipeVersionId: { collectionId: collection.id, plantDefinitionId, substrateRecipeVersionId: item.substrateRecipeVersionId } },
+          update: { rank: item.rank, suitability: item.suitability, confidence: item.confidence, notes: item.notes, source: 'AI' },
+          create: { collectionId: collection.id, plantDefinitionId, ...item, source: 'AI' },
+        })
+      }
+    }
+  }
+
   await audit(user, 'UPDATE', 'PLANT_HUSBANDRY_GUIDE', guide.id, `Saved plant husbandry guide`, undefined, collection.id)
   redirect(collectionPath(collection.slug, `/plants/${plantDefinitionId}/edit#husbandry`))
 }
@@ -2226,6 +2256,7 @@ export async function createPlantInstance(fd: FormData) {
     instanceType,
     date: propagationDate || acquisitionDate,
   })
+  const substrateMode = substrateModes.includes(val(fd, 'substrateMode') as any) ? val(fd, 'substrateMode')! : acquisitionDate ? 'RECEIVED_SUBSTRATE' : 'UNKNOWN'
 
   const instance = await prisma.$transaction(async (tx) => {
     const created = await tx.plantInstance.create({ data: {
@@ -2272,6 +2303,23 @@ export async function createPlantInstance(fd: FormData) {
       eventType: 'plant.created', collectionId: collection.id, aggregateId: created.id,
       actor: { id: user.id, role: user.role }, occurredAt: created.acquisitionDate || created.createdAt,
       idempotencyKey: `plant:${created.id}:created`, payload: { subjectId: created.id, plantInstanceId: created.id, plantId: created.plantId, displayName: plantName(definition), instanceType: created.instanceType, source: created.source, distributor: created.distributor, location: currentLocation ? { id: currentLocation.id, name: currentLocation.name, code: currentLocation.code } : null, summary: note || undefined },
+    })
+    const substrate = await setPlantSubstrate(tx, {
+      collectionId: collection.id,
+      plantInstanceId: created.id,
+      mode: substrateMode,
+      recipeVersionId: clearableVal(fd, 'substrateRecipeVersionId'),
+      description: clearableVal(fd, 'receivedSubstrateDescription'),
+      notes: clearableVal(fd, 'substrateNotes'),
+      startedAt: acquisitionDate || propagationDate || created.createdAt,
+      reason: 'Initial substrate recorded',
+      changedByUserId: user.id,
+    })
+    await emitDomainEvent(tx, {
+      eventType: substrateMode === 'RECEIVED_SUBSTRATE' ? 'plant.received_substrate_recorded' : 'plant.substrate_assigned',
+      collectionId: collection.id, aggregateId: created.id, actor: { id: user.id, role: user.role }, occurredAt: substrate.current.startedAt,
+      idempotencyKey: `plant:${created.id}:substrate:${substrate.history.id}`,
+      payload: { subjectId: created.id, plantInstanceId: created.id, plantId: created.plantId, recordId: substrate.history.id, recordType: 'PlantSubstrateHistory', newMode: substrateMode, newRecipeVersionId: substrate.recipeVersion?.id, displayName: substrate.recipeVersion ? `${substrate.recipeVersion.recipe.name} v${substrate.recipeVersion.versionNumber}` : substrateMode.replaceAll('_', ' ') },
     })
     return created
   })
@@ -2815,6 +2863,14 @@ export async function completeCareTask(fd: FormData) {
   const fertilizerRecipeId = taskType === 'FERTILIZE'
     ? await verifiedFertilizerRecipeId(context.collection.id, val(fd, 'fertilizerRecipeId') || null)
     : null
+  const substrateMode = taskType === 'REPOT' && substrateModes.includes(val(fd, 'substrateMode') as any)
+    ? val(fd, 'substrateMode')!
+    : null
+  if (taskType === 'REPOT' && !substrateMode) throw new Error('Choose the new substrate type.')
+  const substrateRecipeVersionId = substrateMode === 'RECIPE'
+    ? (await requireSubstrateRecipeVersion(prisma, context.collection.id, val(fd, 'substrateRecipeVersionId')))?.id || null
+    : null
+  const performedAt = parseDateLocal(val(fd, 'performedAt'), timezone) || new Date()
 
   const event = await prisma.$transaction(async (tx) => {
     const created = await tx.plantCareEvent.create({ data: {
@@ -2822,9 +2878,10 @@ export async function completeCareTask(fd: FormData) {
       plantInstanceId,
       userId: context.user.id,
       eventType: careEventForTask(taskType),
-      performedAt: parseDateLocal(val(fd, 'performedAt'), timezone) || new Date(),
+      performedAt,
       notes: val(fd, 'notes'),
       fertilizerRecipeId,
+      substrateRecipeVersionId,
       metadata: {
         taskType,
         conditionId: val(fd, 'conditionId') || null,
@@ -2833,8 +2890,24 @@ export async function completeCareTask(fd: FormData) {
         fertilizerStrength: val(fd, 'fertilizerStrength') || null,
         fertilizerDose: val(fd, 'fertilizerDose') || null,
         fertilizerWaterVolume: val(fd, 'fertilizerWaterVolume') || null,
+        substrateMode,
+        substrateRecipeVersionId,
       },
     } })
+    if (taskType === 'REPOT' && substrateMode) {
+      await setPlantSubstrate(tx, {
+        collectionId: context.collection.id,
+        plantInstanceId,
+        mode: substrateMode,
+        recipeVersionId: substrateRecipeVersionId,
+        description: val(fd, 'receivedSubstrateDescription') || null,
+        notes: val(fd, 'substrateNotes') || val(fd, 'notes') || null,
+        startedAt: performedAt,
+        reason: 'Repotted from care queue',
+        changedByUserId: context.user.id,
+        repottingCareEventId: created.id,
+      })
+    }
     await tx.plantCareAdjustment.updateMany({
     where: { collectionId: context.collection.id, plantInstanceId, taskType },
     data: { snoozedUntil: null, nextDueAt: null },
@@ -2842,7 +2915,7 @@ export async function completeCareTask(fd: FormData) {
     await emitDomainEvent(tx, {
       eventType: domainEventForCare(created.eventType), collectionId: context.collection.id, aggregateId: created.id,
       actor: { id: context.user.id, role: context.user.role }, occurredAt: created.performedAt,
-      idempotencyKey: `care:${created.id}:created`, payload: { subjectId: created.id, recordId: created.id, recordType: 'PlantCareEvent', plantInstanceId, plantId: plant.plantId, displayName: plant.plantId, taskType, summary: created.notes || undefined, fertilizerRecipeId },
+      idempotencyKey: `care:${created.id}:created`, payload: { subjectId: created.id, recordId: created.id, recordType: 'PlantCareEvent', plantInstanceId, plantId: plant.plantId, displayName: plant.plantId, taskType, summary: created.notes || undefined, fertilizerRecipeId, substrateRecipeVersionId },
     })
     return created
   })
@@ -2864,6 +2937,12 @@ export async function completeBulkCare(fd: FormData) {
   const sharedResult = val(fd, 'sharedResult') || ''
   const fertilizerRecipeId = careType === 'FERTILIZING'
     ? await verifiedFertilizerRecipeId(context.collection.id, val(fd, 'fertilizerRecipeId') || null)
+    : null
+  const substrateMode = careType === 'REPOTTING' && substrateModes.includes(val(fd, 'substrateMode') as any)
+    ? val(fd, 'substrateMode')!
+    : null
+  const substrateRecipeVersionId = substrateMode === 'RECIPE'
+    ? (await requireSubstrateRecipeVersion(prisma, context.collection.id, val(fd, 'substrateRecipeVersionId')))?.id || null
     : null
   const performedAt = parseDateLocal(val(fd, 'performedAt'), timezone) || new Date()
   const selectedIds = fd.getAll('plantInstanceId').map((item) => String(item)).filter(Boolean)
@@ -2951,6 +3030,7 @@ export async function completeBulkCare(fd: FormData) {
           performedAt,
           notes,
           fertilizerRecipeId,
+          substrateRecipeVersionId,
           metadata: {
             source: 'BULK_CARE',
             bulkCareBatchId: batchId,
@@ -2967,6 +3047,26 @@ export async function completeBulkCare(fd: FormData) {
           },
         },
       })
+      if (careType === 'REPOTTING' && substrateMode) {
+        const substrate = await setPlantSubstrate(tx, {
+          collectionId: context.collection.id,
+          plantInstanceId: plant.id,
+          mode: substrateMode,
+          recipeVersionId: substrateRecipeVersionId,
+          description: clearableVal(fd, 'receivedSubstrateDescription'),
+          notes: clearableVal(fd, 'substrateNotes'),
+          startedAt: performedAt,
+          reason: 'Repotting',
+          changedByUserId: context.user.id,
+          repottingCareEventId: event.id,
+        })
+        await emitDomainEvent(tx, {
+          eventType: 'plant.substrate_changed', collectionId: context.collection.id, aggregateId: plant.id,
+          actor: { id: context.user.id, role: context.user.role }, occurredAt: performedAt, correlationId: batchId,
+          idempotencyKey: `plant:${plant.id}:substrate:${substrate.history.id}`,
+          payload: { subjectId: plant.id, plantInstanceId: plant.id, plantId: plant.plantId, recordId: substrate.history.id, recordType: 'PlantSubstrateHistory', newMode: substrateMode, newRecipeVersionId: substrateRecipeVersionId, displayName: substrate.recipeVersion ? `${substrate.recipeVersion.recipe.name} v${substrate.recipeVersion.versionNumber}` : substrateMode.replaceAll('_', ' ') },
+        })
+      }
       await emitDomainEvent(tx, {
         eventType: domainEventForCare(event.eventType), collectionId: context.collection.id, aggregateId: event.id,
         actor: { id: context.user.id, role: context.user.role }, occurredAt: event.performedAt, correlationId: batchId,

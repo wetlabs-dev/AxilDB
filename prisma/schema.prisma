@@ -97,93 +97,93 @@ model GoverningBody {
 }
 
 model User {
-  id                  String               @id @default(cuid())
-  email               String               @unique
-  emailVerifiedAt     DateTime?
-  passwordHash        String
-  role                String               @default("USER")
-  disabledAt          DateTime?
-  disabledReason      String?
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
-  sessions            Session[]
-  auditLogs           AuditLog[]
-  emailTokens         EmailToken[]
-  emailPreference     EmailPreference?
-  pushSubscriptions   PushSubscription[]
-  sortPreferences     UserSortPreference[]
-  reminders           Reminder[]
-  follows             Follow[]
-  followNotifications FollowNotification[]
-  plantCareEvents     PlantCareEvent[]
-  plantConditions     PlantCondition[]
-  plantCareAdjustments PlantCareAdjustment[]
-  twoFactor           UserTwoFactor?
-  twoFactorChallenges TwoFactorChallenge[]
-  memberships         CollectionMembership[]
-  collectionRequests  CollectionRequest[] @relation("CollectionRequestRequester")
-  reviewedCollectionRequests CollectionRequest[] @relation("CollectionRequestReviewer")
-  aiAccessRequests    AiAccessRequest[] @relation("AiAccessRequestRequester")
-  reviewedAiAccessRequests AiAccessRequest[] @relation("AiAccessRequestReviewer")
-  aiUsageEvents       AiUsageEvent[]
-  archivedCollections Collection[] @relation("CollectionArchivedBy")
-  backupRuns          BackupRun[] @relation("BackupRunRequestedBy")
-  maintenanceStarted  MaintenanceMode[] @relation("MaintenanceModeStartedBy")
-  maintenanceEnded    MaintenanceMode[] @relation("MaintenanceModeEndedBy")
-  requestedRestoreRequests RestoreRequest[] @relation("RestoreRequestRequestedBy")
-  completedRestoreRequests RestoreRequest[] @relation("RestoreRequestCompletedBy")
-  cancelledRestoreRequests RestoreRequest[] @relation("RestoreRequestCancelledBy")
-  generatedCollectionBriefings CollectionBriefing[]
-  sunshine            Sunshine[]
-  sentCollectionInvitations CollectionInvitation[] @relation("CollectionInvitationInviter")
-  acceptedCollectionInvitations CollectionInvitation[] @relation("CollectionInvitationAcceptedUser")
-  requestedTransferConnections CollectionTransferConnection[] @relation("TransferConnectionRequester")
-  respondedTransferConnections CollectionTransferConnection[] @relation("TransferConnectionResponder")
-  requestedPlantTransfers PlantTransferRequest[] @relation("PlantTransferRequester")
-  reviewedPlantTransfers PlantTransferRequest[] @relation("PlantTransferReviewer")
-  requestedDefinitionShares PlantDefinitionShareRequest[] @relation("DefinitionShareRequester")
-  reviewedDefinitionShares PlantDefinitionShareRequest[] @relation("DefinitionShareReviewer")
-  validatedPlantDefinitions PlantDefinition[] @relation("PlantDefinitionValidatedBy")
+  id                                           String                               @id @default(cuid())
+  email                                        String                               @unique
+  emailVerifiedAt                              DateTime?
+  passwordHash                                 String
+  role                                         String                               @default("USER")
+  disabledAt                                   DateTime?
+  disabledReason                               String?
+  createdAt                                    DateTime                             @default(now())
+  updatedAt                                    DateTime                             @updatedAt
+  sessions                                     Session[]
+  auditLogs                                    AuditLog[]
+  emailTokens                                  EmailToken[]
+  emailPreference                              EmailPreference?
+  pushSubscriptions                            PushSubscription[]
+  sortPreferences                              UserSortPreference[]
+  reminders                                    Reminder[]
+  follows                                      Follow[]
+  followNotifications                          FollowNotification[]
+  plantCareEvents                              PlantCareEvent[]
+  plantConditions                              PlantCondition[]
+  plantCareAdjustments                         PlantCareAdjustment[]
+  twoFactor                                    UserTwoFactor?
+  twoFactorChallenges                          TwoFactorChallenge[]
+  memberships                                  CollectionMembership[]
+  collectionRequests                           CollectionRequest[]                  @relation("CollectionRequestRequester")
+  reviewedCollectionRequests                   CollectionRequest[]                  @relation("CollectionRequestReviewer")
+  aiAccessRequests                             AiAccessRequest[]                    @relation("AiAccessRequestRequester")
+  reviewedAiAccessRequests                     AiAccessRequest[]                    @relation("AiAccessRequestReviewer")
+  aiUsageEvents                                AiUsageEvent[]
+  archivedCollections                          Collection[]                         @relation("CollectionArchivedBy")
+  backupRuns                                   BackupRun[]                          @relation("BackupRunRequestedBy")
+  maintenanceStarted                           MaintenanceMode[]                    @relation("MaintenanceModeStartedBy")
+  maintenanceEnded                             MaintenanceMode[]                    @relation("MaintenanceModeEndedBy")
+  requestedRestoreRequests                     RestoreRequest[]                     @relation("RestoreRequestRequestedBy")
+  completedRestoreRequests                     RestoreRequest[]                     @relation("RestoreRequestCompletedBy")
+  cancelledRestoreRequests                     RestoreRequest[]                     @relation("RestoreRequestCancelledBy")
+  generatedCollectionBriefings                 CollectionBriefing[]
+  sunshine                                     Sunshine[]
+  sentCollectionInvitations                    CollectionInvitation[]               @relation("CollectionInvitationInviter")
+  acceptedCollectionInvitations                CollectionInvitation[]               @relation("CollectionInvitationAcceptedUser")
+  requestedTransferConnections                 CollectionTransferConnection[]       @relation("TransferConnectionRequester")
+  respondedTransferConnections                 CollectionTransferConnection[]       @relation("TransferConnectionResponder")
+  requestedPlantTransfers                      PlantTransferRequest[]               @relation("PlantTransferRequester")
+  reviewedPlantTransfers                       PlantTransferRequest[]               @relation("PlantTransferReviewer")
+  requestedDefinitionShares                    PlantDefinitionShareRequest[]        @relation("DefinitionShareRequester")
+  reviewedDefinitionShares                     PlantDefinitionShareRequest[]        @relation("DefinitionShareReviewer")
+  validatedPlantDefinitions                    PlantDefinition[]                    @relation("PlantDefinitionValidatedBy")
   submittedPlantDefinitionValidationCandidates PlantDefinitionValidationCandidate[] @relation("PlantDefinitionValidationCandidateSubmitter")
-  reviewedPlantDefinitionValidationCandidates PlantDefinitionValidationCandidate[] @relation("PlantDefinitionValidationCandidateReviewer")
-  submittedPlantDefinitionDisputes PlantDefinitionDispute[] @relation("PlantDefinitionDisputeSubmitter")
-  reviewedPlantDefinitionDisputes PlantDefinitionDispute[] @relation("PlantDefinitionDisputeReviewer")
-  validatedDefinitionChanges ValidatedDefinitionChange[] @relation("ValidatedDefinitionChangeActor")
-  collectionUpdateDigestDeliveries CollectionUpdateDigestDelivery[]
-  uploadedImageModerationReviews ImageModerationReview[] @relation("ImageModerationReviewUploader")
-  resolvedImageModerationReviews ImageModerationReview[] @relation("ImageModerationReviewResolver")
-  uploadedPhotos Photo[] @relation("PhotoUploader")
-  plantIdentificationLogs PlantIdentificationLog[]
-  plantLocationMoves PlantLocationMove[]
-  createdServerIncidents ServerIncident[] @relation("ServerIncidentCreator")
-  serverIncidentNotes ServerIncidentNote[] @relation("ServerIncidentNoteAuthor")
-  serverIncidentNotifications ServerIncidentNotification[]
-  createdPlantQuarantines PlantQuarantine[] @relation("PlantQuarantineCreatedBy")
-  releasedPlantQuarantines PlantQuarantine[] @relation("PlantQuarantineReleasedBy")
-  cancelledPlantQuarantines PlantQuarantine[] @relation("PlantQuarantineCancelledBy")
-  careSheets          CareSheet[]
-  completedCareSheetTasks CareSheetTask[] @relation("CareSheetTaskCompletedBy")
-  domainEvents        DomainEvent[] @relation("DomainEventActor")
-  ignoredDomainEvents DomainEvent[] @relation("DomainEventIgnoredBy")
-  createdCollectionExhibits CollectionExhibit[] @relation("CollectionExhibitCreatedBy")
-  publishedCollectionExhibits CollectionExhibit[] @relation("CollectionExhibitPublishedBy")
-  createdCollectionExhibitUpdates CollectionExhibitUpdate[] @relation("CollectionExhibitUpdateCreatedBy")
-  createdPlantTags    PlantTag[] @relation("PlantTagCreatedBy")
-  createdPlantDefinitionTags PlantDefinitionTag[] @relation("PlantDefinitionTagCreatedBy")
-  createdWorkflowTemplates WorkflowTemplate[] @relation("WorkflowTemplateCreatedBy")
-  startedWorkflowRuns WorkflowRun[] @relation("WorkflowRunStartedBy")
-  assignedWorkflowRuns WorkflowRun[] @relation("WorkflowRunAssignedTo")
-  completedWorkflowRunSteps WorkflowRunStep[] @relation("WorkflowRunStepCompletedBy")
-  createdCareScheduleSyncBatches CareScheduleSyncBatch[] @relation("CareScheduleSyncBatchCreatedBy")
-  createdQuietDays CollectionQuietDay[] @relation("CollectionQuietDayCreatedBy")
-  createdAcquisitionResearchEntries AcquisitionResearchEntry[] @relation("AcquisitionResearchEntryCreatedBy")
-  createdPlantObservations PlantObservation[] @relation("PlantObservationCreatedBy")
-  createdPlantAcquisitionRecords PlantAcquisitionRecord[] @relation("PlantAcquisitionRecordCreatedBy")
-  createdAcquisitionBatches AcquisitionBatch[] @relation("AcquisitionBatchCreatedBy")
-  createdSources Source[] @relation("SourceCreatedBy")
-  createdDistributors Distributor[] @relation("DistributorCreatedBy")
-  createdSellers Seller[] @relation("SellerCreatedBy")
-  resolvedProvenanceItems ProvenanceReconciliationItem[] @relation("ProvenanceReconciliationResolvedBy")
+  reviewedPlantDefinitionValidationCandidates  PlantDefinitionValidationCandidate[] @relation("PlantDefinitionValidationCandidateReviewer")
+  submittedPlantDefinitionDisputes             PlantDefinitionDispute[]             @relation("PlantDefinitionDisputeSubmitter")
+  reviewedPlantDefinitionDisputes              PlantDefinitionDispute[]             @relation("PlantDefinitionDisputeReviewer")
+  validatedDefinitionChanges                   ValidatedDefinitionChange[]          @relation("ValidatedDefinitionChangeActor")
+  collectionUpdateDigestDeliveries             CollectionUpdateDigestDelivery[]
+  uploadedImageModerationReviews               ImageModerationReview[]              @relation("ImageModerationReviewUploader")
+  resolvedImageModerationReviews               ImageModerationReview[]              @relation("ImageModerationReviewResolver")
+  uploadedPhotos                               Photo[]                              @relation("PhotoUploader")
+  plantIdentificationLogs                      PlantIdentificationLog[]
+  plantLocationMoves                           PlantLocationMove[]
+  createdServerIncidents                       ServerIncident[]                     @relation("ServerIncidentCreator")
+  serverIncidentNotes                          ServerIncidentNote[]                 @relation("ServerIncidentNoteAuthor")
+  serverIncidentNotifications                  ServerIncidentNotification[]
+  createdPlantQuarantines                      PlantQuarantine[]                    @relation("PlantQuarantineCreatedBy")
+  releasedPlantQuarantines                     PlantQuarantine[]                    @relation("PlantQuarantineReleasedBy")
+  cancelledPlantQuarantines                    PlantQuarantine[]                    @relation("PlantQuarantineCancelledBy")
+  careSheets                                   CareSheet[]
+  completedCareSheetTasks                      CareSheetTask[]                      @relation("CareSheetTaskCompletedBy")
+  domainEvents                                 DomainEvent[]                        @relation("DomainEventActor")
+  ignoredDomainEvents                          DomainEvent[]                        @relation("DomainEventIgnoredBy")
+  createdCollectionExhibits                    CollectionExhibit[]                  @relation("CollectionExhibitCreatedBy")
+  publishedCollectionExhibits                  CollectionExhibit[]                  @relation("CollectionExhibitPublishedBy")
+  createdCollectionExhibitUpdates              CollectionExhibitUpdate[]            @relation("CollectionExhibitUpdateCreatedBy")
+  createdPlantTags                             PlantTag[]                           @relation("PlantTagCreatedBy")
+  createdPlantDefinitionTags                   PlantDefinitionTag[]                 @relation("PlantDefinitionTagCreatedBy")
+  createdWorkflowTemplates                     WorkflowTemplate[]                   @relation("WorkflowTemplateCreatedBy")
+  startedWorkflowRuns                          WorkflowRun[]                        @relation("WorkflowRunStartedBy")
+  assignedWorkflowRuns                         WorkflowRun[]                        @relation("WorkflowRunAssignedTo")
+  completedWorkflowRunSteps                    WorkflowRunStep[]                    @relation("WorkflowRunStepCompletedBy")
+  createdCareScheduleSyncBatches               CareScheduleSyncBatch[]              @relation("CareScheduleSyncBatchCreatedBy")
+  createdQuietDays                             CollectionQuietDay[]                 @relation("CollectionQuietDayCreatedBy")
+  createdAcquisitionResearchEntries            AcquisitionResearchEntry[]           @relation("AcquisitionResearchEntryCreatedBy")
+  createdPlantObservations                     PlantObservation[]                   @relation("PlantObservationCreatedBy")
+  createdPlantAcquisitionRecords               PlantAcquisitionRecord[]             @relation("PlantAcquisitionRecordCreatedBy")
+  createdAcquisitionBatches                    AcquisitionBatch[]                   @relation("AcquisitionBatchCreatedBy")
+  createdSources                               Source[]                             @relation("SourceCreatedBy")
+  createdDistributors                          Distributor[]                        @relation("DistributorCreatedBy")
+  createdSellers                               Seller[]                             @relation("SellerCreatedBy")
+  resolvedProvenanceItems                      ProvenanceReconciliationItem[]       @relation("ProvenanceReconciliationResolvedBy")
 
   @@index([role])
   @@index([emailVerifiedAt])
@@ -191,112 +191,119 @@ model User {
 }
 
 model Collection {
-  id                  String                 @id @default(cuid())
-  name                String
-  slug                String                 @unique
-  visibility          String                 @default("PRIVATE")
-  status              String                 @default("ACTIVE")
-  isDefault           Boolean                @default(false)
-  aiFeaturesEnabled   Boolean                @default(true)
-  aiBriefingEnabled   Boolean                @default(false)
-  acquisitionVisibility String                @default("PRIVATE")
-  wishlistIntro       String?
+  id                         String    @id @default(cuid())
+  name                       String
+  slug                       String    @unique
+  visibility                 String    @default("PRIVATE")
+  status                     String    @default("ACTIVE")
+  isDefault                  Boolean   @default(false)
+  aiFeaturesEnabled          Boolean   @default(true)
+  aiBriefingEnabled          Boolean   @default(false)
+  acquisitionVisibility      String    @default("PRIVATE")
+  wishlistIntro              String?
   wishlistPublicSettingsJson Json?
-  showSourceProvenance Boolean                @default(false)
-  showDistributorIdentity Boolean             @default(false)
-  showDistributorOutlet Boolean               @default(false)
-  showSellerIdentity     Boolean               @default(false)
-  showSellerStorefront   Boolean               @default(false)
-  description         String?
-  archivedAt          DateTime?
-  archivedById        String?
-  createdAt           DateTime               @default(now())
-  updatedAt           DateTime               @updatedAt
+  showSourceProvenance       Boolean   @default(false)
+  showDistributorIdentity    Boolean   @default(false)
+  showDistributorOutlet      Boolean   @default(false)
+  showSellerIdentity         Boolean   @default(false)
+  showSellerStorefront       Boolean   @default(false)
+  description                String?
+  archivedAt                 DateTime?
+  archivedById               String?
+  createdAt                  DateTime  @default(now())
+  updatedAt                  DateTime  @updatedAt
 
-  archivedBy          User?                  @relation("CollectionArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull)
-  memberships         CollectionMembership[]
-  invitations         CollectionInvitation[]
-  collectionRequests  CollectionRequest[]
-  aiAccessRequests    AiAccessRequest[]
-  aiUsageEvents       AiUsageEvent[]
-  briefings           CollectionBriefing[]
-  sunshine            Sunshine[]
-  auditLogs           AuditLog[]
-  follows             Follow[]
-  followNotifications FollowNotification[]
-  plantDefinitions    PlantDefinition[]
-  plantTags           PlantTag[]
-  plantDefinitionTags PlantDefinitionTag[]
-  sourceValidatedPlantDefinitions PlantDefinition[] @relation("ValidatedPlantDefinitionSourceCollection")
+  archivedBy                          User?                                    @relation("CollectionArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull)
+  memberships                         CollectionMembership[]
+  invitations                         CollectionInvitation[]
+  collectionRequests                  CollectionRequest[]
+  aiAccessRequests                    AiAccessRequest[]
+  aiUsageEvents                       AiUsageEvent[]
+  briefings                           CollectionBriefing[]
+  sunshine                            Sunshine[]
+  auditLogs                           AuditLog[]
+  follows                             Follow[]
+  followNotifications                 FollowNotification[]
+  plantDefinitions                    PlantDefinition[]
+  plantTags                           PlantTag[]
+  plantDefinitionTags                 PlantDefinitionTag[]
+  sourceValidatedPlantDefinitions     PlantDefinition[]                        @relation("ValidatedPlantDefinitionSourceCollection")
   plantDefinitionValidationCandidates PlantDefinitionValidationCandidate[]
-  plantDefinitionDisputes PlantDefinitionDispute[]
-  plantAliases        PlantAlias[]
-  plantInstances      PlantInstance[]
-  locationTypes       LocationType[]
-  locations           Location[]
-  locationEnvironmentProfiles LocationEnvironmentProfile[]
-  plantLocationMoves  PlantLocationMove[]
-  plantQuarantines    PlantQuarantine[]
-  propagationEvents   PropagationEvent[]
-  notes               Note[]
-  photos              Photo[]
-  imageModerationReviews ImageModerationReview[]
-  plantIdentificationLogs PlantIdentificationLog[]
-  bloomEvents         BloomEvent[]
-  reminders           Reminder[]
-  reminderDeliveries  ReminderDelivery[]
-  plantCareEvents     PlantCareEvent[]
-  plantConditions     PlantCondition[]
-  plantCareAdjustments PlantCareAdjustment[]
-  careScheduleSyncBatches CareScheduleSyncBatch[]
-  careScheduleSyncItems CareScheduleSyncItem[]
-  quietDays           CollectionQuietDay[]
-  quietDayShiftRules  CollectionQuietDayShiftRule[]
-  quietDayAdjustments CareQuietDayAdjustment[]
-  governingBodies     GoverningBody[]
-  plantHusbandryGuides PlantHusbandryGuide[]
-  plantHusbandryOverrides PlantHusbandryOverride[]
-  fertilizerProducts  FertilizerProduct[]
-  fertilizerRecipes   FertilizerRecipe[]
-  treatmentDefinitions TreatmentDefinition[]
-  treatmentProducts   TreatmentProduct[]
-  treatmentPlans      TreatmentPlan[]
-  treatmentPlanSteps  TreatmentPlanStep[]
-  treatmentApplications TreatmentApplication[]
-  treatmentApplicationOutcomes TreatmentApplicationOutcome[]
-  treatmentApplicationBatches TreatmentApplicationBatch[]
-  treatmentApplicationBatchItems TreatmentApplicationBatchItem[]
-  acquisitionResearchEntries AcquisitionResearchEntry[]
-  plantObservations   PlantObservation[]
-  plantAcquisitionRecords PlantAcquisitionRecord[]
-  acquisitionBatches AcquisitionBatch[]
-  sources             Source[]
-  acquisitionSources  AcquisitionSource[]
-  distributors        Distributor[]
-  distributorOutlets  DistributorOutlet[]
-  sellers             Seller[]
-  sellerStorefronts   SellerStorefront[]
-  preferredSellers    PlantDefinitionPreferredSeller[]
-  preferredDistributors PlantDefinitionPreferredDistributor[]
-  provenanceReconciliationItems ProvenanceReconciliationItem[]
-  outgoingTransferConnections CollectionTransferConnection[] @relation("TransferConnectionSource")
-  incomingTransferConnections CollectionTransferConnection[] @relation("TransferConnectionTarget")
-  outgoingPlantTransferRequests PlantTransferRequest[] @relation("PlantTransferSourceCollection")
-  incomingPlantTransferRequests PlantTransferRequest[] @relation("PlantTransferTargetCollection")
-  outgoingDefinitionShareRequests PlantDefinitionShareRequest[] @relation("DefinitionShareSourceCollection")
-  incomingDefinitionShareRequests PlantDefinitionShareRequest[] @relation("DefinitionShareTargetCollection")
-  careSheets          CareSheet[]
-  careSheetPlants     CareSheetPlant[]
-  careSheetTasks      CareSheetTask[]
-  careSheetAccessLogs CareSheetAccessLog[]
-  collectionUpdateDigestDeliveries CollectionUpdateDigestDelivery[]
-  exhibits            CollectionExhibit[]
-  exhibitWishlistItems CollectionExhibitWishlistItem[]
-  workflowTemplates   WorkflowTemplate[]
-  workflowRuns        WorkflowRun[]
-  workflowRunPlants   WorkflowRunPlant[]
-  workflowRunSteps    WorkflowRunStep[]
-  domainEvents        DomainEvent[]
+  plantDefinitionDisputes             PlantDefinitionDispute[]
+  plantAliases                        PlantAlias[]
+  plantInstances                      PlantInstance[]
+  locationTypes                       LocationType[]
+  locations                           Location[]
+  locationEnvironmentProfiles         LocationEnvironmentProfile[]
+  plantLocationMoves                  PlantLocationMove[]
+  plantQuarantines                    PlantQuarantine[]
+  propagationEvents                   PropagationEvent[]
+  notes                               Note[]
+  photos                              Photo[]
+  imageModerationReviews              ImageModerationReview[]
+  plantIdentificationLogs             PlantIdentificationLog[]
+  bloomEvents                         BloomEvent[]
+  reminders                           Reminder[]
+  reminderDeliveries                  ReminderDelivery[]
+  plantCareEvents                     PlantCareEvent[]
+  plantConditions                     PlantCondition[]
+  plantCareAdjustments                PlantCareAdjustment[]
+  careScheduleSyncBatches             CareScheduleSyncBatch[]
+  careScheduleSyncItems               CareScheduleSyncItem[]
+  quietDays                           CollectionQuietDay[]
+  quietDayShiftRules                  CollectionQuietDayShiftRule[]
+  quietDayAdjustments                 CareQuietDayAdjustment[]
+  governingBodies                     GoverningBody[]
+  plantHusbandryGuides                PlantHusbandryGuide[]
+  plantHusbandryOverrides             PlantHusbandryOverride[]
+  fertilizerProducts                  FertilizerProduct[]
+  fertilizerRecipes                   FertilizerRecipe[]
+  substrateComponents                 SubstrateComponent[]
+  substrateRecipes                    SubstrateRecipe[]
+  substrateRecipeVersions             SubstrateRecipeVersion[]
+  substrateRecipeComponents           SubstrateRecipeComponent[]
+  substrateRecommendations            PlantDefinitionSubstrateRecommendation[]
+  plantInstanceSubstrates             PlantInstanceSubstrate[]
+  plantSubstrateHistory               PlantSubstrateHistory[]
+  treatmentDefinitions                TreatmentDefinition[]
+  treatmentProducts                   TreatmentProduct[]
+  treatmentPlans                      TreatmentPlan[]
+  treatmentPlanSteps                  TreatmentPlanStep[]
+  treatmentApplications               TreatmentApplication[]
+  treatmentApplicationOutcomes        TreatmentApplicationOutcome[]
+  treatmentApplicationBatches         TreatmentApplicationBatch[]
+  treatmentApplicationBatchItems      TreatmentApplicationBatchItem[]
+  acquisitionResearchEntries          AcquisitionResearchEntry[]
+  plantObservations                   PlantObservation[]
+  plantAcquisitionRecords             PlantAcquisitionRecord[]
+  acquisitionBatches                  AcquisitionBatch[]
+  sources                             Source[]
+  acquisitionSources                  AcquisitionSource[]
+  distributors                        Distributor[]
+  distributorOutlets                  DistributorOutlet[]
+  sellers                             Seller[]
+  sellerStorefronts                   SellerStorefront[]
+  preferredSellers                    PlantDefinitionPreferredSeller[]
+  preferredDistributors               PlantDefinitionPreferredDistributor[]
+  provenanceReconciliationItems       ProvenanceReconciliationItem[]
+  outgoingTransferConnections         CollectionTransferConnection[]           @relation("TransferConnectionSource")
+  incomingTransferConnections         CollectionTransferConnection[]           @relation("TransferConnectionTarget")
+  outgoingPlantTransferRequests       PlantTransferRequest[]                   @relation("PlantTransferSourceCollection")
+  incomingPlantTransferRequests       PlantTransferRequest[]                   @relation("PlantTransferTargetCollection")
+  outgoingDefinitionShareRequests     PlantDefinitionShareRequest[]            @relation("DefinitionShareSourceCollection")
+  incomingDefinitionShareRequests     PlantDefinitionShareRequest[]            @relation("DefinitionShareTargetCollection")
+  careSheets                          CareSheet[]
+  careSheetPlants                     CareSheetPlant[]
+  careSheetTasks                      CareSheetTask[]
+  careSheetAccessLogs                 CareSheetAccessLog[]
+  collectionUpdateDigestDeliveries    CollectionUpdateDigestDelivery[]
+  exhibits                            CollectionExhibit[]
+  exhibitWishlistItems                CollectionExhibitWishlistItem[]
+  workflowTemplates                   WorkflowTemplate[]
+  workflowRuns                        WorkflowRun[]
+  workflowRunPlants                   WorkflowRunPlant[]
+  workflowRunSteps                    WorkflowRunStep[]
+  domainEvents                        DomainEvent[]
 
   @@index([visibility])
   @@index([status])
@@ -322,9 +329,9 @@ model PlantTag {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  createdBy  User? @relation("PlantTagCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  definitions PlantDefinitionTag[]
+  collection        Collection            @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  createdBy         User?                 @relation("PlantTagCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  definitions       PlantDefinitionTag[]
   treatmentCautions TreatmentTagCaution[]
 
   @@unique([collectionId, slug])
@@ -343,10 +350,10 @@ model PlantDefinitionTag {
   createdByUserId   String?
   createdAt         DateTime @default(now())
 
-  collection      Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  collection      Collection      @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   plantDefinition PlantDefinition @relation(fields: [plantDefinitionId], references: [id], onDelete: Cascade)
-  plantTag        PlantTag @relation(fields: [plantTagId], references: [id], onDelete: Restrict)
-  createdBy       User? @relation("PlantDefinitionTagCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  plantTag        PlantTag        @relation(fields: [plantTagId], references: [id], onDelete: Restrict)
+  createdBy       User?           @relation("PlantDefinitionTagCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
 
   @@unique([plantDefinitionId, plantTagId])
   @@index([collectionId])
@@ -355,20 +362,20 @@ model PlantDefinitionTag {
 }
 
 model CollectionBriefing {
-  id                String    @id @default(cuid())
+  id                String   @id @default(cuid())
   collectionId      String
   localDate         String
   timezone          String
   model             String?
   promptVersion     String
   sourceHash        String?
-  status            String    @default("READY")
+  status            String   @default("READY")
   title             String
   summaryMarkdown   String
   structuredJson    Json?
-  generatedAt       DateTime  @default(now())
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  generatedAt       DateTime @default(now())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
   generatedByUserId String?
 
   collection      Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
@@ -438,11 +445,11 @@ model CollectionTransferConnection {
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
-  sourceCollection Collection @relation("TransferConnectionSource", fields: [sourceCollectionId], references: [id], onDelete: Cascade)
-  targetCollection Collection @relation("TransferConnectionTarget", fields: [targetCollectionId], references: [id], onDelete: Cascade)
-  requestedBy      User       @relation("TransferConnectionRequester", fields: [requestedById], references: [id], onDelete: Cascade)
-  respondedBy      User?      @relation("TransferConnectionResponder", fields: [respondedById], references: [id], onDelete: SetNull)
-  transferRequests PlantTransferRequest[]
+  sourceCollection        Collection                    @relation("TransferConnectionSource", fields: [sourceCollectionId], references: [id], onDelete: Cascade)
+  targetCollection        Collection                    @relation("TransferConnectionTarget", fields: [targetCollectionId], references: [id], onDelete: Cascade)
+  requestedBy             User                          @relation("TransferConnectionRequester", fields: [requestedById], references: [id], onDelete: Cascade)
+  respondedBy             User?                         @relation("TransferConnectionResponder", fields: [respondedById], references: [id], onDelete: SetNull)
+  transferRequests        PlantTransferRequest[]
   definitionShareRequests PlantDefinitionShareRequest[]
 
   @@unique([sourceCollectionId, targetCollectionId])
@@ -472,12 +479,12 @@ model PlantTransferRequest {
   updatedAt             DateTime  @updatedAt
 
   connection          CollectionTransferConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
-  sourceCollection    Collection @relation("PlantTransferSourceCollection", fields: [sourceCollectionId], references: [id], onDelete: Cascade)
-  targetCollection    Collection @relation("PlantTransferTargetCollection", fields: [targetCollectionId], references: [id], onDelete: Cascade)
-  sourcePlantInstance PlantInstance @relation("SourcePlantTransferRequests", fields: [sourcePlantInstanceId], references: [id], onDelete: Cascade)
-  targetPlantInstance PlantInstance? @relation("TargetPlantTransferRequests", fields: [targetPlantInstanceId], references: [id], onDelete: SetNull)
-  requestedBy         User @relation("PlantTransferRequester", fields: [requestedById], references: [id], onDelete: Cascade)
-  reviewedBy          User? @relation("PlantTransferReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  sourceCollection    Collection                   @relation("PlantTransferSourceCollection", fields: [sourceCollectionId], references: [id], onDelete: Cascade)
+  targetCollection    Collection                   @relation("PlantTransferTargetCollection", fields: [targetCollectionId], references: [id], onDelete: Cascade)
+  sourcePlantInstance PlantInstance                @relation("SourcePlantTransferRequests", fields: [sourcePlantInstanceId], references: [id], onDelete: Cascade)
+  targetPlantInstance PlantInstance?               @relation("TargetPlantTransferRequests", fields: [targetPlantInstanceId], references: [id], onDelete: SetNull)
+  requestedBy         User                         @relation("PlantTransferRequester", fields: [requestedById], references: [id], onDelete: Cascade)
+  reviewedBy          User?                        @relation("PlantTransferReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
 
   @@index([connectionId])
   @@index([sourceCollectionId])
@@ -508,12 +515,12 @@ model PlantDefinitionShareRequest {
   updatedAt               DateTime  @updatedAt
 
   connection            CollectionTransferConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
-  sourceCollection      Collection @relation("DefinitionShareSourceCollection", fields: [sourceCollectionId], references: [id], onDelete: Cascade)
-  targetCollection      Collection @relation("DefinitionShareTargetCollection", fields: [targetCollectionId], references: [id], onDelete: Cascade)
-  sourcePlantDefinition PlantDefinition @relation("SourceDefinitionShareRequests", fields: [sourcePlantDefinitionId], references: [id], onDelete: Cascade)
-  targetPlantDefinition PlantDefinition? @relation("TargetDefinitionShareRequests", fields: [targetPlantDefinitionId], references: [id], onDelete: SetNull)
-  requestedBy           User @relation("DefinitionShareRequester", fields: [requestedById], references: [id], onDelete: Cascade)
-  reviewedBy            User? @relation("DefinitionShareReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  sourceCollection      Collection                   @relation("DefinitionShareSourceCollection", fields: [sourceCollectionId], references: [id], onDelete: Cascade)
+  targetCollection      Collection                   @relation("DefinitionShareTargetCollection", fields: [targetCollectionId], references: [id], onDelete: Cascade)
+  sourcePlantDefinition PlantDefinition              @relation("SourceDefinitionShareRequests", fields: [sourcePlantDefinitionId], references: [id], onDelete: Cascade)
+  targetPlantDefinition PlantDefinition?             @relation("TargetDefinitionShareRequests", fields: [targetPlantDefinitionId], references: [id], onDelete: SetNull)
+  requestedBy           User                         @relation("DefinitionShareRequester", fields: [requestedById], references: [id], onDelete: Cascade)
+  reviewedBy            User?                        @relation("DefinitionShareReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
 
   @@index([connectionId])
   @@index([sourceCollectionId])
@@ -525,20 +532,20 @@ model PlantDefinitionShareRequest {
 }
 
 model CollectionRequest {
-  id             String    @id @default(cuid())
-  requestedById  String
-  reviewedById   String?
-  collectionId   String?
-  requestedName  String
-  requestedSlug  String
-  visibility     String    @default("PRIVATE")
-  description    String?
-  rationale      String?
-  status         String    @default("PENDING")
-  reviewNote     String?
-  reviewedAt     DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id            String    @id @default(cuid())
+  requestedById String
+  reviewedById  String?
+  collectionId  String?
+  requestedName String
+  requestedSlug String
+  visibility    String    @default("PRIVATE")
+  description   String?
+  rationale     String?
+  status        String    @default("PENDING")
+  reviewNote    String?
+  reviewedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   requestedBy User        @relation("CollectionRequestRequester", fields: [requestedById], references: [id], onDelete: Cascade)
   reviewedBy  User?       @relation("CollectionRequestReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
@@ -553,16 +560,16 @@ model CollectionRequest {
 }
 
 model AiAccessRequest {
-  id             String    @id @default(cuid())
-  collectionId   String
-  requestedById  String
-  reviewedById   String?
-  status         String    @default("PENDING")
-  rationale      String?
-  reviewNote     String?
-  reviewedAt     DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id            String    @id @default(cuid())
+  collectionId  String
+  requestedById String
+  reviewedById  String?
+  status        String    @default("PENDING")
+  rationale     String?
+  reviewNote    String?
+  reviewedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   collection  Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   requestedBy User       @relation("AiAccessRequestRequester", fields: [requestedById], references: [id], onDelete: Cascade)
@@ -599,19 +606,19 @@ model AiUsageEvent {
 }
 
 model ServerMetricSnapshot {
-  id        String   @id @default(cuid())
+  id         String   @id @default(cuid())
   capturedAt DateTime @default(now())
-  metrics   Json
+  metrics    Json
 
   @@index([capturedAt])
 }
 
 model ServerIncident {
-  id              String    @id @default(cuid())
+  id              String                 @id @default(cuid())
   type            String
   category        ServerIncidentCategory
   severity        ServerIncidentSeverity
-  status          ServerIncidentStatus @default(OPEN)
+  status          ServerIncidentStatus   @default(OPEN)
   title           String
   description     String?
   detectedAt      DateTime
@@ -623,10 +630,10 @@ model ServerIncident {
   peakValue       Float?
   createdByUserId String?
   metadata        Json?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
 
-  createdBy     User? @relation("ServerIncidentCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  createdBy     User?                        @relation("ServerIncidentCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
   notes         ServerIncidentNote[]
   notifications ServerIncidentNotification[]
 
@@ -641,15 +648,15 @@ model ServerIncident {
 }
 
 model ServerIncidentNote {
-  id          String   @id @default(cuid())
-  incidentId  String
+  id           String   @id @default(cuid())
+  incidentId   String
   authorUserId String?
-  body        String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  body         String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   incident ServerIncident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
-  author   User? @relation("ServerIncidentNoteAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
+  author   User?          @relation("ServerIncidentNoteAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
 
   @@index([incidentId])
   @@index([authorUserId])
@@ -657,17 +664,17 @@ model ServerIncidentNote {
 }
 
 model ServerIncidentNotification {
-  id          String   @id @default(cuid())
-  incidentId  String
-  userId      String?
-  channel     String
-  status      String
-  recipient   String?
-  sentAt      DateTime @default(now())
-  metadata    Json?
+  id         String   @id @default(cuid())
+  incidentId String
+  userId     String?
+  channel    String
+  status     String
+  recipient  String?
+  sentAt     DateTime @default(now())
+  metadata   Json?
 
   incident ServerIncident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
-  user     User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user     User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([incidentId])
   @@index([userId])
@@ -676,16 +683,16 @@ model ServerIncidentNotification {
 }
 
 model ServerWorkerRun {
-  id          String    @id @default(cuid())
-  workerName  String
-  status      String
-  startedAt   DateTime  @default(now())
-  finishedAt  DateTime?
-  durationMs  Int?
-  summary     String?
-  error       String?
-  metadata    Json?
-  createdAt   DateTime  @default(now())
+  id         String    @id @default(cuid())
+  workerName String
+  status     String
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  durationMs Int?
+  summary    String?
+  error      String?
+  metadata   Json?
+  createdAt  DateTime  @default(now())
 
   @@index([workerName])
   @@index([status])
@@ -803,14 +810,14 @@ model CollectionExhibit {
   createdAt          DateTime                    @default(now())
   updatedAt          DateTime                    @updatedAt
 
-  collection  Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  coverPhoto  Photo?     @relation("CollectionExhibitCoverPhoto", fields: [coverPhotoId], references: [id], onDelete: SetNull)
-  createdBy   User?      @relation("CollectionExhibitCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  publishedBy User?      @relation("CollectionExhibitPublishedBy", fields: [publishedByUserId], references: [id], onDelete: SetNull)
-  plants      CollectionExhibitPlant[]
+  collection    Collection                      @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  coverPhoto    Photo?                          @relation("CollectionExhibitCoverPhoto", fields: [coverPhotoId], references: [id], onDelete: SetNull)
+  createdBy     User?                           @relation("CollectionExhibitCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  publishedBy   User?                           @relation("CollectionExhibitPublishedBy", fields: [publishedByUserId], references: [id], onDelete: SetNull)
+  plants        CollectionExhibitPlant[]
   wishlistItems CollectionExhibitWishlistItem[]
-  subscribers CollectionExhibitSubscriber[]
-  updates     CollectionExhibitUpdate[]
+  subscribers   CollectionExhibitSubscriber[]
+  updates       CollectionExhibitUpdate[]
 
   @@index([collectionId])
   @@index([status])
@@ -870,7 +877,7 @@ model CollectionExhibitSubscriber {
   createdAt            DateTime                          @default(now())
   updatedAt            DateTime                          @updatedAt
 
-  exhibit    CollectionExhibit @relation(fields: [exhibitId], references: [id], onDelete: Cascade)
+  exhibit    CollectionExhibit           @relation(fields: [exhibitId], references: [id], onDelete: Cascade)
   deliveries CollectionExhibitDelivery[]
 
   @@unique([exhibitId, email])
@@ -889,8 +896,8 @@ model CollectionExhibitUpdate {
   createdAt         DateTime  @default(now())
   sentAt            DateTime?
 
-  exhibit    CollectionExhibit @relation(fields: [exhibitId], references: [id], onDelete: Cascade)
-  createdBy  User?             @relation("CollectionExhibitUpdateCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  exhibit    CollectionExhibit           @relation(fields: [exhibitId], references: [id], onDelete: Cascade)
+  createdBy  User?                       @relation("CollectionExhibitUpdateCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
   deliveries CollectionExhibitDelivery[]
 
   @@index([exhibitId])
@@ -917,16 +924,16 @@ model CollectionExhibitDelivery {
 }
 
 model MaintenanceMode {
-  id                  String    @id @default(cuid())
-  enabled             Boolean   @default(false)
-  message             String?
-  expectedReturnAt    DateTime?
-  startedAt           DateTime?
-  startedByUserId     String?
-  endedAt             DateTime?
-  endedByUserId       String?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  id               String    @id @default(cuid())
+  enabled          Boolean   @default(false)
+  message          String?
+  expectedReturnAt DateTime?
+  startedAt        DateTime?
+  startedByUserId  String?
+  endedAt          DateTime?
+  endedByUserId    String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   startedBy User? @relation("MaintenanceModeStartedBy", fields: [startedByUserId], references: [id], onDelete: SetNull)
   endedBy   User? @relation("MaintenanceModeEndedBy", fields: [endedByUserId], references: [id], onDelete: SetNull)
@@ -937,22 +944,22 @@ model MaintenanceMode {
 }
 
 model RestoreRequest {
-  id                  String               @id @default(cuid())
-  backupPath          String
-  backupName          String
-  status              RestoreRequestStatus @default(PLANNED)
-  requestedByUserId   String?
-  requestedAt         DateTime             @default(now())
-  validationJson      Json?
-  generatedCommand    String?
-  commandGeneratedAt  DateTime?
-  notes               String?
-  completedAt         DateTime?
-  completedByUserId   String?
-  cancelledAt         DateTime?
-  cancelledByUserId   String?
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
+  id                 String               @id @default(cuid())
+  backupPath         String
+  backupName         String
+  status             RestoreRequestStatus @default(PLANNED)
+  requestedByUserId  String?
+  requestedAt        DateTime             @default(now())
+  validationJson     Json?
+  generatedCommand   String?
+  commandGeneratedAt DateTime?
+  notes              String?
+  completedAt        DateTime?
+  completedByUserId  String?
+  cancelledAt        DateTime?
+  cancelledByUserId  String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
 
   requestedBy User? @relation("RestoreRequestRequestedBy", fields: [requestedByUserId], references: [id], onDelete: SetNull)
   completedBy User? @relation("RestoreRequestCompletedBy", fields: [completedByUserId], references: [id], onDelete: SetNull)
@@ -1023,20 +1030,20 @@ model TwoFactorRecoveryCode {
 }
 
 model AuditLog {
-  id         String   @id @default(cuid())
+  id           String   @id @default(cuid())
   collectionId String?
-  userId     String?
-  userEmail  String?
-  userRole   String?
-  action     String
-  entityType String
-  entityId   String?
-  summary    String?
-  metadata   String?
-  createdAt  DateTime @default(now())
+  userId       String?
+  userEmail    String?
+  userRole     String?
+  action       String
+  entityType   String
+  entityId     String?
+  summary      String?
+  metadata     String?
+  createdAt    DateTime @default(now())
 
   collection Collection? @relation(fields: [collectionId], references: [id], onDelete: SetNull)
-  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user       User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([collectionId])
   @@index([userId])
@@ -1065,40 +1072,40 @@ model EmailToken {
 }
 
 model EmailPreference {
-  id                    String   @id @default(cuid())
-  userId                String   @unique
-  timezone              String   @default("America/New_York")
-  temperatureUnit       String   @default("CELSIUS")
-  lightUnit             String   @default("LUX")
-  authSecurityEmails    Boolean  @default(true)
-  welcomeEmails         Boolean  @default(true)
-  generalReminders      Boolean  @default(true)
-  plantCheckInReminders Boolean  @default(true)
-  bloomCycleReminders   Boolean  @default(true)
-  propagationFollowUps  Boolean  @default(true)
-  followNotifications   Boolean  @default(true)
-  transferNotifications Boolean  @default(true)
-  sunshineNotifications Boolean  @default(false)
-  collectionUpdateDigestEmailEnabled Boolean @default(true)
-  careQueueDigestEmailEnabled Boolean @default(true)
-  serverHealthEmailEnabled Boolean @default(true)
-  generalRemindersPushEnabled Boolean @default(false)
-  plantCheckInRemindersPushEnabled Boolean @default(false)
-  bloomCycleRemindersPushEnabled Boolean @default(false)
-  propagationFollowUpsPushEnabled Boolean @default(false)
-  followNotificationsPushEnabled Boolean @default(false)
-  sunshineNotificationsPushEnabled Boolean @default(false)
-  collectionUpdateDigestPushEnabled Boolean @default(false)
-  careQueueDigestPushEnabled Boolean @default(false)
-  serverHealthPushEnabled Boolean @default(false)
-  careQueueDigestSendTime String @default("08:00")
-  careQueueDigestLastSentAt DateTime?
-  serverHealthAlertLastSentAt DateTime?
-  sunshineNotificationLastSentAt DateTime?
-  quietHoursStart       String?
-  quietHoursEnd         String?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id                                 String    @id @default(cuid())
+  userId                             String    @unique
+  timezone                           String    @default("America/New_York")
+  temperatureUnit                    String    @default("CELSIUS")
+  lightUnit                          String    @default("LUX")
+  authSecurityEmails                 Boolean   @default(true)
+  welcomeEmails                      Boolean   @default(true)
+  generalReminders                   Boolean   @default(true)
+  plantCheckInReminders              Boolean   @default(true)
+  bloomCycleReminders                Boolean   @default(true)
+  propagationFollowUps               Boolean   @default(true)
+  followNotifications                Boolean   @default(true)
+  transferNotifications              Boolean   @default(true)
+  sunshineNotifications              Boolean   @default(false)
+  collectionUpdateDigestEmailEnabled Boolean   @default(true)
+  careQueueDigestEmailEnabled        Boolean   @default(true)
+  serverHealthEmailEnabled           Boolean   @default(true)
+  generalRemindersPushEnabled        Boolean   @default(false)
+  plantCheckInRemindersPushEnabled   Boolean   @default(false)
+  bloomCycleRemindersPushEnabled     Boolean   @default(false)
+  propagationFollowUpsPushEnabled    Boolean   @default(false)
+  followNotificationsPushEnabled     Boolean   @default(false)
+  sunshineNotificationsPushEnabled   Boolean   @default(false)
+  collectionUpdateDigestPushEnabled  Boolean   @default(false)
+  careQueueDigestPushEnabled         Boolean   @default(false)
+  serverHealthPushEnabled            Boolean   @default(false)
+  careQueueDigestSendTime            String    @default("08:00")
+  careQueueDigestLastSentAt          DateTime?
+  serverHealthAlertLastSentAt        DateTime?
+  sunshineNotificationLastSentAt     DateTime?
+  quietHoursStart                    String?
+  quietHoursEnd                      String?
+  createdAt                          DateTime  @default(now())
+  updatedAt                          DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
@@ -1121,19 +1128,19 @@ model Sunshine {
 }
 
 model PushSubscription {
-  id           String    @id @default(cuid())
-  userId       String
-  endpoint     String    @unique
-  p256dh       String
-  auth         String
-  userAgent    String?
-  deviceLabel  String?
-  enabled      Boolean   @default(true)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  lastSeenAt   DateTime?
-  revokedAt    DateTime?
-  failureCount Int       @default(0)
+  id            String    @id @default(cuid())
+  userId        String
+  endpoint      String    @unique
+  p256dh        String
+  auth          String
+  userAgent     String?
+  deviceLabel   String?
+  enabled       Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastSeenAt    DateTime?
+  revokedAt     DateTime?
+  failureCount  Int       @default(0)
   lastFailureAt DateTime?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -1160,16 +1167,16 @@ model UserSortPreference {
 }
 
 model Follow {
-  id         String   @id @default(cuid())
+  id           String   @id @default(cuid())
   collectionId String?
-  userId     String
-  scope      String
-  entityType String
-  entityId   String
-  label      String
-  createdAt  DateTime @default(now())
+  userId       String
+  scope        String
+  entityType   String
+  entityId     String
+  label        String
+  createdAt    DateTime @default(now())
 
-  collection    Collection?           @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  collection    Collection?          @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   notifications FollowNotification[]
 
@@ -1180,22 +1187,22 @@ model Follow {
 }
 
 model FollowNotification {
-  id        String    @id @default(cuid())
+  id           String    @id @default(cuid())
   collectionId String?
-  followId  String
-  userId    String
-  eventType String
-  subject   String
-  body      String?
-  recordUrl String
-  status    String    @default("PENDING")
-  error     String?
-  sentAt    DateTime?
-  createdAt DateTime  @default(now())
+  followId     String
+  userId       String
+  eventType    String
+  subject      String
+  body         String?
+  recordUrl    String
+  status       String    @default("PENDING")
+  error        String?
+  sentAt       DateTime?
+  createdAt    DateTime  @default(now())
 
   collection Collection? @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  follow Follow @relation(fields: [followId], references: [id], onDelete: Cascade)
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  follow     Follow      @relation(fields: [followId], references: [id], onDelete: Cascade)
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([collectionId])
   @@index([followId])
@@ -1204,72 +1211,74 @@ model FollowNotification {
   @@index([status])
   @@index([sentAt])
 }
+
 model PlantDefinition {
-  id                         String   @id @default(cuid())
-  collectionId               String?
-  genus                      String
-  species                    String
-  hybridNotation             String?
-  cultivarName               String?
-  authority                  String?
-  cultivarRegistrationNumber String?
-  governingBodyId            String?
-  confidence                 String   @default("UNCERTAIN")
-  provisionalTaxon           String?
-  identificationStatus       String   @default("IDENTIFIED")
-  wikipediaUrl               String?
-  inaturalistUrl             String?
-  powoUrl                    String?
-  gbifUrl                    String?
-  description                String?
-  notes                      String?
-  acquisitionStatus          AcquisitionStatus?
-  acquisitionPriority        Int?
-  acquisitionInterestNotes   String?
-  desiredSpecimenSize        String?
-  idealPurchasePrice         Decimal?
-  maximumPurchasePrice       Decimal?
-  desiredLocationId          String?
-  preferredVendorsJson       Json?
-  acquisitionResearchSummary String?
-  isValidated                Boolean  @default(false)
-  validatedAt                DateTime?
-  validatedByUserId          String?
+  id                          String             @id @default(cuid())
+  collectionId                String?
+  genus                       String
+  species                     String
+  hybridNotation              String?
+  cultivarName                String?
+  authority                   String?
+  cultivarRegistrationNumber  String?
+  governingBodyId             String?
+  confidence                  String             @default("UNCERTAIN")
+  provisionalTaxon            String?
+  identificationStatus        String             @default("IDENTIFIED")
+  wikipediaUrl                String?
+  inaturalistUrl              String?
+  powoUrl                     String?
+  gbifUrl                     String?
+  description                 String?
+  notes                       String?
+  acquisitionStatus           AcquisitionStatus?
+  acquisitionPriority         Int?
+  acquisitionInterestNotes    String?
+  desiredSpecimenSize         String?
+  idealPurchasePrice          Decimal?
+  maximumPurchasePrice        Decimal?
+  desiredLocationId           String?
+  preferredVendorsJson        Json?
+  acquisitionResearchSummary  String?
+  isValidated                 Boolean            @default(false)
+  validatedAt                 DateTime?
+  validatedByUserId           String?
   validatedSourceCollectionId String?
   validatedSourceDefinitionId String?
-  validatedPlantDefinitionId String?
-  validationNotes            String?
-  createdAt                  DateTime @default(now())
-  updatedAt                  DateTime @updatedAt
+  validatedPlantDefinitionId  String?
+  validationNotes             String?
+  createdAt                   DateTime           @default(now())
+  updatedAt                   DateTime           @updatedAt
 
-  collection    Collection?      @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  governingBody GoverningBody?  @relation(fields: [governingBodyId], references: [id], onDelete: SetNull)
-  desiredLocation Location?     @relation("PlantDefinitionDesiredLocation", fields: [desiredLocationId], references: [id], onDelete: SetNull)
-  validatedBy   User?           @relation("PlantDefinitionValidatedBy", fields: [validatedByUserId], references: [id], onDelete: SetNull)
-  validatedSourceCollection Collection? @relation("ValidatedPlantDefinitionSourceCollection", fields: [validatedSourceCollectionId], references: [id], onDelete: SetNull)
-  validatedPlantDefinition PlantDefinition? @relation("LocalValidatedDefinitionLink", fields: [validatedPlantDefinitionId], references: [id], onDelete: SetNull)
-  localLinkedDefinitions PlantDefinition[] @relation("LocalValidatedDefinitionLink")
-  instances     PlantInstance[]
-  aliases       PlantAlias[]
-  husbandryGuide PlantHusbandryGuide?
-  husbandrySourceFor PlantHusbandryGuide[] @relation("HusbandrySourceDefinition")
-  outgoingDefinitionShareRequests PlantDefinitionShareRequest[] @relation("SourceDefinitionShareRequests")
-  incomingDefinitionShareRequests PlantDefinitionShareRequest[] @relation("TargetDefinitionShareRequests")
-  validationCandidates PlantDefinitionValidationCandidate[] @relation("ValidationCandidateSourceDefinition")
-  approvedValidationCandidates PlantDefinitionValidationCandidate[] @relation("ValidationCandidateApprovedDefinition")
-  disputes PlantDefinitionDispute[] @relation("ValidatedDefinitionDisputes")
-  validatedChanges ValidatedDefinitionChange[]
-  matchedIdentificationLogs PlantIdentificationLog[] @relation("PlantIdentificationLogMatchedDefinition")
-  appliedIdentificationLogs PlantIdentificationLog[] @relation("PlantIdentificationLogAppliedDefinition")
-  createdIdentificationLogs PlantIdentificationLog[] @relation("PlantIdentificationLogCreatedDefinition")
-  acquisitionResearchEntries AcquisitionResearchEntry[]
-  plantObservations PlantObservation[]
-  acquisitionRecords PlantAcquisitionRecord[]
-  acquisitionBatchItems AcquisitionBatchItem[]
-  exhibitWishlistItems CollectionExhibitWishlistItem[]
-  tags PlantDefinitionTag[]
-  preferredSellers PlantDefinitionPreferredSeller[]
-  preferredDistributors PlantDefinitionPreferredDistributor[]
+  collection                      Collection?                              @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  governingBody                   GoverningBody?                           @relation(fields: [governingBodyId], references: [id], onDelete: SetNull)
+  desiredLocation                 Location?                                @relation("PlantDefinitionDesiredLocation", fields: [desiredLocationId], references: [id], onDelete: SetNull)
+  validatedBy                     User?                                    @relation("PlantDefinitionValidatedBy", fields: [validatedByUserId], references: [id], onDelete: SetNull)
+  validatedSourceCollection       Collection?                              @relation("ValidatedPlantDefinitionSourceCollection", fields: [validatedSourceCollectionId], references: [id], onDelete: SetNull)
+  validatedPlantDefinition        PlantDefinition?                         @relation("LocalValidatedDefinitionLink", fields: [validatedPlantDefinitionId], references: [id], onDelete: SetNull)
+  localLinkedDefinitions          PlantDefinition[]                        @relation("LocalValidatedDefinitionLink")
+  instances                       PlantInstance[]
+  aliases                         PlantAlias[]
+  husbandryGuide                  PlantHusbandryGuide?
+  husbandrySourceFor              PlantHusbandryGuide[]                    @relation("HusbandrySourceDefinition")
+  outgoingDefinitionShareRequests PlantDefinitionShareRequest[]            @relation("SourceDefinitionShareRequests")
+  incomingDefinitionShareRequests PlantDefinitionShareRequest[]            @relation("TargetDefinitionShareRequests")
+  validationCandidates            PlantDefinitionValidationCandidate[]     @relation("ValidationCandidateSourceDefinition")
+  approvedValidationCandidates    PlantDefinitionValidationCandidate[]     @relation("ValidationCandidateApprovedDefinition")
+  disputes                        PlantDefinitionDispute[]                 @relation("ValidatedDefinitionDisputes")
+  validatedChanges                ValidatedDefinitionChange[]
+  matchedIdentificationLogs       PlantIdentificationLog[]                 @relation("PlantIdentificationLogMatchedDefinition")
+  appliedIdentificationLogs       PlantIdentificationLog[]                 @relation("PlantIdentificationLogAppliedDefinition")
+  createdIdentificationLogs       PlantIdentificationLog[]                 @relation("PlantIdentificationLogCreatedDefinition")
+  acquisitionResearchEntries      AcquisitionResearchEntry[]
+  plantObservations               PlantObservation[]
+  acquisitionRecords              PlantAcquisitionRecord[]
+  acquisitionBatchItems           AcquisitionBatchItem[]
+  exhibitWishlistItems            CollectionExhibitWishlistItem[]
+  tags                            PlantDefinitionTag[]
+  preferredSellers                PlantDefinitionPreferredSeller[]
+  preferredDistributors           PlantDefinitionPreferredDistributor[]
+  substrateRecommendations        PlantDefinitionSubstrateRecommendation[]
 
   @@index([collectionId])
   @@index([governingBodyId])
@@ -1309,34 +1318,34 @@ model AcquisitionResearchEntry {
 }
 
 model PlantObservation {
-  id                String   @id @default(cuid())
-  collectionId      String
-  plantDefinitionId String
-  createdByUserId   String?
-  vendor            String?
-  distributorId     String?
+  id                  String                  @id @default(cuid())
+  collectionId        String
+  plantDefinitionId   String
+  createdByUserId     String?
+  vendor              String?
+  distributorId       String?
   distributorOutletId String?
-  sellerId          String?
-  sellerStorefrontId String?
-  observedAt        DateTime @default(now())
-  observedPrice     Decimal?
-  currency          String   @default("USD")
-  specimenSize      String?
-  condition         String?
-  availability      AcquisitionAvailability @default(UNKNOWN)
-  notes             String?
-  isPublic          Boolean  @default(false)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  sellerId            String?
+  sellerStorefrontId  String?
+  observedAt          DateTime                @default(now())
+  observedPrice       Decimal?
+  currency            String                  @default("USD")
+  specimenSize        String?
+  condition           String?
+  availability        AcquisitionAvailability @default(UNKNOWN)
+  notes               String?
+  isPublic            Boolean                 @default(false)
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
 
-  collection      Collection      @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  plantDefinition PlantDefinition @relation(fields: [plantDefinitionId], references: [id], onDelete: Cascade)
-  createdBy       User?           @relation("PlantObservationCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  distributor     Distributor? @relation(fields: [distributorId], references: [id], onDelete: SetNull)
-  distributorOutlet DistributorOutlet? @relation(fields: [distributorOutletId], references: [id], onDelete: SetNull)
-  seller          Seller? @relation(fields: [sellerId], references: [id], onDelete: SetNull)
-  sellerStorefront SellerStorefront? @relation(fields: [sellerStorefrontId], references: [id], onDelete: SetNull)
-  acquisitionRecords PlantAcquisitionRecord[]
+  collection            Collection               @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  plantDefinition       PlantDefinition          @relation(fields: [plantDefinitionId], references: [id], onDelete: Cascade)
+  createdBy             User?                    @relation("PlantObservationCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  distributor           Distributor?             @relation(fields: [distributorId], references: [id], onDelete: SetNull)
+  distributorOutlet     DistributorOutlet?       @relation(fields: [distributorOutletId], references: [id], onDelete: SetNull)
+  seller                Seller?                  @relation(fields: [sellerId], references: [id], onDelete: SetNull)
+  sellerStorefront      SellerStorefront?        @relation(fields: [sellerStorefrontId], references: [id], onDelete: SetNull)
+  acquisitionRecords    PlantAcquisitionRecord[]
   acquisitionBatchItems AcquisitionBatchItem[]
 
   @@index([collectionId])
@@ -1351,36 +1360,36 @@ model PlantObservation {
 }
 
 model AcquisitionBatch {
-  id                    String   @id @default(cuid())
-  collectionId          String
-  distributorId         String?
-  distributorOutletId   String?
-  sellerId               String?
-  sellerStorefrontId     String?
-  acquisitionDate       DateTime @default(now())
-  orderNumber           String?
-  currency              String   @default("USD")
-  subtotal              Decimal?
-  shippingCost          Decimal?
-  tax                   Decimal?
-  totalCost             Decimal?
-  sharedNotes           String?
-  receiptPhotoId        String?
-  idempotencyKey        String
-  status                String   @default("COMPLETED")
-  createdByUserId       String?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id                  String   @id @default(cuid())
+  collectionId        String
+  distributorId       String?
+  distributorOutletId String?
+  sellerId            String?
+  sellerStorefrontId  String?
+  acquisitionDate     DateTime @default(now())
+  orderNumber         String?
+  currency            String   @default("USD")
+  subtotal            Decimal?
+  shippingCost        Decimal?
+  tax                 Decimal?
+  totalCost           Decimal?
+  sharedNotes         String?
+  receiptPhotoId      String?
+  idempotencyKey      String
+  status              String   @default("COMPLETED")
+  createdByUserId     String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
-  collection          Collection           @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  distributor         Distributor?          @relation(fields: [distributorId], references: [id], onDelete: SetNull)
-  distributorOutlet   DistributorOutlet?    @relation(fields: [distributorOutletId], references: [id], onDelete: SetNull)
-  seller              Seller?               @relation(fields: [sellerId], references: [id], onDelete: SetNull)
-  sellerStorefront    SellerStorefront?      @relation(fields: [sellerStorefrontId], references: [id], onDelete: SetNull)
-  receiptPhoto        Photo?                 @relation("AcquisitionBatchReceiptPhoto", fields: [receiptPhotoId], references: [id], onDelete: SetNull)
-  createdBy           User?                  @relation("AcquisitionBatchCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  items               AcquisitionBatchItem[]
-  acquisitionRecords  PlantAcquisitionRecord[]
+  collection         Collection               @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  distributor        Distributor?             @relation(fields: [distributorId], references: [id], onDelete: SetNull)
+  distributorOutlet  DistributorOutlet?       @relation(fields: [distributorOutletId], references: [id], onDelete: SetNull)
+  seller             Seller?                  @relation(fields: [sellerId], references: [id], onDelete: SetNull)
+  sellerStorefront   SellerStorefront?        @relation(fields: [sellerStorefrontId], references: [id], onDelete: SetNull)
+  receiptPhoto       Photo?                   @relation("AcquisitionBatchReceiptPhoto", fields: [receiptPhotoId], references: [id], onDelete: SetNull)
+  createdBy          User?                    @relation("AcquisitionBatchCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  items              AcquisitionBatchItem[]
+  acquisitionRecords PlantAcquisitionRecord[]
 
   @@unique([collectionId, idempotencyKey])
   @@index([collectionId, acquisitionDate])
@@ -1393,24 +1402,24 @@ model AcquisitionBatch {
 }
 
 model AcquisitionBatchItem {
-  id                         String   @id @default(cuid())
+  id                         String                       @id @default(cuid())
   acquisitionBatchId         String
   plantDefinitionId          String
   observationId              String?
-  quantity                   Int      @default(1)
+  quantity                   Int                          @default(1)
   unitPrice                  Decimal?
   specimenSize               String?
   potSize                    String?
   initialLocationId          String?
   notes                      String?
   fulfillmentChoice          AcquisitionFulfillmentChoice @default(FULFILLED)
-  createPlantInstances       Boolean  @default(true)
-  createdAcquisitionRecordId String?  @unique
-  createdAt                  DateTime @default(now())
-  updatedAt                  DateTime @updatedAt
+  createPlantInstances       Boolean                      @default(true)
+  createdAcquisitionRecordId String?                      @unique
+  createdAt                  DateTime                     @default(now())
+  updatedAt                  DateTime                     @updatedAt
 
-  batch             AcquisitionBatch      @relation(fields: [acquisitionBatchId], references: [id], onDelete: Cascade)
-  plantDefinition   PlantDefinition        @relation(fields: [plantDefinitionId], references: [id], onDelete: Restrict)
+  batch             AcquisitionBatch        @relation(fields: [acquisitionBatchId], references: [id], onDelete: Cascade)
+  plantDefinition   PlantDefinition         @relation(fields: [plantDefinitionId], references: [id], onDelete: Restrict)
   observation       PlantObservation?       @relation(fields: [observationId], references: [id], onDelete: SetNull)
   initialLocation   Location?               @relation("AcquisitionBatchItemInitialLocation", fields: [initialLocationId], references: [id], onDelete: SetNull)
   acquisitionRecord PlantAcquisitionRecord? @relation("AcquisitionBatchItemRecord", fields: [createdAcquisitionRecordId], references: [id], onDelete: SetNull)
@@ -1422,42 +1431,42 @@ model AcquisitionBatchItem {
 }
 
 model PlantAcquisitionRecord {
-  id                String   @id @default(cuid())
-  collectionId      String
-  plantDefinitionId String
-  createdByUserId   String?
-  observationId     String?
-  vendor            String?
-  distributorId     String?
+  id                  String                       @id @default(cuid())
+  collectionId        String
+  plantDefinitionId   String
+  createdByUserId     String?
+  observationId       String?
+  vendor              String?
+  distributorId       String?
   distributorOutletId String?
-  sellerId          String?
-  sellerStorefrontId String?
-  acquiredAt        DateTime @default(now())
-  price             Decimal?
-  currency          String   @default("USD")
-  quantity          Int      @default(1)
-  specimenSize      String?
-  potSize           String?
-  initialLocationId String?
-  notes             String?
-  fulfillmentChoice AcquisitionFulfillmentChoice @default(FULFILLED)
-  acquisitionBatchId String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  sellerId            String?
+  sellerStorefrontId  String?
+  acquiredAt          DateTime                     @default(now())
+  price               Decimal?
+  currency            String                       @default("USD")
+  quantity            Int                          @default(1)
+  specimenSize        String?
+  potSize             String?
+  initialLocationId   String?
+  notes               String?
+  fulfillmentChoice   AcquisitionFulfillmentChoice @default(FULFILLED)
+  acquisitionBatchId  String?
+  createdAt           DateTime                     @default(now())
+  updatedAt           DateTime                     @updatedAt
 
-  collection      Collection      @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  plantDefinition PlantDefinition @relation(fields: [plantDefinitionId], references: [id], onDelete: Cascade)
-  createdBy       User?           @relation("PlantAcquisitionRecordCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  observation     PlantObservation? @relation(fields: [observationId], references: [id], onDelete: SetNull)
-  initialLocation Location?       @relation("PlantAcquisitionInitialLocation", fields: [initialLocationId], references: [id], onDelete: SetNull)
-  plantInstances  PlantAcquisitionRecordInstance[]
-  distributor     Distributor? @relation(fields: [distributorId], references: [id], onDelete: SetNull)
-  distributorOutlet DistributorOutlet? @relation(fields: [distributorOutletId], references: [id], onDelete: SetNull)
-  seller          Seller? @relation(fields: [sellerId], references: [id], onDelete: SetNull)
-  sellerStorefront SellerStorefront? @relation(fields: [sellerStorefrontId], references: [id], onDelete: SetNull)
-  sources         AcquisitionSource[]
-  acquisitionBatch AcquisitionBatch? @relation(fields: [acquisitionBatchId], references: [id], onDelete: SetNull)
-  acquisitionBatchItem AcquisitionBatchItem? @relation("AcquisitionBatchItemRecord")
+  collection           Collection                       @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  plantDefinition      PlantDefinition                  @relation(fields: [plantDefinitionId], references: [id], onDelete: Cascade)
+  createdBy            User?                            @relation("PlantAcquisitionRecordCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  observation          PlantObservation?                @relation(fields: [observationId], references: [id], onDelete: SetNull)
+  initialLocation      Location?                        @relation("PlantAcquisitionInitialLocation", fields: [initialLocationId], references: [id], onDelete: SetNull)
+  plantInstances       PlantAcquisitionRecordInstance[]
+  distributor          Distributor?                     @relation(fields: [distributorId], references: [id], onDelete: SetNull)
+  distributorOutlet    DistributorOutlet?               @relation(fields: [distributorOutletId], references: [id], onDelete: SetNull)
+  seller               Seller?                          @relation(fields: [sellerId], references: [id], onDelete: SetNull)
+  sellerStorefront     SellerStorefront?                @relation(fields: [sellerStorefrontId], references: [id], onDelete: SetNull)
+  sources              AcquisitionSource[]
+  acquisitionBatch     AcquisitionBatch?                @relation(fields: [acquisitionBatchId], references: [id], onDelete: SetNull)
+  acquisitionBatchItem AcquisitionBatchItem?            @relation("AcquisitionBatchItemRecord")
 
   @@index([collectionId])
   @@index([plantDefinitionId])
@@ -1473,7 +1482,7 @@ model PlantAcquisitionRecord {
 }
 
 model PlantAcquisitionRecordInstance {
-  id                  String @id @default(cuid())
+  id                  String   @id @default(cuid())
   acquisitionRecordId String
   plantInstanceId     String
   createdAt           DateTime @default(now())
@@ -1486,12 +1495,12 @@ model PlantAcquisitionRecordInstance {
 }
 
 model Source {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   collectionId    String
-  kind            String   @default("ORGANIZATION")
+  kind            String    @default("ORGANIZATION")
   name            String
   normalizedName  String
-  sourceType      String   @default("UNKNOWN")
+  sourceType      String    @default("UNKNOWN")
   websiteUrl      String?
   country         String?
   region          String?
@@ -1499,15 +1508,15 @@ model Source {
   description     String?
   notes           String?
   aliasesJson     Json?
-  active          Boolean  @default(true)
+  active          Boolean   @default(true)
   archivedAt      DateTime?
   createdByUserId String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  collection      Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  createdBy       User? @relation("SourceCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  acquisitions    AcquisitionSource[]
+  collection   Collection          @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  createdBy    User?               @relation("SourceCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  acquisitions AcquisitionSource[]
 
   @@unique([collectionId, normalizedName])
   @@index([collectionId, active])
@@ -1515,31 +1524,31 @@ model Source {
 }
 
 model Distributor {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   collectionId    String
-  kind            String   @default("ORGANIZATION")
+  kind            String    @default("ORGANIZATION")
   name            String
   normalizedName  String
-  distributorType String   @default("OTHER")
+  distributorType String    @default("OTHER")
   websiteUrl      String?
   description     String?
   rating          Int?
   experienceNotes String?
   aliasesJson     Json?
-  active          Boolean  @default(true)
+  active          Boolean   @default(true)
   archivedAt      DateTime?
   createdByUserId String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  collection      Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  createdBy       User? @relation("DistributorCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  outlets         DistributorOutlet[]
-  sellerStorefronts SellerStorefront[]
-  acquisitions    PlantAcquisitionRecord[]
-  observations    PlantObservation[]
+  collection         Collection                            @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  createdBy          User?                                 @relation("DistributorCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  outlets            DistributorOutlet[]
+  sellerStorefronts  SellerStorefront[]
+  acquisitions       PlantAcquisitionRecord[]
+  observations       PlantObservation[]
   acquisitionBatches AcquisitionBatch[]
-  preferredBy     PlantDefinitionPreferredDistributor[]
+  preferredBy        PlantDefinitionPreferredDistributor[]
 
   @@unique([collectionId, normalizedName])
   @@index([collectionId, active])
@@ -1547,32 +1556,32 @@ model Distributor {
 }
 
 model DistributorOutlet {
-  id              String   @id @default(cuid())
-  collectionId    String
-  distributorId   String
-  name            String
-  normalizedName  String
-  outletType      String   @default("OTHER")
-  addressLine1    String?
-  addressLine2    String?
-  city            String?
-  region          String?
-  postalCode      String?
-  country         String?
-  phone           String?
-  url             String?
-  latitude        Decimal?
-  longitude       Decimal?
-  notes           String?
-  active          Boolean  @default(true)
-  archivedAt      DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id             String    @id @default(cuid())
+  collectionId   String
+  distributorId  String
+  name           String
+  normalizedName String
+  outletType     String    @default("OTHER")
+  addressLine1   String?
+  addressLine2   String?
+  city           String?
+  region         String?
+  postalCode     String?
+  country        String?
+  phone          String?
+  url            String?
+  latitude       Decimal?
+  longitude      Decimal?
+  notes          String?
+  active         Boolean   @default(true)
+  archivedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  collection      Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  distributor     Distributor @relation(fields: [distributorId], references: [id], onDelete: Cascade)
-  acquisitions    PlantAcquisitionRecord[]
-  observations    PlantObservation[]
+  collection         Collection               @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  distributor        Distributor              @relation(fields: [distributorId], references: [id], onDelete: Cascade)
+  acquisitions       PlantAcquisitionRecord[]
+  observations       PlantObservation[]
   acquisitionBatches AcquisitionBatch[]
 
   @@unique([distributorId, normalizedName])
@@ -1581,9 +1590,9 @@ model DistributorOutlet {
 }
 
 model Seller {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   collectionId    String
-  kind            String   @default("ORGANIZATION")
+  kind            String    @default("ORGANIZATION")
   name            String
   normalizedName  String
   websiteUrl      String?
@@ -1593,46 +1602,46 @@ model Seller {
   rating          Int?
   experienceNotes String?
   aliasesJson     Json?
-  active          Boolean  @default(true)
+  active          Boolean   @default(true)
   archivedAt      DateTime?
   createdByUserId String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  collection      Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  createdBy       User? @relation("SellerCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  storefronts     SellerStorefront[]
-  acquisitions    PlantAcquisitionRecord[]
-  observations    PlantObservation[]
+  collection         Collection                       @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  createdBy          User?                            @relation("SellerCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  storefronts        SellerStorefront[]
+  acquisitions       PlantAcquisitionRecord[]
+  observations       PlantObservation[]
   acquisitionBatches AcquisitionBatch[]
-  preferredBy     PlantDefinitionPreferredSeller[]
+  preferredBy        PlantDefinitionPreferredSeller[]
 
   @@unique([collectionId, normalizedName])
   @@index([collectionId, active])
 }
 
 model SellerStorefront {
-  id              String   @id @default(cuid())
-  collectionId    String
-  sellerId        String
-  distributorId   String?
-  handleOrName    String
-  normalizedName  String
-  storefrontType  String   @default("OTHER")
-  profileUrl      String?
-  notes           String?
-  active          Boolean  @default(true)
-  archivedAt      DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id             String    @id @default(cuid())
+  collectionId   String
+  sellerId       String
+  distributorId  String?
+  handleOrName   String
+  normalizedName String
+  storefrontType String    @default("OTHER")
+  profileUrl     String?
+  notes          String?
+  active         Boolean   @default(true)
+  archivedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  collection      Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  seller          Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-  distributor     Distributor? @relation(fields: [distributorId], references: [id], onDelete: SetNull)
-  acquisitions    PlantAcquisitionRecord[]
-  observations    PlantObservation[]
+  collection         Collection                       @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  seller             Seller                           @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  distributor        Distributor?                     @relation(fields: [distributorId], references: [id], onDelete: SetNull)
+  acquisitions       PlantAcquisitionRecord[]
+  observations       PlantObservation[]
   acquisitionBatches AcquisitionBatch[]
-  preferredBy     PlantDefinitionPreferredSeller[]
+  preferredBy        PlantDefinitionPreferredSeller[]
 
   @@unique([sellerId, normalizedName, distributorId])
   @@index([collectionId, active])
@@ -1649,9 +1658,9 @@ model PlantDefinitionPreferredSeller {
   sortOrder          Int      @default(0)
   createdAt          DateTime @default(now())
 
-  collection       Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  plantDefinition  PlantDefinition @relation(fields: [plantDefinitionId], references: [id], onDelete: Cascade)
-  seller           Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  collection       Collection        @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  plantDefinition  PlantDefinition   @relation(fields: [plantDefinitionId], references: [id], onDelete: Cascade)
+  seller           Seller            @relation(fields: [sellerId], references: [id], onDelete: Cascade)
   sellerStorefront SellerStorefront? @relation(fields: [sellerStorefrontId], references: [id], onDelete: SetNull)
 
   @@unique([plantDefinitionId, sellerId, sellerStorefrontId])
@@ -1668,9 +1677,9 @@ model PlantDefinitionPreferredDistributor {
   sortOrder         Int      @default(0)
   createdAt         DateTime @default(now())
 
-  collection      Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  collection      Collection      @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   plantDefinition PlantDefinition @relation(fields: [plantDefinitionId], references: [id], onDelete: Cascade)
-  distributor    Distributor @relation(fields: [distributorId], references: [id], onDelete: Cascade)
+  distributor     Distributor     @relation(fields: [distributorId], references: [id], onDelete: Cascade)
 
   @@unique([plantDefinitionId, distributorId])
   @@index([collectionId])
@@ -1689,9 +1698,9 @@ model AcquisitionSource {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
-  collection          Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  acquisitionRecord   PlantAcquisitionRecord @relation(fields: [acquisitionRecordId], references: [id], onDelete: Cascade)
-  source              Source @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+  collection        Collection             @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  acquisitionRecord PlantAcquisitionRecord @relation(fields: [acquisitionRecordId], references: [id], onDelete: Cascade)
+  source            Source                 @relation(fields: [sourceId], references: [id], onDelete: Restrict)
 
   @@unique([acquisitionRecordId, sourceId, role])
   @@unique([acquisitionRecordId, sortOrder])
@@ -1700,26 +1709,26 @@ model AcquisitionSource {
 }
 
 model ProvenanceReconciliationItem {
-  id                            String   @id @default(cuid())
-  collectionId                  String
-  entityType                    String
-  entityId                      String
-  legacyField                   String
-  legacyValue                   String
-  suggestedSourceId             String?
-  suggestedDistributorId        String?
-  suggestedDistributorOutletId  String?
-  suggestedSellerId             String?
-  suggestedSellerStorefrontId   String?
-  status                        String   @default("PENDING")
-  resolutionJson                Json?
-  resolvedByUserId              String?
-  resolvedAt                    DateTime?
-  createdAt                     DateTime @default(now())
-  updatedAt                     DateTime @updatedAt
+  id                           String    @id @default(cuid())
+  collectionId                 String
+  entityType                   String
+  entityId                     String
+  legacyField                  String
+  legacyValue                  String
+  suggestedSourceId            String?
+  suggestedDistributorId       String?
+  suggestedDistributorOutletId String?
+  suggestedSellerId            String?
+  suggestedSellerStorefrontId  String?
+  status                       String    @default("PENDING")
+  resolutionJson               Json?
+  resolvedByUserId             String?
+  resolvedAt                   DateTime?
+  createdAt                    DateTime  @default(now())
+  updatedAt                    DateTime  @updatedAt
 
-  collection                    Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  resolvedBy                    User? @relation("ProvenanceReconciliationResolvedBy", fields: [resolvedByUserId], references: [id], onDelete: SetNull)
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  resolvedBy User?      @relation("ProvenanceReconciliationResolvedBy", fields: [resolvedByUserId], references: [id], onDelete: SetNull)
 
   @@unique([collectionId, entityType, entityId, legacyField])
   @@index([collectionId, status])
@@ -1745,16 +1754,16 @@ model ValidatedDefinitionChange {
 }
 
 model CollectionUpdateDigestDelivery {
-  id            String    @id @default(cuid())
-  collectionId  String
-  userId        String
-  channel       String
-  localDate     String
-  timezone      String
-  status        String    @default("SENT")
-  error         String?
-  sentAt        DateTime?
-  createdAt     DateTime  @default(now())
+  id           String    @id @default(cuid())
+  collectionId String
+  userId       String
+  channel      String
+  localDate    String
+  timezone     String
+  status       String    @default("SENT")
+  error        String?
+  sentAt       DateTime?
+  createdAt    DateTime  @default(now())
 
   collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -1767,23 +1776,23 @@ model CollectionUpdateDigestDelivery {
 }
 
 model PlantDefinitionValidationCandidate {
-  id                         String   @id @default(cuid())
-  collectionId               String
-  plantDefinitionId          String?
-  nominatedByUserId          String?
-  notes                      String?
-  status                     String   @default("PENDING")
-  reviewedByUserId           String?
-  reviewedAt                 DateTime?
-  reviewNotes                String?
-  approvedPlantDefinitionId  String?
-  createdAt                  DateTime @default(now())
-  updatedAt                  DateTime @updatedAt
+  id                        String    @id @default(cuid())
+  collectionId              String
+  plantDefinitionId         String?
+  nominatedByUserId         String?
+  notes                     String?
+  status                    String    @default("PENDING")
+  reviewedByUserId          String?
+  reviewedAt                DateTime?
+  reviewNotes               String?
+  approvedPlantDefinitionId String?
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
 
-  collection              Collection      @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  collection              Collection       @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   plantDefinition         PlantDefinition? @relation("ValidationCandidateSourceDefinition", fields: [plantDefinitionId], references: [id], onDelete: SetNull)
-  nominatedByUser         User?           @relation("PlantDefinitionValidationCandidateSubmitter", fields: [nominatedByUserId], references: [id], onDelete: SetNull)
-  reviewedByUser          User?           @relation("PlantDefinitionValidationCandidateReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  nominatedByUser         User?            @relation("PlantDefinitionValidationCandidateSubmitter", fields: [nominatedByUserId], references: [id], onDelete: SetNull)
+  reviewedByUser          User?            @relation("PlantDefinitionValidationCandidateReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
   approvedPlantDefinition PlantDefinition? @relation("ValidationCandidateApprovedDefinition", fields: [approvedPlantDefinitionId], references: [id], onDelete: SetNull)
 
   @@index([collectionId])
@@ -1795,18 +1804,18 @@ model PlantDefinitionValidationCandidate {
 }
 
 model PlantDefinitionDispute {
-  id                         String   @id @default(cuid())
+  id                         String    @id @default(cuid())
   collectionId               String
   validatedPlantDefinitionId String
   submittedByUserId          String?
   reason                     String
   notes                      String?
-  status                     String   @default("PENDING")
+  status                     String    @default("PENDING")
   reviewedByUserId           String?
   reviewedAt                 DateTime?
   resolutionNotes            String?
-  createdAt                  DateTime @default(now())
-  updatedAt                  DateTime @updatedAt
+  createdAt                  DateTime  @default(now())
+  updatedAt                  DateTime  @updatedAt
 
   collection               Collection      @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   validatedPlantDefinition PlantDefinition @relation("ValidatedDefinitionDisputes", fields: [validatedPlantDefinitionId], references: [id], onDelete: Cascade)
@@ -1822,105 +1831,105 @@ model PlantDefinitionDispute {
 }
 
 model PlantHusbandryGuide {
-  id                      String    @id @default(cuid())
-  collectionId            String?
-  plantDefinitionId       String    @unique
-  sourcePlantDefinitionId String?
-  summaryWater            String?
-  summaryLight            String?
-  summaryToxicity         String?
-  summaryCare             String?
-  wateringCadence         String?
-  wateringMoistureLevel   String?
-  wateringDroughtTolerance String?
-  wateringCycleNotes      String?
-  wateringSeasonalAdjustments String?
-  lightIntensity          String?
-  lightDuration           String?
-  temperatureUsdaZone     String?
-  temperatureColdTolerance String?
-  temperatureHeatTolerance String?
-  temperatureFrostSensitivity String?
+  id                                String    @id @default(cuid())
+  collectionId                      String?
+  plantDefinitionId                 String    @unique
+  sourcePlantDefinitionId           String?
+  summaryWater                      String?
+  summaryLight                      String?
+  summaryToxicity                   String?
+  summaryCare                       String?
+  wateringCadence                   String?
+  wateringMoistureLevel             String?
+  wateringDroughtTolerance          String?
+  wateringCycleNotes                String?
+  wateringSeasonalAdjustments       String?
+  lightIntensity                    String?
+  lightDuration                     String?
+  temperatureUsdaZone               String?
+  temperatureColdTolerance          String?
+  temperatureHeatTolerance          String?
+  temperatureFrostSensitivity       String?
   temperatureOverwinterInstructions String?
-  humidityRange           String?
-  humidityDryAirTolerance String?
-  humidityMistingNotes    String?
-  environmentTemperatureMinC Float?
-  environmentTemperatureMaxC Float?
-  environmentNightTemperatureMinC Float?
-  environmentNightTemperatureMaxC Float?
-  environmentHumidityMinPercent Float?
-  environmentHumidityMaxPercent Float?
-  environmentLightLevel String?
-  environmentLightExposure String?
-  environmentLightMinLux Int?
-  environmentLightMaxLux Int?
-  environmentPhotoperiodMinHours Float?
-  environmentPhotoperiodMaxHours Float?
-  environmentAirflowLevel String?
-  environmentStability String?
-  environmentAvoidDrafts Boolean?
-  environmentSeasonalNotes String?
-  mediumPreferred         String?
-  mediumPh                String?
-  mediumDrainage          String?
-  mediumHabit             String?
-  mediumRecipeNotes       String?
-  fertilizationType       String?
-  fertilizationStrength   String?
-  fertilizationFrequency  String?
-  fertilizationSeasonalSchedule String?
-  fertilizationMicronutrientNotes String?
-  fertilizerRecipeId      String?
-  fertilizationCadenceDays Int?
-  fertilizationPaused     Boolean   @default(false)
-  repottingInterval       String?
-  repottingPotType        String?
-  repottingRootSensitivity String?
-  repottingDormancyConsideration String?
-  repottingDivisionGuidance String?
-  propagationMethods      String?
-  propagationDifficulty   String?
-  propagationExpectedSuccess String?
-  propagationOptimalTiming String?
-  propagationRootingHormoneNotes String?
-  propagationTissueCultureNotes String?
-  pestsCommon             String?
-  diseasesCommon          String?
-  treatmentNotes          String?
-  susceptibilityLevel     String?
-  preventativePractices   String?
-  toxicityPets            String?
-  toxicityHumans          String?
-  toxicitySapIrritant     String?
-  toxicityEdible          String?
-  dormancyBehavior        String?
-  bloomSeason             String?
-  bloomDuration           String?
-  bloomFragrance          String?
-  bloomRebloomTendency    String?
-  bloomTriggers           String?
-  bloomPollinatorNotes    String?
-  growthHabit             String?
-  rarity                  String?
-  conservationStatus      String?
-  conservationLinks       String?
-  protectedSpeciesNotes   String?
-  collectionRestrictions  String?
-  importExportConcerns    String?
-  invasiveness            String?
-  nativeRangeNotes        String?
-  aiGeneratedAt           DateTime?
-  aiModel                 String?
-  reviewStatus            String    @default("DRAFT")
-  reviewNotes             String?
-  createdAt               DateTime  @default(now())
-  updatedAt               DateTime  @updatedAt
+  humidityRange                     String?
+  humidityDryAirTolerance           String?
+  humidityMistingNotes              String?
+  environmentTemperatureMinC        Float?
+  environmentTemperatureMaxC        Float?
+  environmentNightTemperatureMinC   Float?
+  environmentNightTemperatureMaxC   Float?
+  environmentHumidityMinPercent     Float?
+  environmentHumidityMaxPercent     Float?
+  environmentLightLevel             String?
+  environmentLightExposure          String?
+  environmentLightMinLux            Int?
+  environmentLightMaxLux            Int?
+  environmentPhotoperiodMinHours    Float?
+  environmentPhotoperiodMaxHours    Float?
+  environmentAirflowLevel           String?
+  environmentStability              String?
+  environmentAvoidDrafts            Boolean?
+  environmentSeasonalNotes          String?
+  mediumPreferred                   String?
+  mediumPh                          String?
+  mediumDrainage                    String?
+  mediumHabit                       String?
+  mediumRecipeNotes                 String?
+  fertilizationType                 String?
+  fertilizationStrength             String?
+  fertilizationFrequency            String?
+  fertilizationSeasonalSchedule     String?
+  fertilizationMicronutrientNotes   String?
+  fertilizerRecipeId                String?
+  fertilizationCadenceDays          Int?
+  fertilizationPaused               Boolean   @default(false)
+  repottingInterval                 String?
+  repottingPotType                  String?
+  repottingRootSensitivity          String?
+  repottingDormancyConsideration    String?
+  repottingDivisionGuidance         String?
+  propagationMethods                String?
+  propagationDifficulty             String?
+  propagationExpectedSuccess        String?
+  propagationOptimalTiming          String?
+  propagationRootingHormoneNotes    String?
+  propagationTissueCultureNotes     String?
+  pestsCommon                       String?
+  diseasesCommon                    String?
+  treatmentNotes                    String?
+  susceptibilityLevel               String?
+  preventativePractices             String?
+  toxicityPets                      String?
+  toxicityHumans                    String?
+  toxicitySapIrritant               String?
+  toxicityEdible                    String?
+  dormancyBehavior                  String?
+  bloomSeason                       String?
+  bloomDuration                     String?
+  bloomFragrance                    String?
+  bloomRebloomTendency              String?
+  bloomTriggers                     String?
+  bloomPollinatorNotes              String?
+  growthHabit                       String?
+  rarity                            String?
+  conservationStatus                String?
+  conservationLinks                 String?
+  protectedSpeciesNotes             String?
+  collectionRestrictions            String?
+  importExportConcerns              String?
+  invasiveness                      String?
+  nativeRangeNotes                  String?
+  aiGeneratedAt                     DateTime?
+  aiModel                           String?
+  reviewStatus                      String    @default("DRAFT")
+  reviewNotes                       String?
+  createdAt                         DateTime  @default(now())
+  updatedAt                         DateTime  @updatedAt
 
-  collection            Collection?      @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  plantDefinition       PlantDefinition @relation(fields: [plantDefinitionId], references: [id], onDelete: Cascade)
-  sourcePlantDefinition PlantDefinition? @relation("HusbandrySourceDefinition", fields: [sourcePlantDefinitionId], references: [id], onDelete: SetNull)
-  fertilizerRecipe     FertilizerRecipe? @relation("HusbandryGuideFertilizerRecipe", fields: [fertilizerRecipeId], references: [id], onDelete: SetNull)
+  collection            Collection?       @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  plantDefinition       PlantDefinition   @relation(fields: [plantDefinitionId], references: [id], onDelete: Cascade)
+  sourcePlantDefinition PlantDefinition?  @relation("HusbandrySourceDefinition", fields: [sourcePlantDefinitionId], references: [id], onDelete: SetNull)
+  fertilizerRecipe      FertilizerRecipe? @relation("HusbandryGuideFertilizerRecipe", fields: [fertilizerRecipeId], references: [id], onDelete: SetNull)
 
   @@index([collectionId])
   @@index([plantDefinitionId])
@@ -1930,45 +1939,45 @@ model PlantHusbandryGuide {
 }
 
 model FertilizerProduct {
-  id                 String   @id @default(cuid())
-  collectionId       String
-  name               String
-  brand              String?
-  productType        String   @default("OTHER")
-  nitrogen           Decimal?
-  phosphorus         Decimal?
-  potassium          Decimal?
-  calcium            Decimal?
-  magnesium          Decimal?
-  sulfur             Decimal?
-  iron               Decimal?
-  manganese          Decimal?
-  zinc               Decimal?
-  copper             Decimal?
-  boron              Decimal?
-  molybdenum         Decimal?
-  chlorine           Decimal?
-  nickel             Decimal?
-  silicon            Decimal?
-  guaranteedAnalysisNotes String?
-  concentrationNotes String?
-  defaultDilution    String?
-  manufacturerFeedAmount String?
-  manufacturerFeedUnit String?
+  id                          String    @id @default(cuid())
+  collectionId                String
+  name                        String
+  brand                       String?
+  productType                 String    @default("OTHER")
+  nitrogen                    Decimal?
+  phosphorus                  Decimal?
+  potassium                   Decimal?
+  calcium                     Decimal?
+  magnesium                   Decimal?
+  sulfur                      Decimal?
+  iron                        Decimal?
+  manganese                   Decimal?
+  zinc                        Decimal?
+  copper                      Decimal?
+  boron                       Decimal?
+  molybdenum                  Decimal?
+  chlorine                    Decimal?
+  nickel                      Decimal?
+  silicon                     Decimal?
+  guaranteedAnalysisNotes     String?
+  concentrationNotes          String?
+  defaultDilution             String?
+  manufacturerFeedAmount      String?
+  manufacturerFeedUnit        String?
   manufacturerFeedWaterVolume String?
-  manufacturerFeedWaterUnit String?
-  manufacturerFeedNotes String?
-  sourceUrl          String?
-  sourceName         String?
-  dataConfidence     String   @default("USER_ENTERED")
-  dataReviewedAt     DateTime?
-  dataReviewedByUserId String?
-  aiModel            String?
-  aiFilledAt         DateTime?
-  notes              String?
-  active             Boolean  @default(true)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  manufacturerFeedWaterUnit   String?
+  manufacturerFeedNotes       String?
+  sourceUrl                   String?
+  sourceName                  String?
+  dataConfidence              String    @default("USER_ENTERED")
+  dataReviewedAt              DateTime?
+  dataReviewedByUserId        String?
+  aiModel                     String?
+  aiFilledAt                  DateTime?
+  notes                       String?
+  active                      Boolean   @default(true)
+  createdAt                   DateTime  @default(now())
+  updatedAt                   DateTime  @updatedAt
 
   collection     Collection                @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   recipeProducts FertilizerRecipeProduct[]
@@ -2019,15 +2028,15 @@ model FertilizerRecipe {
 }
 
 model FertilizerRecipeProduct {
-  id          String   @id @default(cuid())
-  recipeId    String
-  productId   String
-  amount      String?
-  unit        String?
-  notes       String?
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  recipeId  String
+  productId String
+  amount    String?
+  unit      String?
+  notes     String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   recipe  FertilizerRecipe  @relation(fields: [recipeId], references: [id], onDelete: Cascade)
   product FertilizerProduct @relation(fields: [productId], references: [id], onDelete: Restrict)
@@ -2036,6 +2045,181 @@ model FertilizerRecipeProduct {
   @@index([recipeId])
   @@index([productId])
   @@index([sortOrder])
+}
+
+model SubstrateComponent {
+  id                     String    @id @default(cuid())
+  collectionId           String
+  name                   String
+  slug                   String
+  category               String    @default("OTHER")
+  description            String?
+  particleSize           String?
+  organicity             String    @default("UNKNOWN")
+  waterRetention         String?
+  aeration               String?
+  drainage               String?
+  cationExchangeCapacity String?
+  longevity              String?
+  phTendency             String?
+  renewable              Boolean?
+  notes                  String?
+  active                 Boolean   @default(true)
+  archivedAt             DateTime?
+  createdByUserId        String?
+  starterKey             String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  collection       Collection                 @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  recipeComponents SubstrateRecipeComponent[]
+
+  @@unique([collectionId, slug])
+  @@unique([collectionId, starterKey])
+  @@index([collectionId, active])
+  @@index([collectionId, category])
+  @@index([collectionId, organicity])
+}
+
+model SubstrateRecipe {
+  id              String    @id @default(cuid())
+  collectionId    String
+  name            String
+  slug            String
+  description     String?
+  intendedUse     String?
+  activeVersionId String?   @unique
+  archivedAt      DateTime?
+  createdByUserId String?
+  starterKey      String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  collection    Collection               @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  activeVersion SubstrateRecipeVersion?  @relation("ActiveSubstrateRecipeVersion", fields: [activeVersionId], references: [id], onDelete: SetNull)
+  versions      SubstrateRecipeVersion[] @relation("SubstrateRecipeVersions")
+
+  @@unique([collectionId, slug])
+  @@unique([collectionId, starterKey])
+  @@index([collectionId, archivedAt])
+}
+
+model SubstrateRecipeVersion {
+  id                String    @id @default(cuid())
+  collectionId      String
+  substrateRecipeId String
+  versionNumber     Int
+  changeSummary     String?
+  notes             String?
+  totalPercent      Decimal   @default(0)
+  status            String    @default("DRAFT")
+  createdByUserId   String?
+  createdAt         DateTime  @default(now())
+  supersededAt      DateTime?
+
+  collection         Collection                               @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  recipe             SubstrateRecipe                          @relation("SubstrateRecipeVersions", fields: [substrateRecipeId], references: [id], onDelete: Cascade)
+  activeForRecipe    SubstrateRecipe?                         @relation("ActiveSubstrateRecipeVersion")
+  components         SubstrateRecipeComponent[]
+  recommendations    PlantDefinitionSubstrateRecommendation[]
+  currentAssignments PlantInstanceSubstrate[]
+  previousHistory    PlantSubstrateHistory[]                  @relation("PreviousSubstrateRecipeVersion")
+  newHistory         PlantSubstrateHistory[]                  @relation("NewSubstrateRecipeVersion")
+  careEvents         PlantCareEvent[]                         @relation("PlantCareEventSubstrateRecipeVersion")
+
+  @@unique([substrateRecipeId, versionNumber])
+  @@index([collectionId, status])
+  @@index([collectionId, substrateRecipeId])
+}
+
+model SubstrateRecipeComponent {
+  id                       String   @id @default(cuid())
+  collectionId             String
+  substrateRecipeVersionId String
+  substrateComponentId     String
+  percentByVolume          Decimal
+  sortOrder                Int      @default(0)
+  notes                    String?
+  createdAt                DateTime @default(now())
+
+  collection    Collection             @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  recipeVersion SubstrateRecipeVersion @relation(fields: [substrateRecipeVersionId], references: [id], onDelete: Cascade)
+  component     SubstrateComponent     @relation(fields: [substrateComponentId], references: [id], onDelete: Restrict)
+
+  @@unique([substrateRecipeVersionId, substrateComponentId])
+  @@index([collectionId])
+  @@index([substrateComponentId])
+  @@index([substrateRecipeVersionId, sortOrder])
+}
+
+model PlantDefinitionSubstrateRecommendation {
+  id                       String   @id @default(cuid())
+  collectionId             String
+  plantDefinitionId        String
+  substrateRecipeVersionId String
+  rank                     Int      @default(1)
+  suitability              String   @default("RECOMMENDED")
+  notes                    String?
+  source                   String   @default("MANUAL")
+  confidence               Float?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  collection      Collection             @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  plantDefinition PlantDefinition        @relation(fields: [plantDefinitionId], references: [id], onDelete: Cascade)
+  recipeVersion   SubstrateRecipeVersion @relation(fields: [substrateRecipeVersionId], references: [id], onDelete: Restrict)
+
+  @@unique([collectionId, plantDefinitionId, substrateRecipeVersionId])
+  @@index([collectionId, plantDefinitionId, rank])
+  @@index([collectionId, substrateRecipeVersionId])
+}
+
+model PlantInstanceSubstrate {
+  id                           String   @id @default(cuid())
+  collectionId                 String
+  plantInstanceId              String   @unique
+  substrateMode                String   @default("UNKNOWN")
+  substrateRecipeVersionId     String?
+  receivedSubstrateDescription String?
+  startedAt                    DateTime @default(now())
+  notes                        String?
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+
+  collection    Collection              @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  plantInstance PlantInstance           @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
+  recipeVersion SubstrateRecipeVersion? @relation(fields: [substrateRecipeVersionId], references: [id], onDelete: Restrict)
+
+  @@index([collectionId, substrateMode])
+  @@index([collectionId, substrateRecipeVersionId])
+}
+
+model PlantSubstrateHistory {
+  id                      String   @id @default(cuid())
+  collectionId            String
+  plantInstanceId         String
+  previousMode            String?
+  previousRecipeVersionId String?
+  previousDescription     String?
+  newMode                 String
+  newRecipeVersionId      String?
+  newDescription          String?
+  changedAt               DateTime @default(now())
+  reason                  String?
+  repottingCareEventId    String?  @unique
+  changedByUserId         String?
+  notes                   String?
+  createdAt               DateTime @default(now())
+
+  collection            Collection              @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  plantInstance         PlantInstance           @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
+  previousRecipeVersion SubstrateRecipeVersion? @relation("PreviousSubstrateRecipeVersion", fields: [previousRecipeVersionId], references: [id], onDelete: Restrict)
+  newRecipeVersion      SubstrateRecipeVersion? @relation("NewSubstrateRecipeVersion", fields: [newRecipeVersionId], references: [id], onDelete: Restrict)
+  repottingCareEvent    PlantCareEvent?         @relation(fields: [repottingCareEventId], references: [id], onDelete: SetNull)
+
+  @@index([collectionId, plantInstanceId, changedAt])
+  @@index([collectionId, newMode])
+  @@index([newRecipeVersionId])
 }
 
 model PlantAlias {
@@ -2050,7 +2234,7 @@ model PlantAlias {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  collection      Collection?      @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  collection      Collection?     @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   plantDefinition PlantDefinition @relation(fields: [plantDefinitionId], references: [id], onDelete: Cascade)
 
   @@index([collectionId])
@@ -2060,64 +2244,66 @@ model PlantAlias {
 }
 
 model PlantInstance {
-  id                String    @id @default(cuid())
-  collectionId      String?
-  plantDefinitionId String
-  plantId           String
-  instanceType      String
-  status            String    @default("ACTIVE")
-  location          String?
-  legacyLocationText String?
-  currentLocationId String?
-  acquisitionDate   DateTime?
-  propagationDate   DateTime?
-  propagationEstablishedAt DateTime?
-  source            String?
-  distributor       String?
-  stockNumber       String?
-  acquisitionLabel  String?
-  purchasePrice     Decimal?
-  archiveDate       DateTime?
-  archiveReason     String?
-  archiveNotes      String?
-  originCollectionSlug String?
-  originPlantId     String?
+  id                            String    @id @default(cuid())
+  collectionId                  String?
+  plantDefinitionId             String
+  plantId                       String
+  instanceType                  String
+  status                        String    @default("ACTIVE")
+  location                      String?
+  legacyLocationText            String?
+  currentLocationId             String?
+  acquisitionDate               DateTime?
+  propagationDate               DateTime?
+  propagationEstablishedAt      DateTime?
+  source                        String?
+  distributor                   String?
+  stockNumber                   String?
+  acquisitionLabel              String?
+  purchasePrice                 Decimal?
+  archiveDate                   DateTime?
+  archiveReason                 String?
+  archiveNotes                  String?
+  originCollectionSlug          String?
+  originPlantId                 String?
   transferredFromCollectionSlug String?
-  transferredFromPlantId String?
-  isSportCandidate  Boolean   @default(false)
-  sportStatus       String    @default("NONE")
-  sportDescription  String?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  transferredFromPlantId        String?
+  isSportCandidate              Boolean   @default(false)
+  sportStatus                   String    @default("NONE")
+  sportDescription              String?
+  createdAt                     DateTime  @default(now())
+  updatedAt                     DateTime  @updatedAt
 
-  collection      Collection?              @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  plantDefinition PlantDefinition        @relation(fields: [plantDefinitionId], references: [id], onDelete: Cascade)
-  currentLocation Location?              @relation("CurrentPlantLocation", fields: [currentLocationId], references: [id], onDelete: SetNull)
-  locationMoves   PlantLocationMove[]
-  quarantines     PlantQuarantine[]
-  parentLinks     ParentageLink[]
-  childLinks      PropagationChild[]
-  blooms          BloomEvent[]
-  sportRecords    SportStabilityRecord[]
-  husbandryOverride PlantHusbandryOverride?
-  careEvents      PlantCareEvent[]
-  conditions      PlantCondition[]
-  careAdjustments PlantCareAdjustment[]
-  outgoingTransferRequests PlantTransferRequest[] @relation("SourcePlantTransferRequests")
-  incomingTransferRequests PlantTransferRequest[] @relation("TargetPlantTransferRequests")
-  careSheetPlants CareSheetPlant[]
-  careSheetTasks  CareSheetTask[]
-  exhibitPlants   CollectionExhibitPlant[]
-  workflowRunPlants WorkflowRunPlant[]
-  careScheduleSyncItems CareScheduleSyncItem[]
-  acquisitionRecordLinks PlantAcquisitionRecordInstance[]
-  quietDayAdjustments CareQuietDayAdjustment[]
-  treatmentPlans TreatmentPlan[]
-  treatmentApplications TreatmentApplication[]
+  collection                     Collection?                      @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  plantDefinition                PlantDefinition                  @relation(fields: [plantDefinitionId], references: [id], onDelete: Cascade)
+  currentLocation                Location?                        @relation("CurrentPlantLocation", fields: [currentLocationId], references: [id], onDelete: SetNull)
+  locationMoves                  PlantLocationMove[]
+  quarantines                    PlantQuarantine[]
+  parentLinks                    ParentageLink[]
+  childLinks                     PropagationChild[]
+  blooms                         BloomEvent[]
+  sportRecords                   SportStabilityRecord[]
+  husbandryOverride              PlantHusbandryOverride?
+  careEvents                     PlantCareEvent[]
+  conditions                     PlantCondition[]
+  careAdjustments                PlantCareAdjustment[]
+  outgoingTransferRequests       PlantTransferRequest[]           @relation("SourcePlantTransferRequests")
+  incomingTransferRequests       PlantTransferRequest[]           @relation("TargetPlantTransferRequests")
+  careSheetPlants                CareSheetPlant[]
+  careSheetTasks                 CareSheetTask[]
+  exhibitPlants                  CollectionExhibitPlant[]
+  workflowRunPlants              WorkflowRunPlant[]
+  careScheduleSyncItems          CareScheduleSyncItem[]
+  acquisitionRecordLinks         PlantAcquisitionRecordInstance[]
+  quietDayAdjustments            CareQuietDayAdjustment[]
+  treatmentPlans                 TreatmentPlan[]
+  treatmentApplications          TreatmentApplication[]
   treatmentApplicationBatchItems TreatmentApplicationBatchItem[]
+  currentSubstrate               PlantInstanceSubstrate?
+  substrateHistory               PlantSubstrateHistory[]
 
-  @@index([collectionId])
   @@unique([collectionId, plantId])
+  @@index([collectionId])
   @@index([plantDefinitionId])
   @@index([currentLocationId])
   @@index([status])
@@ -2161,20 +2347,20 @@ model Location {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
-  collection     Collection      @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  parentLocation Location?       @relation("LocationHierarchy", fields: [parentLocationId], references: [id], onDelete: SetNull)
-  childLocations Location[]      @relation("LocationHierarchy")
-  locationType   LocationType    @relation(fields: [locationTypeId], references: [id], onDelete: Restrict)
-  plantInstances PlantInstance[] @relation("CurrentPlantLocation")
-  desiredPlantDefinitions PlantDefinition[] @relation("PlantDefinitionDesiredLocation")
-  acquisitionRecords PlantAcquisitionRecord[] @relation("PlantAcquisitionInitialLocation")
-  acquisitionBatchItems AcquisitionBatchItem[] @relation("AcquisitionBatchItemInitialLocation")
-  movesFrom      PlantLocationMove[] @relation("PlantLocationMoveFrom")
-  movesTo        PlantLocationMove[] @relation("PlantLocationMoveTo")
-  quarantineRecords PlantQuarantine[]
-  workflowRuns   WorkflowRun[]
+  collection              Collection                  @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  parentLocation          Location?                   @relation("LocationHierarchy", fields: [parentLocationId], references: [id], onDelete: SetNull)
+  childLocations          Location[]                  @relation("LocationHierarchy")
+  locationType            LocationType                @relation(fields: [locationTypeId], references: [id], onDelete: Restrict)
+  plantInstances          PlantInstance[]             @relation("CurrentPlantLocation")
+  desiredPlantDefinitions PlantDefinition[]           @relation("PlantDefinitionDesiredLocation")
+  acquisitionRecords      PlantAcquisitionRecord[]    @relation("PlantAcquisitionInitialLocation")
+  acquisitionBatchItems   AcquisitionBatchItem[]      @relation("AcquisitionBatchItemInitialLocation")
+  movesFrom               PlantLocationMove[]         @relation("PlantLocationMoveFrom")
+  movesTo                 PlantLocationMove[]         @relation("PlantLocationMoveTo")
+  quarantineRecords       PlantQuarantine[]
+  workflowRuns            WorkflowRun[]
   careScheduleSyncBatches CareScheduleSyncBatch[]
-  environmentProfile LocationEnvironmentProfile?
+  environmentProfile      LocationEnvironmentProfile?
 
   @@unique([collectionId, code])
   @@index([collectionId])
@@ -2185,9 +2371,9 @@ model Location {
 }
 
 model LocationEnvironmentProfile {
-  id                       String   @id @default(cuid())
+  id                       String    @id @default(cuid())
   collectionId             String
-  locationId               String   @unique
+  locationId               String    @unique
   temperatureMinC          Float?
   temperatureMaxC          Float?
   nighttimeTemperatureMinC Float?
@@ -2215,8 +2401,8 @@ model LocationEnvironmentProfile {
   measuredAt               DateTime?
   confidence               String?
   notes                    String?
-  createdAt                DateTime @default(now())
-  updatedAt                DateTime @updatedAt
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
 
   collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   location   Location   @relation(fields: [locationId], references: [id], onDelete: Cascade)
@@ -2227,17 +2413,17 @@ model LocationEnvironmentProfile {
 }
 
 model PlantLocationMove {
-  id              String   @id @default(cuid())
-  collectionId    String
-  plantInstanceId String
-  fromLocationId  String?
-  toLocationId    String?
-  movedByUserId   String?
-  movedAt         DateTime @default(now())
-  notes           String?
-  compatibilityStatus String?
+  id                          String    @id @default(cuid())
+  collectionId                String
+  plantInstanceId             String
+  fromLocationId              String?
+  toLocationId                String?
+  movedByUserId               String?
+  movedAt                     DateTime  @default(now())
+  notes                       String?
+  compatibilityStatus         String?
   compatibilityAcknowledgedAt DateTime?
-  compatibilityNote String?
+  compatibilityNote           String?
 
   collection    Collection    @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   plantInstance PlantInstance @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
@@ -2254,14 +2440,14 @@ model PlantLocationMove {
 }
 
 model PlantQuarantine {
-  id                   String   @id @default(cuid())
+  id                   String    @id @default(cuid())
   collectionId         String
   plantInstanceId      String
   quarantineLocationId String?
-  status               String   @default("ACTIVE")
+  status               String    @default("ACTIVE")
   reason               String
-  riskLevel            String   @default("UNKNOWN")
-  startDate            DateTime @default(now())
+  riskLevel            String    @default("UNKNOWN")
+  startDate            DateTime  @default(now())
   targetReleaseDate    DateTime
   releasedAt           DateTime?
   releasedByUserId     String?
@@ -2270,8 +2456,8 @@ model PlantQuarantine {
   notes                String?
   checklistJson        Json?
   createdByUserId      String
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
   collection         Collection    @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   plantInstance      PlantInstance @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
@@ -2292,99 +2478,99 @@ model PlantQuarantine {
 }
 
 model PlantHusbandryOverride {
-  id                      String    @id @default(cuid())
-  collectionId            String?
-  plantInstanceId         String    @unique
-  summaryWater            String?
-  summaryLight            String?
-  summaryToxicity         String?
-  summaryCare             String?
-  wateringCadence         String?
-  wateringMoistureLevel   String?
-  wateringDroughtTolerance String?
-  wateringCycleNotes      String?
-  wateringSeasonalAdjustments String?
-  lightIntensity          String?
-  lightDuration           String?
-  temperatureUsdaZone     String?
-  temperatureColdTolerance String?
-  temperatureHeatTolerance String?
-  temperatureFrostSensitivity String?
+  id                                String   @id @default(cuid())
+  collectionId                      String?
+  plantInstanceId                   String   @unique
+  summaryWater                      String?
+  summaryLight                      String?
+  summaryToxicity                   String?
+  summaryCare                       String?
+  wateringCadence                   String?
+  wateringMoistureLevel             String?
+  wateringDroughtTolerance          String?
+  wateringCycleNotes                String?
+  wateringSeasonalAdjustments       String?
+  lightIntensity                    String?
+  lightDuration                     String?
+  temperatureUsdaZone               String?
+  temperatureColdTolerance          String?
+  temperatureHeatTolerance          String?
+  temperatureFrostSensitivity       String?
   temperatureOverwinterInstructions String?
-  humidityRange           String?
-  humidityDryAirTolerance String?
-  humidityMistingNotes    String?
-  environmentTemperatureMinC Float?
-  environmentTemperatureMaxC Float?
-  environmentNightTemperatureMinC Float?
-  environmentNightTemperatureMaxC Float?
-  environmentHumidityMinPercent Float?
-  environmentHumidityMaxPercent Float?
-  environmentLightLevel String?
-  environmentLightExposure String?
-  environmentLightMinLux Int?
-  environmentLightMaxLux Int?
-  environmentPhotoperiodMinHours Float?
-  environmentPhotoperiodMaxHours Float?
-  environmentAirflowLevel String?
-  environmentStability String?
-  environmentAvoidDrafts Boolean?
-  environmentSeasonalNotes String?
-  mediumPreferred         String?
-  mediumPh                String?
-  mediumDrainage          String?
-  mediumHabit             String?
-  mediumRecipeNotes       String?
-  fertilizationType       String?
-  fertilizationStrength   String?
-  fertilizationFrequency  String?
-  fertilizationSeasonalSchedule String?
-  fertilizationMicronutrientNotes String?
-  fertilizerRecipeId      String?
-  fertilizationCadenceDays Int?
-  fertilizationPaused     Boolean   @default(false)
-  repottingInterval       String?
-  repottingPotType        String?
-  repottingRootSensitivity String?
-  repottingDormancyConsideration String?
-  repottingDivisionGuidance String?
-  propagationMethods      String?
-  propagationDifficulty   String?
-  propagationExpectedSuccess String?
-  propagationOptimalTiming String?
-  propagationRootingHormoneNotes String?
-  propagationTissueCultureNotes String?
-  pestsCommon             String?
-  diseasesCommon          String?
-  treatmentNotes          String?
-  susceptibilityLevel     String?
-  preventativePractices   String?
-  toxicityPets            String?
-  toxicityHumans          String?
-  toxicitySapIrritant     String?
-  toxicityEdible          String?
-  dormancyBehavior        String?
-  bloomSeason             String?
-  bloomDuration           String?
-  bloomFragrance          String?
-  bloomRebloomTendency    String?
-  bloomTriggers           String?
-  bloomPollinatorNotes    String?
-  growthHabit             String?
-  rarity                  String?
-  conservationStatus      String?
-  conservationLinks       String?
-  protectedSpeciesNotes   String?
-  collectionRestrictions  String?
-  importExportConcerns    String?
-  invasiveness            String?
-  nativeRangeNotes        String?
-  overrideNotes           String?
-  createdAt               DateTime  @default(now())
-  updatedAt               DateTime  @updatedAt
+  humidityRange                     String?
+  humidityDryAirTolerance           String?
+  humidityMistingNotes              String?
+  environmentTemperatureMinC        Float?
+  environmentTemperatureMaxC        Float?
+  environmentNightTemperatureMinC   Float?
+  environmentNightTemperatureMaxC   Float?
+  environmentHumidityMinPercent     Float?
+  environmentHumidityMaxPercent     Float?
+  environmentLightLevel             String?
+  environmentLightExposure          String?
+  environmentLightMinLux            Int?
+  environmentLightMaxLux            Int?
+  environmentPhotoperiodMinHours    Float?
+  environmentPhotoperiodMaxHours    Float?
+  environmentAirflowLevel           String?
+  environmentStability              String?
+  environmentAvoidDrafts            Boolean?
+  environmentSeasonalNotes          String?
+  mediumPreferred                   String?
+  mediumPh                          String?
+  mediumDrainage                    String?
+  mediumHabit                       String?
+  mediumRecipeNotes                 String?
+  fertilizationType                 String?
+  fertilizationStrength             String?
+  fertilizationFrequency            String?
+  fertilizationSeasonalSchedule     String?
+  fertilizationMicronutrientNotes   String?
+  fertilizerRecipeId                String?
+  fertilizationCadenceDays          Int?
+  fertilizationPaused               Boolean  @default(false)
+  repottingInterval                 String?
+  repottingPotType                  String?
+  repottingRootSensitivity          String?
+  repottingDormancyConsideration    String?
+  repottingDivisionGuidance         String?
+  propagationMethods                String?
+  propagationDifficulty             String?
+  propagationExpectedSuccess        String?
+  propagationOptimalTiming          String?
+  propagationRootingHormoneNotes    String?
+  propagationTissueCultureNotes     String?
+  pestsCommon                       String?
+  diseasesCommon                    String?
+  treatmentNotes                    String?
+  susceptibilityLevel               String?
+  preventativePractices             String?
+  toxicityPets                      String?
+  toxicityHumans                    String?
+  toxicitySapIrritant               String?
+  toxicityEdible                    String?
+  dormancyBehavior                  String?
+  bloomSeason                       String?
+  bloomDuration                     String?
+  bloomFragrance                    String?
+  bloomRebloomTendency              String?
+  bloomTriggers                     String?
+  bloomPollinatorNotes              String?
+  growthHabit                       String?
+  rarity                            String?
+  conservationStatus                String?
+  conservationLinks                 String?
+  protectedSpeciesNotes             String?
+  collectionRestrictions            String?
+  importExportConcerns              String?
+  invasiveness                      String?
+  nativeRangeNotes                  String?
+  overrideNotes                     String?
+  createdAt                         DateTime @default(now())
+  updatedAt                         DateTime @updatedAt
 
-  collection    Collection?    @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  plantInstance PlantInstance @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
+  collection       Collection?       @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  plantInstance    PlantInstance     @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
   fertilizerRecipe FertilizerRecipe? @relation("HusbandryOverrideFertilizerRecipe", fields: [fertilizerRecipeId], references: [id], onDelete: SetNull)
 
   @@index([collectionId])
@@ -2393,84 +2579,88 @@ model PlantHusbandryOverride {
 }
 
 model PlantCareEvent {
-  id              String   @id @default(cuid())
-  collectionId    String?
-  plantInstanceId String
-  userId          String?
-  eventType       String
-  performedAt     DateTime @default(now())
-  notes           String?
-  metadata        Json?
-  fertilizerRecipeId String?
-  createdAt       DateTime @default(now())
+  id                       String   @id @default(cuid())
+  collectionId             String?
+  plantInstanceId          String
+  userId                   String?
+  eventType                String
+  performedAt              DateTime @default(now())
+  notes                    String?
+  metadata                 Json?
+  fertilizerRecipeId       String?
+  substrateRecipeVersionId String?
+  createdAt                DateTime @default(now())
 
-  collection    Collection?    @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  plantInstance PlantInstance @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
-  user          User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
-  fertilizerRecipe FertilizerRecipe? @relation("PlantCareEventFertilizerRecipe", fields: [fertilizerRecipeId], references: [id], onDelete: SetNull)
+  collection             Collection?             @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  plantInstance          PlantInstance           @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
+  user                   User?                   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  fertilizerRecipe       FertilizerRecipe?       @relation("PlantCareEventFertilizerRecipe", fields: [fertilizerRecipeId], references: [id], onDelete: SetNull)
+  substrateRecipeVersion SubstrateRecipeVersion? @relation("PlantCareEventSubstrateRecipeVersion", fields: [substrateRecipeVersionId], references: [id], onDelete: Restrict)
+  substrateHistory       PlantSubstrateHistory?
 
   @@index([collectionId])
   @@index([plantInstanceId])
   @@index([userId])
   @@index([eventType])
   @@index([fertilizerRecipeId])
+  @@index([substrateRecipeVersionId])
   @@index([performedAt])
   @@index([collectionId, plantInstanceId, eventType, performedAt])
 }
 
 model TreatmentDefinition {
-  id                       String   @id @default(cuid())
-  collectionId             String
-  name                     String
-  slug                     String
-  category                 String
-  active                   Boolean  @default(true)
-  description              String?
-  targetSummary            String?
-  targetArea               String?
-  instructions             String?
-  manufacturerDoseText     String?
-  defaultDoseAmount        Float?
-  defaultDoseUnit          String?
-  defaultWaterVolumeMl     Float?
-  defaultWaterVolumeUnit   String?  @default("ML")
-  defaultStrength          String?
-  applicationMethod        String?
-  minimumIntervalDays      Int?
-  defaultRepeatCount       Int?
-  defaultRepeatIntervalDays Int?
-  defaultFollowUpDays      Int?
-  maximumApplications      Int?
-  petSafety                String?
-  requiresQuarantine       Boolean  @default(false)
-  reentryIntervalHours     Int?
-  ventilationRequired      Boolean  @default(false)
-  indoorUseAllowed         Boolean?
-  outdoorApplicationPreferred Boolean @default(false)
-  keepAwayAquaticSystems   Boolean  @default(false)
-  temperatureMinC          Float?
-  temperatureMaxC          Float?
-  avoidBlooms              Boolean  @default(false)
-  avoidHeat                Boolean  @default(false)
-  avoidDirectLight         Boolean  @default(false)
-  ppeRequirementsJson      Json?
-  safetyNotes              String?
-  contraindications        String?
-  incompatibilities        String?
-  precautions              String?
-  disposalNotes            String?
-  sourceUrlsJson           Json?
-  archivedAt               DateTime?
-  createdByUserId          String?
-  createdAt                DateTime @default(now())
-  updatedAt                DateTime @updatedAt
+  id                          String    @id @default(cuid())
+  collectionId                String
+  name                        String
+  slug                        String
+  category                    String
+  active                      Boolean   @default(true)
+  description                 String?
+  targetSummary               String?
+  targetArea                  String?
+  instructions                String?
+  manufacturerDoseText        String?
+  defaultDoseAmount           Float?
+  defaultDoseUnit             String?
+  defaultWaterVolumeMl        Float?
+  defaultWaterVolumeUnit      String?   @default("ML")
+  defaultStrength             String?
+  applicationMethod           String?
+  minimumIntervalDays         Int?
+  defaultRepeatCount          Int?
+  defaultRepeatIntervalDays   Int?
+  defaultFollowUpDays         Int?
+  maximumApplications         Int?
+  petSafety                   String?
+  requiresQuarantine          Boolean   @default(false)
+  reentryIntervalHours        Int?
+  ventilationRequired         Boolean   @default(false)
+  indoorUseAllowed            Boolean?
+  outdoorApplicationPreferred Boolean   @default(false)
+  keepAwayAquaticSystems      Boolean   @default(false)
+  temperatureMinC             Float?
+  temperatureMaxC             Float?
+  avoidBlooms                 Boolean   @default(false)
+  avoidHeat                   Boolean   @default(false)
+  avoidDirectLight            Boolean   @default(false)
+  ppeRequirementsJson         Json?
+  safetyNotes                 String?
+  contraindications           String?
+  incompatibilities           String?
+  precautions                 String?
+  disposalNotes               String?
+  sourceUrlsJson              Json?
+  archivedAt                  DateTime?
+  createdByUserId             String?
+  createdAt                   DateTime  @default(now())
+  updatedAt                   DateTime  @updatedAt
 
-  collection       Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  products         TreatmentDefinitionProduct[]
-  conditionTypes   TreatmentConditionType[]
-  cautionTags      TreatmentTagCaution[]
-  planSteps        TreatmentPlanStep[]
-  applications     TreatmentApplication[]
+  collection         Collection                   @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  products           TreatmentDefinitionProduct[]
+  conditionTypes     TreatmentConditionType[]
+  cautionTags        TreatmentTagCaution[]
+  planSteps          TreatmentPlanStep[]
+  applications       TreatmentApplication[]
   applicationBatches TreatmentApplicationBatch[]
 
   @@unique([collectionId, slug])
@@ -2479,7 +2669,7 @@ model TreatmentDefinition {
 }
 
 model TreatmentProduct {
-  id                 String   @id @default(cuid())
+  id                 String    @id @default(cuid())
   collectionId       String
   name               String
   manufacturer       String?
@@ -2499,14 +2689,14 @@ model TreatmentProduct {
   petSafety          String?
   labelNotes         String?
   notes              String?
-  active             Boolean  @default(true)
+  active             Boolean   @default(true)
   archivedAt         DateTime?
   createdByUserId    String?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
-  collection  Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  treatments TreatmentDefinitionProduct[]
+  collection   Collection                   @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  treatments   TreatmentDefinitionProduct[]
   applications TreatmentApplication[]
 
   @@unique([collectionId, name, manufacturer])
@@ -2515,18 +2705,18 @@ model TreatmentProduct {
 }
 
 model TreatmentDefinitionProduct {
-  id                    String   @id @default(cuid())
+  id                    String  @id @default(cuid())
   collectionId          String
   treatmentDefinitionId String
   treatmentProductId    String
-  amount                 Float?
-  unit                   String?
-  role                   String?
+  amount                Float?
+  unit                  String?
+  role                  String?
   notes                 String?
-  sortOrder             Int      @default(0)
+  sortOrder             Int     @default(0)
 
   treatment TreatmentDefinition @relation(fields: [treatmentDefinitionId], references: [id], onDelete: Cascade)
-  product   TreatmentProduct @relation(fields: [treatmentProductId], references: [id], onDelete: Restrict)
+  product   TreatmentProduct    @relation(fields: [treatmentProductId], references: [id], onDelete: Restrict)
 
   @@unique([treatmentDefinitionId, treatmentProductId])
   @@index([collectionId])
@@ -2534,7 +2724,7 @@ model TreatmentDefinitionProduct {
 }
 
 model TreatmentConditionType {
-  id                    String @id @default(cuid())
+  id                    String   @id @default(cuid())
   collectionId          String
   treatmentDefinitionId String
   conditionType         String
@@ -2557,7 +2747,7 @@ model TreatmentTagCaution {
   warningText           String
 
   treatment TreatmentDefinition @relation(fields: [treatmentDefinitionId], references: [id], onDelete: Cascade)
-  plantTag  PlantTag @relation(fields: [plantTagId], references: [id], onDelete: Restrict)
+  plantTag  PlantTag            @relation(fields: [plantTagId], references: [id], onDelete: Restrict)
 
   @@unique([treatmentDefinitionId, plantTagId])
   @@index([collectionId])
@@ -2565,31 +2755,31 @@ model TreatmentTagCaution {
 }
 
 model TreatmentPlan {
-  id                String    @id @default(cuid())
-  collectionId      String
-  plantInstanceId   String
-  plantConditionId  String?
-  title             String
-  description       String?
-  status            String    @default("ACTIVE")
-  startedAt         DateTime  @default(now())
-  targetCompletionAt DateTime?
-  completedAt       DateTime?
-  cancelledAt       DateTime?
-  finalOutcome      String?
-  finalEffectiveness String?
-  finalNotes        String?
-  createdByUserId   String?
-  updatedByUserId   String?
-  assignedToUserId  String?
+  id                          String    @id @default(cuid())
+  collectionId                String
+  plantInstanceId             String
+  plantConditionId            String?
+  title                       String
+  description                 String?
+  status                      String    @default("ACTIVE")
+  startedAt                   DateTime  @default(now())
+  targetCompletionAt          DateTime?
+  completedAt                 DateTime?
+  cancelledAt                 DateTime?
+  finalOutcome                String?
+  finalEffectiveness          String?
+  finalNotes                  String?
+  createdByUserId             String?
+  updatedByUserId             String?
+  assignedToUserId            String?
   finalOutcomeAmendmentReason String?
-  conditionReviewJson Json?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  conditionReviewJson         Json?
+  createdAt                   DateTime  @default(now())
+  updatedAt                   DateTime  @updatedAt
 
-  collection    Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  plantInstance PlantInstance @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
-  condition     PlantCondition? @relation(fields: [plantConditionId], references: [id], onDelete: SetNull)
+  collection    Collection             @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  plantInstance PlantInstance          @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
+  condition     PlantCondition?        @relation(fields: [plantConditionId], references: [id], onDelete: SetNull)
   steps         TreatmentPlanStep[]
   applications  TreatmentApplication[]
 
@@ -2623,9 +2813,9 @@ model TreatmentPlanStep {
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
-  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  plan       TreatmentPlan @relation(fields: [treatmentPlanId], references: [id], onDelete: Cascade)
-  treatment  TreatmentDefinition? @relation(fields: [treatmentDefinitionId], references: [id], onDelete: SetNull)
+  collection  Collection            @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  plan        TreatmentPlan         @relation(fields: [treatmentPlanId], references: [id], onDelete: Cascade)
+  treatment   TreatmentDefinition?  @relation(fields: [treatmentDefinitionId], references: [id], onDelete: SetNull)
   application TreatmentApplication?
 
   @@index([collectionId, status, scheduledAt])
@@ -2634,47 +2824,47 @@ model TreatmentPlanStep {
 }
 
 model TreatmentApplication {
-  id                    String   @id @default(cuid())
-  collectionId          String
-  plantInstanceId       String
-  plantConditionId      String?
-  treatmentPlanId       String?
-  treatmentPlanStepId   String?  @unique
-  treatmentDefinitionId String?
-  treatmentProductId    String?
-  treatmentApplicationBatchItemId String? @unique
-  appliedByUserId       String?
-  appliedAt             DateTime @default(now())
-  treatmentNameSnapshot String
-  productNameSnapshot   String?
-  doseAmount            Float?
-  doseUnit              String?
-  waterVolumeMl         Float?
-  strength              String?
-  applicationMethod     String?
-  targetArea            String?
-  instructionsSnapshot  String?
-  safetySnapshotJson    Json?
-  notes                 String?
-  immediateResponse     String?
-  adverseReaction       Boolean  @default(false)
-  adverseReactionNotes  String?
-  followUpDueAt         DateTime?
-  intervalOverrideNote  String?
-  correctedAt           DateTime?
-  correctedByUserId     String?
-  correctionReason      String?
-  originalSnapshotJson  Json?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id                              String    @id @default(cuid())
+  collectionId                    String
+  plantInstanceId                 String
+  plantConditionId                String?
+  treatmentPlanId                 String?
+  treatmentPlanStepId             String?   @unique
+  treatmentDefinitionId           String?
+  treatmentProductId              String?
+  treatmentApplicationBatchItemId String?   @unique
+  appliedByUserId                 String?
+  appliedAt                       DateTime  @default(now())
+  treatmentNameSnapshot           String
+  productNameSnapshot             String?
+  doseAmount                      Float?
+  doseUnit                        String?
+  waterVolumeMl                   Float?
+  strength                        String?
+  applicationMethod               String?
+  targetArea                      String?
+  instructionsSnapshot            String?
+  safetySnapshotJson              Json?
+  notes                           String?
+  immediateResponse               String?
+  adverseReaction                 Boolean   @default(false)
+  adverseReactionNotes            String?
+  followUpDueAt                   DateTime?
+  intervalOverrideNote            String?
+  correctedAt                     DateTime?
+  correctedByUserId               String?
+  correctionReason                String?
+  originalSnapshotJson            Json?
+  createdAt                       DateTime  @default(now())
+  updatedAt                       DateTime  @updatedAt
 
-  collection    Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  plantInstance PlantInstance @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
-  condition     PlantCondition? @relation(fields: [plantConditionId], references: [id], onDelete: SetNull)
-  plan          TreatmentPlan? @relation(fields: [treatmentPlanId], references: [id], onDelete: SetNull)
-  planStep      TreatmentPlanStep? @relation(fields: [treatmentPlanStepId], references: [id], onDelete: SetNull)
-  treatment     TreatmentDefinition? @relation(fields: [treatmentDefinitionId], references: [id], onDelete: SetNull)
-  product       TreatmentProduct? @relation(fields: [treatmentProductId], references: [id], onDelete: SetNull)
+  collection    Collection                     @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  plantInstance PlantInstance                  @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
+  condition     PlantCondition?                @relation(fields: [plantConditionId], references: [id], onDelete: SetNull)
+  plan          TreatmentPlan?                 @relation(fields: [treatmentPlanId], references: [id], onDelete: SetNull)
+  planStep      TreatmentPlanStep?             @relation(fields: [treatmentPlanStepId], references: [id], onDelete: SetNull)
+  treatment     TreatmentDefinition?           @relation(fields: [treatmentDefinitionId], references: [id], onDelete: SetNull)
+  product       TreatmentProduct?              @relation(fields: [treatmentProductId], references: [id], onDelete: SetNull)
   outcomes      TreatmentApplicationOutcome[]
   batchItem     TreatmentApplicationBatchItem? @relation(fields: [treatmentApplicationBatchItemId], references: [id], onDelete: SetNull)
 
@@ -2686,23 +2876,23 @@ model TreatmentApplication {
 }
 
 model TreatmentApplicationOutcome {
-  id                       String   @id @default(cuid())
-  collectionId             String
-  treatmentApplicationId   String
-  recordedByUserId         String?
-  observedAt               DateTime @default(now())
-  effectiveness            String
-  outcome                   String @default("UNKNOWN")
-  conditionResponse        String?
+  id                        String    @id @default(cuid())
+  collectionId              String
+  treatmentApplicationId    String
+  recordedByUserId          String?
+  observedAt                DateTime  @default(now())
+  effectiveness             String
+  outcome                   String    @default("UNKNOWN")
+  conditionResponse         String?
   observedConditionSeverity String?
-  adverseEffects           String?
-  notes                    String?
-  correctedAt              DateTime?
-  correctedByUserId        String?
-  correctionReason         String?
-  createdAt                DateTime @default(now())
+  adverseEffects            String?
+  notes                     String?
+  correctedAt               DateTime?
+  correctedByUserId         String?
+  correctionReason          String?
+  createdAt                 DateTime  @default(now())
 
-  collection  Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  collection  Collection           @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   application TreatmentApplication @relation(fields: [treatmentApplicationId], references: [id], onDelete: Cascade)
 
   @@index([collectionId, observedAt])
@@ -2720,9 +2910,9 @@ model TreatmentApplicationBatch {
   sharedValuesJson      Json
   createdAt             DateTime @default(now())
 
-  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  treatment TreatmentDefinition @relation(fields: [treatmentDefinitionId], references: [id], onDelete: Restrict)
-  items TreatmentApplicationBatchItem[]
+  collection Collection                      @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  treatment  TreatmentDefinition             @relation(fields: [treatmentDefinitionId], references: [id], onDelete: Restrict)
+  items      TreatmentApplicationBatchItem[]
 
   @@unique([collectionId, idempotencyKey])
   @@index([collectionId, appliedAt])
@@ -2730,23 +2920,23 @@ model TreatmentApplicationBatch {
 }
 
 model TreatmentApplicationBatchItem {
-  id                       String   @id @default(cuid())
-  collectionId             String
-  batchId                   String
-  plantInstanceId           String
-  plantConditionId          String?
-  treatmentPlanStepId       String?
-  status                    String   @default("PENDING")
-  warningSnapshotJson       Json?
-  error                     String?
-  createdAt                 DateTime @default(now())
-  updatedAt                 DateTime @updatedAt
+  id                  String   @id @default(cuid())
+  collectionId        String
+  batchId             String
+  plantInstanceId     String
+  plantConditionId    String?
+  treatmentPlanStepId String?
+  status              String   @default("PENDING")
+  warningSnapshotJson Json?
+  error               String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
-  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  batch TreatmentApplicationBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
-  plantInstance PlantInstance @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
-  condition PlantCondition? @relation(fields: [plantConditionId], references: [id], onDelete: SetNull)
-  application TreatmentApplication?
+  collection    Collection                @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  batch         TreatmentApplicationBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  plantInstance PlantInstance             @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
+  condition     PlantCondition?           @relation(fields: [plantConditionId], references: [id], onDelete: SetNull)
+  application   TreatmentApplication?
 
   @@unique([batchId, plantInstanceId])
   @@index([collectionId, status])
@@ -2769,11 +2959,11 @@ model PlantCondition {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  collection    Collection?    @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  plantInstance PlantInstance @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
-  user          User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
-  treatmentPlans TreatmentPlan[]
-  treatmentApplications TreatmentApplication[]
+  collection                     Collection?                     @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  plantInstance                  PlantInstance                   @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
+  user                           User?                           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  treatmentPlans                 TreatmentPlan[]
+  treatmentApplications          TreatmentApplication[]
   treatmentApplicationBatchItems TreatmentApplicationBatchItem[]
 
   @@index([collectionId])
@@ -2800,7 +2990,7 @@ model PlantCareAdjustment {
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
-  collection    Collection?    @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  collection    Collection?   @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   plantInstance PlantInstance @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
   user          User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
 
@@ -2830,9 +3020,9 @@ model CareScheduleSyncBatch {
   notes                 String?
   createdAt             DateTime @default(now())
 
-  collection    Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  createdByUser User?      @relation("CareScheduleSyncBatchCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  location      Location?  @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  collection    Collection             @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  createdByUser User?                  @relation("CareScheduleSyncBatchCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  location      Location?              @relation(fields: [locationId], references: [id], onDelete: SetNull)
   items         CareScheduleSyncItem[]
 
   @@index([collectionId])
@@ -2843,18 +3033,18 @@ model CareScheduleSyncBatch {
 }
 
 model CareScheduleSyncItem {
-  id                 String   @id @default(cuid())
-  batchId            String
-  collectionId       String
-  plantInstanceId    String
-  careType           String
-  previousDueAt      DateTime?
-  newDueAt           DateTime?
+  id                  String    @id @default(cuid())
+  batchId             String
+  collectionId        String
+  plantInstanceId     String
+  careType            String
+  previousDueAt       DateTime?
+  newDueAt            DateTime?
   previousCadenceJson Json?
-  newCadenceJson     Json?
-  action             String
-  skipReason         String?
-  createdAt          DateTime @default(now())
+  newCadenceJson      Json?
+  action              String
+  skipReason          String?
+  createdAt           DateTime  @default(now())
 
   batch         CareScheduleSyncBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
   collection    Collection            @relation(fields: [collectionId], references: [id], onDelete: Cascade)
@@ -2868,7 +3058,7 @@ model CareScheduleSyncItem {
 }
 
 model CollectionQuietDay {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   collectionId    String
   name            String
   description     String?
@@ -2878,13 +3068,13 @@ model CollectionQuietDay {
   endDate         DateTime?
   dayOfWeek       Int?
   timezone        String
-  active          Boolean  @default(true)
+  active          Boolean   @default(true)
   createdByUserId String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  collection    Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  createdByUser User?      @relation("CollectionQuietDayCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  collection    Collection               @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  createdByUser User?                    @relation("CollectionQuietDayCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
   adjustments   CareQuietDayAdjustment[]
 
   @@index([collectionId])
@@ -2929,9 +3119,9 @@ model CareQuietDayAdjustment {
   reason          String
   createdAt       DateTime @default(now())
 
-  collection    Collection        @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  collection    Collection          @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   quietDay      CollectionQuietDay? @relation(fields: [quietDayId], references: [id], onDelete: SetNull)
-  plantInstance PlantInstance?    @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
+  plantInstance PlantInstance?      @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
 
   @@index([collectionId])
   @@index([quietDayId])
@@ -2956,8 +3146,8 @@ model CareSheet {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  createdBy  User?      @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  collection Collection           @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  createdBy  User?                @relation(fields: [createdById], references: [id], onDelete: SetNull)
   plants     CareSheetPlant[]
   tasks      CareSheetTask[]
   accessLogs CareSheetAccessLog[]
@@ -3023,13 +3213,13 @@ model CareSheetTask {
 }
 
 model CareSheetAccessLog {
-  id          String   @id @default(cuid())
-  careSheetId String
+  id           String   @id @default(cuid())
+  careSheetId  String
   collectionId String
-  accessedAt DateTime @default(now())
-  ipHash     String?
-  userAgent  String?
-  action     String?
+  accessedAt   DateTime @default(now())
+  ipHash       String?
+  userAgent    String?
+  action       String?
 
   careSheet  CareSheet  @relation(fields: [careSheetId], references: [id], onDelete: Cascade)
   collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
@@ -3087,13 +3277,13 @@ model PropagationChild {
 }
 
 model Note {
-  id         String   @id @default(cuid())
+  id           String   @id @default(cuid())
   collectionId String?
-  entityType String
-  entityId   String
-  note       String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  entityType   String
+  entityId     String
+  note         String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   collection Collection? @relation(fields: [collectionId], references: [id], onDelete: Cascade)
 
@@ -3102,43 +3292,43 @@ model Note {
 }
 
 model Photo {
-  id         String   @id @default(cuid())
-  collectionId String?
-  uploadedByUserId String?
-  entityType String
-  entityId   String
-  filename   String
-  path       String
-  caption    String?
-  source     String?
-  sourceUrl  String?
-  cropX      Float?
-  cropY      Float?
-  cropWidth  Float?
-  cropHeight Float?
-  focalX     Float?
-  focalY     Float?
-  isCover    Boolean  @default(false)
-  isType     Boolean  @default(false)
-  moderationStatus String @default("PENDING")
-  nsfwFlagged Boolean @default(false)
-  plantDetected Boolean?
-  plantConfidence Float?
-  moderationCheckedAt DateTime?
-  moderationReason String?
-  moderationModel String?
-  moderationResultJson Json?
-  plantAnalysisJson Json?
-  moderationFailureCount Int @default(0)
-  moderationLastError String?
-  createdAt  DateTime @default(now())
+  id                     String    @id @default(cuid())
+  collectionId           String?
+  uploadedByUserId       String?
+  entityType             String
+  entityId               String
+  filename               String
+  path                   String
+  caption                String?
+  source                 String?
+  sourceUrl              String?
+  cropX                  Float?
+  cropY                  Float?
+  cropWidth              Float?
+  cropHeight             Float?
+  focalX                 Float?
+  focalY                 Float?
+  isCover                Boolean   @default(false)
+  isType                 Boolean   @default(false)
+  moderationStatus       String    @default("PENDING")
+  nsfwFlagged            Boolean   @default(false)
+  plantDetected          Boolean?
+  plantConfidence        Float?
+  moderationCheckedAt    DateTime?
+  moderationReason       String?
+  moderationModel        String?
+  moderationResultJson   Json?
+  plantAnalysisJson      Json?
+  moderationFailureCount Int       @default(0)
+  moderationLastError    String?
+  createdAt              DateTime  @default(now())
 
-  collection Collection? @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  uploadedByUser User? @relation("PhotoUploader", fields: [uploadedByUserId], references: [id], onDelete: SetNull)
-  moderationReviews ImageModerationReview[]
-  plantIdentificationLogs PlantIdentificationLog[]
-  exhibitCoverPhotos CollectionExhibit[] @relation("CollectionExhibitCoverPhoto")
-  acquisitionBatchReceipts AcquisitionBatch[] @relation("AcquisitionBatchReceiptPhoto")
+  collection               Collection?              @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  uploadedByUser           User?                    @relation("PhotoUploader", fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+  moderationReviews        ImageModerationReview[]
+  plantIdentificationLogs  PlantIdentificationLog[]
+  exhibitCoverPhotos       CollectionExhibit[]      @relation("CollectionExhibitCoverPhoto")
+  acquisitionBatchReceipts AcquisitionBatch[]       @relation("AcquisitionBatchReceiptPhoto")
 
   @@index([collectionId])
   @@index([uploadedByUserId])
@@ -3151,15 +3341,15 @@ model Photo {
 }
 
 model ImageModerationReview {
-  id               String   @id @default(cuid())
+  id               String    @id @default(cuid())
   photoId          String
   collectionId     String?
   uploaderUserId   String?
   reviewType       String
-  status           String   @default("PENDING")
+  status           String    @default("PENDING")
   reason           String?
   model            String?
-  createdAt        DateTime @default(now())
+  createdAt        DateTime  @default(now())
   resolvedAt       DateTime?
   resolvedByUserId String?
 
@@ -3233,7 +3423,7 @@ model BloomEvent {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  collection    Collection?    @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  collection    Collection?   @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   plantInstance PlantInstance @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
 
   @@index([collectionId])
@@ -3257,19 +3447,19 @@ model SportStabilityRecord {
 }
 
 model WorkflowTemplate {
-  id               String   @id @default(cuid())
-  collectionId     String
-  name             String
-  description      String?
-  category         String?
-  isBuiltIn        Boolean  @default(false)
-  isArchived       Boolean  @default(false)
-  createdByUserId  String?
-  triggerType      String?
+  id                String   @id @default(cuid())
+  collectionId      String
+  name              String
+  description       String?
+  category          String?
+  isBuiltIn         Boolean  @default(false)
+  isArchived        Boolean  @default(false)
+  createdByUserId   String?
+  triggerType       String?
   triggerConfigJson Json?
-  isTriggerEnabled Boolean  @default(false)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  isTriggerEnabled  Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   collection    Collection     @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   createdByUser User?          @relation("WorkflowTemplateCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
@@ -3298,7 +3488,7 @@ model WorkflowStep {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  template WorkflowTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  template WorkflowTemplate  @relation(fields: [templateId], references: [id], onDelete: Cascade)
   runSteps WorkflowRunStep[]
 
   @@index([templateId])
@@ -3326,11 +3516,11 @@ model WorkflowRun {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
-  collection Collection        @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  template   WorkflowTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
-  location   Location?         @relation(fields: [locationId], references: [id], onDelete: SetNull)
-  assignedTo User?             @relation("WorkflowRunAssignedTo", fields: [assignedToUserId], references: [id], onDelete: SetNull)
-  startedBy  User              @relation("WorkflowRunStartedBy", fields: [startedByUserId], references: [id], onDelete: Cascade)
+  collection Collection         @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  template   WorkflowTemplate?  @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  location   Location?          @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  assignedTo User?              @relation("WorkflowRunAssignedTo", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  startedBy  User               @relation("WorkflowRunStartedBy", fields: [startedByUserId], references: [id], onDelete: Cascade)
   plants     WorkflowRunPlant[]
   steps      WorkflowRunStep[]
 
@@ -3397,26 +3587,26 @@ model WorkflowRunStep {
 }
 
 model Reminder {
-  id          String    @id @default(cuid())
+  id           String    @id @default(cuid())
   collectionId String?
-  userId      String
-  title       String
-  body        String?
-  category    String    @default("GENERAL")
-  entityType  String?
-  entityId    String?
-  dueAt       DateTime
-  rrule       String?
-  lastSentAt  DateTime?
-  nextSendAt  DateTime?
-  completedAt DateTime?
-  pausedAt    DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  userId       String
+  title        String
+  body         String?
+  category     String    @default("GENERAL")
+  entityType   String?
+  entityId     String?
+  dueAt        DateTime
+  rrule        String?
+  lastSentAt   DateTime?
+  nextSendAt   DateTime?
+  completedAt  DateTime?
+  pausedAt     DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
-  collection Collection?        @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  deliveries ReminderDelivery[]
+  collection     Collection?        @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries     ReminderDelivery[]
   careSheetTasks CareSheetTask[]
 
   @@index([collectionId])
@@ -3428,21 +3618,21 @@ model Reminder {
 }
 
 model ReminderDelivery {
-  id         String    @id @default(cuid())
+  id           String    @id @default(cuid())
   collectionId String?
-  reminderId String
-  userId     String?
-  recipient  String
-  subject    String
-  status     String    @default("PENDING")
-  provider   String?
-  providerId String?
-  error      String?
-  sentAt     DateTime?
-  createdAt  DateTime  @default(now())
+  reminderId   String
+  userId       String?
+  recipient    String
+  subject      String
+  status       String    @default("PENDING")
+  provider     String?
+  providerId   String?
+  error        String?
+  sentAt       DateTime?
+  createdAt    DateTime  @default(now())
 
   collection Collection? @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  reminder Reminder @relation(fields: [reminderId], references: [id], onDelete: Cascade)
+  reminder   Reminder    @relation(fields: [reminderId], references: [id], onDelete: Cascade)
 
   @@index([collectionId])
   @@index([reminderId])

@@ -1,11 +1,13 @@
 import { PrismaClient } from '@prisma/client'
 import { randomBytes, scryptSync } from 'crypto'
+import { ensureStarterSubstrates } from '../lib/substrates'
 const prisma = new PrismaClient()
 function hashPassword(password:string){ const salt=randomBytes(16).toString('hex'); const hash=scryptSync(password,salt,64).toString('hex'); return `${salt}:${hash}` }
 async function main(){
  await prisma.auditLog.deleteMany(); await prisma.session.deleteMany(); await prisma.collectionMembership.deleteMany(); await prisma.collectionInvitation.deleteMany(); await prisma.sportStabilityRecord.deleteMany(); await prisma.propagationChild.deleteMany(); await prisma.parentageLink.deleteMany(); await prisma.propagationEvent.deleteMany(); await prisma.bloomEvent.deleteMany(); await prisma.note.deleteMany(); await prisma.photo.deleteMany(); await prisma.plantHusbandryOverride.deleteMany(); await prisma.plantInstance.deleteMany(); await prisma.plantHusbandryGuide.deleteMany(); await prisma.plantDefinition.deleteMany(); await prisma.governingBody.deleteMany(); await prisma.followNotification.deleteMany(); await prisma.follow.deleteMany(); await prisma.reminderDelivery.deleteMany(); await prisma.reminder.deleteMany(); await prisma.collection.deleteMany(); await prisma.user.deleteMany();
  const admin=await prisma.user.create({data:{email:'admin@axildb.com',emailVerifiedAt:new Date(),passwordHash:hashPassword('password'),role:'SERVER_ADMIN'}})
  const collection=await prisma.collection.create({data:{name:'AxilDB',slug:'axildb',visibility:'PRIVATE',status:'ACTIVE',description:'Default AxilDB collection.'}})
+ await ensureStarterSubstrates(prisma,collection.id,admin.id)
  await prisma.collectionMembership.create({data:{collectionId:collection.id,userId:admin.id,role:'MANAGER',status:'ACTIVE'}})
  const palmstreet=await prisma.distributor.create({data:{collectionId:collection.id,name:'Palmstreet',normalizedName:'palmstreet',distributorType:'MARKETPLACE'}})
  const etsy=await prisma.distributor.create({data:{collectionId:collection.id,name:'Etsy',normalizedName:'etsy',distributorType:'MARKETPLACE'}})

@@ -11,6 +11,7 @@ import { plantName } from '@/lib/utils'
 import { normalizePlantDefinitionIdentity } from '@/lib/plant-identity'
 import { acquisitionProvenanceDisplay, sourceRowsFromForm, validateCommerceSelection, validateSourceRows } from '@/lib/provenance'
 import type { AcquisitionAvailability, AcquisitionFulfillmentChoice, AcquisitionStatus } from '@prisma/client'
+import { setPlantSubstrate, substrateModes } from '@/lib/substrates'
 
 const val = (fd: FormData, key: string) => String(fd.get(key) || '').trim() || undefined
 const clearableVal = (fd: FormData, key: string) => fd.has(key) ? val(fd, key) || null : undefined
@@ -329,6 +330,7 @@ export async function createPlantAcquisitionRecord(fd: FormData) {
   const sourceRecords = await validateSourceRows(prisma, collection.id, sourceRows)
   const sourceNames = new Map(sourceRecords.map((source) => [source.id, source.name]))
   const primarySource = sourceRows.find((row) => row.isPrimary) || sourceRows[0]
+  const substrateMode = substrateModes.includes(val(fd, 'substrateMode') as any) ? val(fd, 'substrateMode')! : 'RECEIVED_SUBSTRATE'
 
   const result = await prisma.$transaction(async (tx) => {
     const record = await tx.plantAcquisitionRecord.create({
@@ -415,6 +417,17 @@ export async function createPlantAcquisitionRecord(fd: FormData) {
             location: location ? { id: location.id, name: location.name, code: location.code } : null,
             summary: val(fd, 'notes') || undefined,
           },
+        })
+        const substrate = await setPlantSubstrate(tx, {
+          collectionId: collection.id, plantInstanceId: instance.id, mode: substrateMode,
+          recipeVersionId: clearableVal(fd, 'substrateRecipeVersionId'), description: clearableVal(fd, 'receivedSubstrateDescription'),
+          notes: clearableVal(fd, 'substrateNotes'), startedAt: acquiredAt, reason: 'Initial substrate recorded at acquisition', changedByUserId: user.id,
+        })
+        await emitDomainEvent(tx, {
+          eventType: substrateMode === 'RECEIVED_SUBSTRATE' ? 'plant.received_substrate_recorded' : 'plant.substrate_assigned',
+          collectionId: collection.id, aggregateId: instance.id, actor: { id: user.id, role: user.role }, occurredAt: acquiredAt,
+          idempotencyKey: `plant:${instance.id}:substrate:${substrate.history.id}`,
+          payload: { subjectId: instance.id, plantInstanceId: instance.id, plantId: instance.plantId, recordId: substrate.history.id, recordType: 'PlantSubstrateHistory', newMode: substrateMode, newRecipeVersionId: substrate.recipeVersion?.id, displayName: substrate.recipeVersion ? `${substrate.recipeVersion.recipe.name} v${substrate.recipeVersion.versionNumber}` : substrateMode.replaceAll('_', ' ') },
         })
         createdInstances.push(instance)
       }
@@ -567,6 +580,15 @@ export async function createAcquisitionBatch(fd: FormData) {
             acquisitionDate: acquiredAt, distributor: seller?.name || distributor?.name || null, purchasePrice: dec(val(fd, `unitPrice:${definition.id}`)) as any,
             acquisitionLabel: clearableVal(fd, `acquisitionLabel:${definition.id}`),
           } })
+          await setPlantSubstrate(tx, {
+            collectionId: collection.id,
+            plantInstanceId: instance.id,
+            mode: 'RECEIVED_SUBSTRATE',
+            description: 'Substrate as received; composition not yet recorded.',
+            startedAt: acquiredAt,
+            reason: 'Initial substrate recorded from bulk acquisition',
+            changedByUserId: user.id,
+          })
           await tx.plantAcquisitionRecordInstance.create({ data: { acquisitionRecordId: record.id, plantInstanceId: instance.id } })
           await emitDomainEvent(tx, {
             eventType: 'acquisition.instance_created', collectionId: collection.id, aggregateId: instance.id,

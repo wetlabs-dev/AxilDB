@@ -18,6 +18,7 @@ import { cn, plantName } from '@/lib/utils'
 import { ensureStarterWorkflowTemplates } from '@/lib/workflows'
 import Link from 'next/link'
 import { PlantTagRow } from '@/components/PlantTagChip'
+import { substrateAssignmentLabel, substrateLabel, substrateModes } from '@/lib/substrates'
 
 const instanceSortOptions: SortOption[] = [
   { value: 'plantIdAsc', label: 'Plant ID A-Z' },
@@ -33,7 +34,7 @@ const instanceSortOptions: SortOption[] = [
 export default async function Instances({
   searchParams,
 }: {
-  searchParams: Promise<{ definition?: string; location?: string; includeNested?: string; tag?: string }>
+  searchParams: Promise<{ definition?: string; location?: string; includeNested?: string; tag?: string; substrateMode?: string; substrateVersion?: string; substrateComponent?: string }>
 }) {
   const user = await getCurrentUser()
   const sp = await searchParams
@@ -44,9 +45,12 @@ export default async function Instances({
   const locationFilter = sp.location || ''
   const includeNestedLocations = sp.includeNested !== '0'
   const tagFilter = sp.tag || ''
+  const substrateModeFilter = sp.substrateMode || ''
+  const substrateVersionFilter = sp.substrateVersion || ''
+  const substrateComponentFilter = sp.substrateComponent || ''
   const sortKey = await sortPreference(user?.id, 'instances', 'plantIdAsc', instanceSortOptions.map((option) => option.value))
   await ensureStarterWorkflowTemplates(prisma, collection.id)
-  const [defs, instanceSuggestionRows, locations, locationTypes, workflowTemplates, sources, distributors, sellers, activeTags] = await Promise.all([
+  const [defs, instanceSuggestionRows, locations, locationTypes, workflowTemplates, sources, distributors, sellers, activeTags, substrateVersions, substrateComponents] = await Promise.all([
     prisma.plantDefinition.findMany({
       where: { OR: [collectionWhere, { collectionId: null, isValidated: true }] },
       orderBy: [{ isValidated: 'desc' }, { genus: 'asc' }, { species: 'asc' }, { cultivarName: 'asc' }],
@@ -73,6 +77,8 @@ export default async function Instances({
     prisma.distributor.findMany({ where: { collectionId: collection.id, active: true }, include: { outlets: { where: { active: true }, orderBy: { name: 'asc' } } }, orderBy: { name: 'asc' } }),
     prisma.seller.findMany({ where: { collectionId: collection.id, active: true }, include: { storefronts: { where: { active: true }, orderBy: { handleOrName: 'asc' } } }, orderBy: { name: 'asc' } }),
     prisma.plantTag.findMany({ where: { collectionId: collection.id, active: true }, orderBy: { name: 'asc' } }),
+    prisma.substrateRecipeVersion.findMany({ where: { collectionId: collection.id, status: 'ACTIVE', recipe: { archivedAt: null } }, include: { recipe: true }, orderBy: { recipe: { name: 'asc' } } }),
+    prisma.substrateComponent.findMany({ where: { collectionId: collection.id, active: true }, orderBy: { name: 'asc' } }),
   ])
   const locationNodes = locations.map((location) => ({
     id: location.id,
@@ -94,8 +100,11 @@ export default async function Instances({
       ...(definitionFilter ? { plantDefinitionId: definitionFilter } : {}),
       ...(filteredLocationIds.length ? { currentLocationId: { in: filteredLocationIds } } : {}),
       ...(tagFilter ? { plantDefinition: { tags: { some: { plantTagId: tagFilter } } } } : {}),
+      ...(substrateModeFilter ? { currentSubstrate: { is: { substrateMode: substrateModeFilter } } } : {}),
+      ...(substrateVersionFilter ? { currentSubstrate: { is: { substrateRecipeVersionId: substrateVersionFilter } } } : {}),
+      ...(substrateComponentFilter ? { currentSubstrate: { is: { recipeVersion: { components: { some: { substrateComponentId: substrateComponentFilter } } } } } } : {}),
     },
-    include: { plantDefinition: { include: { tags: { include: { plantTag: true }, orderBy: { plantTag: { name: 'asc' } } } } }, currentLocation: { include: { locationType: true } }, quarantines: { where: { status: 'ACTIVE' }, take: 1 } },
+    include: { plantDefinition: { include: { tags: { include: { plantTag: true }, orderBy: { plantTag: { name: 'asc' } } } } }, currentLocation: { include: { locationType: true } }, currentSubstrate: { include: { recipeVersion: { include: { recipe: true } } } }, quarantines: { where: { status: 'ACTIVE' }, take: 1 } },
     orderBy: { plantId: 'asc' },
   })
   const locationSuggestions = rankedSuggestions(instanceSuggestionRows.map((instance) => instance.location))
@@ -108,6 +117,9 @@ export default async function Instances({
   if (definitionFilter) filterParams.set('definition', definitionFilter)
   if (locationFilter) filterParams.set('location', locationFilter)
   if (tagFilter) filterParams.set('tag', tagFilter)
+  if (substrateModeFilter) filterParams.set('substrateMode', substrateModeFilter)
+  if (substrateVersionFilter) filterParams.set('substrateVersion', substrateVersionFilter)
+  if (substrateComponentFilter) filterParams.set('substrateComponent', substrateComponentFilter)
   filterParams.set('includeNested', includeNestedLocations ? '1' : '0')
   const instancesBackPath = collectionPath(collection.slug, `/instances${filterParams.toString() ? `?${filterParams}` : ''}`)
   const careSyncParams = new URLSearchParams()
@@ -179,7 +191,7 @@ export default async function Instances({
       </div>
 
       <Card>
-        <form action={collectionPath(collection.slug, '/instances')} className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto] md:items-end">
+        <form action={collectionPath(collection.slug, '/instances')} className="grid gap-3 md:grid-cols-2 xl:grid-cols-4 xl:items-end">
           {definitionFilter && <input type="hidden" name="definition" value={definitionFilter} />}
           <label className="grid gap-1 text-sm font-medium text-stone-800">
             Filter by location
@@ -191,6 +203,9 @@ export default async function Instances({
             </select>
           </label>
           <label className="grid gap-1 text-sm font-medium text-stone-800">Filter by tag<select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="tag" defaultValue={tagFilter}><option value="">All tags</option>{activeTags.map((tag) => <option key={tag.id} value={tag.id}>{tag.name}</option>)}</select></label>
+          <label className="grid gap-1 text-sm font-medium text-stone-800">Substrate mode<select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="substrateMode" defaultValue={substrateModeFilter}><option value="">All substrate modes</option>{substrateModes.map((mode) => <option key={mode} value={mode}>{substrateLabel(mode)}</option>)}</select></label>
+          <label className="grid gap-1 text-sm font-medium text-stone-800">Substrate recipe<select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="substrateVersion" defaultValue={substrateVersionFilter}><option value="">All recipe versions</option>{substrateVersions.map((version) => <option key={version.id} value={version.id}>{version.recipe.name} v{version.versionNumber}</option>)}</select></label>
+          <label className="grid gap-1 text-sm font-medium text-stone-800">Contains component<select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="substrateComponent" defaultValue={substrateComponentFilter}><option value="">Any component</option>{substrateComponents.map((component) => <option key={component.id} value={component.id}>{component.name}</option>)}</select></label>
           <label className="flex items-center gap-2 rounded-md border border-stone-200 bg-white/50 px-3 py-2 text-sm font-medium text-stone-800">
             <input type="hidden" name="includeNested" value="0" />
             <input type="checkbox" name="includeNested" value="1" defaultChecked={includeNestedLocations} />
@@ -198,7 +213,7 @@ export default async function Instances({
           </label>
           <div className="flex gap-2">
             <Button className="px-3 py-2">Apply</Button>
-            {(definitionFilter || locationFilter || tagFilter) && <Link className="rounded-md border border-stone-300 bg-white/70 px-3 py-2 text-sm font-semibold" href={collectionPath(collection.slug, '/instances')}>Clear</Link>}
+            {(definitionFilter || locationFilter || tagFilter || substrateModeFilter || substrateVersionFilter || substrateComponentFilter) && <Link className="rounded-md border border-stone-300 bg-white/70 px-3 py-2 text-sm font-semibold" href={collectionPath(collection.slug, '/instances')}>Clear</Link>}
           </div>
         </form>
       </Card>
@@ -248,6 +263,10 @@ export default async function Instances({
             <div className="lg:col-span-4"><AcquisitionSourceChainFields sources={sources} /></div>
             <Field label="Stock number" help="Optional vendor, nursery, or collection stock number from the original source." name="stockNumber" list="instance-stock-number-suggestions" />
             <Field label="Purchase price" help="Optional cost record for your own collection tracking." name="purchasePrice" type="number" min="0" step="0.01" />
+            <label className="grid gap-1 text-sm font-medium">Initial substrate<select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="substrateMode" defaultValue="RECEIVED_SUBSTRATE">{substrateModes.map((mode) => <option key={mode} value={mode}>{substrateLabel(mode)}</option>)}</select></label>
+            <label className="grid gap-1 text-sm font-medium">Substrate recipe version<select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="substrateRecipeVersionId" defaultValue=""><option value="">Choose when using Recipe</option>{substrateVersions.map((version) => <option key={version.id} value={version.id}>{version.recipe.name} v{version.versionNumber}</option>)}</select></label>
+            <Field label="Received/custom substrate description" name="receivedSubstrateDescription" wrapperClassName="lg:col-span-2" />
+            <Field label="Substrate notes" name="substrateNotes" wrapperClassName="lg:col-span-2" />
             <TextArea label="Notes" help="Initial observation or context to add to the plant's note history at creation." name="note" wrapperClassName="lg:col-span-2" />
             <Button className="justify-self-start lg:col-span-4">Create instance</Button>
           </form>
@@ -328,6 +347,7 @@ export default async function Instances({
                   <p className="truncate text-sm text-stone-600">
                     {instance.instanceType} · {instance.currentLocation ? `${instance.currentLocation.code} · ${locationPath(instance.currentLocation.id, locationNodes)}` : instance.location || 'No location'}
                   </p>
+                  <p className="mt-1 truncate text-xs text-stone-600">Substrate: {substrateAssignmentLabel(instance.currentSubstrate)}</p>
                   <div className="mt-2"><PlantTagRow tags={instance.plantDefinition.tags.map((item) => item.plantTag)} limit={3} /></div>
                   {instance.quarantines.length > 0 && (
                     <p className="mt-2 inline-flex rounded-full border border-[#c9a15b] bg-[#fff2cf] px-2 py-0.5 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-[#6f4b12]">

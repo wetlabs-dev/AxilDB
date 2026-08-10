@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
-import { Bell, Bug, ChevronDown, Droplets, FlaskConical, Flower2, HeartPulse, Sprout } from 'lucide-react'
+import { Bell, Bug, ChevronDown, Droplets, FlaskConical, Flower2, HeartPulse, Layers3, Sprout } from 'lucide-react'
 import {
   completeCareTask,
   conditionStillNeedsAttentionFromCareQueue,
@@ -25,6 +25,7 @@ function taskIcon(task: CareQueueItem) {
   const className = 'h-4 w-4'
   if (task.taskType === 'WATER') return <Droplets className={className} />
   if (task.taskType === 'FERTILIZE') return <FlaskConical className={className} />
+  if (task.taskType === 'REPOT') return <Layers3 className={className} />
   if (task.taskType === 'TREATMENT') return <FlaskConical className={className} />
   if (task.taskType === 'PROPAGATION_CHECK') return <Sprout className={className} />
   if (task.taskType === 'PEST_CHECK') return <Bug className={className} />
@@ -36,6 +37,7 @@ function taskIcon(task: CareQueueItem) {
 function careTaskLabel(type: CareQueueItem['taskType']) {
   if (type === 'WATER') return 'Water'
   if (type === 'FERTILIZE') return 'Fertilize'
+  if (type === 'REPOT') return 'Repot'
   if (type === 'TREATMENT') return 'Treatment'
   if (type === 'PROPAGATION_CHECK') return 'Propagation check'
   if (type === 'PEST_CHECK') return 'Pest check'
@@ -213,10 +215,12 @@ function NormalCareDetails({
   item,
   collectionSlug,
   back,
+  substrateVersions,
 }: {
   item: CareQueueItem
   collectionSlug: string
   back: string
+  substrateVersions: Array<{ id: string; label: string }>
 }) {
   if (item.source === 'treatment-plan') return (
     <div className="grid gap-2 rounded-md border border-amber-200 bg-amber-50/70 p-3 text-sm text-stone-700">
@@ -241,6 +245,27 @@ function NormalCareDetails({
               <Field label="Dose" name="fertilizerDose" placeholder="e.g. 2 ml" />
               <Field label="Water volume" name="fertilizerWaterVolume" placeholder="e.g. 1 L" />
             </div>
+          </div>
+        )}
+        {item.taskType === 'REPOT' && (
+          <div className="grid gap-3 rounded-md border border-[#d6dfc9] bg-[#f7f4e8]/80 p-3 text-sm text-stone-700">
+            <div className="grid gap-1 sm:grid-cols-2">
+              <p><span className="font-semibold text-stone-800">Current:</span> {item.currentSubstrate || 'Unknown substrate'}</p>
+              <p><span className="font-semibold text-stone-800">Recommended:</span> {item.recommendedSubstrate || 'No ranked recommendation'}</p>
+            </div>
+            <Select label="New substrate type" name="substrateMode" defaultValue={item.recommendedSubstrateRecipeVersionId ? 'RECIPE' : 'RECEIVED_SUBSTRATE'}>
+              <option value="RECIPE">Substrate recipe</option>
+              <option value="RECEIVED_SUBSTRATE">Received Substrate</option>
+              <option value="CUSTOM_UNKNOWN">Custom / Unknown Mix</option>
+              <option value="NO_SUBSTRATE">No Substrate</option>
+              <option value="UNKNOWN">Unknown</option>
+            </Select>
+            <Select label="Recipe version" name="substrateRecipeVersionId" defaultValue={item.recommendedSubstrateRecipeVersionId || ''}>
+              <option value="">Choose a recipe when using Substrate recipe</option>
+              {substrateVersions.map((version) => <option key={version.id} value={version.id}>{version.label}</option>)}
+            </Select>
+            <TextArea label="Received/custom substrate description" name="receivedSubstrateDescription" className="min-h-14" />
+            <Field label="Substrate notes" name="substrateNotes" />
           </div>
         )}
         {item.source === 'derived' && <TextArea label="Quick note" name="notes" className="min-h-14" />}
@@ -290,12 +315,14 @@ function CareQueueItemDetails({
   back,
   canAct,
   timezone,
+  substrateVersions,
 }: {
   item: CareQueueItem
   collectionSlug: string
   back: string
   canAct: boolean
   timezone?: string | null
+  substrateVersions: Array<{ id: string; label: string }>
 }) {
   if (!canAct || item.completedAt) return null
   return (
@@ -303,7 +330,7 @@ function CareQueueItemDetails({
       {item.condition ? (
         <ConditionActionsPanel item={item} collectionSlug={collectionSlug} back={back} timezone={timezone} />
       ) : (
-        <NormalCareDetails item={item} collectionSlug={collectionSlug} back={back} />
+        <NormalCareDetails item={item} collectionSlug={collectionSlug} back={back} substrateVersions={substrateVersions} />
       )}
       <PropagationEstablishedAction item={item} collectionSlug={collectionSlug} back={back} />
     </div>
@@ -321,7 +348,7 @@ function DesktopPrimaryAction({
   back: string
   canAct: boolean
 }) {
-  if (!canAct || item.completedAt || item.condition) return null
+  if (!canAct || item.completedAt || item.condition || item.taskType === 'REPOT') return null
   if (item.source === 'treatment-plan') return <Link href={item.href} className="rounded-md bg-[#2f6b45] px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#28593b]">Continue plan</Link>
   return (
     <form action={completeCareTask}>
@@ -339,12 +366,14 @@ export function CareQueueItemCard({
   back,
   canAct,
   timezone,
+  substrateVersions,
 }: {
   item: CareQueueItem
   collectionSlug: string
   back: string
   canAct: boolean
   timezone?: string | null
+  substrateVersions: Array<{ id: string; label: string }>
 }) {
   const [desktopExpanded, setDesktopExpanded] = useState(false)
   const detailsId = `care-item-details-${item.key.replace(/[^a-zA-Z0-9_-]/g, '-')}`
@@ -361,7 +390,7 @@ export function CareQueueItemCard({
           <PlantHeading item={item} collectionSlug={collectionSlug} />
           <p className="text-sm text-stone-700">{item.reason}</p>
           <QuietDayNotice item={item} />
-          <CareQueueItemDetails item={item} collectionSlug={collectionSlug} back={back} canAct={canAct} timezone={timezone} />
+          <CareQueueItemDetails item={item} collectionSlug={collectionSlug} back={back} canAct={canAct} timezone={timezone} substrateVersions={substrateVersions} />
           <Link href={item.href} className="text-sm font-medium text-[#2f6b45] underline">View record</Link>
         </div>
       </div>
@@ -397,7 +426,7 @@ export function CareQueueItemCard({
           <div id={detailsId} className="border-t border-stone-200 px-4 pb-4 pt-3">
             <div className="grid gap-2">
               <p className="text-sm text-stone-700">{item.reason}</p>
-              <CareQueueItemDetails item={item} collectionSlug={collectionSlug} back={back} canAct={canAct} timezone={timezone} />
+              <CareQueueItemDetails item={item} collectionSlug={collectionSlug} back={back} canAct={canAct} timezone={timezone} substrateVersions={substrateVersions} />
               <Link href={item.href} className="text-sm font-medium text-[#2f6b45] underline">View record</Link>
             </div>
           </div>

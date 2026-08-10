@@ -10,6 +10,7 @@ import { plantName } from '@/lib/utils'
 export const careTaskTypes = [
   'WATER',
   'FERTILIZE',
+  'REPOT',
   'PROPAGATION_CHECK',
   'PEST_CHECK',
   'HEALTH_CHECK',
@@ -22,6 +23,7 @@ export const careTaskTypes = [
 const latestCareEventTypes = [
   'WATERED',
   'FERTILIZED',
+  'REPOTTED',
   'PEST_CHECK',
   'HEALTH_CHECK',
   'PROPAGATION_CHECK',
@@ -29,7 +31,7 @@ const latestCareEventTypes = [
 ] as const
 
 export type CareTaskType = (typeof careTaskTypes)[number]
-export type CareQueueFilter = 'today' | 'overdue' | 'water' | 'fertilize' | 'treatment' | 'propagation' | 'health' | 'pest' | 'bloom' | 'custom' | 'completed'
+export type CareQueueFilter = 'today' | 'overdue' | 'water' | 'fertilize' | 'repot' | 'treatment' | 'propagation' | 'health' | 'pest' | 'bloom' | 'custom' | 'completed'
 
 export type CareQueueItem = {
   key: string
@@ -72,6 +74,9 @@ export type CareQueueItem = {
   fertilizerRecipeSummary?: string | null
   fertilizerStrength?: string | null
   fertilizerSource?: 'definition' | 'override'
+  currentSubstrate?: string | null
+  recommendedSubstrateRecipeVersionId?: string | null
+  recommendedSubstrate?: string | null
   treatmentPlanId?: string
   treatmentPlanStepId?: string
   treatmentName?: string | null
@@ -111,6 +116,18 @@ export function waterCadenceDays(summaryWater?: string | null, cadenceOverride?:
   return 7
 }
 
+export function repotCadenceDays(interval?: string | null) {
+  const value = normalized(interval)
+  if (!value) return null
+  const number = Number(value.match(/\d+(?:\.\d+)?/)?.[0])
+  if (value.includes('week') && number > 0) return Math.round(number * 7)
+  if (value.includes('month') && number > 0) return Math.round(number * 30.4375)
+  if (value.includes('year') && number > 0) return Math.round(number * 365.25)
+  if (value.includes('biennial') || value.includes('every other year')) return 730
+  if (value.includes('annual') || value.includes('yearly')) return 365
+  return null
+}
+
 function pestCadenceDays(guide: any, adjustment?: any) {
   if (adjustment?.cadenceOverrideDays && adjustment.cadenceOverrideDays > 0) return adjustment.cadenceOverrideDays
   const susceptibility = normalized(guide?.susceptibilityLevel)
@@ -130,6 +147,7 @@ function conditionPriority(severity?: string | null) {
 export function careTaskLabel(type: CareTaskType) {
   if (type === 'WATER') return 'Water'
   if (type === 'FERTILIZE') return 'Fertilize'
+  if (type === 'REPOT') return 'Repot'
   if (type === 'PROPAGATION_CHECK') return 'Propagation check'
   if (type === 'PEST_CHECK') return 'Pest check'
   if (type === 'HEALTH_CHECK') return 'Health check'
@@ -274,8 +292,19 @@ export async function getCareQueue(
   const instances = await prisma.plantInstance.findMany({
     where: { collectionId, status: 'ACTIVE' },
     include: {
-      plantDefinition: { include: { husbandryGuide: { include: { fertilizerRecipe: { include: { products: { include: { product: true }, orderBy: { sortOrder: 'asc' } } } } } } } },
+      plantDefinition: {
+        include: {
+          husbandryGuide: { include: { fertilizerRecipe: { include: { products: { include: { product: true }, orderBy: { sortOrder: 'asc' } } } } } },
+          substrateRecommendations: {
+            where: { collectionId },
+            include: { recipeVersion: { include: { recipe: true } } },
+            orderBy: { rank: 'asc' },
+            take: 1,
+          },
+        },
+      },
       husbandryOverride: { include: { fertilizerRecipe: { include: { products: { include: { product: true }, orderBy: { sortOrder: 'asc' } } } } } },
+      currentSubstrate: { include: { recipeVersion: { include: { recipe: true } } } },
     },
   })
   const activePlantInstanceIds = instances.map((instance) => instance.id)
@@ -325,6 +354,7 @@ export async function getCareQueue(
   const openBloomById = new Map(openBlooms.map((bloom) => [bloom.id, bloom]))
   const latestWater = latestBy(careEvents as any, 'WATERED')
   const latestFertilized = latestBy(careEvents as any, 'FERTILIZED')
+  const latestRepotted = latestBy(careEvents as any, 'REPOTTED')
   const latestPestCheck = latestBy(careEvents as any, 'PEST_CHECK')
   const latestHealthCheck = latestBy(careEvents as any, 'HEALTH_CHECK')
   const latestPropagationCheck = latestBy(careEvents as any, 'PROPAGATION_CHECK')
@@ -436,6 +466,36 @@ export async function getCareQueue(
         fertilizerRecipeSummary: fertilizer.recipe ? fertilizerRecipeSummary(fertilizer.recipe) : guide.fertilizationType || null,
         fertilizerStrength: guide.fertilizationStrength || fertilizer.recipe?.strengthLabel || null,
         fertilizerSource: fertilizer.source,
+      })
+    }
+
+    const repotDays = repotCadenceDays(guide.repottingInterval)
+    if (repotDays) {
+      const lastRepotted = latestRepotted.get(instance.id)?.performedAt || instance.currentSubstrate?.startedAt || baseDate
+      const recommendation = instance.plantDefinition.substrateRecommendations[0]
+      pushDerived({
+        key: `REPOT:${instance.id}`,
+        taskType: 'REPOT',
+        title: `Repot ${instance.plantId}`,
+        reason: latestRepotted.has(instance.id) || instance.currentSubstrate
+          ? `Substrate was last recorded ${daysBetween(now, lastRepotted, timezone)} day${daysBetween(now, lastRepotted, timezone) === 1 ? '' : 's'} ago; repotting interval is ${guide.repottingInterval}.`
+          : `No substrate has been recorded; repotting interval is ${guide.repottingInterval}.`,
+        dueAt: addDays(lastRepotted, repotDays, timezone),
+        basePriority: 48,
+        plantInstanceId: instance.id,
+        plantId: instance.plantId,
+        plantName: plantDisplayName,
+        location: instance.location,
+        image,
+        currentSubstrate: instance.currentSubstrate?.substrateMode === 'RECIPE'
+          ? `${instance.currentSubstrate.recipeVersion?.recipe.name || 'Substrate recipe'} v${instance.currentSubstrate.recipeVersion?.versionNumber || '?'}`
+          : instance.currentSubstrate?.substrateMode === 'RECEIVED_SUBSTRATE'
+            ? 'Received Substrate'
+            : instance.currentSubstrate?.substrateMode?.toLowerCase().replaceAll('_', ' ') || 'Unknown substrate',
+        recommendedSubstrateRecipeVersionId: recommendation?.substrateRecipeVersionId || null,
+        recommendedSubstrate: recommendation
+          ? `${recommendation.recipeVersion.recipe.name} v${recommendation.recipeVersion.versionNumber}`
+          : null,
       })
     }
 
@@ -655,6 +715,7 @@ export function filterCareQueue(items: CareQueueItem[], filter?: string | null, 
   if (filter === 'completed') return items.filter((item) => item.completedAt)
   if (filter === 'water') return items.filter((item) => !item.completedAt && item.taskType === 'WATER')
   if (filter === 'fertilize') return items.filter((item) => !item.completedAt && item.taskType === 'FERTILIZE')
+  if (filter === 'repot') return items.filter((item) => !item.completedAt && item.taskType === 'REPOT')
   if (filter === 'treatment') return items.filter((item) => !item.completedAt && item.taskType === 'TREATMENT')
   if (filter === 'propagation') return items.filter((item) => !item.completedAt && item.taskType === 'PROPAGATION_CHECK')
   if (filter === 'health') return items.filter((item) => !item.completedAt && ['HEALTH_CHECK', 'QUARANTINE_REVIEW'].includes(item.taskType))

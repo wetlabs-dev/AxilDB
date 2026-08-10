@@ -9,6 +9,7 @@ import { descendantLocationIds, locationPathWithCodes } from '@/lib/locations'
 import { prisma } from '@/lib/prisma'
 import { formatDate, parseDateLocal } from '@/lib/time'
 import { plantName } from '@/lib/utils'
+import { substrateLabel, substrateModes } from '@/lib/substrates'
 
 const careTypes = [
   ['WATERING', 'Watering'],
@@ -53,7 +54,7 @@ export default async function BulkCarePage({
 }) {
   const params = await searchParams
   const context = await requireCollectionLogger()
-  const [locations, fertilizerRecipes] = await Promise.all([
+  const [locations, fertilizerRecipes, substrateVersions] = await Promise.all([
     prisma.location.findMany({
       where: { collectionId: context.collection.id, status: 'ACTIVE' },
       include: { locationType: true },
@@ -63,6 +64,7 @@ export default async function BulkCarePage({
       where: { collectionId: context.collection.id, active: true },
       orderBy: [{ draft: 'asc' }, { name: 'asc' }],
     }),
+    prisma.substrateRecipeVersion.findMany({ where: { collectionId: context.collection.id, status: 'ACTIVE', recipe: { archivedAt: null } }, include: { recipe: true }, orderBy: { recipe: { name: 'asc' } } }),
   ])
   const locationId = firstParam(params.locationId) || locations[0]?.id || ''
   const includeNested = firstParam(params.includeNested) === '1' || firstParam(params.includeNested) === 'on'
@@ -144,6 +146,10 @@ export default async function BulkCarePage({
   const fertilizerStrength = firstParam(params.fertilizerStrength)
   const fertilizerDose = firstParam(params.fertilizerDose)
   const fertilizerWaterVolume = firstParam(params.fertilizerWaterVolume)
+  const substrateMode = firstParam(params.substrateMode) || 'RECIPE'
+  const substrateRecipeVersionId = firstParam(params.substrateRecipeVersionId)
+  const receivedSubstrateDescription = firstParam(params.receivedSubstrateDescription) || ''
+  const substrateNotes = firstParam(params.substrateNotes) || ''
   const performedAt = firstParam(params.performedAt) || inputDateTimeValue()
   const success = firstParam(params.bulk) === 'success'
   const duplicate = firstParam(params.bulk) === 'duplicate'
@@ -208,6 +214,7 @@ export default async function BulkCarePage({
         {review && fertilizerStrength && <input type="hidden" name="fertilizerStrength" value={fertilizerStrength} />}
         {review && fertilizerDose && <input type="hidden" name="fertilizerDose" value={fertilizerDose} />}
         {review && fertilizerWaterVolume && <input type="hidden" name="fertilizerWaterVolume" value={fertilizerWaterVolume} />}
+        {review && careType === 'REPOTTING' && <><input type="hidden" name="substrateMode" value={substrateMode} />{substrateRecipeVersionId && <input type="hidden" name="substrateRecipeVersionId" value={substrateRecipeVersionId} />}<input type="hidden" name="receivedSubstrateDescription" value={receivedSubstrateDescription} /><input type="hidden" name="substrateNotes" value={substrateNotes} /></>}
         <input type="hidden" name="q" value={firstParam(params.q) || ''} />
         <input type="hidden" name="bulkCareBatchId" value={firstParam(params.bulkCareBatchId) || randomUUID()} />
         {includeNested && <input type="hidden" name="includeNested" value="on" />}
@@ -234,6 +241,14 @@ export default async function BulkCarePage({
               <Field label="Water volume" name="fertilizerWaterVolume" defaultValue={fertilizerWaterVolume} placeholder="e.g. 1 L" />
             </>
           )}
+          {careType === 'REPOTTING' && (
+            <>
+              <label className="grid gap-1 text-sm font-medium text-stone-800">New substrate<select className={selectClass} name="substrateMode" defaultValue={substrateMode}>{substrateModes.map((mode) => <option key={mode} value={mode}>{substrateLabel(mode)}</option>)}</select></label>
+              <label className="grid gap-1 text-sm font-medium text-stone-800">Recipe version<select className={selectClass} name="substrateRecipeVersionId" defaultValue={substrateRecipeVersionId}><option value="">Choose when using Recipe</option>{substrateVersions.map((version) => <option key={version.id} value={version.id}>{version.recipe.name} v{version.versionNumber}</option>)}</select></label>
+              <Field label="Received/custom substrate description" name="receivedSubstrateDescription" defaultValue={receivedSubstrateDescription} />
+              <Field label="Substrate notes" name="substrateNotes" defaultValue={substrateNotes} />
+            </>
+          )}
           <TextArea label="Shared note" name="sharedNote" defaultValue={sharedNote} wrapperClassName="md:col-span-2" className="min-h-20" />
         </Card>
 
@@ -252,6 +267,11 @@ export default async function BulkCarePage({
             {careType === 'FERTILIZING' && (
               <p className="text-sm text-stone-700">
                 Recipe: {fertilizerRecipes.find((recipe) => recipe.id === fertilizerRecipeId)?.name || 'Ad hoc'}{fertilizerStrength ? ` · ${fertilizerStrength}` : ''}{fertilizerDose ? ` · ${fertilizerDose}` : ''}{fertilizerWaterVolume ? ` in ${fertilizerWaterVolume}` : ''}
+              </p>
+            )}
+            {careType === 'REPOTTING' && (
+              <p className="text-sm text-stone-700">
+                New substrate: {substrateMode === 'RECIPE' ? `${substrateVersions.find((version) => version.id === substrateRecipeVersionId)?.recipe.name || 'Recipe not selected'}` : substrateLabel(substrateMode)}{receivedSubstrateDescription ? ` · ${receivedSubstrateDescription}` : ''}
               </p>
             )}
             <div className="grid gap-2">

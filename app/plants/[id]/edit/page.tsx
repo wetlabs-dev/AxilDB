@@ -21,6 +21,8 @@ import { collectionRoleAtLeast, isServerAdminRole } from '@/lib/roles'
 import { getUserUnitPreferences } from '@/lib/units'
 import { PlantTagPicker } from '@/components/PlantTagPicker'
 import { PlantTagRow } from '@/components/PlantTagChip'
+import { addSubstrateRecommendation, removeSubstrateRecommendation, updateSubstrateRecommendation } from '@/app/substrate-actions'
+import { substrateLabel, substrateSuitabilities } from '@/lib/substrates'
 
 const selectClass = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
 
@@ -134,6 +136,18 @@ export default async function EditPlant({
   const governingBodyOptions = bodies.map((body) => ({ id: body.id, name: body.name, abbreviation: body.abbreviation }))
   const matchingValidatedDefinition = plant.validatedPlantDefinitionId ? null : await findMatchingValidatedDefinition(prisma, plant)
   const pendingValidationCandidate = plant.validationCandidates.find((candidate) => candidate.status === 'PENDING')
+  const [substrateVersions, substrateRecommendations] = await Promise.all([
+    prisma.substrateRecipeVersion.findMany({
+      where: { collectionId: collection.id, recipe: { archivedAt: null }, OR: [{ status: 'ACTIVE' }, { recommendations: { some: { collectionId: collection.id, plantDefinitionId: plant.id } } }] },
+      include: { recipe: true, components: { include: { component: true }, orderBy: { sortOrder: 'asc' } } },
+      orderBy: [{ recipe: { name: 'asc' } }, { versionNumber: 'desc' }],
+    }),
+    prisma.plantDefinitionSubstrateRecommendation.findMany({
+      where: { collectionId: collection.id, plantDefinitionId: plant.id },
+      include: { recipeVersion: { include: { recipe: true, components: { include: { component: true }, orderBy: { sortOrder: 'asc' } } } } },
+      orderBy: [{ rank: 'asc' }, { createdAt: 'asc' }],
+    }),
+  ])
 
   return (
     <div className="space-y-6">
@@ -291,6 +305,8 @@ export default async function EditPlant({
                 {(plant.husbandryGuide as any)?.fertilizationPaused && <input type="hidden" name="fertilizationPaused" value="on" />}
                 <HusbandryMagicFillButton
                   plant={plant}
+                  collectionSlug={collection.slug}
+                  substrateRecommendationCount={substrateRecommendations.length}
                   autoSubmit
                   label={plant.husbandryGuide ? 'Magic refill husbandry' : 'Magic Fill husbandry'}
                 />
@@ -365,6 +381,31 @@ export default async function EditPlant({
               </form>
             </details>
           )}
+
+          <details className="group rounded-lg border border-[#d6dfc9] bg-[#f7f4e8]/70" open={substrateRecommendations.length > 0}>
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-semibold">
+              <span>Recommended substrates · {substrateRecommendations.length}</span>
+              <span className="rounded-md border border-stone-300 bg-white/70 px-2 py-1 text-xs group-open:hidden">Open</span>
+              <span className="hidden rounded-md border border-stone-300 bg-white/70 px-2 py-1 text-xs group-open:inline-block">Hide</span>
+            </summary>
+            <div className="grid gap-3 border-t border-[#d6dfc9] p-3">
+              <p className="text-sm text-stone-600">These collection-local recommendations augment the readable soil and medium guidance above. They remain local even when a definition is linked to a site-validated definition.</p>
+              {substrateRecommendations.map((recommendation) => <form key={recommendation.id} action={updateSubstrateRecommendation} className="grid gap-2 rounded-md border border-stone-200 bg-white/60 p-3 md:grid-cols-[5rem_minmax(11rem,1fr)_minmax(12rem,2fr)_auto]">
+                <input type="hidden" name="collectionSlug" value={collection.slug} /><input type="hidden" name="recommendationId" value={recommendation.id} />
+                <Field label="Rank" name="rank" type="number" min="1" defaultValue={recommendation.rank} />
+                <label className="grid gap-1 text-sm font-medium">Suitability<select className={selectClass} name="suitability" defaultValue={recommendation.suitability}>{substrateSuitabilities.map((value) => <option key={value} value={value}>{substrateLabel(value)}</option>)}</select></label>
+                <label className="grid gap-1 text-sm font-medium">{recommendation.recipeVersion.recipe.name} v{recommendation.recipeVersion.versionNumber}<input className={selectClass} name="notes" defaultValue={recommendation.notes || ''} placeholder="Recommendation note" /><span className="text-xs font-normal text-stone-500">{recommendation.recipeVersion.components.map((row) => `${Number(row.percentByVolume)}% ${row.component.name}`).join(' · ')}</span></label>
+                <div className="flex items-end gap-2"><Button className="px-3 py-2 text-xs">Save</Button><button formAction={removeSubstrateRecommendation} className="px-2 py-2 text-xs font-semibold text-[#9a3f35] underline">Remove</button></div>
+              </form>)}
+              <form action={addSubstrateRecommendation} className="grid gap-3 rounded-md border border-stone-200 bg-white/60 p-3 md:grid-cols-[minmax(12rem,1fr)_12rem_minmax(12rem,1fr)_auto]">
+                <input type="hidden" name="collectionSlug" value={collection.slug} /><input type="hidden" name="plantDefinitionId" value={plant.id} />
+                <label className="grid gap-1 text-sm font-medium">Recipe version<select className={selectClass} name="substrateRecipeVersionId" required defaultValue=""><option value="">Choose current recipe...</option>{substrateVersions.filter((version) => !substrateRecommendations.some((item) => item.substrateRecipeVersionId === version.id)).map((version) => <option key={version.id} value={version.id}>{version.recipe.name} v{version.versionNumber}{version.status !== 'ACTIVE' ? ` · ${substrateLabel(version.status)}` : ''}</option>)}</select></label>
+                <label className="grid gap-1 text-sm font-medium">Suitability<select className={selectClass} name="suitability" defaultValue="RECOMMENDED">{substrateSuitabilities.map((value) => <option key={value} value={value}>{substrateLabel(value)}</option>)}</select></label>
+                <Field label="Notes" name="notes" />
+                <Button className="self-end">Add recommendation</Button>
+              </form>
+            </div>
+          </details>
 
           <details className="group rounded-lg border border-stone-200 bg-white/50">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-semibold">

@@ -65,6 +65,8 @@ import QRCode from 'qrcode'
 import { RefreshCw } from 'lucide-react'
 import { acquisitionProvenanceDisplay, sourceChainDisplay } from '@/lib/provenance'
 import { labelizeTreatment } from '@/lib/treatments'
+import { assignPlantSubstrate } from '@/app/substrate-actions'
+import { compactRecipeComposition, substrateAssignmentLabel, substrateLabel, substrateModes } from '@/lib/substrates'
 
 const conditionCategories = [
   ['WILTING', 'Wilting'],
@@ -162,8 +164,13 @@ export default async function InstanceDetail({
       sportRecords: { include: { propagationEvent: true }, orderBy: { generationNumber: 'desc' } },
       husbandryOverride: { include: { fertilizerRecipe: true } },
       currentLocation: { include: { locationType: true } },
+      currentSubstrate: { include: { recipeVersion: { include: { recipe: true, components: { include: { component: true }, orderBy: { sortOrder: 'asc' } } } } } },
+      substrateHistory: { include: { previousRecipeVersion: { include: { recipe: true } }, newRecipeVersion: { include: { recipe: true, components: { include: { component: true }, orderBy: { sortOrder: 'asc' } } } } }, orderBy: { changedAt: 'desc' } },
     },
   })
+  const substrateVersions = canCreateRecords
+    ? await prisma.substrateRecipeVersion.findMany({ where: { collectionId: collection.id, status: 'ACTIVE', recipe: { archivedAt: null } }, include: { recipe: true }, orderBy: { recipe: { name: 'asc' } } })
+    : []
   const [activeQuarantine, quarantineHistory] = await Promise.all([
     prisma.plantQuarantine.findFirst({
       where: { collectionId: collection.id, plantInstanceId: id, status: 'ACTIVE' },
@@ -959,6 +966,38 @@ export default async function InstanceDetail({
               ))}
             </div>
           )}
+        </Card>
+
+        <Card id="substrate">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div><h3 className="font-bold">Current substrate</h3><p className="mt-1 font-medium">{substrateAssignmentLabel(i.currentSubstrate)}</p></div>
+            <Link className="text-sm font-semibold text-[#2f6b45] underline" href={collectionPath(collection.slug, '/substrates')}>Substrate library</Link>
+          </div>
+          {i.currentSubstrate?.recipeVersion && <p className="mt-2 text-sm text-stone-700">{compactRecipeComposition(i.currentSubstrate.recipeVersion)}</p>}
+          {i.currentSubstrate?.receivedSubstrateDescription && <p className="mt-2 whitespace-pre-wrap text-sm text-stone-700">{i.currentSubstrate.receivedSubstrateDescription}</p>}
+          {i.currentSubstrate?.notes && <p className="mt-2 whitespace-pre-wrap text-sm text-stone-600">{i.currentSubstrate.notes}</p>}
+          {canCreateRecords && <details className="mt-3 rounded-md border border-stone-200 bg-white/55">
+            <summary className="cursor-pointer p-3 text-sm font-semibold">Record substrate change</summary>
+            <form action={assignPlantSubstrate} className="grid gap-3 border-t border-stone-200 p-3 sm:grid-cols-2">
+              <input type="hidden" name="collectionSlug" value={collection.slug} />
+              <input type="hidden" name="plantInstanceId" value={i.id} />
+              <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${i.id}#substrate`)} />
+              <Select label="Substrate mode" name="substrateMode" defaultValue="RECIPE">{substrateModes.map((mode) => <option key={mode} value={mode}>{substrateLabel(mode)}</option>)}</Select>
+              <Select label="Recipe version" name="substrateRecipeVersionId" defaultValue=""><option value="">Choose when using Recipe</option>{substrateVersions.map((version) => <option key={version.id} value={version.id}>{version.recipe.name} v{version.versionNumber}</option>)}</Select>
+              <Field label="Started on" name="startedAt" type="date" defaultValue={dateInput(new Date(), timezone)} />
+              <Field label="Reason" name="reason" defaultValue="Repotting" />
+              <TextArea label="Received/custom substrate description" name="receivedSubstrateDescription" wrapperClassName="sm:col-span-2" />
+              <TextArea label="Notes" name="substrateNotes" wrapperClassName="sm:col-span-2" />
+              <Button className="w-fit">Record substrate</Button>
+            </form>
+          </details>}
+          <details className="mt-3 rounded-md border border-stone-200 bg-white/55">
+            <summary className="cursor-pointer p-3 text-sm font-semibold">Substrate history ({i.substrateHistory.length})</summary>
+            <div className="grid gap-2 border-t border-stone-200 p-3">
+              {i.substrateHistory.length === 0 && <p className="text-sm text-stone-600">No substrate history has been recorded.</p>}
+              {i.substrateHistory.map((entry) => <article key={entry.id} className="rounded-md border border-stone-200 bg-white/70 p-3 text-sm"><p className="font-semibold">{entry.newMode === 'RECIPE' ? `${entry.newRecipeVersion?.recipe.name || 'Recipe'} v${entry.newRecipeVersion?.versionNumber || '?'}` : substrateLabel(entry.newMode)}</p><p className="text-stone-600">{fmtDate(entry.changedAt, timezone)}{entry.reason ? ` · ${entry.reason}` : ''}</p>{entry.newRecipeVersion && <p className="mt-1 text-stone-700">{compactRecipeComposition(entry.newRecipeVersion)}</p>}{entry.newDescription && <p className="mt-1 whitespace-pre-wrap text-stone-700">{entry.newDescription}</p>}{entry.notes && <p className="mt-1 whitespace-pre-wrap text-stone-600">{entry.notes}</p>}</article>)}
+            </div>
+          </details>
         </Card>
 
         {photosCard}
