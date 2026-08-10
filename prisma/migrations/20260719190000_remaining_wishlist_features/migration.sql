@@ -79,8 +79,18 @@ CREATE INDEX "CollectionExhibitWishlistItem_collectionId_idx" ON "CollectionExhi
 CREATE INDEX "CollectionExhibitWishlistItem_plantDefinitionId_idx" ON "CollectionExhibitWishlistItem"("plantDefinitionId");
 
 ALTER TABLE "AcquisitionBatch" ADD CONSTRAINT "AcquisitionBatch_collectionId_fkey" FOREIGN KEY ("collectionId") REFERENCES "Collection"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "AcquisitionBatch" ADD CONSTRAINT "AcquisitionBatch_distributorId_fkey" FOREIGN KEY ("distributorId") REFERENCES "Distributor"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-ALTER TABLE "AcquisitionBatch" ADD CONSTRAINT "AcquisitionBatch_distributorLocationId_fkey" FOREIGN KEY ("distributorLocationId") REFERENCES "DistributorLocation"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+DO $$
+BEGIN
+  -- These tables are created by a migration with the same timestamp prefix. Their
+  -- lexical order can place this migration first on a clean database.
+  IF to_regclass('"Distributor"') IS NOT NULL THEN
+    ALTER TABLE "AcquisitionBatch" ADD CONSTRAINT "AcquisitionBatch_distributorId_fkey" FOREIGN KEY ("distributorId") REFERENCES "Distributor"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+  END IF;
+
+  IF to_regclass('"DistributorLocation"') IS NOT NULL THEN
+    ALTER TABLE "AcquisitionBatch" ADD CONSTRAINT "AcquisitionBatch_distributorLocationId_fkey" FOREIGN KEY ("distributorLocationId") REFERENCES "DistributorLocation"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+  END IF;
+END $$;
 ALTER TABLE "AcquisitionBatch" ADD CONSTRAINT "AcquisitionBatch_receiptPhotoId_fkey" FOREIGN KEY ("receiptPhotoId") REFERENCES "Photo"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "AcquisitionBatch" ADD CONSTRAINT "AcquisitionBatch_createdByUserId_fkey" FOREIGN KEY ("createdByUserId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "AcquisitionBatchItem" ADD CONSTRAINT "AcquisitionBatchItem_acquisitionBatchId_fkey" FOREIGN KEY ("acquisitionBatchId") REFERENCES "AcquisitionBatch"("id") ON DELETE CASCADE ON UPDATE CASCADE;
