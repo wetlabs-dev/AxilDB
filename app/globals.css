@@ -1105,4 +1105,12 @@ section {
   left: 0.06in;
 }
 
-@media print { .no-print { display: none; } body { background: white; } }
+@media print {
+  .no-print { display: none; }
+  body { background: white; }
+  .substrate-composition-bar,
+  .substrate-composition-bar * {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}

@@ -274,7 +274,9 @@ export const manualSections: ManualSection[] = [
     purpose: 'The Substrate Library keeps reusable components, versioned recipes, plant recommendations, current specimen substrate, and repotting history together without treating substrate as inventory.',
     howTo: [
       'Open Substrates from the collection sidebar to browse the starter component and recipe library, create local records, and review usage.',
+      'Use the shared color-and-pattern composition bars to scan recipes, then open Compare recipe versions to review two to four formulations side by side.',
       'Build a recipe draft by percentage by volume. The component total must equal exactly 100% before the version can be activated.',
+      'Edit a component to choose its color, pattern, short label, and visual family, or reset it to its deterministic default visual.',
       'Create a new version when a formulation changes. Activated and historical versions remain read-only so existing plant and care records keep their exact formulation.',
       'On a Plant Definition, rank one or more recipe versions as Preferred, Recommended, Acceptable, or Special purpose.',
       'On a Plant Instance, record the current recipe version or choose Received Substrate, Custom / Unknown Mix, No Substrate, or Unknown. Each change adds a history entry.',
@@ -283,6 +285,8 @@ export const manualSections: ManualSection[] = [
     ],
     notes: [
       'Each collection has its own library. Starter records can be archived or extended without changing another collection.',
+      'Patterns supplement color across recipe, plant, search, Care Queue, and Magic Fill views and remain useful in monochrome print.',
+      'Visual identity is presentation metadata. Editing it does not create a recipe version or change historical formulation data.',
       'Acquired plants default to Received Substrate when the exact seller mix is unknown.',
       'Magic Fill husbandry can suggest ranked existing recipes or prepare a new recipe draft, but it never assigns or activates one automatically.',
       'Green Thumb may consider current substrate, recent changes, and recommendations as context. It treats correlations cautiously and does not diagnose solely from substrate.',

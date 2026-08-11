@@ -226,11 +226,14 @@ export async function POST(req: Request) {
     const fields = normalizeFields(raw, model)
     const fertilizerRecommendation = normalizeFertilizerRecommendation(raw, fertilizerRecipeIds)
     const substrateRecommendation = normalizeSubstrateRecommendation(raw, substrateProfiles, substrateComponentIds)
-    const substrateNameById = new Map(substrateVersions.map((version) => [version.id, `${version.recipe.name} v${version.versionNumber}`]))
-    const componentNameById = new Map(substrateComponents.map((component) => [component.id, component.name]))
+    const substrateById = new Map(substrateVersions.map((version) => [version.id, version]))
+    const componentById = new Map(substrateComponents.map((component) => [component.id, component]))
     const displaySubstrateRecommendation = {
-      substrateRecommendations: substrateRecommendation.substrateRecommendations.map((item: any) => ({ ...item, displayName: substrateNameById.get(item.recipeVersionId) || 'Substrate recipe' })),
-      newRecipeSuggestion: substrateRecommendation.newRecipeSuggestion ? { ...substrateRecommendation.newRecipeSuggestion, components: substrateRecommendation.newRecipeSuggestion.components.map((item: any) => ({ ...item, componentName: componentNameById.get(item.componentId) || 'Component' })) } : null,
+      substrateRecommendations: substrateRecommendation.substrateRecommendations.map((item: any) => {
+        const version = substrateById.get(item.recipeVersionId)
+        return { ...item, displayName: version ? `${version.recipe.name} v${version.versionNumber}` : 'Substrate recipe', components: version?.components.map((row) => ({ id: row.id, percentByVolume: Number(row.percentByVolume), component: row.component })) || [] }
+      }),
+      newRecipeSuggestion: substrateRecommendation.newRecipeSuggestion ? { ...substrateRecommendation.newRecipeSuggestion, components: substrateRecommendation.newRecipeSuggestion.components.map((item: any) => ({ ...item, componentName: componentById.get(item.componentId)?.name || 'Component', component: componentById.get(item.componentId) || { id: item.componentId, name: 'Component' } })) } : null,
     }
     await recordAiUsage({ collectionId: collection.id, userId: user.id, feature: 'AI_HUSBANDRY_FILL', model, usage: tokenUsage(payload) })
     await audit(user, 'GENERATE', 'AI_HUSBANDRY_FILL', null, `Generated husbandry fill for ${name}`, { model, applyMode }, collection.id)

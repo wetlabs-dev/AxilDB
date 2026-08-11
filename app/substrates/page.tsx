@@ -10,12 +10,14 @@ import {
   updateSubstrateRecipeFamily,
 } from '@/app/substrate-actions'
 import { SubstrateBatchCalculator, SubstrateRecipeEditor } from '@/components/SubstrateRecipeEditor'
+import { SubstrateCompositionBar, SubstrateStateStrip, SubstrateSwatch } from '@/components/SubstrateCompositionBar'
+import { SubstrateRecipeComparison } from '@/components/SubstrateRecipeComparison'
+import { SubstrateVisualIdentityEditor } from '@/components/SubstrateVisualIdentityEditor'
 import { Card, Field, TextArea } from '@/components/ui'
 import { collectionPath, requireCollectionGardener } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
 import { collectionRoleAtLeast, isServerAdminRole } from '@/lib/roles'
 import {
-  compactRecipeComposition,
   ensureStarterSubstrates,
   substrateComponentCategories,
   substrateLabel,
@@ -49,6 +51,7 @@ function ComponentForm({ collectionSlug, component }: { collectionSlug: string; 
     <label className="grid gap-1 text-sm font-semibold">Renewable<select className={control} name="renewable" defaultValue={component?.renewable === true ? 'YES' : component?.renewable === false ? 'NO' : ''}><option value="">Unknown</option><option value="YES">Yes</option><option value="NO">No</option></select></label>
     <TextArea label="Description" name="description" defaultValue={component?.description || ''} wrapperClassName="md:col-span-2" />
     <TextArea label="Notes" name="notes" defaultValue={component?.notes || ''} wrapperClassName="md:col-span-2" />
+    <SubstrateVisualIdentityEditor component={component || { name: 'New component', slug: 'new-component' }} isNew={!component} />
     <button className="w-fit rounded-md bg-[#2f6b45] px-4 py-2 text-sm font-semibold text-white md:col-span-4">{component ? 'Save component' : 'Create component'}</button>
   </form>
 }
@@ -74,7 +77,11 @@ export default async function SubstratesPage({ searchParams }: { searchParams: P
     }),
     prisma.plantInstanceSubstrate.groupBy({ by: ['substrateMode'], where: { collectionId: context.collection.id }, _count: { _all: true } }),
   ])
-  const activeComponents = components.filter((component) => component.active).map((component) => ({ id: component.id, name: component.name, category: component.category }))
+  const activeComponents = components.filter((component) => component.active).map((component) => ({
+    id: component.id, name: component.name, slug: component.slug, starterKey: component.starterKey,
+    category: component.category, waterRetention: component.waterRetention, aeration: component.aeration,
+    displayColor: component.displayColor, displayPattern: component.displayPattern, shortLabel: component.shortLabel, visualFamily: component.visualFamily,
+  }))
   const selectedRecipe = recipes.find((recipe) => recipe.id === sp.recipe)
   const selectedVersion = selectedRecipe?.versions.find((version) => version.id === sp.version)
 
@@ -95,7 +102,7 @@ export default async function SubstratesPage({ searchParams }: { searchParams: P
           const active = recipe.activeVersion
           return <article key={recipe.id} className="rounded-md border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] p-3">
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div><h4 className="font-serif text-xl font-semibold">{recipe.name}</h4><p className="text-xs text-[var(--ax-muted)]">{active ? `v${active.versionNumber} · current` : 'No active version'}{recipe.archivedAt ? ' · archived' : ''}</p>{active && <p className="mt-2 text-sm">{compactRecipeComposition(active)}</p>}<p className="mt-2 text-xs text-[var(--ax-muted)]">{active?._count.currentAssignments || 0} plants · {active?._count.recommendations || 0} definition recommendations · {active?._count.newHistory || 0} recorded assignments</p></div>
+              <div className="min-w-0 flex-1"><h4 className="font-serif text-xl font-semibold">{recipe.name}</h4><p className="text-xs text-[var(--ax-muted)]">{active ? `v${active.versionNumber} · current` : 'No active version'}{recipe.archivedAt ? ' · archived' : ''}</p>{active && <SubstrateCompositionBar className="mt-2 max-w-3xl" items={active.components} mode="compact" />}<p className="mt-2 text-xs text-[var(--ax-muted)]">{active?._count.currentAssignments || 0} plants · {active?._count.recommendations || 0} definition recommendations · {active?._count.newHistory || 0} recorded assignments</p></div>
               <div className="flex flex-wrap gap-2"><Link href={collectionPath(context.collection.slug, `/substrates?recipe=${recipe.id}`)} className="rounded-md border border-[color:var(--ax-border)] px-3 py-1.5 text-xs font-semibold">View</Link><form action={createSubstrateRecipeVersion}><input type="hidden" name="collectionSlug" value={context.collection.slug} /><input type="hidden" name="substrateRecipeId" value={recipe.id} /><button className="rounded-md border border-[color:var(--ax-border)] px-3 py-1.5 text-xs font-semibold">Create new version</button></form></div>
             </div>
             {selectedRecipe?.id === recipe.id && <div className="mt-4 grid gap-4 border-t border-[color:var(--ax-border)] pt-4">
@@ -103,10 +110,10 @@ export default async function SubstratesPage({ searchParams }: { searchParams: P
               {recipe.versions.map((version) => <details key={version.id} open={selectedVersion?.id === version.id} className="rounded-md border border-[color:var(--ax-border)] bg-[var(--ax-surface)]">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3"><span><strong>v{version.versionNumber}</strong> · {substrateLabel(version.status)} · {Number(version.totalPercent)}%<span className="ml-2 text-xs text-[var(--ax-muted)]">{version._count.currentAssignments} plants · {version._count.recommendations} recommendations</span></span><span className="text-xs font-semibold">Open</span></summary>
                 <div className="grid gap-4 border-t border-[color:var(--ax-border)] p-3">
-                  <p className="text-sm">{compactRecipeComposition(version)}</p>
+                  <SubstrateCompositionBar items={version.components} mode="full" />
                   {version.status === 'DRAFT' ? <SubstrateRecipeEditor collectionSlug={context.collection.slug} components={activeComponents} recipe={recipe} version={version} /> : <p className="rounded-md border border-[#d6dfc9] bg-[#f4f8ed] p-3 text-sm">Published formulation. Its composition is immutable; create a new version to make changes.</p>}
                   {version.status === 'DRAFT' && <form action={activateSubstrateRecipeVersion}><input type="hidden" name="collectionSlug" value={context.collection.slug} /><input type="hidden" name="substrateRecipeVersionId" value={version.id} /><button className="rounded-md bg-[#2f6b45] px-3 py-2 text-sm font-semibold text-white">Activate v{version.versionNumber}</button></form>}
-                  <details><summary className="cursor-pointer text-sm font-semibold"><Calculator className="mr-1 inline h-4 w-4" />Batch calculator</summary><div className="mt-2"><SubstrateBatchCalculator components={version.components.map((row) => ({ name: row.component.name, percentByVolume: row.percentByVolume }))} /></div></details>
+                  <details><summary className="cursor-pointer text-sm font-semibold"><Calculator className="mr-1 inline h-4 w-4" />Batch calculator</summary><div className="mt-2"><SubstrateBatchCalculator components={version.components.map((row) => ({ name: row.component.name, percentByVolume: row.percentByVolume, component: row.component }))} /></div></details>
                 </div>
               </details>)}
               {canManage && <form action={toggleSubstrateRecipeArchive}><input type="hidden" name="collectionSlug" value={context.collection.slug} /><input type="hidden" name="substrateRecipeId" value={recipe.id} /><button className="inline-flex items-center gap-1 text-sm font-semibold text-[#9a3f35] underline"><Archive className="h-4 w-4" />{recipe.archivedAt ? 'Restore recipe family' : 'Archive recipe family'}</button></form>}
@@ -114,19 +121,24 @@ export default async function SubstratesPage({ searchParams }: { searchParams: P
           </article>
         })}
       </div>
+      <SubstrateRecipeComparison versions={recipes.flatMap((recipe) => recipe.versions.map((version) => ({
+        id: version.id,
+        name: `${recipe.name} v${version.versionNumber}`,
+        components: version.components.map((row) => ({ id: row.id, percentByVolume: Number(row.percentByVolume), component: row.component })),
+      })))} />
     </Card>
 
     <Card id="components">
       <h3 className="font-serif text-2xl font-semibold">Component Library</h3>
       <details className="mt-3 rounded-md border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)]"><summary className="cursor-pointer p-3 font-semibold">Create component</summary><div className="border-t border-[color:var(--ax-border)] p-3"><ComponentForm collectionSlug={context.collection.slug} /></div></details>
-      <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">{components.map((component) => <details key={component.id} className="rounded-md border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)]"><summary className="cursor-pointer list-none p-3"><strong>{component.name}</strong><span className="block text-xs text-[var(--ax-muted)]">{substrateLabel(component.category)} · {substrateLabel(component.organicity)} · {component._count.recipeComponents} recipe versions{!component.active ? ' · archived' : ''}</span></summary><div className="grid gap-3 border-t border-[color:var(--ax-border)] p-3"><ComponentForm collectionSlug={context.collection.slug} component={component} />{canManage && <form action={toggleSubstrateComponentArchive}><input type="hidden" name="collectionSlug" value={context.collection.slug} /><input type="hidden" name="substrateComponentId" value={component.id} /><button className="text-sm font-semibold text-[#9a3f35] underline">{component.active ? 'Archive component' : 'Restore component'}</button></form>}</div></details>)}</div>
+      <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">{components.map((component) => <details key={component.id} className="rounded-md border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)]"><summary className="cursor-pointer list-none p-3"><span className="flex items-center gap-2"><SubstrateSwatch component={component} className="h-8 w-12" /><strong>{component.name}</strong></span><span className="mt-1 block text-xs text-[var(--ax-muted)]">{substrateLabel(component.category)} · {substrateLabel(component.organicity)} · {component._count.recipeComponents} recipe versions{!component.active ? ' · archived' : ''}</span></summary><div className="grid gap-3 border-t border-[color:var(--ax-border)] p-3"><ComponentForm collectionSlug={context.collection.slug} component={component} />{canManage && <form action={toggleSubstrateComponentArchive}><input type="hidden" name="collectionSlug" value={context.collection.slug} /><input type="hidden" name="substrateComponentId" value={component.id} /><button className="text-sm font-semibold text-[#9a3f35] underline">{component.active ? 'Archive component' : 'Restore component'}</button></form>}</div></details>)}</div>
     </Card>
 
     <Card id="usage">
       <div className="flex items-center gap-2"><Sprout className="h-5 w-5 text-[#2f6b45]" /><h3 className="font-serif text-2xl font-semibold">Plants by Substrate</h3></div>
       <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {recipes.flatMap((recipe) => recipe.versions.filter((version) => version._count.currentAssignments > 0).map((version) => <Link key={version.id} href={collectionPath(context.collection.slug, `/instances?substrateVersion=${version.id}`)} className="rounded-md border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] p-3"><strong>{recipe.name} v{version.versionNumber}</strong><span className="block text-sm text-[var(--ax-muted)]">{version._count.currentAssignments} plants</span></Link>))}
-        {modeCounts.map((group) => <Link key={group.substrateMode} href={collectionPath(context.collection.slug, `/instances?substrateMode=${group.substrateMode}`)} className="rounded-md border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] p-3"><strong>{substrateLabel(group.substrateMode)}</strong><span className="block text-sm text-[var(--ax-muted)]">{group._count._all} plants</span></Link>)}
+        {recipes.flatMap((recipe) => recipe.versions.filter((version) => version._count.currentAssignments > 0).map((version) => <Link key={version.id} href={collectionPath(context.collection.slug, `/instances?substrateVersion=${version.id}`)} className="rounded-md border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] p-3"><strong>{recipe.name} v{version.versionNumber}</strong><span className="block text-sm text-[var(--ax-muted)]">{version._count.currentAssignments} plants</span><SubstrateCompositionBar className="mt-2" items={version.components} mode="tiny" showLegend={false} /></Link>))}
+        {modeCounts.map((group) => <Link key={group.substrateMode} href={collectionPath(context.collection.slug, `/instances?substrateMode=${group.substrateMode}`)} className="rounded-md border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] p-3"><strong>{substrateLabel(group.substrateMode)}</strong><span className="block text-sm text-[var(--ax-muted)]">{group._count._all} plants</span><SubstrateStateStrip mode={group.substrateMode} /></Link>)}
       </div>
       <div className="mt-4 flex flex-wrap gap-2"><a href={`/api/exports/substrate-recipes?collectionSlug=${encodeURIComponent(context.collection.slug)}`} className="rounded-md border border-[color:var(--ax-border)] px-3 py-2 text-sm font-semibold">Recipe library CSV</a><a href={`/api/exports/plant-substrates?collectionSlug=${encodeURIComponent(context.collection.slug)}`} className="rounded-md border border-[color:var(--ax-border)] px-3 py-2 text-sm font-semibold">Plant substrate CSV</a><a href={`/api/exports/plant-substrates?collectionSlug=${encodeURIComponent(context.collection.slug)}&mode=RECEIVED_SUBSTRATE`} className="rounded-md border border-[color:var(--ax-border)] px-3 py-2 text-sm font-semibold">Received Substrate CSV</a></div>
     </Card>

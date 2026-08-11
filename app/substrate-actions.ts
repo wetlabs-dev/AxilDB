@@ -19,6 +19,7 @@ import {
   substrateSuitabilities,
   validRecipeTotal,
 } from '@/lib/substrates'
+import { substrateDisplayPatterns, substrateVisualDefaults } from '@/lib/substrate-visuals'
 
 const val = (fd: FormData, key: string) => String(fd.get(key) || '').trim()
 const nullable = (fd: FormData, key: string) => val(fd, key) || null
@@ -50,9 +51,13 @@ function componentData(fd: FormData, fallbackName?: string) {
   const name = val(fd, 'name') || fallbackName
   if (!name) throw new Error('Component name is required.')
   const renewable = val(fd, 'renewable')
+  const slug = substrateSlug(name)
+  const defaults = substrateVisualDefaults({ name, slug })
+  const displayColor = val(fd, 'displayColor').toUpperCase()
+  const automaticVisual = val(fd, 'visualIdentityAuto') === 'true'
   return {
     name,
-    slug: substrateSlug(name),
+    slug,
     category: allowed(val(fd, 'category'), substrateComponentCategories, 'OTHER'),
     description: nullable(fd, 'description'),
     particleSize: nullable(fd, 'particleSize'),
@@ -65,6 +70,10 @@ function componentData(fd: FormData, fallbackName?: string) {
     phTendency: val(fd, 'phTendency') ? allowed(val(fd, 'phTendency'), substratePhTendencies, 'UNKNOWN') : null,
     renewable: renewable === 'YES' ? true : renewable === 'NO' ? false : null,
     notes: nullable(fd, 'notes'),
+    displayColor: automaticVisual ? defaults.color : /^#[0-9A-F]{6}$/.test(displayColor) ? displayColor : defaults.color,
+    displayPattern: automaticVisual ? defaults.pattern : allowed(val(fd, 'displayPattern'), substrateDisplayPatterns, defaults.pattern),
+    shortLabel: (automaticVisual ? defaults.shortLabel : val(fd, 'shortLabel') || defaults.shortLabel).slice(0, 40),
+    visualFamily: (automaticVisual ? defaults.family : val(fd, 'visualFamily') || defaults.family).toUpperCase().replace(/[^A-Z0-9_ -]/g, '').slice(0, 40),
   }
 }
 

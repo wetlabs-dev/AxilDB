@@ -1,4 +1,5 @@
 import type { Prisma, PrismaClient } from '@prisma/client'
+import { starterSubstrateVisuals } from '@/lib/substrate-visuals'
 
 export const substrateComponentCategories = [
   'COIR', 'MOSS', 'PERLITE', 'PUMICE', 'LAVA_ROCK', 'BARK', 'SOIL_MIX', 'MINERAL',
@@ -90,12 +91,23 @@ export async function ensureStarterSubstrates(db: DbClient, collectionId: string
   const componentIds = new Map<string, string>()
   for (const starter of starterSubstrateComponents) {
     const { key, ...componentData } = starter
+    const visual = starterSubstrateVisuals[key]
     const existing = await db.substrateComponent.findFirst({
       where: { collectionId, OR: [{ starterKey: key }, { slug: substrateSlug(starter.name) }] },
-      select: { id: true },
+      select: { id: true, starterKey: true, displayColor: true, displayPattern: true, shortLabel: true, visualFamily: true },
     })
-    const component = existing || await db.substrateComponent.create({
-      data: { collectionId, createdByUserId, starterKey: key, slug: substrateSlug(starter.name), ...componentData },
+    const component = existing ? await db.substrateComponent.update({
+      where: { id: existing.id },
+      data: {
+        starterKey: existing.starterKey || key,
+        displayColor: existing.displayColor || visual.color,
+        displayPattern: existing.displayPattern || visual.pattern,
+        shortLabel: existing.shortLabel || visual.shortLabel,
+        visualFamily: existing.visualFamily || visual.family,
+      },
+      select: { id: true },
+    }) : await db.substrateComponent.create({
+      data: { collectionId, createdByUserId, starterKey: key, slug: substrateSlug(starter.name), ...componentData, displayColor: visual.color, displayPattern: visual.pattern, shortLabel: visual.shortLabel, visualFamily: visual.family },
       select: { id: true },
     })
     componentIds.set(key, component.id)

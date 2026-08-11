@@ -25,6 +25,7 @@ import { PlantTagRow } from '@/components/PlantTagChip'
 import { authoritySelectionValue, taxonomicAuthorityWhere, taxonomicPlacementValue } from '@/lib/taxonomic-authorities'
 import { addSubstrateRecommendation, removeSubstrateRecommendation, updateSubstrateRecommendation } from '@/app/substrate-actions'
 import { substrateLabel, substrateSuitabilities } from '@/lib/substrates'
+import { SubstrateCompositionBar } from '@/components/SubstrateCompositionBar'
 
 const selectClass = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
 
@@ -413,7 +414,7 @@ export default async function EditPlant({
                 <input type="hidden" name="collectionSlug" value={collection.slug} /><input type="hidden" name="recommendationId" value={recommendation.id} />
                 <Field label="Rank" name="rank" type="number" min="1" defaultValue={recommendation.rank} />
                 <label className="grid gap-1 text-sm font-medium">Suitability<select className={selectClass} name="suitability" defaultValue={recommendation.suitability}>{substrateSuitabilities.map((value) => <option key={value} value={value}>{substrateLabel(value)}</option>)}</select></label>
-                <label className="grid gap-1 text-sm font-medium">{recommendation.recipeVersion.recipe.name} v{recommendation.recipeVersion.versionNumber}<input className={selectClass} name="notes" defaultValue={recommendation.notes || ''} placeholder="Recommendation note" /><span className="text-xs font-normal text-stone-500">{recommendation.recipeVersion.components.map((row) => `${Number(row.percentByVolume)}% ${row.component.name}`).join(' · ')}</span></label>
+                <label className="grid min-w-0 gap-1 text-sm font-medium">{recommendation.recipeVersion.recipe.name} v{recommendation.recipeVersion.versionNumber}<input className={selectClass} name="notes" defaultValue={recommendation.notes || ''} placeholder="Recommendation note" /><SubstrateCompositionBar items={recommendation.recipeVersion.components} mode="tiny" /></label>
                 <div className="flex items-end gap-2"><Button className="px-3 py-2 text-xs">Save</Button><button formAction={removeSubstrateRecommendation} className="px-2 py-2 text-xs font-semibold text-[#9a3f35] underline">Remove</button></div>
               </form>)}
               <form action={addSubstrateRecommendation} className="grid gap-3 rounded-md border border-stone-200 bg-white/60 p-3 md:grid-cols-[minmax(12rem,1fr)_12rem_minmax(12rem,1fr)_auto]">

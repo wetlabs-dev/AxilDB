@@ -17,6 +17,7 @@ import { Button, Card, Field, Select, TextArea } from '@/components/ui'
 import type { CareQueueItem } from '@/lib/care-queue'
 import { dateInputValue, formatDate } from '@/lib/time'
 import { cn } from '@/lib/utils'
+import { SubstrateCompositionBar } from '@/components/SubstrateCompositionBar'
 
 const conditionSeverityOptions = ['LOW', 'MODERATE', 'HIGH', 'CRITICAL'] as const
 const conditionStatusOptions = ['OPEN', 'IMPROVING', 'RESOLVED'] as const
@@ -253,6 +254,7 @@ function NormalCareDetails({
               <p><span className="font-semibold text-stone-800">Current:</span> {item.currentSubstrate || 'Unknown substrate'}</p>
               <p><span className="font-semibold text-stone-800">Recommended:</span> {item.recommendedSubstrate || 'No ranked recommendation'}</p>
             </div>
+            {item.recommendedSubstrateComposition?.length ? <SubstrateCompositionBar items={item.recommendedSubstrateComposition} mode="tiny" /> : null}
             <Select label="New substrate type" name="substrateMode" defaultValue={item.recommendedSubstrateRecipeVersionId ? 'RECIPE' : 'RECEIVED_SUBSTRATE'}>
               <option value="RECIPE">Substrate recipe</option>
               <option value="RECEIVED_SUBSTRATE">Received Substrate</option>

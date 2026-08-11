@@ -2185,6 +2185,10 @@ model SubstrateComponent {
   phTendency             String?
   renewable              Boolean?
   notes                  String?
+  displayColor           String?
+  displayPattern         String?
+  shortLabel             String?
+  visualFamily           String?
   active                 Boolean   @default(true)
   archivedAt             DateTime?
   createdByUserId        String?

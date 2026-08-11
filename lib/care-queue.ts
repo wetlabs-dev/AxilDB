@@ -77,6 +77,7 @@ export type CareQueueItem = {
   currentSubstrate?: string | null
   recommendedSubstrateRecipeVersionId?: string | null
   recommendedSubstrate?: string | null
+  recommendedSubstrateComposition?: Array<{ id: string; percentByVolume: number; component: any }>
   treatmentPlanId?: string
   treatmentPlanStepId?: string
   treatmentName?: string | null
@@ -297,7 +298,7 @@ export async function getCareQueue(
           husbandryGuide: { include: { fertilizerRecipe: { include: { products: { include: { product: true }, orderBy: { sortOrder: 'asc' } } } } } },
           substrateRecommendations: {
             where: { collectionId },
-            include: { recipeVersion: { include: { recipe: true } } },
+            include: { recipeVersion: { include: { recipe: true, components: { include: { component: true }, orderBy: { sortOrder: 'asc' } } } } },
             orderBy: { rank: 'asc' },
             take: 1,
           },
@@ -496,6 +497,7 @@ export async function getCareQueue(
         recommendedSubstrate: recommendation
           ? `${recommendation.recipeVersion.recipe.name} v${recommendation.recipeVersion.versionNumber}`
           : null,
+        recommendedSubstrateComposition: recommendation?.recipeVersion.components.map((row) => ({ id: row.id, percentByVolume: Number(row.percentByVolume), component: row.component })) || [],
       })
     }
 

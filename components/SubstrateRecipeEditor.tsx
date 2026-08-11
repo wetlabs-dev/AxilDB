@@ -6,8 +6,10 @@ import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, v
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, Plus, X } from 'lucide-react'
 import { createSubstrateRecipe, saveSubstrateRecipeDraft } from '@/app/substrate-actions'
+import { SubstrateCompositionBar, SubstrateSwatch } from '@/components/SubstrateCompositionBar'
+import type { SubstrateVisualSource } from '@/lib/substrate-visuals'
 
-type ComponentOption = { id: string; name: string; category: string }
+type ComponentOption = SubstrateVisualSource & { id: string; category: string; waterRetention?: string | null; aeration?: string | null }
 type RecipeRow = { key: string; substrateComponentId: string; percentByVolume: string; notes: string }
 
 const control = 'min-w-0 rounded-md border border-[color:var(--ax-border)] bg-[var(--ax-surface)] px-3 py-2 text-sm text-[var(--ax-text)]'
@@ -57,6 +59,10 @@ export function SubstrateRecipeEditor({ collectionSlug, components, recipe, vers
   const delta = Math.abs(total - 100)
   const valid = delta <= 0.001
   const duplicate = rows.some((row, index) => row.substrateComponentId && rows.findIndex((candidate) => candidate.substrateComponentId === row.substrateComponentId) !== index)
+  const previewItems = useMemo(() => rows.flatMap((row) => {
+    const component = components.find((candidate) => candidate.id === row.substrateComponentId)
+    return component && Number(row.percentByVolume) > 0 ? [{ id: row.key, percentByVolume: Number(row.percentByVolume), component }] : []
+  }), [components, rows])
 
   function update(index: number, next: RecipeRow) {
     setRows((current) => current.map((row, rowIndex) => rowIndex === index ? next : row))
@@ -78,6 +84,10 @@ export function SubstrateRecipeEditor({ collectionSlug, components, recipe, vers
         <label className="grid gap-1 text-sm font-semibold sm:col-span-2">Description<textarea className={`${control} min-h-20`} name="description" defaultValue={recipe?.description || ''} /></label>
       </div>}
       <div className="grid gap-2">
+        <div className="rounded-md border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] p-3">
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--ax-muted)]">Live composition</p>
+          <SubstrateCompositionBar items={previewItems} mode="full" allocation />
+        </div>
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={dragEnd}>
           <SortableContext items={rows.map((row) => row.key)} strategy={verticalListSortingStrategy}>
             {rows.map((row, index) => <SortableRow key={row.key} row={row} components={components} onChange={(next) => update(index, next)} onRemove={() => setRows((current) => current.filter((_, rowIndex) => rowIndex !== index))} />)}
@@ -103,7 +113,7 @@ function newRow(key = crypto.randomUUID()): RecipeRow {
   return { key: `new-${key}`, substrateComponentId: '', percentByVolume: '', notes: '' }
 }
 
-export function SubstrateBatchCalculator({ components }: { components: Array<{ name: string; percentByVolume: unknown }> }) {
+export function SubstrateBatchCalculator({ components }: { components: Array<{ name: string; percentByVolume: unknown; component: ComponentOption }> }) {
   const [volume, setVolume] = useState('1')
   const [unit, setUnit] = useState('L')
   const amount = Number(volume) || 0
@@ -114,7 +124,7 @@ export function SubstrateBatchCalculator({ components }: { components: Array<{ n
         <label className="grid gap-1 text-sm font-semibold">Unit<select className={control} value={unit} onChange={(event) => setUnit(event.target.value)}><option>mL</option><option>L</option><option>cups</option><option>quarts</option><option>gallons</option></select></label>
       </div>
       <div className="grid gap-1 text-sm">
-        {components.map((row) => <p key={row.name} className="flex justify-between gap-3"><span>{row.name}</span><strong>{(amount * Number(row.percentByVolume) / 100).toFixed(3).replace(/\.?0+$/, '')} {unit}</strong></p>)}
+        {components.map((row) => <p key={row.name} className="flex justify-between gap-3"><span className="inline-flex items-center gap-2"><SubstrateSwatch component={row.component} />{row.name}</span><strong>{(amount * Number(row.percentByVolume) / 100).toFixed(3).replace(/\.?0+$/, '')} {unit}</strong></p>)}
       </div>
       <p className="text-xs text-[var(--ax-muted)]">Calculator only; no component inventory is tracked.</p>
     </div>

@@ -66,7 +66,8 @@ import { RefreshCw } from 'lucide-react'
 import { sourceChainDisplay } from '@/lib/provenance'
 import { labelizeTreatment } from '@/lib/treatments'
 import { assignPlantSubstrate } from '@/app/substrate-actions'
-import { compactRecipeComposition, substrateAssignmentLabel, substrateLabel, substrateModes } from '@/lib/substrates'
+import { substrateAssignmentLabel, substrateLabel, substrateModes } from '@/lib/substrates'
+import { SubstrateCompositionBar, SubstrateStateStrip } from '@/components/SubstrateCompositionBar'
 
 const conditionCategories = [
   ['WILTING', 'Wilting'],
@@ -982,7 +983,7 @@ export default async function InstanceDetail({
             <div><h3 className="font-bold">Current substrate</h3><p className="mt-1 font-medium">{substrateAssignmentLabel(i.currentSubstrate)}</p></div>
             <Link className="text-sm font-semibold text-[#2f6b45] underline" href={collectionPath(collection.slug, '/substrates')}>Substrate library</Link>
           </div>
-          {i.currentSubstrate?.recipeVersion && <p className="mt-2 text-sm text-stone-700">{compactRecipeComposition(i.currentSubstrate.recipeVersion)}</p>}
+          {i.currentSubstrate?.recipeVersion ? <SubstrateCompositionBar className="mt-2 max-w-3xl" items={i.currentSubstrate.recipeVersion.components} mode="compact" /> : i.currentSubstrate && <SubstrateStateStrip mode={i.currentSubstrate.substrateMode} label={substrateAssignmentLabel(i.currentSubstrate)} />}
           {i.currentSubstrate?.receivedSubstrateDescription && <p className="mt-2 whitespace-pre-wrap text-sm text-stone-700">{i.currentSubstrate.receivedSubstrateDescription}</p>}
           {i.currentSubstrate?.notes && <p className="mt-2 whitespace-pre-wrap text-sm text-stone-600">{i.currentSubstrate.notes}</p>}
           {canCreateRecords && <details className="mt-3 rounded-md border border-stone-200 bg-white/55">
@@ -1004,7 +1005,7 @@ export default async function InstanceDetail({
             <summary className="cursor-pointer p-3 text-sm font-semibold">Substrate history ({i.substrateHistory.length})</summary>
             <div className="grid gap-2 border-t border-stone-200 p-3">
               {i.substrateHistory.length === 0 && <p className="text-sm text-stone-600">No substrate history has been recorded.</p>}
-              {i.substrateHistory.map((entry) => <article key={entry.id} className="rounded-md border border-stone-200 bg-white/70 p-3 text-sm"><p className="font-semibold">{entry.newMode === 'RECIPE' ? `${entry.newRecipeVersion?.recipe.name || 'Recipe'} v${entry.newRecipeVersion?.versionNumber || '?'}` : substrateLabel(entry.newMode)}</p><p className="text-stone-600">{fmtDate(entry.changedAt, timezone)}{entry.reason ? ` · ${entry.reason}` : ''}</p>{entry.newRecipeVersion && <p className="mt-1 text-stone-700">{compactRecipeComposition(entry.newRecipeVersion)}</p>}{entry.newDescription && <p className="mt-1 whitespace-pre-wrap text-stone-700">{entry.newDescription}</p>}{entry.notes && <p className="mt-1 whitespace-pre-wrap text-stone-600">{entry.notes}</p>}</article>)}
+              {i.substrateHistory.map((entry) => <article key={entry.id} className="rounded-md border border-stone-200 bg-white/70 p-3 text-sm"><p className="font-semibold">{entry.newMode === 'RECIPE' ? `${entry.newRecipeVersion?.recipe.name || 'Recipe'} v${entry.newRecipeVersion?.versionNumber || '?'}` : substrateLabel(entry.newMode)}</p><p className="text-stone-600">{fmtDate(entry.changedAt, timezone)}{entry.reason ? ` · ${entry.reason}` : ''}</p>{entry.newRecipeVersion ? <SubstrateCompositionBar className="mt-2" items={entry.newRecipeVersion.components} mode="tiny" /> : <SubstrateStateStrip mode={entry.newMode} />}{entry.newDescription && <p className="mt-1 whitespace-pre-wrap text-stone-700">{entry.newDescription}</p>}{entry.notes && <p className="mt-1 whitespace-pre-wrap text-stone-600">{entry.notes}</p>}</article>)}
             </div>
           </details>
         </Card>
