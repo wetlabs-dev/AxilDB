@@ -159,7 +159,7 @@ const definitions: DefinitionInput[] = [
 export async function createDemoData(collectionId: string) {
   const batch = `DEMO-${new Date().toISOString().replace(/[-:]/g, '').slice(0, 13)}`
 
-  const avsa = await prisma.governingBody.upsert({
+  const avsa = await prisma.taxonomicAuthority.upsert({
     where: { id: `demo-avsa-${collectionId}` },
     update: {},
     create: {
@@ -167,8 +167,10 @@ export async function createDemoData(collectionId: string) {
       collectionId,
       name: 'African Violet Society of America',
       abbreviation: 'AVSA',
+      authorityType: 'ICRA',
       website: 'https://africanvioletsocietyofamerica.org/',
-      notes: 'Demo governing body used by sample data.',
+      notes: 'Demo taxonomic authority used by sample data.',
+      scopeRules: { create: [{ rank: 'GENUS', taxonName: 'Streptocarpus' }, { rank: 'SECTION', taxonName: 'Saintpaulia' }] },
     },
   })
 
@@ -190,7 +192,9 @@ export async function createDemoData(collectionId: string) {
         inaturalistUrl: item.inaturalistUrl,
         powoUrl: item.powoUrl,
         gbifUrl: item.gbifUrl,
-        governingBodyId: item.code === 'STR' ? avsa.id : undefined,
+        taxonomicAuthorityId: item.code === 'STR' ? avsa.id : undefined,
+        taxonomicAuthoritySource: item.code === 'STR' ? 'MANUAL' : 'AUTO',
+        taxonomicAuthorityMatchReason: item.code === 'STR' ? 'Demo data manual selection' : undefined,
         description: `${item.description} Batch ${batch}.`,
         notes: `Sample record generated for app evaluation in ${batch}.`,
         aliases: { create: (item.aliases || []).map((alias) => ({ ...alias, collectionId })) },

@@ -173,7 +173,7 @@ export async function POST(req: Request) {
       'Never claim certainty. Prefer likely, possible, or uncertain language.',
       'If the evidence is weak, keep genus/species null or low confidence instead of hallucinating.',
       'Use lowercase for species.',
-      'Do not invent cultivar registration numbers, governing bodies, or cultivar registration details.',
+      'Do not invent cultivar registration numbers, taxonomic authorities, or cultivar registration details.',
       'Do not fill cultivarName unless strongly supported by the user-provided evidence.',
       'Suggest common names and trade names as aliases when useful.',
       'Suggest reference URLs only when likely relevant and public.',

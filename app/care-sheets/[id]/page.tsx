@@ -25,7 +25,7 @@ export default async function CareSheetDetailPage({
         include: {
           plantInstance: {
             include: {
-              plantDefinition: { include: { aliases: true, governingBody: true, husbandryGuide: true } },
+              plantDefinition: { include: { aliases: true, taxonomicAuthority: true, husbandryGuide: true } },
               husbandryOverride: true,
             },
           },
@@ -36,7 +36,7 @@ export default async function CareSheetDetailPage({
         include: {
           plantInstance: {
             include: {
-              plantDefinition: { include: { aliases: true, governingBody: true, husbandryGuide: true } },
+              plantDefinition: { include: { aliases: true, taxonomicAuthority: true, husbandryGuide: true } },
               husbandryOverride: true,
             },
           },

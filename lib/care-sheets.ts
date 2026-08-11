@@ -24,7 +24,7 @@ export const careSheetPlantInclude = {
   plantDefinition: {
     include: {
       aliases: true,
-      governingBody: true,
+      taxonomicAuthority: true,
       husbandryGuide: true,
     },
   },

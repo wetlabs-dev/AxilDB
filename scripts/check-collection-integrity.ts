@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client'
 const prisma = new PrismaClient()
 
 const requiredCollectionModels = [
-  ['GoverningBody', 'governingBody'],
+  ['TaxonomicAuthority', 'taxonomicAuthority'],
   ['PlantDefinition', 'plantDefinition'],
   ['PlantAlias', 'plantAlias'],
   ['LocationType', 'locationType'],
@@ -230,12 +230,13 @@ const relationshipChecks = [
     `,
   },
   {
-    label: 'PlantDefinition.collectionId matches GoverningBody.collectionId',
+    label: 'PlantDefinition.collectionId matches TaxonomicAuthority.collectionId',
     sql: `
       SELECT COUNT(*)::int AS count
       FROM "PlantDefinition" definition
-      JOIN "GoverningBody" body ON body.id = definition."governingBodyId"
-      WHERE definition."collectionId" IS DISTINCT FROM body."collectionId"
+      JOIN "TaxonomicAuthority" body ON body.id = definition."taxonomicAuthorityId"
+      WHERE body."collectionId" IS NOT NULL
+        AND definition."collectionId" IS DISTINCT FROM body."collectionId"
     `,
   },
   {
@@ -524,7 +525,7 @@ const relationshipChecks = [
       WHERE audit."entityType" IN (
         'COLLECTION',
         'COLLECTION_MEMBERSHIP',
-        'GOVERNING_BODY',
+        'TAXONOMIC_AUTHORITY',
         'PLANT_DEFINITION',
         'PLANT_INSTANCE',
         'NOTE',

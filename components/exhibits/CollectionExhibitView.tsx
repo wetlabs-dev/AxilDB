@@ -204,7 +204,7 @@ function DefinitionGroup({ group, settings, collectionSlug, visibility }: { grou
             items={[
               ['Authority', definition.authority],
               ['Registration', definition.cultivarRegistrationNumber],
-              ['Governing body', definition.governingBody?.name],
+              ['Taxonomic Authority', definition.taxonomicAuthority?.name],
               ['Confidence', taxonomyLabel(definition.confidence)],
               ['Validation', definition.isValidated ? `Validated ${formatDate(definition.validatedAt)}` : 'Not validated'],
             ]}

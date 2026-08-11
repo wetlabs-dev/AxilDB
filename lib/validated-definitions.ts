@@ -47,11 +47,11 @@ export async function findMatchingValidatedDefinition(client: PrismaClient | Pri
   })
 }
 
-export async function globalGoverningBodyId(client: PrismaClient | Prisma.TransactionClient, governingBodyId?: string | null) {
-  if (!governingBodyId) return null
-  const body = await client.governingBody.findUnique({ where: { id: governingBodyId } })
+export async function globalTaxonomicAuthorityId(client: PrismaClient | Prisma.TransactionClient, taxonomicAuthorityId?: string | null) {
+  if (!taxonomicAuthorityId) return null
+  const body = await client.taxonomicAuthority.findUnique({ where: { id: taxonomicAuthorityId }, include: { scopeRules: true, publications: true } })
   if (!body) return null
-  const existing = await client.governingBody.findFirst({
+  const existing = await client.taxonomicAuthority.findFirst({
     where: {
       collectionId: null,
       name: { equals: body.name, mode: 'insensitive' },
@@ -59,13 +59,21 @@ export async function globalGoverningBodyId(client: PrismaClient | Prisma.Transa
     },
   })
   if (existing) return existing.id
-  const created = await client.governingBody.create({
+  const created = await client.taxonomicAuthority.create({
     data: {
       collectionId: null,
       name: body.name,
       abbreviation: body.abbreviation,
+      authorityType: body.authorityType,
+      description: body.description,
       website: body.website,
+      registrationUrl: body.registrationUrl,
+      cultivarSearchUrl: body.cultivarSearchUrl,
+      membershipUrl: body.membershipUrl,
+      externalAuthorityUrl: body.externalAuthorityUrl,
       notes: body.notes,
+      scopeRules: { create: body.scopeRules.map(({ rank, taxonName, qualifier, priority, notes }) => ({ rank, taxonName, qualifier, priority, notes })) },
+      publications: { create: body.publications.map(({ name, url, purpose, notes }) => ({ name, url, purpose, notes })) },
     },
   })
   return created.id
@@ -79,7 +87,19 @@ export function definitionData(source: any, overrides: Record<string, unknown> =
     cultivarName: source.cultivarName,
     authority: source.authority,
     cultivarRegistrationNumber: source.cultivarRegistrationNumber,
-    governingBodyId: source.governingBodyId,
+    taxonomicAuthorityId: source.taxonomicAuthorityId,
+    automaticTaxonomicAuthorityId: source.automaticTaxonomicAuthorityId,
+    taxonomicAuthoritySource: source.taxonomicAuthoritySource,
+    taxonomicAuthorityMatchReason: source.taxonomicAuthorityMatchReason,
+    taxonomicAuthorityMatchPriority: source.taxonomicAuthorityMatchPriority,
+    taxonomicPlacementJson: source.taxonomicPlacementJson,
+    registrationRequired: source.registrationRequired,
+    registrationStatus: source.registrationStatus,
+    registrationDate: source.registrationDate,
+    registrationApplicationDate: source.registrationApplicationDate,
+    cultivarAccepted: source.cultivarAccepted,
+    officialCultivarName: source.officialCultivarName,
+    registrationPublicationReference: source.registrationPublicationReference,
     confidence: source.confidence,
     provisionalTaxon: source.provisionalTaxon,
     identificationStatus: source.identificationStatus,

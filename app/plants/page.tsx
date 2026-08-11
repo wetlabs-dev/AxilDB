@@ -18,6 +18,7 @@ import Link from 'next/link'
 import { PlantTagPicker } from '@/components/PlantTagPicker'
 import { PlantTagRow } from '@/components/PlantTagChip'
 import { PlantTagFilter } from '@/components/PlantTagFilter'
+import { TAXONOMIC_AUTHORITY_TYPES, taxonomicAuthorityWhere } from '@/lib/taxonomic-authorities'
 
 const selectClass = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
 
@@ -47,7 +48,7 @@ function referencePrefill(log: { resultJson: unknown }) {
 export default async function Plants({
   searchParams,
 }: {
-  searchParams: Promise<{ fromIdentification?: string; wishlist?: string; tag?: string | string[]; tagMode?: string }>
+  searchParams: Promise<{ fromIdentification?: string; wishlist?: string; tag?: string | string[]; tagMode?: string; taxonomicAuthorityId?: string; authorityType?: string; registrationAuthority?: string }>
 }) {
   const user = await getCurrentUser()
   const sp = await searchParams
@@ -59,12 +60,19 @@ export default async function Plants({
   const collectionWhere = { collectionId: collection.id }
   const selectedTagIds = (Array.isArray(sp.tag) ? sp.tag : sp.tag ? [sp.tag] : []).filter(Boolean)
   const tagMode = sp.tagMode === 'all' ? 'all' : 'any'
+  const authorityFilter = String(sp.taxonomicAuthorityId || '')
+  const authorityTypeFilter = String(sp.authorityType || '')
+  const registrationAuthorityOnly = sp.registrationAuthority === '1'
   const sortKey = await sortPreference(user?.id, 'plants', 'nameAsc', plantSortOptions.map((option) => option.value))
   const [plants, bodies, follows, activeTags, outgoingTransferConnections] = await Promise.all([
     prisma.plantDefinition.findMany({
-      where: { ...collectionWhere, ...(selectedTagIds.length ? tagMode === 'all' ? { AND: selectedTagIds.map((plantTagId) => ({ tags: { some: { plantTagId } } })) } : { tags: { some: { plantTagId: { in: selectedTagIds } } } } : {}) },
+      where: { ...collectionWhere,
+        ...(authorityFilter ? { taxonomicAuthorityId: authorityFilter } : {}),
+        ...(authorityTypeFilter ? { taxonomicAuthority: { authorityType: authorityTypeFilter } } : {}),
+        ...(registrationAuthorityOnly ? { taxonomicAuthority: { authorityType: 'ICRA' } } : {}),
+        ...(selectedTagIds.length ? tagMode === 'all' ? { AND: selectedTagIds.map((plantTagId) => ({ tags: { some: { plantTagId } } })) } : { tags: { some: { plantTagId: { in: selectedTagIds } } } } : {}) },
       include: {
-        governingBody: true,
+        taxonomicAuthority: true,
         aliases: { orderBy: { name: 'asc' } },
         husbandryGuide: true,
         instances: { select: { id: true } },
@@ -73,7 +81,7 @@ export default async function Plants({
       },
       orderBy: [{ genus: 'asc' }, { species: 'asc' }],
     }),
-    prisma.governingBody.findMany({ where: collectionWhere, orderBy: { name: 'asc' } }),
+    prisma.taxonomicAuthority.findMany({ where: taxonomicAuthorityWhere(collection.id), include: { scopeRules: true }, orderBy: { name: 'asc' } }),
     user
       ? prisma.follow.findMany({
           where: { ...collectionWhere, userId: user.id, scope: 'TYPE', entityType: 'PLANT_DEFINITION' },
@@ -98,7 +106,7 @@ export default async function Plants({
     provisionalTaxon: rankedSuggestions(plants.map((plant) => plant.provisionalTaxon)),
     aliasSource: rankedSuggestions(plants.flatMap((plant) => plant.aliases.map((alias) => alias.source))),
   }
-  const governingBodyOptions = bodies.map((body) => ({ id: body.id, name: body.name, abbreviation: body.abbreviation }))
+  const taxonomicAuthorityOptions = bodies.map((body) => ({ id: body.id, name: body.name, abbreviation: body.abbreviation }))
   const identificationPrefill = canCreate && sp.fromIdentification
     ? await prisma.plantIdentificationLog.findFirst({
         where: { id: sp.fromIdentification, collectionId: collection.id },
@@ -196,23 +204,28 @@ export default async function Plants({
             <div className="min-w-0 rounded-lg border border-[#d6dfc9] bg-[#f7f4e8]/80 px-3 py-2 text-sm text-stone-700 lg:col-span-4">
               <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
                 <span className="min-w-0">Enter the core name first, then let AxilDB draft taxonomy metadata and suggested aliases.</span>
-                <AIMagicFillButton governingBodies={governingBodyOptions} />
+                <AIMagicFillButton taxonomicAuthorities={taxonomicAuthorityOptions} />
               </div>
               <PlantIdentificationAssistant collectionSlug={collection.slug} className="mt-3" />
             </div>
             <Field label="Author citation" help="The author citation for the scientific name, such as (L.f.) R.Br. It records who validly published the name or combination." name="authority" list="definition-authority-suggestions" />
-            <Field label="Cultivar registration number" help="Use when a formal cultivar registry or governing body assigns a registration number to the cultivar." name="cultivarRegistrationNumber" />
+            <Field label="Cultivar registration number" help="Use when a formal registry or Taxonomic Authority assigns a registration number to the cultivar." name="cultivarRegistrationNumber" />
+            <Field label="Order" name="taxonomicOrder" />
+            <Field label="Family" name="taxonomicFamily" />
+            <Field label="Tribe" name="taxonomicTribe" />
+            <Field label="Section" name="taxonomicSection" help="For an infrageneric placement such as Saintpaulia within Streptocarpus." />
             <ConfidenceSelect name="confidence" defaultValue={identificationPrefill ? 'AI_DETERMINED' : 'UNCERTAIN'} />
             <label className="grid gap-1 text-sm font-medium text-stone-800">
               <span className="flex items-center gap-1.5">
-                <span>Governing body</span>
-                <HelpTooltip>The registry, society, or authority that governs naming or registration for this plant group, if applicable.</HelpTooltip>
+                <span>Taxonomic Authority</span>
+                <HelpTooltip>Use automatic matching from structured scope rules, choose a manual override, or explicitly continue without an authority.</HelpTooltip>
               </span>
-              <select className={selectClass} name="governingBodyId">
-                <option value="">—</option>
+              <select className={selectClass} name="taxonomicAuthoritySelection" defaultValue="AUTO">
+                <option value="AUTO">Automatic matching</option>
+                <option value="NONE">Continue without authority</option>
                 {bodies.map((body) => (
-                  <option key={body.id} value={body.id}>
-                    {body.name}
+                  <option key={body.id} value={`MANUAL:${body.id}`}>
+                    Override: {body.name}
                   </option>
                 ))}
               </select>
@@ -229,6 +242,15 @@ export default async function Plants({
           </form>
         </AddPanel>
       )}
+
+      <Card>
+        <form method="get" className="grid gap-2 sm:grid-cols-3 lg:grid-cols-[1fr_1fr_auto_auto] lg:items-end">
+          <label className="grid gap-1 text-sm font-medium">Taxonomic Authority<select className={selectClass} name="taxonomicAuthorityId" defaultValue={authorityFilter}><option value="">All authorities</option>{bodies.map((body) => <option key={body.id} value={body.id}>{body.name}</option>)}</select></label>
+          <label className="grid gap-1 text-sm font-medium">Authority type<select className={selectClass} name="authorityType" defaultValue={authorityTypeFilter}><option value="">All types</option>{TAXONOMIC_AUTHORITY_TYPES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+          <label className="flex items-center gap-2 rounded-md border border-stone-300 px-3 py-2 text-sm"><input type="checkbox" name="registrationAuthority" value="1" defaultChecked={registrationAuthorityOnly} />Registration Authorities only</label>
+          <Button>Apply authority filters</Button>
+        </form>
+      </Card>
 
       {activeTags.length > 0 && (
         <Card>
@@ -249,7 +271,7 @@ export default async function Plants({
                   <div className="min-w-0">
                     <span className="line-clamp-2 text-sm font-bold leading-tight">{plantName(plant)}</span>
                     <p className="truncate text-sm">
-                      {plant.governingBody?.abbreviation || 'No governing body'} · {plant._count.instances} instance(s) ·{' '}
+                      {plant.taxonomicAuthority?.abbreviation || 'No matching Taxonomic Authority'} · {plant._count.instances} instance(s) ·{' '}
                       {taxonomyLabel(plant.confidence)}
                     </p>
                     {(plantNeedsIdentification(plant) || plant.authority) && (

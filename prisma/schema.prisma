@@ -83,17 +83,72 @@ enum AcquisitionFulfillmentChoice {
   REPEAT_PURCHASE
 }
 
-model GoverningBody {
-  collectionId     String?
-  id               String            @id @default(cuid())
-  name             String
-  abbreviation     String?
-  website          String?
-  notes            String?
-  collection       Collection?       @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  plantDefinitions PlantDefinition[]
+model TaxonomicAuthority {
+  collectionId             String?
+  id                       String                              @id @default(cuid())
+  name                     String
+  abbreviation             String?
+  authorityType            String                              @default("OTHER")
+  description              String?
+  notes                    String?
+  website                  String?
+  registrationUrl          String?
+  cultivarSearchUrl        String?
+  membershipUrl            String?
+  externalAuthorityUrl     String?
+  otherResourcesJson       Json?
+  importProvider           String?
+  externalId               String?
+  importedAt               DateTime?
+  lastUrlCheckAt           DateTime?
+  urlHealthStatus          String?
+  urlHealthDetailsJson     Json?
+  createdAt                DateTime                            @default(now())
+  updatedAt                DateTime                            @updatedAt
+  collection               Collection?                        @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  plantDefinitions         PlantDefinition[]                  @relation("SelectedTaxonomicAuthority")
+  automaticPlantDefinitions PlantDefinition[]                 @relation("AutomaticTaxonomicAuthority")
+  scopeRules               TaxonomicAuthorityScopeRule[]
+  publications             TaxonomicAuthorityPublication[]
+  definitionMatches        PlantDefinitionAuthorityMatch[]
 
   @@index([collectionId])
+  @@index([authorityType])
+  @@index([name])
+  @@unique([collectionId, importProvider, externalId])
+}
+
+model TaxonomicAuthorityScopeRule {
+  id                    String              @id @default(cuid())
+  taxonomicAuthorityId  String
+  rank                  String
+  taxonName             String
+  qualifier             String?
+  priority              Int                 @default(0)
+  notes                 String?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  taxonomicAuthority    TaxonomicAuthority  @relation(fields: [taxonomicAuthorityId], references: [id], onDelete: Cascade)
+  definitionMatches     PlantDefinitionAuthorityMatch[]
+
+  @@unique([taxonomicAuthorityId, rank, taxonName, qualifier])
+  @@index([taxonomicAuthorityId, priority])
+  @@index([rank, taxonName])
+}
+
+model TaxonomicAuthorityPublication {
+  id                    String              @id @default(cuid())
+  taxonomicAuthorityId  String
+  name                  String
+  url                   String?
+  purpose               String?
+  notes                 String?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  taxonomicAuthority    TaxonomicAuthority  @relation(fields: [taxonomicAuthorityId], references: [id], onDelete: Cascade)
+
+  @@index([taxonomicAuthorityId])
+  @@index([name])
 }
 
 model User {
@@ -253,7 +308,7 @@ model Collection {
   quietDays                           CollectionQuietDay[]
   quietDayShiftRules                  CollectionQuietDayShiftRule[]
   quietDayAdjustments                 CareQuietDayAdjustment[]
-  governingBodies                     GoverningBody[]
+  taxonomicAuthorities                TaxonomicAuthority[]
   plantHusbandryGuides                PlantHusbandryGuide[]
   plantHusbandryOverrides             PlantHusbandryOverride[]
   fertilizerProducts                  FertilizerProduct[]
@@ -1222,7 +1277,19 @@ model PlantDefinition {
   cultivarName                String?
   authority                   String?
   cultivarRegistrationNumber  String?
-  governingBodyId             String?
+  taxonomicAuthorityId             String?
+  automaticTaxonomicAuthorityId    String?
+  taxonomicAuthoritySource         String             @default("AUTO")
+  taxonomicAuthorityMatchReason    String?
+  taxonomicAuthorityMatchPriority  Int?
+  taxonomicPlacementJson           Json?
+  registrationRequired             Boolean?
+  registrationStatus               String?
+  registrationDate                 DateTime?
+  registrationApplicationDate      DateTime?
+  cultivarAccepted                 Boolean?
+  officialCultivarName             String?
+  registrationPublicationReference String?
   confidence                  String             @default("UNCERTAIN")
   provisionalTaxon            String?
   identificationStatus        String             @default("IDENTIFIED")
@@ -1252,7 +1319,9 @@ model PlantDefinition {
   updatedAt                   DateTime           @updatedAt
 
   collection                      Collection?                              @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  governingBody                   GoverningBody?                           @relation(fields: [governingBodyId], references: [id], onDelete: SetNull)
+  taxonomicAuthority              TaxonomicAuthority?                      @relation("SelectedTaxonomicAuthority", fields: [taxonomicAuthorityId], references: [id], onDelete: SetNull)
+  automaticTaxonomicAuthority     TaxonomicAuthority?                      @relation("AutomaticTaxonomicAuthority", fields: [automaticTaxonomicAuthorityId], references: [id], onDelete: SetNull)
+  taxonomicAuthorityMatches       PlantDefinitionAuthorityMatch[]
   desiredLocation                 Location?                                @relation("PlantDefinitionDesiredLocation", fields: [desiredLocationId], references: [id], onDelete: SetNull)
   validatedBy                     User?                                    @relation("PlantDefinitionValidatedBy", fields: [validatedByUserId], references: [id], onDelete: SetNull)
   validatedSourceCollection       Collection?                              @relation("ValidatedPlantDefinitionSourceCollection", fields: [validatedSourceCollectionId], references: [id], onDelete: SetNull)
@@ -1282,7 +1351,8 @@ model PlantDefinition {
   substrateRecommendations        PlantDefinitionSubstrateRecommendation[]
 
   @@index([collectionId])
-  @@index([governingBodyId])
+  @@index([taxonomicAuthorityId])
+  @@index([automaticTaxonomicAuthorityId])
   @@index([confidence])
   @@index([identificationStatus])
   @@index([isValidated])
@@ -1293,6 +1363,27 @@ model PlantDefinition {
   @@index([acquisitionStatus])
   @@index([acquisitionPriority])
   @@index([desiredLocationId])
+}
+
+model PlantDefinitionAuthorityMatch {
+  id                   String             @id @default(cuid())
+  plantDefinitionId    String
+  taxonomicAuthorityId String
+  scopeRuleId          String?
+  matchReason          String
+  priority             Int
+  isSelected           Boolean            @default(false)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  plantDefinition    PlantDefinition    @relation(fields: [plantDefinitionId], references: [id], onDelete: Cascade)
+  taxonomicAuthority TaxonomicAuthority @relation(fields: [taxonomicAuthorityId], references: [id], onDelete: Cascade)
+  scopeRule          TaxonomicAuthorityScopeRule? @relation(fields: [scopeRuleId], references: [id], onDelete: SetNull)
+
+  @@unique([plantDefinitionId, taxonomicAuthorityId])
+  @@index([plantDefinitionId, priority])
+  @@index([taxonomicAuthorityId])
+  @@index([scopeRuleId])
 }
 
 model AcquisitionResearchEntry {

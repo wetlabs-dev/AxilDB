@@ -57,7 +57,7 @@ type DefinitionPreview = {
     provisionalTaxon?: string | null
     identificationStatus?: string | null
     confidence?: string | null
-    governingBody?: string | null
+    taxonomicAuthority?: string | null
   }
   counts?: {
     aliases?: number
@@ -158,7 +158,7 @@ export default async function CollectionTransfersPage({ searchParams }: { search
         where: { collectionId: { in: reciprocalCollectionIds } },
         include: {
           collection: true,
-          governingBody: true,
+          taxonomicAuthority: true,
           aliases: { orderBy: { name: 'asc' } },
           _count: { select: { instances: true } },
         },
@@ -346,7 +346,7 @@ export default async function CollectionTransfersPage({ searchParams }: { search
                   <div>
                     <p className="font-semibold">{preview.plantName || plantName(request.sourcePlantDefinition)}</p>
                     <p className="text-sm text-stone-600">From {request.sourceCollection.name} · requested {fmtDate(request.requestedAt)} by {request.requestedBy.email}</p>
-                    {preview.definition?.governingBody && <p className="text-sm text-stone-600">Governing body: {preview.definition.governingBody}</p>}
+                    {preview.definition?.taxonomicAuthority && <p className="text-sm text-stone-600">Taxonomic Authority: {preview.definition.taxonomicAuthority}</p>}
                   </div>
                   <span className={statusBadge(request.status)}>{request.status.toLowerCase()}</span>
                 </div>
@@ -397,7 +397,7 @@ export default async function CollectionTransfersPage({ searchParams }: { search
                 </div>
                 <div className="min-w-0">
                   <p className="font-semibold">{plantName(definition)}</p>
-                  <p className="text-stone-600">{definition.collection?.name} · {definition.governingBody?.abbreviation || definition.governingBody?.name || 'No governing body'}</p>
+                  <p className="text-stone-600">{definition.collection?.name} · {definition.taxonomicAuthority?.abbreviation || definition.taxonomicAuthority?.name || 'No taxonomic authority'}</p>
                   <p className="mt-2 text-stone-600">Aliases: {definition.aliases.length} · Instances: {definition._count.instances}</p>
                 </div>
               </div>

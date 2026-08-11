@@ -4,7 +4,7 @@ import path from 'node:path'
 const roots = ['app', 'lib', 'scripts']
 const ignoredDirs = new Set(['node_modules', '.next', '.git'])
 const collectionModels = [
-  'governingBody',
+  'taxonomicAuthority',
   'plantDefinition',
   'plantAlias',
   'locationType',
@@ -26,6 +26,22 @@ const collectionModels = [
 const readOps = ['findMany', 'findFirst', 'findUnique', 'findUniqueOrThrow', 'count']
 
 const reviewedAllowlist = [
+  ...[
+    'app/api/taxonomic-authorities/route.ts',
+    'app/plants/[id]/edit/page.tsx',
+    'app/plants/page.tsx',
+  ].map((file) => ({
+    file,
+    model: 'taxonomicAuthority',
+    op: 'findMany',
+    reason: 'Taxonomic Authority selection intentionally combines collection-owned records with read-only site-level registry records through taxonomicAuthorityWhere(collectionId).',
+  })),
+  {
+    file: 'lib/taxonomic-authority-health.ts',
+    model: 'taxonomicAuthority',
+    op: 'findMany',
+    reason: 'Server metrics worker intentionally checks stale official authority links across collections and records only operational link-health metadata.',
+  },
   ...['plantLocationMove', 'plantQuarantine', 'propagationEvent', 'bloomEvent'].map((model) => ({
     file: 'scripts/backfill-domain-events.ts',
     model,

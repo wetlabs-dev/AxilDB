@@ -156,7 +156,7 @@ async function collectionUsages() {
           photos: true,
           reminders: true,
           follows: true,
-          governingBodies: true,
+          taxonomicAuthorities: true,
         },
       },
     },

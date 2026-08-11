@@ -205,7 +205,7 @@ export async function loadExhibitForDisplay(prisma: PrismaClient, slug: string) 
                 include: {
                   aliases: true,
                   tags: { where: { plantTag: { publicVisible: true, active: true } }, include: { plantTag: true }, orderBy: { plantTag: { name: 'asc' } } },
-                  governingBody: true,
+                  taxonomicAuthority: true,
                   husbandryGuide: true,
                 },
               },

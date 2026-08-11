@@ -214,7 +214,7 @@ function drawDefinitionSection(
     detailGrid(doc, [
       ['Authority', group.definition.authority],
       ['Registration', group.definition.cultivarRegistrationNumber],
-      ['Governing body', group.definition.governingBody?.name],
+      ['Taxonomic Authority', group.definition.taxonomicAuthority?.name],
       ['Confidence', taxonomyLabel(group.definition.confidence)],
       ['Validation', group.definition.isValidated ? `Validated ${formatDate(group.definition.validatedAt)}` : 'Not validated'],
     ], 2, data.exhibit.title)

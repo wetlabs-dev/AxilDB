@@ -66,13 +66,25 @@ async function resolvedHusbandryGuide(client: TransferClient, plantDefinitionId:
   })
 }
 
-async function matchingGoverningBody(
+async function matchingTaxonomicAuthority(
   client: TransferClient,
   targetCollectionId: string,
-  source: { name: string; abbreviation: string | null; website: string | null; notes: string | null } | null,
+  source: {
+    name: string
+    abbreviation: string | null
+    authorityType: string
+    description: string | null
+    website: string | null
+    registrationUrl: string | null
+    cultivarSearchUrl: string | null
+    membershipUrl: string | null
+    externalAuthorityUrl: string | null
+    otherResourcesJson: Prisma.JsonValue | null
+    notes: string | null
+  } | null,
 ) {
   if (!source) return null
-  const existing = await client.governingBody.findFirst({
+  const existing = await client.taxonomicAuthority.findFirst({
     where: {
       collectionId: targetCollectionId,
       OR: [
@@ -82,12 +94,19 @@ async function matchingGoverningBody(
     },
   })
   if (existing) return existing
-  return client.governingBody.create({
+  return client.taxonomicAuthority.create({
     data: {
       collectionId: targetCollectionId,
       name: source.name,
       abbreviation: source.abbreviation,
+      authorityType: source.authorityType,
+      description: source.description,
       website: source.website,
+      registrationUrl: source.registrationUrl,
+      cultivarSearchUrl: source.cultivarSearchUrl,
+      membershipUrl: source.membershipUrl,
+      externalAuthorityUrl: source.externalAuthorityUrl,
+      otherResourcesJson: source.otherResourcesJson ?? undefined,
       notes: source.notes,
     },
   })
@@ -95,11 +114,11 @@ async function matchingGoverningBody(
 
 export async function ensureTargetDefinition(
   client: TransferClient,
-  sourceDefinition: Prisma.PlantDefinitionGetPayload<{ include: { aliases: true; governingBody: true } }>,
+  sourceDefinition: Prisma.PlantDefinitionGetPayload<{ include: { aliases: true; taxonomicAuthority: true } }>,
   sourceCollectionId: string,
   targetCollectionId: string,
 ) {
-  const governingBody = await matchingGoverningBody(client, targetCollectionId, sourceDefinition.governingBody)
+  const taxonomicAuthority = await matchingTaxonomicAuthority(client, targetCollectionId, sourceDefinition.taxonomicAuthority)
   const existing = await client.plantDefinition.findFirst({
     where: {
       collectionId: targetCollectionId,
@@ -120,7 +139,10 @@ export async function ensureTargetDefinition(
     cultivarName: sourceDefinition.cultivarName,
     authority: sourceDefinition.authority,
     cultivarRegistrationNumber: sourceDefinition.cultivarRegistrationNumber,
-    governingBodyId: governingBody?.id,
+    taxonomicAuthorityId: taxonomicAuthority?.id,
+    taxonomicAuthoritySource: taxonomicAuthority ? 'MANUAL' : sourceDefinition.taxonomicAuthoritySource === 'NONE' ? 'NONE' : 'AUTO',
+    taxonomicAuthorityMatchReason: taxonomicAuthority ? 'Preserved during collection transfer' : null,
+    taxonomicPlacementJson: sourceDefinition.taxonomicPlacementJson ?? undefined,
     confidence: sourceDefinition.confidence,
     provisionalTaxon: sourceDefinition.provisionalTaxon,
     identificationStatus: sourceDefinition.identificationStatus,
@@ -172,7 +194,7 @@ export async function ensureTargetDefinition(
 }
 
 function buildDefinitionPreview(
-  definition: Prisma.PlantDefinitionGetPayload<{ include: { aliases: true; governingBody: true; _count: { select: { instances: true } } } }>,
+  definition: Prisma.PlantDefinitionGetPayload<{ include: { aliases: true; taxonomicAuthority: true; _count: { select: { instances: true } } } }>,
   counts: { typePhotoCount: number; husbandryGuideCount: number },
   senderNote?: string | null,
 ) {
@@ -185,7 +207,7 @@ function buildDefinitionPreview(
       provisionalTaxon: definition.provisionalTaxon,
       identificationStatus: definition.identificationStatus,
       confidence: definition.confidence,
-      governingBody: definition.governingBody?.name || null,
+      taxonomicAuthority: definition.taxonomicAuthority?.name || null,
     },
     counts: {
       aliases: definition.aliases.length,
@@ -203,7 +225,7 @@ export async function buildPlantDefinitionSharePreview(sourceCollectionId: strin
     where: { id: sourcePlantDefinitionId, collectionId: sourceCollectionId },
     include: {
       aliases: { orderBy: { name: 'asc' } },
-      governingBody: true,
+      taxonomicAuthority: true,
       _count: { select: { instances: true } },
     },
   })
@@ -273,7 +295,7 @@ export async function copyPlantDefinitionPackage(options: {
 }) {
   const sourceDefinition = await prisma.plantDefinition.findFirstOrThrow({
     where: { id: options.sourcePlantDefinitionId, collectionId: options.sourceCollectionId },
-    include: { aliases: { orderBy: { name: 'asc' } }, governingBody: true },
+    include: { aliases: { orderBy: { name: 'asc' } }, taxonomicAuthority: true },
   })
 
   return prisma.$transaction(async (tx) => {
@@ -418,7 +440,7 @@ export async function acceptPlantTransferPackage(options: {
       targetCollection: true,
       sourcePlantInstance: {
         include: {
-          plantDefinition: { include: { aliases: true, governingBody: true } },
+          plantDefinition: { include: { aliases: true, taxonomicAuthority: true } },
           husbandryOverride: true,
           blooms: { orderBy: { bloomStartDate: 'asc' } },
           sportRecords: { include: { propagationEvent: true } },

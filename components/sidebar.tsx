@@ -28,7 +28,7 @@ async function buildSidebarBadges(collection: { id: string; slug: string }, user
     archivedPlants,
     careSheets,
     exhibits,
-    governingBodies,
+    taxonomicAuthorities,
     pendingMembers,
     pendingConnections,
     pendingPlantTransfers,
@@ -63,7 +63,7 @@ async function buildSidebarBadges(collection: { id: string; slug: string }, user
     prisma.plantInstance.count({ where: { collectionId, status: 'ARCHIVED' } }),
     prisma.careSheet.count({ where: { collectionId, status: { not: 'REVOKED' } } }),
     prisma.collectionExhibit.count({ where: { collectionId } }),
-    prisma.governingBody.count({ where: { collectionId } }),
+    prisma.taxonomicAuthority.count({ where: { collectionId } }),
     prisma.collectionMembership.count({ where: { collectionId, status: 'PENDING' } }),
     prisma.collectionTransferConnection.count({
       where: {
@@ -113,7 +113,7 @@ async function buildSidebarBadges(collection: { id: string; slug: string }, user
     '/reminders': reminders,
     '/following': follows,
     '/sports': sportReview,
-    '/settings': governingBodies,
+    '/taxonomic-authorities': taxonomicAuthorities,
     '/members': pendingMembers,
     '/transfers': pendingConnections + pendingPlantTransfers + pendingDefinitionShares,
     '/archived': archivedPlants,

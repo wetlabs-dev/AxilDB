@@ -34,7 +34,7 @@ export default function PrivacyPage() {
           </li>
           <li>
             <strong>Collection and plant records:</strong> collection names, slugs, visibility, descriptions,
-            plant definitions, author citations, aliases, source links, governing bodies, generated plant IDs,
+            plant definitions, author citations, aliases, source links, taxonomic authorities, generated plant IDs,
             plant specimens, locations, acquisition details, sources, distributors, stock labels, propagations,
             blooms, sport observations, notes, labels, transfers, and archive history.
           </li>

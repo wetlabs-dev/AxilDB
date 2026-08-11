@@ -16,10 +16,11 @@ import { createMagicFillPlantTags } from '@/app/plant-tag-actions'
 
 const control = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
 
-type GoverningBodyOption = {
+type TaxonomicAuthorityOption = {
   id: string
   name: string
   abbreviation?: string | null
+  scopeRules?: Array<{ rank: string; taxonName: string; priority: number }>
 }
 
 type ConflictRequest = ReturnType<typeof getMagicFillConflictState> & {
@@ -29,18 +30,9 @@ type ConflictRequest = ReturnType<typeof getMagicFillConflictState> & {
 const descriptionMagicFillFields = ['description'] as const
 const definitionMagicFillFields = [
   'genus', 'species', 'hybridNotation', 'cultivarName', 'authority', 'cultivarRegistrationNumber',
-  'governingBodyId', 'wikipediaUrl', 'inaturalistUrl', 'powoUrl', 'gbifUrl', 'description', 'aliasName',
+  'taxonomicOrder', 'taxonomicFamily', 'taxonomicTribe', 'taxonomicSection',
+  'wikipediaUrl', 'inaturalistUrl', 'powoUrl', 'gbifUrl', 'description', 'aliasName',
 ] as const
-
-function governingBodyId(bodies: GoverningBodyOption[], value?: string | null) {
-  if (!value) return undefined
-  const normalized = value.trim().toLowerCase()
-  return bodies.find((body) =>
-    body.id.toLowerCase() === normalized ||
-    body.name.toLowerCase() === normalized ||
-    body.abbreviation?.toLowerCase() === normalized
-  )?.id
-}
 
 function normalizeAlias(alias: any) {
   return {
@@ -154,10 +146,10 @@ export function AIDescriptionField({
 }
 
 export function AIMagicFillButton({
-  governingBodies = [],
+  taxonomicAuthorities = [],
   className = '',
 }: {
-  governingBodies?: GoverningBodyOption[]
+  taxonomicAuthorities?: TaxonomicAuthorityOption[]
   className?: string
 }) {
   const buttonRef = useRef<HTMLButtonElement>(null)
@@ -207,7 +199,7 @@ export function AIMagicFillButton({
       const response = await fetch('/api/ai/plant-definition-fill', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ collectionSlug, genus, species, hybridNotation, cultivarName, governingBodies, applyMode: mode }),
+        body: JSON.stringify({ collectionSlug, genus, species, hybridNotation, cultivarName, taxonomicAuthorities, applyMode: mode }),
       })
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || 'Magic fill failed.')
@@ -221,7 +213,10 @@ export function AIMagicFillButton({
         cultivarName: fields.cultivarName,
         authority: fields.authority,
         cultivarRegistrationNumber: fields.cultivarRegistrationNumber,
-        governingBodyId: governingBodyId(governingBodies, fields.governingBody),
+        taxonomicOrder: fields.taxonomicOrder,
+        taxonomicFamily: fields.taxonomicFamily,
+        taxonomicTribe: fields.taxonomicTribe,
+        taxonomicSection: fields.taxonomicSection,
         wikipediaUrl: fields.wikipediaUrl,
         inaturalistUrl: fields.inaturalistUrl,
         powoUrl: fields.powoUrl,
@@ -237,7 +232,23 @@ export function AIMagicFillButton({
       setSelectedProposedTags(new Set())
       setConfirmProposedTags(false)
       const aliasStatus = shouldApplyAliases && aliases.length ? ` and ${aliases.length} alias${aliases.length === 1 ? '' : 'es'}` : ''
-      setStatus(`Magic fill applied ${outcome.appliedCount} field${outcome.appliedCount === 1 ? '' : 's'}${aliasStatus}. Review before saving.`)
+      const acceptedGenus = String(fields.genus || genus).trim().toLowerCase()
+      const placement: Record<string, string> = {
+        ORDER: String(fields.taxonomicOrder || '').trim().toLowerCase(),
+        FAMILY: String(fields.taxonomicFamily || '').trim().toLowerCase(),
+        TRIBE: String(fields.taxonomicTribe || '').trim().toLowerCase(),
+        GENUS: acceptedGenus,
+        SECTION: String(fields.taxonomicSection || '').trim().toLowerCase(),
+        SPECIES: `${acceptedGenus} ${String(fields.species || species).trim().toLowerCase()}`,
+      }
+      const specificity = ['ORDER', 'FAMILY', 'TRIBE', 'GENUS', 'SECTION', 'SPECIES']
+      const authorityMatch = taxonomicAuthorities
+        .flatMap((authority) => (authority.scopeRules || []).filter((rule) => placement[rule.rank] === rule.taxonName.trim().toLowerCase()).map((rule) => ({ authority, rule, score: specificity.indexOf(rule.rank) * 10_000 + rule.priority })))
+        .sort((left, right) => right.score - left.score)[0]
+      const matchStatus = authorityMatch
+        ? ` Taxonomic Authority match: ${authorityMatch.authority.name} (${authorityMatch.rule.rank.toLowerCase()}: ${authorityMatch.rule.taxonName}).`
+        : ' No matching Taxonomic Authority found; you can create one or continue without one.'
+      setStatus(`Magic fill applied ${outcome.appliedCount} field${outcome.appliedCount === 1 ? '' : 's'}${aliasStatus}.${matchStatus} Review before saving.`)
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Magic fill failed.')
     } finally {

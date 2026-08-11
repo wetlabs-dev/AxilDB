@@ -140,7 +140,6 @@ export async function backfillDefaultCollection(collectionId?: string) {
   const id = collection.id
 
   await prisma.$transaction([
-    prisma.governingBody.updateMany({ where: { collectionId: null }, data: { collectionId: id } }),
     prisma.plantDefinition.updateMany({ where: { collectionId: null, isValidated: false }, data: { collectionId: id } }),
     prisma.plantHusbandryGuide.updateMany({ where: { collectionId: null, plantDefinition: { is: { isValidated: false } } }, data: { collectionId: id } }),
     prisma.plantAlias.updateMany({ where: { collectionId: null, plantDefinition: { is: { isValidated: false } } }, data: { collectionId: id } }),

@@ -2,6 +2,7 @@ import { ensureRecentServerMetricSnapshot, formatBytes } from '@/lib/server-metr
 import { sendServerHealthAlertEmails } from '@/lib/email-alerts'
 import { prisma } from '@/lib/prisma'
 import { recordServerWorkerRun } from '@/lib/server-incidents'
+import { checkStaleTaxonomicAuthorityUrls } from '@/lib/taxonomic-authority-health'
 
 const startedAt = new Date()
 
@@ -16,12 +17,13 @@ async function main() {
     `Server metrics ${snapshot.capturedAt.toISOString()} · memory ${memoryPercent}% · disk ${diskPercent}% · uploads ${formatBytes(metrics.disk.uploadBytes)} · database ${formatBytes(metrics.disk.databaseBytes)}`,
   )
   const alertResult = await sendServerHealthAlertEmails(prisma, snapshot)
+  const authorityUrlHealth = await checkStaleTaxonomicAuthorityUrls(prisma)
   await recordServerWorkerRun(prisma, {
     workerName: 'metrics',
     status: 'SUCCEEDED',
     startedAt,
-    summary: `Sampled server metrics; health email status ${alertResult.status}.`,
-    metadata: { snapshotId: snapshot.id, alertResult },
+    summary: `Sampled server metrics; health email status ${alertResult.status}; checked ${authorityUrlHealth.checked} Taxonomic Authorities.`,
+    metadata: { snapshotId: snapshot.id, alertResult, authorityUrlHealth },
   })
   console.log(`Server health email status: ${alertResult.status}; sent ${alertResult.sent}; failed ${alertResult.failed}.`)
 }

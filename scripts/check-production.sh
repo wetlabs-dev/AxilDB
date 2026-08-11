@@ -31,6 +31,9 @@ npm run check:treatments
 echo "==> Checking substrate management invariants"
 npm run check:substrates
 
+echo "==> Checking Taxonomic Authority invariants"
+npm run check:taxonomic-authorities
+
 echo "==> Checking event engine invariants"
 npm run check:events
 

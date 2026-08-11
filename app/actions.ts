@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { unlink } from 'fs/promises'
 import path from 'path'
 import { randomUUID } from 'crypto'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { audit, requireServerAdmin, requireUser } from '@/lib/auth'
 import {
@@ -35,7 +36,7 @@ import { addCalendarDays, calendarDayIndexInTimeZone, formatDate, parseDateLocal
 import { plantName } from '@/lib/utils'
 import { normalizePlantDefinitionIdentity } from '@/lib/plant-identity'
 import { environmentalHusbandryFields, husbandryFieldNames, husbandryFormValues } from '@/lib/husbandry'
-import { definitionData, findMatchingValidatedDefinition, globalGoverningBodyId, husbandryData } from '@/lib/validated-definitions'
+import { definitionData, findMatchingValidatedDefinition, globalTaxonomicAuthorityId, husbandryData } from '@/lib/validated-definitions'
 import { recordValidatedDefinitionChange, snapshotValidatedDefinition, validatedDefinitionInclude } from '@/lib/collection-updates'
 import { collectionRoleAtLeast, isServerAdminRole } from '@/lib/roles'
 import { assertLocationParentAllowed, descendantLocationIds, isQuarantineLocation, nextLocationCode, normalizeQuarantineRiskLevel, quarantineChecklistItems } from '@/lib/locations'
@@ -44,12 +45,32 @@ import { emitDomainEvent } from '@/lib/events/emit'
 import { sourceRowsFromForm, validateCommerceSelection, validateSourceRows } from '@/lib/provenance'
 import { parseTagIds } from '@/lib/plant-tags'
 import { requireSubstrateRecipeVersion, setPlantSubstrate, substrateModes } from '@/lib/substrates'
+import {
+  authoritySelectionFromForm,
+  reconcileTaxonomicAuthorityMatches,
+  rematchCollectionAuthorities,
+  taxonomicPlacementFromForm,
+  TAXONOMIC_AUTHORITY_TYPES,
+  TAXONOMIC_SCOPE_RANKS,
+} from '@/lib/taxonomic-authorities'
 
 const val = (fd: FormData, k: string) =>
   String(fd.get(k) || '').trim() || undefined
 const clearableVal = (fd: FormData, k: string) =>
   fd.has(k) ? val(fd, k) || null : undefined
 const speciesVal = (fd: FormData, k = 'species') => val(fd, k)?.toLowerCase()
+
+function taxonomicAuthorityResources(fd: FormData) {
+  return String(fd.get('otherResources') || '').split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map((line) => {
+    const [labelPart, ...urlParts] = line.split('|')
+    const rawUrl = urlParts.join('|').trim()
+    const label = labelPart.trim()
+    if (!label || !rawUrl) throw new Error('Each authority resource must use the format Label | https://example.org.')
+    const url = new URL(rawUrl)
+    if (!['http:', 'https:'].includes(url.protocol)) throw new Error('Authority resource URLs must use HTTP or HTTPS.')
+    return { label, url: url.toString() }
+  })
+}
 
 const date = (s?: string) => (s ? new Date(s) : undefined)
 const dec = (s?: string) => (s ? s : undefined)
@@ -603,49 +624,131 @@ export async function saveSortPreference(fd: FormData) {
   redirect(destination)
 }
 
-export async function createGoverningBody(fd: FormData) {
+export async function createTaxonomicAuthority(fd: FormData) {
   const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
-  const body = await prisma.governingBody.create({
+  const body = await prisma.taxonomicAuthority.create({
     data: {
       collectionId: collection.id,
       name: val(fd, 'name')!,
       abbreviation: val(fd, 'abbreviation'),
+      authorityType: TAXONOMIC_AUTHORITY_TYPES.some(([value]) => value === val(fd, 'authorityType')) ? val(fd, 'authorityType')! : 'OTHER',
+      description: val(fd, 'description'),
       website: val(fd, 'website'),
+      registrationUrl: val(fd, 'registrationUrl'),
+      cultivarSearchUrl: val(fd, 'cultivarSearchUrl'),
+      membershipUrl: val(fd, 'membershipUrl'),
+      externalAuthorityUrl: val(fd, 'externalAuthorityUrl'),
+      otherResourcesJson: taxonomicAuthorityResources(fd),
       notes: val(fd, 'notes'),
     },
   })
-  await audit(user, 'CREATE', 'GOVERNING_BODY', body.id, `Created governing body ${body.name}`, undefined, collection.id)
+  await audit(user, 'CREATE', 'TAXONOMIC_AUTHORITY', body.id, `Created Taxonomic Authority ${body.name}`, undefined, collection.id)
 
-  redirect(collectionPath(collection.slug, '/settings'))
+  redirect(collectionPath(collection.slug, '/taxonomic-authorities'))
 }
 
-export async function updateGoverningBody(fd: FormData) {
+export async function updateTaxonomicAuthority(fd: FormData) {
   const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const id = val(fd, 'id')!
-  const existing = await prisma.governingBody.findFirstOrThrow({ where: { id, collectionId: collection.id } })
-  const body = await prisma.governingBody.update({
+  const existing = await prisma.taxonomicAuthority.findFirstOrThrow({ where: { id, collectionId: collection.id } })
+  const body = await prisma.taxonomicAuthority.update({
     where: { id: existing.id },
     data: {
       name: val(fd, 'name')!,
       abbreviation: clearableVal(fd, 'abbreviation'),
+      authorityType: TAXONOMIC_AUTHORITY_TYPES.some(([value]) => value === val(fd, 'authorityType')) ? val(fd, 'authorityType')! : 'OTHER',
+      description: clearableVal(fd, 'description'),
       website: clearableVal(fd, 'website'),
+      registrationUrl: clearableVal(fd, 'registrationUrl'),
+      cultivarSearchUrl: clearableVal(fd, 'cultivarSearchUrl'),
+      membershipUrl: clearableVal(fd, 'membershipUrl'),
+      externalAuthorityUrl: clearableVal(fd, 'externalAuthorityUrl'),
+      otherResourcesJson: taxonomicAuthorityResources(fd),
       notes: clearableVal(fd, 'notes'),
     },
   })
-  await audit(user, 'UPDATE', 'GOVERNING_BODY', body.id, `Updated governing body ${body.name}`, undefined, collection.id)
+  await audit(user, 'UPDATE', 'TAXONOMIC_AUTHORITY', body.id, `Updated Taxonomic Authority ${body.name}`, undefined, collection.id)
 
-  redirect(collectionPath(collection.slug, '/settings'))
+  redirect(collectionPath(collection.slug, `/taxonomic-authorities#authority-${body.id}`))
 }
 
-export async function deleteGoverningBody(fd: FormData) {
+export async function deleteTaxonomicAuthority(fd: FormData) {
   const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const id = val(fd, 'id')!
-  const body = await prisma.governingBody.findFirst({ where: { id, collectionId: collection.id } })
-  if (!body) throw new Error('Governing body not found in this collection.')
-  await cleanupGenericEntity(collection.id, 'GOVERNING_BODY', id)
-  await prisma.governingBody.delete({ where: { id } })
-  await audit(user, 'DELETE', 'GOVERNING_BODY', id, `Deleted governing body ${body?.name || id}`, undefined, collection.id)
-  redirect(collectionPath(collection.slug, '/settings'))
+  const body = await prisma.taxonomicAuthority.findFirst({ where: { id, collectionId: collection.id } })
+  if (!body) throw new Error('Taxonomic Authority not found in this collection.')
+  await cleanupGenericEntity(collection.id, 'TAXONOMIC_AUTHORITY', id)
+  await prisma.$transaction(async (tx) => {
+    await tx.taxonomicAuthority.delete({ where: { id } })
+    await rematchCollectionAuthorities(tx, collection.id)
+  })
+  await audit(user, 'DELETE', 'TAXONOMIC_AUTHORITY', id, `Deleted Taxonomic Authority ${body.name}`, undefined, collection.id)
+  redirect(collectionPath(collection.slug, '/taxonomic-authorities'))
+}
+
+export async function createTaxonomicAuthorityScopeRule(fd: FormData) {
+  const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
+  const taxonomicAuthorityId = val(fd, 'taxonomicAuthorityId')!
+  const authority = await prisma.taxonomicAuthority.findFirstOrThrow({ where: { id: taxonomicAuthorityId, collectionId: collection.id } })
+  const rank = String(val(fd, 'rank') || 'GENUS').toUpperCase()
+  if (!TAXONOMIC_SCOPE_RANKS.includes(rank as typeof TAXONOMIC_SCOPE_RANKS[number])) throw new Error('Unsupported taxonomic rank.')
+  const taxonName = val(fd, 'taxonName')!
+  await prisma.$transaction(async (tx) => {
+    await tx.taxonomicAuthorityScopeRule.create({ data: {
+      taxonomicAuthorityId,
+      rank,
+      taxonName,
+      qualifier: val(fd, 'qualifier'),
+      priority: boundedInt(val(fd, 'priority'), 0, -9999, 9999),
+      notes: val(fd, 'notes'),
+    } })
+    await rematchCollectionAuthorities(tx, collection.id)
+  })
+  await audit(user, 'CREATE_SCOPE', 'TAXONOMIC_AUTHORITY', authority.id, `Added ${rank} scope ${taxonName} to ${authority.name}`, undefined, collection.id)
+  redirect(collectionPath(collection.slug, `/taxonomic-authorities#authority-${authority.id}`))
+}
+
+export async function deleteTaxonomicAuthorityScopeRule(fd: FormData) {
+  const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
+  const id = val(fd, 'id')!
+  const rule = await prisma.taxonomicAuthorityScopeRule.findFirstOrThrow({ where: { id, taxonomicAuthority: { collectionId: collection.id } }, include: { taxonomicAuthority: true } })
+  await prisma.$transaction(async (tx) => {
+    await tx.taxonomicAuthorityScopeRule.delete({ where: { id } })
+    await rematchCollectionAuthorities(tx, collection.id)
+  })
+  await audit(user, 'DELETE_SCOPE', 'TAXONOMIC_AUTHORITY', rule.taxonomicAuthorityId, `Removed ${rule.rank} scope ${rule.taxonName} from ${rule.taxonomicAuthority.name}`, undefined, collection.id)
+  redirect(collectionPath(collection.slug, `/taxonomic-authorities#authority-${rule.taxonomicAuthorityId}`))
+}
+
+export async function createTaxonomicAuthorityPublication(fd: FormData) {
+  const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
+  const taxonomicAuthorityId = val(fd, 'taxonomicAuthorityId')!
+  const authority = await prisma.taxonomicAuthority.findFirstOrThrow({ where: { id: taxonomicAuthorityId, collectionId: collection.id } })
+  const publication = await prisma.taxonomicAuthorityPublication.create({ data: {
+    taxonomicAuthorityId,
+    name: val(fd, 'name')!,
+    url: val(fd, 'url'),
+    purpose: val(fd, 'purpose'),
+    notes: val(fd, 'notes'),
+  } })
+  await audit(user, 'CREATE_PUBLICATION', 'TAXONOMIC_AUTHORITY', authority.id, `Added publication ${publication.name} to ${authority.name}`, undefined, collection.id)
+  redirect(collectionPath(collection.slug, `/taxonomic-authorities#authority-${authority.id}`))
+}
+
+export async function deleteTaxonomicAuthorityPublication(fd: FormData) {
+  const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
+  const id = val(fd, 'id')!
+  const publication = await prisma.taxonomicAuthorityPublication.findFirstOrThrow({ where: { id, taxonomicAuthority: { collectionId: collection.id } }, include: { taxonomicAuthority: true } })
+  await prisma.taxonomicAuthorityPublication.delete({ where: { id } })
+  await audit(user, 'DELETE_PUBLICATION', 'TAXONOMIC_AUTHORITY', publication.taxonomicAuthorityId, `Removed publication ${publication.name} from ${publication.taxonomicAuthority.name}`, undefined, collection.id)
+  redirect(collectionPath(collection.slug, `/taxonomic-authorities#authority-${publication.taxonomicAuthorityId}`))
+}
+
+export async function rematchTaxonomicAuthorities(fd: FormData) {
+  const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
+  const count = await prisma.$transaction((tx) => rematchCollectionAuthorities(tx, collection.id))
+  await audit(user, 'REMATCH', 'TAXONOMIC_AUTHORITY', collection.id, `Re-evaluated Taxonomic Authorities for ${count} plant definitions`, { count }, collection.id)
+  redirect(collectionPath(collection.slug, '/taxonomic-authorities?rematched=1'))
 }
 
 export async function createLocationType(fd: FormData) {
@@ -1277,6 +1380,7 @@ export async function createPlantDefinition(fd: FormData) {
   }
 
   const identity = normalizePlantDefinitionIdentity({ genus: val(fd, 'genus'), species: speciesVal(fd), provisionalTaxon: val(fd, 'provisionalTaxon') })
+  const taxonomicAuthoritySelection = authoritySelectionFromForm(fd)
   const requestedTagIds = parseTagIds(fd)
   const magicFillTagIds = new Set(fd.getAll('magicFillPlantTagIds').map(String))
   const validTags = requestedTagIds.length ? await prisma.plantTag.findMany({ where: { id: { in: requestedTagIds }, collectionId: collection.id, active: true }, select: { id: true } }) : []
@@ -1291,7 +1395,7 @@ export async function createPlantDefinition(fd: FormData) {
         cultivarName: clearableVal(fd, 'cultivarName'),
         authority: clearableVal(fd, 'authority'),
         cultivarRegistrationNumber: clearableVal(fd, 'cultivarRegistrationNumber'),
-        governingBodyId: clearableVal(fd, 'governingBodyId'),
+        taxonomicPlacementJson: taxonomicPlacementFromForm(fd) ?? Prisma.DbNull,
         confidence: val(fd, 'confidence') || 'UNCERTAIN',
         provisionalTaxon: identity.provisionalTaxon,
         identificationStatus: identity.identificationStatus,
@@ -1357,6 +1461,7 @@ export async function createPlantDefinition(fd: FormData) {
       eventType: 'definition.created', collectionId: collection.id, aggregateId: created.id, actor: { id: user.id, role: user.role },
       idempotencyKey: `definition:${created.id}:created`, payload: { subjectId: created.id, recordId: created.id, recordType: 'PlantDefinition', displayName: plantName(created), genus: created.genus, species: created.species, cultivarName: created.cultivarName, confidence: created.confidence },
     })
+    await reconcileTaxonomicAuthorityMatches(tx, created.id, collection.id, taxonomicAuthoritySelection)
     return created
   })
   await audit(user, 'CREATE', 'PLANT_DEFINITION', definition.id, `Created plant definition ${definition.genus} ${definition.species}`, undefined, collection.id)
@@ -1377,7 +1482,11 @@ export async function copyPlantDefinition(fd: FormData) {
       genus: source.genus,
       species: source.species,
       authority: source.authority,
-      governingBodyId: source.governingBodyId,
+      taxonomicAuthorityId: source.taxonomicAuthorityId,
+      automaticTaxonomicAuthorityId: source.automaticTaxonomicAuthorityId,
+      taxonomicAuthoritySource: source.taxonomicAuthoritySource,
+      taxonomicAuthorityMatchReason: source.taxonomicAuthorityMatchReason,
+      taxonomicAuthorityMatchPriority: source.taxonomicAuthorityMatchPriority,
       wikipediaUrl: source.wikipediaUrl,
       inaturalistUrl: source.inaturalistUrl,
       powoUrl: source.powoUrl,
@@ -1450,7 +1559,7 @@ export async function reviewPlantDefinitionValidationCandidate(fd: FormData) {
           include: {
             aliases: true,
             husbandryGuide: true,
-            governingBody: true,
+            taxonomicAuthority: true,
           },
         },
       },
@@ -1473,11 +1582,11 @@ export async function reviewPlantDefinitionValidationCandidate(fd: FormData) {
     const existing = await findMatchingValidatedDefinition(tx, source)
     if (existing) throw new Error(`A matching validated definition already exists: ${plantName(existing)}.`)
 
-    const governingBodyId = await globalGoverningBodyId(tx, source.governingBodyId)
+    const taxonomicAuthorityId = await globalTaxonomicAuthorityId(tx, source.taxonomicAuthorityId)
     const validated = await tx.plantDefinition.create({
       data: definitionData(source, {
         collectionId: null,
-        governingBodyId,
+        taxonomicAuthorityId,
         isValidated: true,
         validatedAt: new Date(),
         validatedByUserId: user.id,
@@ -1728,6 +1837,7 @@ export async function updatePlantDefinition(fd: FormData) {
   await prisma.plantDefinition.findFirstOrThrow({ where: { id, collectionId: collection.id }, select: { id: true } })
 
   const identity = normalizePlantDefinitionIdentity({ genus: val(fd, 'genus'), species: speciesVal(fd), provisionalTaxon: val(fd, 'provisionalTaxon') })
+  const taxonomicAuthoritySelection = authoritySelectionFromForm(fd)
   const requestedTagIds = parseTagIds(fd)
   const magicFillTagIds = new Set(fd.getAll('magicFillPlantTagIds').map(String))
   const validTags = requestedTagIds.length ? await prisma.plantTag.findMany({ where: { id: { in: requestedTagIds }, collectionId: collection.id, active: true }, select: { id: true } }) : []
@@ -1740,7 +1850,7 @@ export async function updatePlantDefinition(fd: FormData) {
       cultivarName: clearableVal(fd, 'cultivarName'),
       authority: clearableVal(fd, 'authority'),
       cultivarRegistrationNumber: clearableVal(fd, 'cultivarRegistrationNumber'),
-      governingBodyId: clearableVal(fd, 'governingBodyId'),
+      taxonomicPlacementJson: taxonomicPlacementFromForm(fd) ?? Prisma.DbNull,
       confidence: val(fd, 'confidence') || 'UNCERTAIN',
       provisionalTaxon: identity.provisionalTaxon,
       identificationStatus: identity.identificationStatus,
@@ -1782,6 +1892,7 @@ export async function updatePlantDefinition(fd: FormData) {
         payload: { subjectId: id, plantDefinitionId: id, plantTagId: tag.id, source: assignment.source },
       })
     }
+    await reconcileTaxonomicAuthorityMatches(tx, id, collection.id, taxonomicAuthoritySelection)
     return updated
   })
   await audit(user, 'UPDATE', 'PLANT_DEFINITION', id, `Updated plant definition ${definition.genus} ${definition.species}`, undefined, collection.id)
@@ -4157,7 +4268,8 @@ export async function createCultivarFromSport(fd: FormData) {
       cultivarName: val(fd, 'cultivarName')!,
       authority: val(fd, 'authority'),
       cultivarRegistrationNumber: val(fd, 'cultivarRegistrationNumber'),
-      governingBodyId: val(fd, 'governingBodyId'),
+      taxonomicAuthorityId: val(fd, 'taxonomicAuthorityId'),
+      taxonomicAuthoritySource: val(fd, 'taxonomicAuthorityId') ? 'MANUAL' : 'AUTO',
       confidence: 'CONFIRMED',
       description: val(fd, 'description') || inst.sportDescription,
       notes: `Created from stable sport lineage of ${inst.plantId}.`,

@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import Link from 'next/link'
 import { deletePhoto, deletePlantDefinition, deletePlantHusbandryGuide, forkPlantHusbandryGuide, linkPlantHusbandryGuide, mergePlantDefinition, nominatePlantDefinitionForValidation, savePlantHusbandryGuide, savePlantHusbandryGuideField, updatePhotoCaption, updatePhotoFraming, updatePlantDefinition } from '@/app/actions'
 import { Button, Card, Field, HelpTooltip, SuggestionDatalist, TextArea } from '@/components/ui'
 import { ConfidenceSelect, PlantAliasFields } from '@/components/PlantAliasFields'
@@ -21,6 +22,7 @@ import { collectionRoleAtLeast, isServerAdminRole } from '@/lib/roles'
 import { getUserUnitPreferences } from '@/lib/units'
 import { PlantTagPicker } from '@/components/PlantTagPicker'
 import { PlantTagRow } from '@/components/PlantTagChip'
+import { authoritySelectionValue, taxonomicAuthorityWhere, taxonomicPlacementValue } from '@/lib/taxonomic-authorities'
 import { addSubstrateRecommendation, removeSubstrateRecommendation, updateSubstrateRecommendation } from '@/app/substrate-actions'
 import { substrateLabel, substrateSuitabilities } from '@/lib/substrates'
 
@@ -62,6 +64,9 @@ export default async function EditPlant({
     prisma.plantDefinition.findFirstOrThrow({
       where: { id, collectionId: collection.id },
       include: {
+        taxonomicAuthority: { include: { publications: true } },
+        automaticTaxonomicAuthority: true,
+        taxonomicAuthorityMatches: { include: { taxonomicAuthority: true }, orderBy: { priority: 'desc' } },
         aliases: { orderBy: { name: 'asc' } },
         husbandryGuide: { include: { fertilizerRecipe: true } },
         validationCandidates: { orderBy: { createdAt: 'desc' }, take: 5 },
@@ -69,7 +74,7 @@ export default async function EditPlant({
         tags: { include: { plantTag: true }, orderBy: { plantTag: { name: 'asc' } } },
       },
     }),
-    prisma.governingBody.findMany({ where: { collectionId: collection.id }, orderBy: { name: 'asc' } }),
+    prisma.taxonomicAuthority.findMany({ where: taxonomicAuthorityWhere(collection.id), include: { scopeRules: true }, orderBy: { name: 'asc' } }),
     prisma.photo.findMany({
       where: { collectionId: collection.id, entityType: 'PLANT_DEFINITION', entityId: id },
       orderBy: [{ isType: 'desc' }, { createdAt: 'desc' }],
@@ -133,7 +138,7 @@ export default async function EditPlant({
     provisionalTaxon: rankedSuggestions(definitionSuggestionRows.map((definition) => definition.provisionalTaxon)),
     aliasSource: rankedSuggestions(definitionSuggestionRows.flatMap((definition) => definition.aliases.map((alias) => alias.source))),
   }
-  const governingBodyOptions = bodies.map((body) => ({ id: body.id, name: body.name, abbreviation: body.abbreviation }))
+  const taxonomicAuthorityOptions = bodies.map((body) => ({ id: body.id, name: body.name, abbreviation: body.abbreviation }))
   const matchingValidatedDefinition = plant.validatedPlantDefinitionId ? null : await findMatchingValidatedDefinition(prisma, plant)
   const pendingValidationCandidate = plant.validationCandidates.find((candidate) => candidate.status === 'PENDING')
   const [substrateVersions, substrateRecommendations] = await Promise.all([
@@ -175,27 +180,41 @@ export default async function EditPlant({
           <div className="min-w-0 rounded-lg border border-[#d6dfc9] bg-[#f7f4e8]/80 px-3 py-2 text-sm text-stone-700 lg:col-span-4">
             <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
               <span className="min-w-0">Update the core name first, then let AxilDB draft taxonomy metadata and suggested aliases.</span>
-              <AIMagicFillButton governingBodies={governingBodyOptions} />
+              <AIMagicFillButton taxonomicAuthorities={taxonomicAuthorityOptions} />
             </div>
             <PlantIdentificationAssistant collectionSlug={collection.slug} plantDefinitionId={plant.id} className="mt-3" />
           </div>
           <Field label="Author citation" help="The author citation for the scientific name, such as (L.f.) R.Br. It records who validly published the name or combination." name="authority" defaultValue={plant.authority} list="definition-authority-suggestions" />
-          <Field label="Cultivar registration number" help="Use when a formal cultivar registry or governing body assigns a registration number to the cultivar." name="cultivarRegistrationNumber" defaultValue={plant.cultivarRegistrationNumber} />
+          <Field label="Cultivar registration number" help="Use when a formal registry or Taxonomic Authority assigns a registration number to the cultivar." name="cultivarRegistrationNumber" defaultValue={plant.cultivarRegistrationNumber} />
+          <Field label="Order" name="taxonomicOrder" defaultValue={taxonomicPlacementValue(plant.taxonomicPlacementJson, 'ORDER')} />
+          <Field label="Family" name="taxonomicFamily" defaultValue={taxonomicPlacementValue(plant.taxonomicPlacementJson, 'FAMILY')} />
+          <Field label="Tribe" name="taxonomicTribe" defaultValue={taxonomicPlacementValue(plant.taxonomicPlacementJson, 'TRIBE')} />
+          <Field label="Section" name="taxonomicSection" help="For an infrageneric placement such as Saintpaulia within Streptocarpus." defaultValue={taxonomicPlacementValue(plant.taxonomicPlacementJson, 'SECTION')} />
           <ConfidenceSelect name="confidence" defaultValue={plant.confidence} />
           <label className="grid gap-1 text-sm font-medium text-stone-800">
             <span className="flex items-center gap-1.5">
-              <span>Governing body</span>
-              <HelpTooltip>The registry, society, or authority that governs naming or registration for this plant group, if applicable.</HelpTooltip>
+              <span>Taxonomic Authority</span>
+              <HelpTooltip>Automatic matching uses structured scope specificity. A manual override remains selected when taxonomy changes.</HelpTooltip>
             </span>
-            <select className={selectClass} name="governingBodyId" defaultValue={plant.governingBodyId || ''}>
-              <option value="">—</option>
+            <select className={selectClass} name="taxonomicAuthoritySelection" defaultValue={authoritySelectionValue(plant)}>
+              <option value="AUTO">Automatic matching</option>
+              <option value="NONE">Continue without authority</option>
               {bodies.map((body) => (
-                <option key={body.id} value={body.id}>
-                  {body.name}
+                <option key={body.id} value={`MANUAL:${body.id}`}>
+                  Override: {body.name}
                 </option>
               ))}
             </select>
           </label>
+          <div className="rounded-md border border-[#d6dfc9] bg-[#f7f4e8]/80 p-3 text-sm lg:col-span-4">
+            <p className="font-semibold">{plant.taxonomicAuthority ? plant.taxonomicAuthority.name : 'No matching Taxonomic Authority found.'}</p>
+            <p className="text-stone-600">{plant.taxonomicAuthorityMatchReason || 'Add an authority scope rule or choose a manual override. This does not block saving.'}</p>
+            {!plant.taxonomicAuthority && <Link className="mt-2 inline-block font-semibold text-[#2f6b45] underline" href={collectionPath(collection.slug, '/taxonomic-authorities')}>Create or review Taxonomic Authorities</Link>}
+            {plant.taxonomicAuthoritySource === 'MANUAL' && plant.automaticTaxonomicAuthority && <p className="mt-1 text-xs text-stone-600">Automatically matched: {plant.automaticTaxonomicAuthority.name}</p>}
+            {plant.taxonomicAuthorityMatches.length > 1 && <p className="mt-1 text-xs text-stone-600">Other matches: {plant.taxonomicAuthorityMatches.filter((match) => match.taxonomicAuthorityId !== plant.taxonomicAuthorityId).map((match) => match.taxonomicAuthority.name).join(', ')}</p>}
+            {plant.taxonomicAuthority && <div className="mt-2 flex flex-wrap gap-2">{[[plant.taxonomicAuthority.website, 'Website'], [plant.taxonomicAuthority.registrationUrl, 'Registration'], [plant.taxonomicAuthority.cultivarSearchUrl, 'Cultivar search'], [plant.taxonomicAuthority.externalAuthorityUrl, 'Official record']].filter(([url]) => url).map(([url, label]) => <a key={label} className="text-[#2f6b45] underline" href={String(url)} target="_blank" rel="noreferrer">{label}</a>)}</div>}
+            {plant.taxonomicAuthority?.publications.length ? <div className="mt-2 flex flex-wrap items-center gap-x-2 text-xs text-stone-600"><span>Publications:</span>{plant.taxonomicAuthority.publications.map((publication) => publication.url ? <a key={publication.id} href={publication.url} target="_blank" rel="noreferrer" className="text-[#2f6b45] underline">{publication.name}</a> : <span key={publication.id}>{publication.name}</span>)}</div> : null}
+          </div>
           <Field label="Provisional / working taxon" help="When present, this takes precedence as the displayed name and marks the definition as needing identification review." name="provisionalTaxon" defaultValue={plant.provisionalTaxon} list="definition-provisional-taxon-suggestions" wrapperClassName="lg:col-span-4" />
           <Field label="Wikipedia URL" help="Optional quick reference link for the species or genus entry." name="wikipediaUrl" type="url" defaultValue={plant.wikipediaUrl} />
           <Field label="iNaturalist URL" help="Optional link to an iNaturalist taxon page for observations, common names, and community references." name="inaturalistUrl" type="url" defaultValue={plant.inaturalistUrl} />

@@ -46,6 +46,14 @@ export default async function SearchPage({
           { gbifUrl: contains(q) },
           { description: contains(q) },
           { notes: contains(q) },
+          { taxonomicAuthority: { is: { OR: [
+            { name: contains(q) },
+            { abbreviation: contains(q) },
+            { authorityType: contains(q) },
+            { website: contains(q) },
+            { scopeRules: { some: { taxonName: contains(q) } } },
+            { publications: { some: { name: contains(q) } } },
+          ] } } },
           {
             husbandryGuide: {
               is: {

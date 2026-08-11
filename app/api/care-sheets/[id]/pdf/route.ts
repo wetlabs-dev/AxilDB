@@ -79,7 +79,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
               plantDefinition: {
                 include: {
                   aliases: true,
-                  governingBody: true,
+                  taxonomicAuthority: true,
                   husbandryGuide: true,
                 },
               },

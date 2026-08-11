@@ -100,7 +100,10 @@ function normalizeFields(raw: any, originalName: string) {
     cultivarName: nullish(raw.cultivarName, 120),
     authority: nullish(raw.authority, 160),
     cultivarRegistrationNumber: nullish(raw.cultivarRegistrationNumber, 120),
-    governingBody: nullish(raw.governingBody, 160),
+    taxonomicOrder: nullish(raw.taxonomicOrder, 120),
+    taxonomicFamily: nullish(raw.taxonomicFamily, 120),
+    taxonomicTribe: nullish(raw.taxonomicTribe, 120),
+    taxonomicSection: nullish(raw.taxonomicSection, 120),
     wikipediaUrl: url(raw.wikipediaUrl),
     inaturalistUrl: url(raw.inaturalistUrl),
     powoUrl: url(raw.powoUrl),
@@ -132,11 +135,16 @@ export async function POST(req: Request) {
   const species = trimmedString(body.species, 80).toLowerCase()
   const hybridNotation = trimmedString(body.hybridNotation, 120)
   const cultivarName = trimmedString(body.cultivarName, 120)
-  const governingBodies = Array.isArray(body.governingBodies)
-    ? body.governingBodies.map((item: any) => ({
+  const taxonomicAuthorities = Array.isArray(body.taxonomicAuthorities)
+    ? body.taxonomicAuthorities.map((item: any) => ({
         id: trimmedString(item.id, 80),
         name: trimmedString(item.name, 160),
-        abbreviation: trimmedString(item.abbreviation, 40),
+      abbreviation: trimmedString(item.abbreviation, 40),
+      scopeRules: Array.isArray(item.scopeRules) ? item.scopeRules.map((rule: any) => ({
+        rank: trimmedString(rule.rank, 40),
+        taxonName: trimmedString(rule.taxonName, 160),
+        priority: Number(rule.priority) || 0,
+      })).filter((rule: any) => rule.rank && rule.taxonName).slice(0, 30) : [],
       })).filter((item: any) => item.id && item.name)
     : []
   const [locations, plantTags] = await Promise.all([prisma.location.findMany({
@@ -165,7 +173,7 @@ export async function POST(req: Request) {
   const prompt = {
     task: 'Fill plant definition fields for a horticultural accession database.',
     originalInput: { genus, species, hybridNotation, cultivarName },
-    governingBodies,
+    taxonomicAuthorities,
     collectionLocationProfiles: locationProfiles,
     collectionPlantTags: plantTags,
     rules: [
@@ -174,7 +182,7 @@ export async function POST(req: Request) {
       'Use lowercase for species.',
       'Do not invent cultivar registration numbers. If unknown, use null.',
       'Prefer authoritative URLs. POWO should be Plants of the World Online, GBIF should be gbif.org, iNaturalist should be an iNaturalist taxon page, Wikipedia should be a relevant article if one exists.',
-      'Use one of the provided governingBodies by name or abbreviation only when it clearly applies; otherwise null.',
+      'Taxonomic Authorities are provided only as compact scope context. Do not choose or invent an authority; AxilDB performs deterministic scope matching after the user saves.',
       'Keep description factual and under 40 words.',
       'Return 1 to 6 useful aliases when meaningful synonyms, obsolete names, common names, trade names, misapplied names, or shorthand labels are known. Do not fabricate aliases if none are known.',
       'For common houseplants or horticultural taxa, include widely used common names as aliases.',
@@ -195,7 +203,10 @@ export async function POST(req: Request) {
       cultivarName: 'string|null',
       authority: 'string|null',
       cultivarRegistrationNumber: 'string|null',
-      governingBody: 'string|null',
+      taxonomicOrder: 'string|null',
+      taxonomicFamily: 'string|null',
+      taxonomicTribe: 'string|null',
+      taxonomicSection: 'string|null',
       wikipediaUrl: 'string|null',
       inaturalistUrl: 'string|null',
       powoUrl: 'string|null',

@@ -78,7 +78,7 @@ export const manualSections: ManualSection[] = [
     howTo: [
       'Open Plant Definitions from the sidebar.',
       'Use Add plant definition to create a new definition.',
-      'Enter genus, species, cultivar, author citation, governing body, reference URLs, aliases, description, and notes. If the identity is unresolved, enter a Provisional / working taxon instead.',
+      'Enter genus, species, cultivar, author citation, taxonomic authority, reference URLs, aliases, description, and notes. If the identity is unresolved, enter a Provisional / working taxon instead.',
       'Use AI draft for a short botanical description, Magic fill to draft taxonomy metadata and aliases, or ID My Plant to suggest an identification from your description, known names, and optional image when AI is enabled for the collection.',
       'When a Magic Fill-managed field already contains information, choose Fill Missing Only to preserve it, Replace All Fields to replace only that tool’s managed fields, or Cancel. Empty forms proceed directly, and every draft still requires review and an explicit save.',
       'Use ID History from the Plant Definitions header to review past ID My Plant suggestions for the collection and create a new plant definition prefilled from a saved result.',
@@ -563,17 +563,28 @@ export const manualSections: ManualSection[] = [
   },
   {
     id: 'collection-tools',
-    title: 'Collection Tools, Governing Bodies, and Audit Log',
-    route: '/admin-tools',
+    title: 'Taxonomic Authorities, Collection Tools, and Audit Log',
+    route: '/taxonomic-authorities',
     screenshot: 'collection-tools.png',
-    purpose: 'Collection tools help gardeners and managers maintain controlled vocabulary, demo data, governing bodies, audit visibility, and record cleanup inside one collection.',
+    purpose: 'Taxonomic Authorities identify the registries, societies, institutions, and agencies responsible for naming or cultivar registration. Structured scope rules let AxilDB match plant definitions consistently.',
     howTo: [
-      'Use Governing Bodies to manage registration authorities and similar organizations.',
+      'Create an authority with its type and official website, registration, cultivar-search, membership, and external-directory links.',
+      'Add structured scope rules. More specific ranks take precedence, so species beats genus, genus beats family, and family beats order.',
+      'Add official publications and their purpose without copying registrar contact details that may become stale.',
+      'Plant definitions use automatic matching by default. Choose an authority to create a durable manual override, or choose Continue without authority to dismiss the match without blocking save.',
+      'Use Re-evaluate plant matches after changing scope. Manual overrides remain unchanged.',
+      'Review diagnostics for unmatched or ambiguous definitions, manual overrides, missing scope rules, and malformed resource URLs.',
       'Use Collection Tools to seed demo data, run collection maintenance helpers, and review collection-only utilities.',
       'Use Audit Log to review changes made inside the current collection.',
     ],
+    notes: [
+      'Magic Fill shows the likely scope match but does not create or assign authority records automatically.',
+      'Shared imported authority records are read-only to collection managers. Official metadata can be refreshed later without replacing local overrides.',
+      'No authority match is a valid state and never blocks saving a plant definition.',
+    ],
     warnings: [
       'Demo data tools should be used intentionally. They create realistic sample records in the current collection.',
+      'Authority links are references to official sources. Verify the current official record before relying on registration guidance.',
     ],
   },
   {

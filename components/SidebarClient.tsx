@@ -25,6 +25,7 @@ import {
   Images,
   Leaf,
   Layers3,
+  LibraryBig,
   FlaskConical,
   MapPinned,
   Menu,
@@ -96,7 +97,7 @@ const navSections = [
 const collectionAdminItems = [
   ['/collection-settings', 'Collection Settings', Settings, 'MANAGER'],
   ['/members', 'Collection Members', Users, 'MANAGER'],
-  ['/settings', 'Governing Bodies', Settings, 'GARDENER'],
+  ['/taxonomic-authorities', 'Taxonomic Authorities', LibraryBig, 'GARDENER'],
   ['/fertilizers', 'Fertilizers', FlaskConical, 'GARDENER'],
   ['/substrates', 'Substrates', Layers3, 'GARDENER'],
   ['/treatments', 'Treatments', ShieldCheck, 'GARDENER'],
