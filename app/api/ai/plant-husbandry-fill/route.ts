@@ -4,6 +4,7 @@ import { recordAiUsage, requireAiFeatureAccess, tokenUsage } from '@/lib/ai-usag
 import { recipeAiContext } from '@/lib/fertilizers'
 import { husbandryFieldNames } from '@/lib/husbandry'
 import { prisma } from '@/lib/prisma'
+import { normalizeAndRankSubstrateRecommendations, substrateRecipePhysicalProfile } from '@/lib/substrate-recommendations'
 
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses'
 const DEFAULT_MODEL = 'gpt-5.4-mini'
@@ -79,18 +80,8 @@ function normalizeFertilizerRecommendation(raw: any, recipeIds: Set<string>) {
   }
 }
 
-function normalizeSubstrateRecommendation(raw: any, recipeIds: Set<string>, componentIds: Set<string>) {
-  const seen = new Set<string>()
-  const substrateRecommendations = (Array.isArray(raw?.substrateRecommendations) ? raw.substrateRecommendations : [])
-    .map((item: any, index: number) => ({
-      recipeVersionId: String(item?.recipeVersionId || ''),
-      rank: index + 1,
-      suitability: ['PREFERRED', 'RECOMMENDED', 'ACCEPTABLE', 'SPECIAL_PURPOSE'].includes(item?.suitability) ? item.suitability : 'RECOMMENDED',
-      confidence: Number.isFinite(Number(item?.confidence)) ? Math.max(0, Math.min(1, Number(item.confidence))) : null,
-      reason: trimmedString(item?.reason, 500) || null,
-    }))
-    .filter((item: any) => recipeIds.has(item.recipeVersionId) && !seen.has(item.recipeVersionId) && seen.add(item.recipeVersionId))
-    .slice(0, 4)
+function normalizeSubstrateRecommendation(raw: any, recipes: Map<string, ReturnType<typeof substrateRecipePhysicalProfile>>, componentIds: Set<string>) {
+  const substrateRecommendations = normalizeAndRankSubstrateRecommendations(raw, recipes)
   const suggestedComponents = (Array.isArray(raw?.newRecipeSuggestion?.components) ? raw.newRecipeSuggestion.components : [])
     .map((item: any) => ({ componentId: String(item?.componentId || ''), percentByVolume: Number(item?.percentByVolume) }))
     .filter((item: any) => componentIds.has(item.componentId) && Number.isFinite(item.percentByVolume) && item.percentByVolume > 0 && item.percentByVolume <= 100)
@@ -133,7 +124,7 @@ export async function POST(req: Request) {
     prisma.substrateComponent.findMany({ where: { collectionId: collection.id, active: true }, orderBy: { name: 'asc' }, take: 50 }),
   ])
   const fertilizerRecipeIds = new Set(fertilizerRecipes.map((recipe) => recipe.id))
-  const substrateRecipeIds = new Set(substrateVersions.map((version) => version.id))
+  const substrateProfiles = new Map(substrateVersions.map((version) => [version.id, substrateRecipePhysicalProfile(version.components.map((row) => ({ percentByVolume: Number(row.percentByVolume), component: row.component })))]))
   const substrateComponentIds = new Set(substrateComponents.map((component) => component.id))
 
   const model = process.env.OPENAI_HUSBANDRY_FILL_MODEL || process.env.OPENAI_MAGIC_FILL_MODEL || process.env.OPENAI_DESCRIPTION_MODEL || DEFAULT_MODEL
@@ -159,10 +150,11 @@ export async function POST(req: Request) {
       familyName: version.recipe.name,
       version: version.versionNumber,
       intendedUse: version.recipe.intendedUse,
-      composition: version.components.map((row) => ({ componentId: row.component.id, name: row.component.name, percentByVolume: Number(row.percentByVolume), waterRetention: row.component.waterRetention, aeration: row.component.aeration, drainage: row.component.drainage, organicity: row.component.organicity })),
+      composition: version.components.map((row) => ({ componentId: row.component.id, name: row.component.name, category: row.component.category, percentByVolume: Number(row.percentByVolume), particleSize: row.component.particleSize, waterRetention: row.component.waterRetention, aeration: row.component.aeration, drainage: row.component.drainage, organicity: row.component.organicity, phTendency: row.component.phTendency, longevity: row.component.longevity })),
       notes: version.notes,
       currentPlantCount: version._count.currentAssignments,
       recommendationCount: version._count.recommendations,
+      physicalProfile: substrateProfiles.get(version.id),
     })),
     activeSubstrateComponents: substrateComponents.map((component) => ({ id: component.id, name: component.name, category: component.category, particleSize: component.particleSize, waterRetention: component.waterRetention, aeration: component.aeration, drainage: component.drainage, phTendency: component.phTendency })),
     rules: [
@@ -175,7 +167,10 @@ export async function POST(req: Request) {
       'If an active collection fertilizer recipe fits, use USE_EXISTING_RECIPE and return its exact id and name. Do not invent recipe ids.',
       'If no existing recipe fits but fertilizer is useful, choose CREATE_NEW_RECIPE and provide practical draft details without pretending exact chemical calculations are certain.',
       'Use unknown only when no useful inference can be made.',
-      'Rank up to four existing substrate recipe versions when suitable. Prefer existing recipes and use their exact recipeVersionId values.',
+      'First infer a target substrate profile for water retention, aeration, and drainage using only VERY_LOW, LOW, MODERATE, HIGH, or VERY_HIGH.',
+      'Compare every active substrate recipe against that target and the plant taxonomy, root physiology, growth habit, and rot sensitivity. Recipe names and popularity are weak evidence; composition and physical fit are primary evidence.',
+      'Rank up to four existing substrate recipe versions when suitable. Return the best overall fit first, use each exact recipeVersionId, use PREFERRED only once, and assign comparative confidence values.',
+      'For semi-succulent, epiphytic, or trailing taxa, favor airy and freely draining mixes over dense moisture-retentive mixes unless reliable species guidance indicates otherwise.',
       'Only propose a new substrate recipe when the existing recipes are unsuitable. Use only listed component IDs, total exactly 100 percent by volume, and explain the gap cautiously.',
       'summaryWater, summaryLight, and summaryToxicity must be short badge-friendly phrases.',
     ],
@@ -198,6 +193,7 @@ export async function POST(req: Request) {
         cautionNotes: 'string|null',
       },
       substrateRecommendations: [{ recipeVersionId: 'exact listed id', rank: 'number', suitability: 'PREFERRED|RECOMMENDED|ACCEPTABLE|SPECIAL_PURPOSE', confidence: 'number 0-1|null', reason: 'string|null' }],
+      substrateTargetProfile: { waterRetention: 'VERY_LOW|LOW|MODERATE|HIGH|VERY_HIGH', aeration: 'VERY_LOW|LOW|MODERATE|HIGH|VERY_HIGH', drainage: 'VERY_LOW|LOW|MODERATE|HIGH|VERY_HIGH' },
       newRecipeSuggestion: { name: 'string|null', reason: 'string|null', components: [{ componentId: 'exact listed id', percentByVolume: 'number' }] },
     },
   }
@@ -229,7 +225,7 @@ export async function POST(req: Request) {
     const raw = extractJson(outputText(payload))
     const fields = normalizeFields(raw, model)
     const fertilizerRecommendation = normalizeFertilizerRecommendation(raw, fertilizerRecipeIds)
-    const substrateRecommendation = normalizeSubstrateRecommendation(raw, substrateRecipeIds, substrateComponentIds)
+    const substrateRecommendation = normalizeSubstrateRecommendation(raw, substrateProfiles, substrateComponentIds)
     const substrateNameById = new Map(substrateVersions.map((version) => [version.id, `${version.recipe.name} v${version.versionNumber}`]))
     const componentNameById = new Map(substrateComponents.map((component) => [component.id, component.name]))
     const displaySubstrateRecommendation = {

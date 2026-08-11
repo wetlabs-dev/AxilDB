@@ -279,6 +279,73 @@ export async function addSubstrateRecommendation(fd: FormData) {
   revalidatePath(collectionPath(collection.slug, `/plants/${plantDefinitionId}/edit`))
 }
 
+export async function applyMagicSubstrateRecommendations(fd: FormData) {
+  const { user, collection } = await requireCollectionGardener(val(fd, 'collectionSlug'))
+  const plantDefinitionId = val(fd, 'plantDefinitionId')
+  await prisma.plantDefinition.findFirstOrThrow({ where: { id: plantDefinitionId, collectionId: collection.id }, select: { id: true } })
+  const raw = JSON.parse(val(fd, 'recommendationsJson') || '[]')
+  const requested = (Array.isArray(raw) ? raw : []).slice(0, 4).map((item: any, index: number) => ({
+    substrateRecipeVersionId: String(item?.recipeVersionId || ''),
+    rank: index + 1,
+    suitability: allowed(String(item?.suitability || ''), substrateSuitabilities, 'RECOMMENDED'),
+    confidence: Number.isFinite(Number(item?.confidence)) ? Math.max(0, Math.min(1, Number(item.confidence))) : null,
+    notes: String(item?.reason || '').trim().slice(0, 500) || null,
+  })).filter((item) => item.substrateRecipeVersionId)
+  const validVersions = await prisma.substrateRecipeVersion.findMany({
+    where: { collectionId: collection.id, status: 'ACTIVE', recipe: { archivedAt: null }, id: { in: requested.map((item) => item.substrateRecipeVersionId) } },
+    select: { id: true },
+  })
+  const validIds = new Set(validVersions.map((version) => version.id))
+  const recommendations = requested.filter((item) => validIds.has(item.substrateRecipeVersionId))
+  if (!recommendations.length) throw new Error('No available substrate recommendations were provided.')
+  const replace = val(fd, 'applyMode') === 'REPLACE_ALL'
+
+  const result = await prisma.$transaction(async (tx) => {
+    const existing = await tx.plantDefinitionSubstrateRecommendation.findMany({
+      where: { collectionId: collection.id, plantDefinitionId },
+      orderBy: [{ rank: 'asc' }, { createdAt: 'asc' }],
+    })
+    if (replace) {
+      await tx.plantDefinitionSubstrateRecommendation.deleteMany({
+        where: { collectionId: collection.id, plantDefinitionId, source: 'AI', substrateRecipeVersionId: { notIn: recommendations.map((item) => item.substrateRecipeVersionId) } },
+      })
+    }
+    const existingByRecipe = new Map(existing.map((item) => [item.substrateRecipeVersionId, item]))
+    let nextRank = replace ? 1 : Math.max(0, ...existing.map((item) => item.rank)) + 1
+    let saved = 0
+    for (const recommendation of recommendations) {
+      const current = existingByRecipe.get(recommendation.substrateRecipeVersionId)
+      if (current && current.source !== 'AI') {
+        if (replace) await tx.plantDefinitionSubstrateRecommendation.update({ where: { id: current.id }, data: { rank: nextRank++ } })
+        saved += 1
+        continue
+      }
+      const rank = replace ? nextRank++ : current?.rank || nextRank++
+      await tx.plantDefinitionSubstrateRecommendation.upsert({
+        where: { collectionId_plantDefinitionId_substrateRecipeVersionId: { collectionId: collection.id, plantDefinitionId, substrateRecipeVersionId: recommendation.substrateRecipeVersionId } },
+        update: { ...recommendation, rank, source: 'AI' },
+        create: { collectionId: collection.id, plantDefinitionId, ...recommendation, rank, source: 'AI' },
+      })
+      saved += 1
+    }
+    if (replace) {
+      const desiredIds = new Set(recommendations.map((item) => item.substrateRecipeVersionId))
+      for (const current of existing.filter((item) => item.source !== 'AI' && !desiredIds.has(item.substrateRecipeVersionId))) {
+        await tx.plantDefinitionSubstrateRecommendation.update({ where: { id: current.id }, data: { rank: nextRank++ } })
+      }
+    }
+    await emitDomainEvent(tx, {
+      eventType: 'plant_definition.substrate_recommendation_added', collectionId: collection.id, aggregateId: plantDefinitionId,
+      actor: { id: user.id, role: user.role }, idempotencyKey: `substrate-recommendations:${plantDefinitionId}:magic-fill:${Date.now()}`,
+      payload: { subjectId: plantDefinitionId, recordType: 'PlantDefinitionSubstrateRecommendation', recipeVersionIds: recommendations.map((item) => item.substrateRecipeVersionId), replace },
+    })
+    return saved
+  })
+  await audit(user, 'UPDATE', 'PLANT_DEFINITION_SUBSTRATE_RECOMMENDATION', plantDefinitionId, `Applied ${result} Magic Fill substrate recommendations`, { count: result, replace }, collection.id)
+  revalidatePath(collectionPath(collection.slug, `/plants/${plantDefinitionId}/edit`))
+  return { saved: result }
+}
+
 export async function updateSubstrateRecommendation(fd: FormData) {
   const { user, collection } = await requireCollectionGardener(val(fd, 'collectionSlug'))
   const id = val(fd, 'recommendationId')

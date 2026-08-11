@@ -1,12 +1,13 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef, useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { Sparkles } from 'lucide-react'
 import { MagicFillConflictDialog } from '@/components/MagicFillConflictDialog'
 import { husbandryFieldNames } from '@/lib/husbandry'
 import { applyMagicFillDraftToForm, getMagicFillConflictState, readMagicFillFormValues, type MagicFillApplyMode } from '@/lib/magic-fill'
 import { cn } from '@/lib/utils'
-import { createSubstrateRecipe } from '@/app/substrate-actions'
+import { applyMagicSubstrateRecommendations, createSubstrateRecipe } from '@/app/substrate-actions'
 
 const husbandryMagicFillFields = [...husbandryFieldNames, 'reviewNotes', 'aiModel'] as const
 const fertilizerAssignmentFields = ['fertilizerRecipeId', 'fertilizationFrequency', 'fertilizationStrength', 'fertilizationSeasonalSchedule', 'fertilizationCadenceDays'] as const
@@ -67,6 +68,8 @@ export function HusbandryMagicFillButton({
   const [substrateRecommendation, setSubstrateRecommendation] = useState<any>(null)
   const [draft, setDraft] = useState<any>(null)
   const [readyToSave, setReadyToSave] = useState(false)
+  const [savingSubstrates, startSubstrateTransition] = useTransition()
+  const router = useRouter()
   const [conflict, setConflict] = useState<(ReturnType<typeof getMagicFillConflictState> & { continueWith: (mode: MagicFillApplyMode) => void }) | null>(null)
 
   function ensureControls(form: HTMLFormElement, fields: readonly string[]) {
@@ -163,9 +166,20 @@ export function HusbandryMagicFillButton({
     setControlValue(form, 'existingSubstrateRecommendations', substrateRecommendationCount ? String(substrateRecommendationCount) : '')
     requestMode(substrateRecommendationFields, (mode) => {
       setConflict(null)
-      setControlValue(form, 'magicSubstrateRecommendationsJson', JSON.stringify(substrateRecommendation.substrateRecommendations))
-      setControlValue(form, 'magicSubstrateApplyMode', mode)
-      setStatus('Substrate recommendations queued. Review and save to apply.')
+      const data = new FormData()
+      data.set('collectionSlug', collectionSlug)
+      data.set('plantDefinitionId', String(plant.id || ''))
+      data.set('recommendationsJson', JSON.stringify(substrateRecommendation.substrateRecommendations))
+      data.set('applyMode', mode)
+      startSubstrateTransition(async () => {
+        try {
+          const result = await applyMagicSubstrateRecommendations(data)
+          setStatus(`${result.saved} substrate recommendation${result.saved === 1 ? '' : 's'} saved.`)
+          router.refresh()
+        } catch (error) {
+          setStatus(error instanceof Error ? error.message : 'Substrate recommendations could not be saved.')
+        }
+      })
     })
   }
 
@@ -230,7 +244,7 @@ export function HusbandryMagicFillButton({
         <div className="w-full max-w-xl rounded-lg border border-[#d6dfc9] bg-[#f7f4e8] p-3 text-left text-sm text-stone-700 shadow-sm">
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#2f6b45]">Substrate recommendation</p>
           {substrateRecommendation.substrateRecommendations?.length > 0 ? <div className="mt-2 grid gap-2">{substrateRecommendation.substrateRecommendations.map((item: any) => <div key={item.recipeVersionId} className="rounded-md border border-stone-200 bg-white/65 p-2"><p className="font-semibold text-stone-900">{item.rank}. {item.displayName} · {String(item.suitability).toLowerCase().replaceAll('_', ' ')}</p>{item.reason && <p className="mt-1 text-xs">{item.reason}</p>}</div>)}</div> : <p className="mt-1">No existing collection recipe was confidently recommended.</p>}
-          {substrateRecommendation.substrateRecommendations?.length > 0 && <button type="button" onClick={requestSubstrateRecommendations} className="mt-3 rounded-md bg-[#2f6b45] px-3 py-1.5 text-xs font-semibold text-white">Use these recommendations</button>}
+          {substrateRecommendation.substrateRecommendations?.length > 0 && <button type="button" onClick={requestSubstrateRecommendations} disabled={savingSubstrates} className="mt-3 rounded-md bg-[#2f6b45] px-3 py-1.5 text-xs font-semibold text-white disabled:cursor-wait disabled:opacity-65">{savingSubstrates ? 'Saving recommendations...' : 'Use these recommendations'}</button>}
           {substrateRecommendation.newRecipeSuggestion && <div className="mt-3 rounded-md border border-stone-200 bg-white/65 p-2"><p className="font-semibold text-stone-900">Suggested draft: {substrateRecommendation.newRecipeSuggestion.name}</p>{substrateRecommendation.newRecipeSuggestion.reason && <p className="mt-1 text-xs">{substrateRecommendation.newRecipeSuggestion.reason}</p>}<p className="mt-2 text-xs">{substrateRecommendation.newRecipeSuggestion.components.map((item: any) => `${item.percentByVolume}% ${item.componentName}`).join(' · ')}</p><div className="mt-2"><input type="hidden" name="collectionSlug" value={collectionSlug} /><input type="hidden" name="name" value={substrateRecommendation.newRecipeSuggestion.name} /><input type="hidden" name="description" value={substrateRecommendation.newRecipeSuggestion.reason || ''} /><input type="hidden" name="status" value="DRAFT" />{substrateRecommendation.newRecipeSuggestion.components.map((item: any) => <span key={item.componentId}><input type="hidden" name="substrateComponentId" value={item.componentId} /><input type="hidden" name="percentByVolume" value={item.percentByVolume} /><input type="hidden" name="componentNotes" value="" /></span>)}<button type="submit" formAction={createSubstrateRecipe} className="rounded-md border border-[#2f6b45] px-3 py-1.5 text-xs font-semibold text-[#2f6b45]">Create recipe draft</button></div></div>}
         </div>
       )}
