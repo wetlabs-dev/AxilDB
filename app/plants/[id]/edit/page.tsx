@@ -171,11 +171,11 @@ export default async function EditPlant({
           {plantNeedsIdentification(plant) && (
             <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 lg:col-span-4">
               <p className="font-semibold">Needs identification review</p>
-              <p className="mt-1">{plantName(plant)} is the displayed provisional identity. Its working placement is {acceptedPlantName(plant)}. Clear the provisional taxon only after entering the identified genus and species.</p>
+              <p className="mt-1">{plantName(plant)} is the displayed provisional identity. Its working placement is {acceptedPlantName(plant)}. Replace the provisional taxon or sp. only after identifying the species.</p>
             </div>
           )}
           <Field label="Genus" help="Required when the provisional taxon is cleared. This working placement is also used for plant ID generation." name="genus" defaultValue={plant.genus} list="definition-genus-suggestions" />
-          <Field label="Species" help="Required when the provisional taxon is cleared." name="species" defaultValue={plant.species} list="definition-species-suggestions" autoCapitalize="none" />
+          <Field label="Species" help="Required when the provisional taxon is cleared. Use sp. with a named cultivar when the species is unresolved." name="species" defaultValue={plant.species} list="definition-species-suggestions" autoCapitalize="none" />
           <Field label="Hybrid notation" help="Use for botanical hybrid markers or formula context, such as x, grex, or parentage notation that belongs with the name." name="hybridNotation" defaultValue={plant.hybridNotation} list="definition-hybrid-notation-suggestions" />
           <Field label="Cultivar name" help="The named cultivated variety, usually written in single quotes, such as 'Morning Glow'. Leave blank for unnamed species or clones." name="cultivarName" defaultValue={plant.cultivarName} list="definition-cultivar-name-suggestions" />
           <div className="min-w-0 rounded-lg border border-[#d6dfc9] bg-[#f7f4e8]/80 px-3 py-2 text-sm text-stone-700 lg:col-span-4">

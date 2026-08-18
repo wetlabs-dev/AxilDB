@@ -88,7 +88,8 @@ async function preferredProvenanceFromForm(collectionId: string, fd: FormData) {
 
 export async function createAcquisitionTarget(fd: FormData) {
   const { user, collection } = await requireCollectionLogger(val(fd, 'collectionSlug'))
-  const identity = normalizePlantDefinitionIdentity({ genus: val(fd, 'genus'), species: val(fd, 'species'), provisionalTaxon: val(fd, 'provisionalTaxon') })
+  const cultivarName = clearableVal(fd, 'cultivarName')
+  const identity = normalizePlantDefinitionIdentity({ genus: val(fd, 'genus'), species: val(fd, 'species'), cultivarName, provisionalTaxon: val(fd, 'provisionalTaxon') })
   const status = statusValue(val(fd, 'acquisitionStatus')) || 'WISHLIST'
   const priority = boundedInt(val(fd, 'acquisitionPriority'), 3, 1, 5)
   const desiredLocationId = clearableVal(fd, 'desiredLocationId')
@@ -103,7 +104,7 @@ export async function createAcquisitionTarget(fd: FormData) {
         collectionId: collection.id,
         genus: identity.genus,
         species: identity.species,
-        cultivarName: clearableVal(fd, 'cultivarName'),
+        cultivarName,
         provisionalTaxon: identity.provisionalTaxon,
         identificationStatus: identity.identificationStatus,
         confidence: 'UNCERTAIN',

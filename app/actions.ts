@@ -1379,7 +1379,8 @@ export async function createPlantDefinition(fd: FormData) {
     throw new Error('Only collection managers can create definitions from another user’s ID My Plant history.')
   }
 
-  const identity = normalizePlantDefinitionIdentity({ genus: val(fd, 'genus'), species: speciesVal(fd), provisionalTaxon: val(fd, 'provisionalTaxon') })
+  const cultivarName = clearableVal(fd, 'cultivarName')
+  const identity = normalizePlantDefinitionIdentity({ genus: val(fd, 'genus'), species: speciesVal(fd), cultivarName, provisionalTaxon: val(fd, 'provisionalTaxon') })
   const taxonomicAuthoritySelection = authoritySelectionFromForm(fd)
   const requestedTagIds = parseTagIds(fd)
   const magicFillTagIds = new Set(fd.getAll('magicFillPlantTagIds').map(String))
@@ -1392,7 +1393,7 @@ export async function createPlantDefinition(fd: FormData) {
         genus: identity.genus,
         species: identity.species,
         hybridNotation: clearableVal(fd, 'hybridNotation'),
-        cultivarName: clearableVal(fd, 'cultivarName'),
+        cultivarName,
         authority: clearableVal(fd, 'authority'),
         cultivarRegistrationNumber: clearableVal(fd, 'cultivarRegistrationNumber'),
         taxonomicPlacementJson: taxonomicPlacementFromForm(fd) ?? Prisma.DbNull,
@@ -1836,7 +1837,8 @@ export async function updatePlantDefinition(fd: FormData) {
   const id = val(fd, 'id')!
   await prisma.plantDefinition.findFirstOrThrow({ where: { id, collectionId: collection.id }, select: { id: true } })
 
-  const identity = normalizePlantDefinitionIdentity({ genus: val(fd, 'genus'), species: speciesVal(fd), provisionalTaxon: val(fd, 'provisionalTaxon') })
+  const cultivarName = clearableVal(fd, 'cultivarName')
+  const identity = normalizePlantDefinitionIdentity({ genus: val(fd, 'genus'), species: speciesVal(fd), cultivarName, provisionalTaxon: val(fd, 'provisionalTaxon') })
   const taxonomicAuthoritySelection = authoritySelectionFromForm(fd)
   const requestedTagIds = parseTagIds(fd)
   const magicFillTagIds = new Set(fd.getAll('magicFillPlantTagIds').map(String))
@@ -1847,7 +1849,7 @@ export async function updatePlantDefinition(fd: FormData) {
       genus: identity.genus,
       species: identity.species,
       hybridNotation: clearableVal(fd, 'hybridNotation'),
-      cultivarName: clearableVal(fd, 'cultivarName'),
+      cultivarName,
       authority: clearableVal(fd, 'authority'),
       cultivarRegistrationNumber: clearableVal(fd, 'cultivarRegistrationNumber'),
       taxonomicPlacementJson: taxonomicPlacementFromForm(fd) ?? Prisma.DbNull,

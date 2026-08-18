@@ -23,11 +23,13 @@ function placeholderIdentity(genus: string, species: string) {
 export function normalizePlantDefinitionIdentity(input: {
   genus?: string | null
   species?: string | null
+  cultivarName?: string | null
   provisionalTaxon?: string | null
 }) {
   const provisionalTaxon = text(input.provisionalTaxon) || null
   let genus = text(input.genus)
   let species = text(input.species).toLowerCase()
+  const cultivarName = text(input.cultivarName)
 
   if (provisionalTaxon) {
     const fallback = provisionalParts(provisionalTaxon)
@@ -36,8 +38,12 @@ export function normalizePlantDefinitionIdentity(input: {
     return { genus, species, provisionalTaxon, identificationStatus: 'PROVISIONAL' as const }
   }
 
+  if (genus.toLowerCase() !== 'unidentified' && ['sp', 'sp.'].includes(species) && cultivarName) {
+    return { genus, species: 'sp.', provisionalTaxon: null, identificationStatus: 'PROVISIONAL' as const }
+  }
+
   if (!genus || !species || placeholderIdentity(genus, species)) {
-    throw new Error('Enter genus and species, or provide a provisional taxon that clearly marks this definition for identification review.')
+    throw new Error('Enter genus and species, use sp. with a named cultivar, or provide a provisional taxon that clearly marks this definition for identification review.')
   }
   return { genus, species, provisionalTaxon: null, identificationStatus: 'IDENTIFIED' as const }
 }

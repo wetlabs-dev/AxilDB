@@ -255,7 +255,7 @@ export default async function AcquisitionPipelinePage({
           <form action={createAcquisitionTarget} className="grid gap-3 md:grid-cols-4">
             <input type="hidden" name="collectionSlug" value={collection.slug} />
             <Field label="Genus" help="Required unless you provide a provisional taxon." name="genus" />
-            <Field label="Species" help="Required unless you provide a provisional taxon." name="species" autoCapitalize="none" />
+            <Field label="Species" help="Required unless you provide a provisional taxon. Use sp. with a named cultivar when the species is unresolved." name="species" autoCapitalize="none" />
             <Field label="Cultivar" name="cultivarName" />
             <Field label="Provisional / working taxon" help="Use an unresolved seller name or suspected identity. It will be displayed prominently and marked for identification review." name="provisionalTaxon" />
             <Select label="Status" name="acquisitionStatus" defaultValue="WISHLIST">

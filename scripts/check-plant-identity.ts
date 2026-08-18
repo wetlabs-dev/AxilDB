@@ -19,9 +19,29 @@ assert.equal(plantName(provisional), 'Saintpaulia sp. aff. ionantha')
 assert.equal(acceptedPlantName(provisional), 'Saintpaulia sp.')
 assert.equal(plantNeedsIdentification(provisional), true)
 
+for (const namedCultivar of [
+  { genus: 'Monstera', species: 'sp.', cultivarName: 'Burle Marx Flame' },
+  { genus: 'Philodendron', species: 'sp', cultivarName: 'Ring of Fire' },
+]) {
+  const normalized = normalizePlantDefinitionIdentity(namedCultivar)
+  assert.deepEqual(normalized, {
+    genus: namedCultivar.genus,
+    species: 'sp.',
+    provisionalTaxon: null,
+    identificationStatus: 'PROVISIONAL',
+  })
+  assert.equal(plantName({ ...normalized, cultivarName: namedCultivar.cultivarName }), `${namedCultivar.genus} sp. '${namedCultivar.cultivarName}'`)
+  assert.equal(plantNeedsIdentification(normalized), true)
+}
+
+assert.throws(
+  () => normalizePlantDefinitionIdentity({ genus: 'Monstera', species: 'sp.' }),
+  /named cultivar|provisional taxon/i,
+)
+
 assert.throws(
   () => normalizePlantDefinitionIdentity({ genus: 'Unidentified', species: 'sp.' }),
-  /provisional taxon/i,
+  /named cultivar|provisional taxon/i,
 )
 
 const schema = readFileSync('prisma/schema.prisma', 'utf8')
