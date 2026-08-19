@@ -118,7 +118,7 @@ export default async function SearchPage({
           : {},
       ],
     },
-    include: { plantDefinition: { include: { aliases: true, tags: { include: { plantTag: true } } } }, currentSubstrate: { include: { recipeVersion: { include: { recipe: true } } } } },
+    include: { plantDefinition: { include: { aliases: true, tags: { include: { plantTag: true } } } }, currentSubstrate: { include: { recipeVersion: { include: { recipe: true } } } }, mergeConstituent: { include: { merge: { include: { survivingPlantInstance: true } } } } },
     orderBy: { plantId: 'asc' },
   })
 
@@ -169,6 +169,7 @@ export default async function SearchPage({
             <option value="">Any status</option>
             <option>ACTIVE</option>
             <option>ARCHIVED</option>
+            <option value="HISTORICAL_CONSTITUENT">Historical constituent</option>
           </select>
           <select className={control} name="type" defaultValue={type}>
             <option value="">Any type</option>
@@ -200,6 +201,7 @@ export default async function SearchPage({
                   {instance.plantId}
                 </Link>{' '}
                 · {plantName(instance.plantDefinition)} · {instance.status} · {fmtDate(instance.propagationDate || instance.acquisitionDate)}
+                {instance.mergeConstituent && <> · merged into <Link className="font-semibold underline" href={collectionPath(collection.slug, `/instances/${instance.mergeConstituent.merge.survivingPlantInstanceId}`)}>{instance.mergeConstituent.merge.survivingPlantInstance.plantId}</Link></>}
               </p>
               <p className="w-full text-xs text-stone-600">Substrate: {substrateAssignmentLabel(instance.currentSubstrate)}</p>
               <SunshineButton

@@ -239,6 +239,7 @@ model User {
   createdDistributors                          Distributor[]                        @relation("DistributorCreatedBy")
   createdSellers                               Seller[]                             @relation("SellerCreatedBy")
   resolvedProvenanceItems                      ProvenanceReconciliationItem[]       @relation("ProvenanceReconciliationResolvedBy")
+  createdPlantInstanceMerges                   PlantInstanceMerge[]                 @relation("PlantInstanceMergeCreatedBy")
 
   @@index([role])
   @@index([emailVerifiedAt])
@@ -360,6 +361,7 @@ model Collection {
   workflowRunPlants                   WorkflowRunPlant[]
   workflowRunSteps                    WorkflowRunStep[]
   domainEvents                        DomainEvent[]
+  plantInstanceMerges                 PlantInstanceMerge[]
 
   @@index([visibility])
   @@index([status])
@@ -2426,6 +2428,8 @@ model PlantInstance {
   treatmentApplicationBatchItems TreatmentApplicationBatchItem[]
   currentSubstrate               PlantInstanceSubstrate?
   substrateHistory               PlantSubstrateHistory[]
+  survivingMerges                PlantInstanceMerge[]            @relation("PlantInstanceMergeSurvivor")
+  mergeConstituent               PlantInstanceMergeConstituent?
 
   @@unique([collectionId, plantId])
   @@index([collectionId])
@@ -2436,6 +2440,41 @@ model PlantInstance {
   @@index([sportStatus])
   @@index([originCollectionSlug, originPlantId])
   @@index([transferredFromCollectionSlug, transferredFromPlantId])
+}
+
+model PlantInstanceMerge {
+  id                       String   @id @default(cuid())
+  collectionId             String
+  survivingPlantInstanceId String
+  mergeDate                DateTime
+  reason                   String
+  notes                    String?
+  metadataSelectionsJson   Json?
+  createdByUserId          String?
+  createdAt                DateTime @default(now())
+
+  collection             Collection                       @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  survivingPlantInstance PlantInstance                    @relation("PlantInstanceMergeSurvivor", fields: [survivingPlantInstanceId], references: [id], onDelete: Restrict)
+  createdBy              User?                            @relation("PlantInstanceMergeCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  constituents           PlantInstanceMergeConstituent[]
+
+  @@index([collectionId, mergeDate])
+  @@index([survivingPlantInstanceId])
+  @@index([createdByUserId])
+}
+
+model PlantInstanceMergeConstituent {
+  id                   String   @id @default(cuid())
+  mergeId              String
+  plantInstanceId      String   @unique
+  originalPlantId      String
+  originalSnapshotJson Json
+  createdAt            DateTime @default(now())
+
+  merge         PlantInstanceMerge @relation(fields: [mergeId], references: [id], onDelete: Cascade)
+  plantInstance PlantInstance      @relation(fields: [plantInstanceId], references: [id], onDelete: Restrict)
+
+  @@index([mergeId])
 }
 
 model LocationType {

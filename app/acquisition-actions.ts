@@ -478,7 +478,7 @@ export async function createPlantAcquisitionRecord(fd: FormData) {
 export async function savePlantInstanceAcquisition(fd: FormData) {
   const { user, collection } = await requireCollectionLogger(val(fd, 'collectionSlug'))
   const plantInstanceId = val(fd, 'plantInstanceId')!
-  const instance = await prisma.plantInstance.findFirstOrThrow({ where: { id: plantInstanceId, collectionId: collection.id } })
+  const instance = await prisma.plantInstance.findFirstOrThrow({ where: { id: plantInstanceId, collectionId: collection.id, status: 'ACTIVE' } })
   const sellerId = clearableVal(fd, 'sellerId')
   const sellerStorefrontId = clearableVal(fd, 'sellerStorefrontId')
   const distributorId = clearableVal(fd, 'distributorId')

@@ -6,6 +6,8 @@ import { Button, Card, Field, TextArea } from '@/components/ui'
 import { collectionPath, requireCollectionLogger } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
 import { dateInput, plantName } from '@/lib/utils'
+import { isHistoricalConstituent } from '@/lib/plant-instance-merges'
+import { redirect } from 'next/navigation'
 
 export default async function EditPlantAcquisition({ params }: { params: Promise<{ id: string }> }) {
   const { collection } = await requireCollectionLogger()
@@ -22,6 +24,7 @@ export default async function EditPlantAcquisition({ params }: { params: Promise
     prisma.distributor.findMany({ where: { collectionId: collection.id, active: true }, include: { outlets: { where: { active: true } } }, orderBy: { name: 'asc' } }),
     prisma.seller.findMany({ where: { collectionId: collection.id, active: true }, include: { storefronts: { where: { active: true }, include: { salesChannelType: true }, orderBy: { handleOrName: 'asc' } } }, orderBy: { name: 'asc' } }),
   ])
+  if (isHistoricalConstituent(instance.status)) redirect(collectionPath(collection.slug, `/instances/${instance.id}`))
   const record = instance.acquisitionRecordLinks[0]?.acquisitionRecord
 
   return <div className="space-y-6">

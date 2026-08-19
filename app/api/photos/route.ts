@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { audit } from '@/lib/auth'
 import { collectionPath, getCurrentCollectionSlug, requireCollectionLogger } from '@/lib/collections'
 import { notifyFollowers } from '@/lib/follows'
-import { mkdir, writeFile } from 'fs/promises'
+import { mkdir, unlink, writeFile } from 'fs/promises'
 import path from 'path'
 import sharp from 'sharp'
 import { emitDomainEvent } from '@/lib/events/emit'
@@ -114,10 +114,14 @@ export async function POST(req: Request) {
       ...framingFromForm(form),
     }
     const plantSnapshot = entityType === 'PLANT_INSTANCE'
-      ? await prisma.plantInstance.findFirst({ where: { id: entityId, collectionId: collection.id }, select: { id: true, plantId: true } })
+      ? await prisma.plantInstance.findFirst({ where: { id: entityId, collectionId: collection.id, status: 'ACTIVE' }, select: { id: true, plantId: true } })
       : entityType === 'BLOOM_EVENT'
-        ? await prisma.bloomEvent.findFirst({ where: { id: entityId, collectionId: collection.id }, select: { plantInstance: { select: { id: true, plantId: true } } } })
+        ? await prisma.bloomEvent.findFirst({ where: { id: entityId, collectionId: collection.id, plantInstance: { status: 'ACTIVE' } }, select: { plantInstance: { select: { id: true, plantId: true } } } })
         : null
+    if ((entityType === 'PLANT_INSTANCE' || entityType === 'BLOOM_EVENT') && !plantSnapshot) {
+      await unlink(path.join(process.cwd(), 'public', 'uploads', filename)).catch(() => undefined)
+      return redirectBack(req, back, 'historical_record_read_only')
+    }
     const plant = plantSnapshot && 'plantInstance' in plantSnapshot ? plantSnapshot.plantInstance : plantSnapshot
     const photo = await prisma.$transaction(async (tx) => {
       if (entityType === 'PLANT_DEFINITION') await tx.photo.updateMany({ where: { collectionId: collection.id, entityType: 'PLANT_DEFINITION', entityId }, data: { isType: false } })

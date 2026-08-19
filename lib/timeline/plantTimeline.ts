@@ -170,26 +170,34 @@ export async function collectPlantTimelineEvents(
     },
   })
 
+  const mergeConstituents = await prisma.plantInstanceMergeConstituent.findMany({
+    where: { merge: { collectionId: input.collectionId, survivingPlantInstanceId: input.plantInstanceId } },
+    include: { plantInstance: true },
+  })
+  const constituentInstances = mergeConstituents.map((entry) => entry.plantInstance)
+  const timelineInstanceIds = [input.plantInstanceId, ...constituentInstances.map((entry) => entry.id)]
+  const plantIdByInstanceId = new Map([[instance.id, instance.plantId], ...constituentInstances.map((entry) => [entry.id, entry.plantId] as const)])
+
   const blooms = await prisma.bloomEvent.findMany({
-    where: { collectionId: input.collectionId, plantInstanceId: input.plantInstanceId },
+    where: { collectionId: input.collectionId, plantInstanceId: { in: timelineInstanceIds } },
     orderBy: { bloomStartDate: 'asc' },
   })
   const bloomIds = blooms.map((bloom) => bloom.id)
 
   const [careEvents, conditions, photos, notes, propagationEvents, reminders, sportRecords, locationMoves, quarantines, workflowRuns, domainEvents] = await Promise.all([
     prisma.plantCareEvent.findMany({
-      where: { collectionId: input.collectionId, plantInstanceId: input.plantInstanceId },
+      where: { collectionId: input.collectionId, plantInstanceId: { in: timelineInstanceIds } },
       orderBy: { performedAt: 'asc' },
     }),
     prisma.plantCondition.findMany({
-      where: { collectionId: input.collectionId, plantInstanceId: input.plantInstanceId },
+      where: { collectionId: input.collectionId, plantInstanceId: { in: timelineInstanceIds } },
       orderBy: { observedAt: 'asc' },
     }),
     prisma.photo.findMany({
       where: {
         collectionId: input.collectionId,
         OR: [
-          { entityType: 'PLANT_INSTANCE', entityId: input.plantInstanceId },
+          { entityType: 'PLANT_INSTANCE', entityId: { in: timelineInstanceIds } },
           ...(bloomIds.length ? [{ entityType: 'BLOOM_EVENT', entityId: { in: bloomIds } }] : []),
         ],
       },
@@ -199,7 +207,7 @@ export async function collectPlantTimelineEvents(
       where: {
         collectionId: input.collectionId,
         OR: [
-          { entityType: 'PLANT_INSTANCE', entityId: input.plantInstanceId },
+          { entityType: 'PLANT_INSTANCE', entityId: { in: timelineInstanceIds } },
           ...(bloomIds.length ? [{ entityType: 'BLOOM_EVENT', entityId: { in: bloomIds } }] : []),
         ],
       },
@@ -209,8 +217,8 @@ export async function collectPlantTimelineEvents(
       where: {
         collectionId: input.collectionId,
         OR: [
-          { parents: { some: { parentPlantInstanceId: input.plantInstanceId } } },
-          { children: { some: { childPlantInstanceId: input.plantInstanceId } } },
+          { parents: { some: { parentPlantInstanceId: { in: timelineInstanceIds } } } },
+          { children: { some: { childPlantInstanceId: { in: timelineInstanceIds } } } },
         ],
       },
       include: {
@@ -223,24 +231,24 @@ export async function collectPlantTimelineEvents(
       where: {
         collectionId: input.collectionId,
         OR: [
-          { entityType: 'PLANT_INSTANCE', entityId: input.plantInstanceId },
+          { entityType: 'PLANT_INSTANCE', entityId: { in: timelineInstanceIds } },
           ...(bloomIds.length ? [{ entityType: 'BLOOM_EVENT', entityId: { in: bloomIds } }] : []),
         ],
       },
       orderBy: { dueAt: 'asc' },
     }),
     prisma.sportStabilityRecord.findMany({
-      where: { plantInstanceId: input.plantInstanceId, propagationEvent: { collectionId: input.collectionId } },
+      where: { plantInstanceId: { in: timelineInstanceIds }, propagationEvent: { collectionId: input.collectionId } },
       include: { propagationEvent: true },
       orderBy: { createdAt: 'asc' },
     }),
     prisma.plantLocationMove.findMany({
-      where: { collectionId: input.collectionId, plantInstanceId: input.plantInstanceId },
+      where: { collectionId: input.collectionId, plantInstanceId: { in: timelineInstanceIds } },
       include: { fromLocation: true, toLocation: true, movedByUser: { select: { email: true } } },
       orderBy: { movedAt: 'asc' },
     }),
     prisma.plantQuarantine.findMany({
-      where: { collectionId: input.collectionId, plantInstanceId: input.plantInstanceId },
+      where: { collectionId: input.collectionId, plantInstanceId: { in: timelineInstanceIds } },
       include: {
         quarantineLocation: true,
         createdByUser: { select: { email: true } },
@@ -250,7 +258,7 @@ export async function collectPlantTimelineEvents(
       orderBy: { startDate: 'asc' },
     }),
     prisma.workflowRun.findMany({
-      where: { collectionId: input.collectionId, plants: { some: { plantInstanceId: input.plantInstanceId } } },
+      where: { collectionId: input.collectionId, plants: { some: { plantInstanceId: { in: timelineInstanceIds } } } },
       include: { template: true },
       orderBy: { startedAt: 'asc' },
     }),
@@ -260,7 +268,7 @@ export async function collectPlantTimelineEvents(
         visibility: { in: input.visibleEventVisibilities || ['PUBLIC', 'COLLECTION_MEMBER'] },
         redactedAt: null,
         OR: [
-          { aggregateType: 'PlantInstance', aggregateId: input.plantInstanceId },
+          { aggregateType: 'PlantInstance', aggregateId: { in: timelineInstanceIds } },
           { payloadJson: { path: ['plantInstanceId'], equals: input.plantInstanceId } },
         ],
       },
@@ -286,6 +294,20 @@ export async function collectPlantTimelineEvents(
     sourceId: instance.id,
     metadata: { plantId: instance.plantId, instanceType: instance.instanceType },
   })
+
+  for (const constituent of constituentInstances) {
+    addEvent(events, {
+      id: `accession-${constituent.id}`,
+      type: 'ACCESSION',
+      category: 'accession',
+      date: constituent.acquisitionDate || constituent.createdAt,
+      title: constituent.acquisitionDate ? 'Acquired / accessioned' : 'Record created',
+      summary: `${compactText([constituent.source, constituent.distributor].filter(Boolean).join(' via '), `${constituent.plantId} entered the collection.`)} · Originally recorded on ${constituent.plantId}.`,
+      icon: '🌱', colorVariant: 'green', href: eventHref(input.collectionSlug, constituent.id),
+      sourceModel: 'PlantInstance', sourceId: constituent.id,
+      metadata: { plantId: constituent.plantId, originalPlantId: constituent.plantId },
+    })
+  }
 
   if (instance.propagationDate) {
     addEvent(events, {
@@ -618,10 +640,10 @@ export async function collectPlantTimelineEvents(
   for (const event of propagationEvents) {
     const childLinks = event.children.map((child) => child.childPlantInstance)
     const parentLinks = event.parents.map((parent) => parent.parentPlantInstance)
-    const isParent = parentLinks.some((parent) => parent.id === input.plantInstanceId)
+    const isParent = parentLinks.some((parent) => timelineInstanceIds.includes(parent.id))
     const related = isParent
-      ? childLinks.filter((child) => child.id !== input.plantInstanceId)
-      : parentLinks.filter((parent) => parent.id !== input.plantInstanceId)
+      ? childLinks.filter((child) => !timelineInstanceIds.includes(child.id))
+      : parentLinks.filter((parent) => !timelineInstanceIds.includes(parent.id))
     addEvent(events, {
       id: `propagation-${event.id}`,
       type: isParent ? 'PROPAGATION_PRODUCED' : 'PROPAGATION_CREATED',
@@ -699,8 +721,36 @@ export async function collectPlantTimelineEvents(
       metadata: { reconstructed: event.reconstructed, manual: event.source === 'MANUAL', eventVersion: event.eventVersion },
     }
   })
-  const legacyFallback = events.filter((event) => !represented.has(`${event.sourceModel}:${event.sourceId}:${semanticType(event.type)}`))
-  return [...legacyFallback, ...domainTimelineEvents].sort((left, right) => left.date.getTime() - right.date.getTime() || left.title.localeCompare(right.title))
+  const originByRecord = new Map<string, string>()
+  const rememberOrigin = (model: string, id: string, plantInstanceId?: string | null) => {
+    const plantId = plantInstanceId ? plantIdByInstanceId.get(plantInstanceId) : null
+    if (plantId && plantInstanceId !== input.plantInstanceId) originByRecord.set(`${model}:${id}`, plantId)
+  }
+  careEvents.forEach((record) => rememberOrigin('PlantCareEvent', record.id, record.plantInstanceId))
+  conditions.forEach((record) => rememberOrigin('PlantCondition', record.id, record.plantInstanceId))
+  blooms.forEach((record) => rememberOrigin('BloomEvent', record.id, record.plantInstanceId))
+  locationMoves.forEach((record) => rememberOrigin('PlantLocationMove', record.id, record.plantInstanceId))
+  quarantines.forEach((record) => rememberOrigin('PlantQuarantine', record.id, record.plantInstanceId))
+  reminders.forEach((record) => rememberOrigin('Reminder', record.id, record.entityType === 'PLANT_INSTANCE' ? record.entityId : null))
+  sportRecords.forEach((record) => rememberOrigin('SportStabilityRecord', record.id, record.plantInstanceId))
+  for (const photo of photos) {
+    const plantInstanceId = photo.entityType === 'PLANT_INSTANCE' ? photo.entityId : blooms.find((bloom) => bloom.id === photo.entityId)?.plantInstanceId
+    rememberOrigin('Photo', photo.id, plantInstanceId)
+  }
+  for (const note of notes) {
+    const plantInstanceId = note.entityType === 'PLANT_INSTANCE' ? note.entityId : blooms.find((bloom) => bloom.id === note.entityId)?.plantInstanceId
+    rememberOrigin('Note', note.id, plantInstanceId)
+  }
+  const attributed = [...events.filter((event) => !represented.has(`${event.sourceModel}:${event.sourceId}:${semanticType(event.type)}`)), ...domainTimelineEvents].map((event) => {
+    const originalPlantId = originByRecord.get(`${event.sourceModel}:${event.sourceId}`)
+    if (!originalPlantId) return event
+    return {
+      ...event,
+      summary: `${event.summary}${event.summary ? ' · ' : ''}Originally recorded on ${originalPlantId}.`,
+      metadata: { ...event.metadata, originalPlantId },
+    }
+  })
+  return attributed.sort((left, right) => left.date.getTime() - right.date.getTime() || left.title.localeCompare(right.title))
 }
 
 export function getPlantTimelineMetrics(events: PlantTimelineEvent[], instance: PlantTimelineInstance, now = new Date()): PlantTimelineMetrics {

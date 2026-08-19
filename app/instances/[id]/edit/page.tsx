@@ -7,6 +7,8 @@ import { locationPath, locationPathWithCodes } from '@/lib/locations'
 import { prisma } from '@/lib/prisma'
 import { rankedSuggestions } from '@/lib/suggestions'
 import { dateInput, plantName } from '@/lib/utils'
+import { isHistoricalConstituent } from '@/lib/plant-instance-merges'
+import { redirect } from 'next/navigation'
 
 const selectClass = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
 
@@ -34,6 +36,7 @@ export default async function EditInstance({ params }: { params: Promise<{ id: s
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     }),
   ])
+  if (isHistoricalConstituent(instance.status)) redirect(collectionPath(collection.slug, `/instances/${id}`))
   const canManage = canManageCollection(user, context)
   const locationNodes = locations.map((location) => ({
     id: location.id,

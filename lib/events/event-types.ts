@@ -1,5 +1,5 @@
 export const DOMAIN_EVENT_TYPES = [
-  'plant.created', 'plant.updated', 'plant.archived', 'plant.restored', 'plant.location_moved', 'plant.photo_added', 'plant.historical_observation_added',
+  'plant.created', 'plant.updated', 'plant.archived', 'plant.restored', 'plant.merged', 'plant.location_moved', 'plant.photo_added', 'plant.historical_observation_added',
   'care.watered', 'care.fertilized', 'care.repotting_completed', 'care.pest_checked', 'care.health_checked', 'care.schedule_synced', 'care.quiet_day_adjusted', 'care.bulk_batch_completed',
   'condition.opened', 'condition.updated', 'condition.resolved', 'condition.reopened', 'condition.treatment_linked', 'condition.resolved_after_treatment', 'condition.recurred',
   'bloom.started', 'bloom.peaked', 'bloom.closed', 'bloom.photo_added',

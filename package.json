@@ -45,7 +45,8 @@
     "check:plant-tags": "tsx scripts/check-plant-tags.ts",
     "check:treatments": "tsx scripts/check-treatments.ts",
     "check:substrates": "tsx scripts/check-substrates.ts",
-    "check:taxonomic-authorities": "tsx scripts/check-taxonomic-authorities.ts"
+    "check:taxonomic-authorities": "tsx scripts/check-taxonomic-authorities.ts",
+    "check:plant-instance-merges": "node scripts/check-plant-instance-merges.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

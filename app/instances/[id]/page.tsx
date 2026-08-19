@@ -68,6 +68,7 @@ import { labelizeTreatment } from '@/lib/treatments'
 import { assignPlantSubstrate } from '@/app/substrate-actions'
 import { substrateAssignmentLabel, substrateLabel, substrateModes } from '@/lib/substrates'
 import { SubstrateCompositionBar, SubstrateStateStrip } from '@/components/SubstrateCompositionBar'
+import { isHistoricalConstituent, plantInstanceMergeReasonLabel } from '@/lib/plant-instance-merges'
 
 const conditionCategories = [
   ['WILTING', 'Wilting'],
@@ -106,11 +107,11 @@ export default async function InstanceDetail({
   const context = await requireCollectionViewer()
   const { collection } = context
   const collectionWhere = { collectionId: collection.id }
-  const canCreateRecords = canCreateInCollection(user, context)
-  const canEditRecords = canEditInCollection(user, context)
-  const canManageRecords = canManageCollection(user, context)
+  const canCreateRecordsForRole = canCreateInCollection(user, context)
+  const canEditRecordsForRole = canEditInCollection(user, context)
+  const canManageRecordsForRole = canManageCollection(user, context)
   const canViewTreatmentRecords = Boolean(user && (context.membership?.status === 'ACTIVE' || isServerAdminRole(user.role)))
-  if (canCreateRecords) await ensureStarterWorkflowTemplates(prisma, collection.id)
+  if (canCreateRecordsForRole) await ensureStarterWorkflowTemplates(prisma, collection.id)
   const preferences = user
     ? await prisma.emailPreference.findUnique({ where: { userId: user.id } })
     : null
@@ -167,8 +168,14 @@ export default async function InstanceDetail({
       currentLocation: { include: { locationType: true } },
       currentSubstrate: { include: { recipeVersion: { include: { recipe: true, components: { include: { component: true }, orderBy: { sortOrder: 'asc' } } } } } },
       substrateHistory: { include: { previousRecipeVersion: { include: { recipe: true } }, newRecipeVersion: { include: { recipe: true, components: { include: { component: true }, orderBy: { sortOrder: 'asc' } } } } }, orderBy: { changedAt: 'desc' } },
+      mergeConstituent: { include: { merge: { include: { survivingPlantInstance: { include: { plantDefinition: true } } } } } },
+      survivingMerges: { include: { constituents: { include: { plantInstance: { include: { plantDefinition: true } } } }, createdBy: { select: { email: true } } }, orderBy: { mergeDate: 'desc' } },
     },
   })
+  const historicalConstituent = isHistoricalConstituent(i.status)
+  const canCreateRecords = canCreateRecordsForRole && !historicalConstituent
+  const canEditRecords = canEditRecordsForRole && !historicalConstituent
+  const canManageRecords = canManageRecordsForRole && !historicalConstituent
   const substrateVersions = canCreateRecords
     ? await prisma.substrateRecipeVersion.findMany({ where: { collectionId: collection.id, status: 'ACTIVE', recipe: { archivedAt: null } }, include: { recipe: true }, orderBy: { recipe: { name: 'asc' } } })
     : []
@@ -921,8 +928,39 @@ export default async function InstanceDetail({
             />
           </div>
         </div>
-        <img src={qr} className="h-28 w-28" alt="QR code" />
+        <div className="flex flex-col items-end gap-2">
+          <img src={qr} className="h-28 w-28" alt="QR code" />
+          {canManageRecords && <Link className="rounded-md border border-[#c7d8bd] bg-white/70 px-3 py-2 text-sm font-semibold text-[#2f6b45]" href={collectionPath(collection.slug, `/instances/merge?definition=${i.plantDefinitionId}&ids=${i.id}`)}>Pot together</Link>}
+        </div>
       </div>
+
+      {i.mergeConstituent && (
+        <Card className="border-amber-300 bg-amber-50">
+          <p className="text-xs font-bold uppercase tracking-[0.15em] text-amber-800">Historical constituent</p>
+          <h3 className="mt-1 text-xl font-bold">Merged into {i.mergeConstituent.merge.survivingPlantInstance.plantId}</h3>
+          <p className="mt-1 text-sm">This Plant ID and QR code remain valid as an immutable historical record. New care, photos, notes, reminders, and edits belong on the surviving specimen.</p>
+          <p className="mt-2 text-sm text-stone-700">{plantInstanceMergeReasonLabel(i.mergeConstituent.merge.reason)} · {fmtDate(i.mergeConstituent.merge.mergeDate, timezone)}{i.mergeConstituent.merge.notes ? ` · ${i.mergeConstituent.merge.notes}` : ''}</p>
+          <Link className="mt-3 inline-block rounded-md bg-[#2f6b45] px-3 py-2 text-sm font-semibold text-white" href={collectionPath(collection.slug, `/instances/${i.mergeConstituent.merge.survivingPlantInstanceId}`)}>Open surviving specimen</Link>
+        </Card>
+      )}
+
+      {i.survivingMerges.length > 0 && (
+        <Card id="merged-specimens">
+          <h3 className="font-bold">Potted-together history</h3>
+          <p className="mt-1 text-sm text-stone-600">This specimen carries forward the current lifecycle while each constituent retains its original historical record.</p>
+          <div className="mt-3 space-y-3">
+            {i.survivingMerges.map((merge) => (
+              <div key={merge.id} className="rounded-md border border-stone-200 bg-white/55 p-3">
+                <p className="text-sm font-semibold">{plantInstanceMergeReasonLabel(merge.reason)} · {fmtDate(merge.mergeDate, timezone)}</p>
+                {merge.notes && <p className="text-sm text-stone-700">{merge.notes}</p>}
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {merge.constituents.map(({ plantInstance }) => <Link key={plantInstance.id} className="rounded-full border border-[#c7d8bd] bg-[#f5fbf0] px-3 py-1 text-xs font-semibold text-[#2f6b45] underline" href={collectionPath(collection.slug, `/instances/${plantInstance.id}`)}>{plantInstance.plantId}</Link>)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       <Card>
         <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-bold">Acquisition &amp; provenance</h3><p className="mt-1 text-sm text-stone-600">The canonical record of how this specimen entered the collection.</p></div>{canCreateRecords && <Link className="text-sm font-semibold text-[#2f6b45] underline" href={collectionPath(collection.slug, `/instances/${i.id}/acquisition`)}>Manage acquisition</Link>}</div>

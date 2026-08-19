@@ -301,6 +301,15 @@ export default async function Instances({
         </AddPanel>
       )}
 
+      {canManageCollection(user, context) && (
+        <Card>
+          <form id="selected-plants-merge" action={collectionPath(collection.slug, '/instances/merge')} className="flex flex-wrap items-center justify-between gap-3">
+            <div><p className="font-bold">Pot checked specimens together</p><p className="text-xs text-stone-500">Select at least two active specimens with the same plant definition.</p></div>
+            <Button>Review permanent merge</Button>
+          </form>
+        </Card>
+      )}
+
       {canCreateInCollection(user, context) && (
         <Card>
           <form id="selected-plants-workflow" action={startWorkflowRun} className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
@@ -330,10 +339,10 @@ export default async function Instances({
               )}
             >
               {canCreateInCollection(user, context) && (
-                <label className="flex items-center gap-2 border-b border-stone-200 bg-white/70 px-3 py-2 text-xs font-semibold">
-                  <input form="selected-plants-workflow" type="checkbox" name="plantInstanceId" value={instance.id} />
-                  Include in workflow
-                </label>
+                <div className="flex flex-wrap gap-x-3 gap-y-1 border-b border-stone-200 bg-white/70 px-3 py-2 text-xs font-semibold">
+                  <label className="flex items-center gap-2"><input form="selected-plants-workflow" type="checkbox" name="plantInstanceId" value={instance.id} />Workflow</label>
+                  {canManageCollection(user, context) && <label className="flex items-center gap-2"><input form="selected-plants-merge" type="checkbox" name="ids" value={instance.id} />Pot together</label>}
+                </div>
               )}
               <Link href={collectionPath(collection.slug, `/instances/${instance.id}`)} className="block flex-1">
                 <div className="aspect-[4/3] overflow-hidden">

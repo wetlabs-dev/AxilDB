@@ -166,6 +166,7 @@ export const manualSections: ManualSection[] = [
       'Filter the instance list by structured location, with optional inclusion of child locations.',
       'Filter instances by a Plant Tag inherited from their linked definition; specimen cards and plant ID previews show a compact inherited tag row.',
       'Review quarantine status from the specimen page. Gardeners can start, update, release, or cancel quarantine records manually.',
+      'Managers can check two or more active specimens with the same definition and choose Pot together, or start from an individual specimen. Review the survivor, current metadata sources, merge date, reason, and irreversible confirmation before completing the merge.',
     ],
     notes: [
       'Plant IDs are generated from the plant definition and relevant date context, then made unique inside the collection.',
@@ -174,6 +175,11 @@ export const manualSections: ManualSection[] = [
       'Active quarantine records show on specimen pages and plant cards, and their target release dates create care queue review items.',
       'Acquired propagation is for purchased or received cuttings, leaf props, starter plugs, and similar plants without an internal parent record.',
       'Timeline v1 uses existing records and includes plant location moves plus quarantine start, update, release, and cancellation events. Dedicated label-change, restore, and sport-transition events are future data-source candidates.',
+      'A Pot Together survivor keeps its Plant ID, QR code, URLs, and future care lifecycle. Constituent IDs remain searchable and their old QR codes open read-only historical records linked to the survivor.',
+      'The survivor timeline combines constituent notes, photos, care, bloom, lineage, and other records in chronological order with the original Plant ID shown. Open conditions, active treatment plans, active blooms, and active quarantine records move to the survivor with origin notes; old reminders are paused.',
+    ],
+    warnings: [
+      'Pot Together is permanent. If a combined planting is later divided, record the resulting plants through propagation rather than trying to split the historical merge.',
     ],
   },
   {

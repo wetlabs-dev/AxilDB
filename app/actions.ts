@@ -44,6 +44,7 @@ import { evaluatePlantLocationCompatibility, getEffectiveLocationEnvironment, ge
 import { emitDomainEvent } from '@/lib/events/emit'
 import { sourceRowsFromForm, validateCommerceSelection, validateSourceRows } from '@/lib/provenance'
 import { parseTagIds } from '@/lib/plant-tags'
+import { isHistoricalConstituent } from '@/lib/plant-instance-merges'
 import { requireSubstrateRecipeVersion, setPlantSubstrate, substrateModes } from '@/lib/substrates'
 import {
   authoritySelectionFromForm,
@@ -115,6 +116,10 @@ const jsonListValue = (fd: FormData, k: string) => {
 }
 const back = (fd: FormData) => val(fd, 'back') || '/'
 const collectionSlug = async (fd: FormData) => val(fd, 'collectionSlug') || await getCurrentCollectionSlug()
+async function assertPlantInstanceAcceptsChanges(collectionId: string, plantInstanceId: string) {
+  const instance = await prisma.plantInstance.findFirstOrThrow({ where: { id: plantInstanceId, collectionId }, select: { status: true } })
+  if (isHistoricalConstituent(instance.status)) throw new Error('This specimen is a read-only historical constituent. Add new records to its surviving specimen.')
+}
 const revalidateDestination = (destination: string) => revalidatePath(destination.split('#')[0] || '/')
 const boundedInt = (value: string | undefined, fallback: number, min: number, max: number) => {
   const parsed = Number(value)
@@ -2455,6 +2460,7 @@ export async function createPlantInstance(fd: FormData) {
 export async function updatePlantInstance(fd: FormData) {
   const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const id = val(fd, 'id')!
+  await assertPlantInstanceAcceptsChanges(collection.id, id)
   const before = await prisma.plantInstance.findFirstOrThrow({ where: { id, collectionId: collection.id }, select: { id: true, plantId: true, currentLocationId: true } })
   const plantDefinitionId = val(fd, 'plantDefinitionId')!
   await prisma.plantDefinition.findFirstOrThrow({
@@ -2518,6 +2524,7 @@ export async function updatePlantInstance(fd: FormData) {
 export async function regeneratePlantInstanceId(fd: FormData) {
   const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const id = val(fd, 'id')!
+  await assertPlantInstanceAcceptsChanges(collection.id, id)
   const proposedPlantId = val(fd, 'proposedPlantId')!
   const instance = await prisma.plantInstance.findFirstOrThrow({
     where: { id, collectionId: collection.id },
@@ -2560,6 +2567,7 @@ export async function regeneratePlantInstanceId(fd: FormData) {
 export async function savePlantHusbandryOverride(fd: FormData) {
   const { user, collection } = await requireCollectionLogger(await collectionSlug(fd))
   const plantInstanceId = val(fd, 'plantInstanceId')!
+  await assertPlantInstanceAcceptsChanges(collection.id, plantInstanceId)
   await prisma.plantInstance.findFirstOrThrow({ where: { id: plantInstanceId, collectionId: collection.id }, select: { id: true } })
   const values = husbandryFormValues(fd)
   const structuredData = await structuredHusbandryMutationData(fd, collection.id)
@@ -2586,6 +2594,7 @@ export async function savePlantHusbandryOverride(fd: FormData) {
 export async function savePlantHusbandryOverrideField(fd: FormData) {
   const { user, collection } = await requireCollectionLogger(await collectionSlug(fd))
   const plantInstanceId = val(fd, 'plantInstanceId')!
+  await assertPlantInstanceAcceptsChanges(collection.id, plantInstanceId)
   const fieldName = val(fd, 'fieldName')!
   if (!husbandryFieldNames.includes(fieldName as any)) throw new Error('Unknown husbandry field.')
   await prisma.plantInstance.findFirstOrThrow({ where: { id: plantInstanceId, collectionId: collection.id }, select: { id: true } })
@@ -2612,8 +2621,11 @@ export async function savePlantHusbandryOverrideField(fd: FormData) {
 export async function deletePlantInstance(fd: FormData) {
   const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const id = val(fd, 'id')!
+  await assertPlantInstanceAcceptsChanges(collection.id, id)
   const instance = await prisma.plantInstance.findFirst({ where: { id, collectionId: collection.id } })
   if (!instance) throw new Error('Plant instance not found in this collection.')
+  const mergeCount = await prisma.plantInstanceMerge.count({ where: { survivingPlantInstanceId: id } })
+  if (mergeCount > 0) throw new Error('A surviving Pot Together specimen cannot be deleted because it anchors permanent constituent history. Archive it instead.')
 
   await cleanupPlantInstanceDependents(collection.id, id)
   await prisma.plantInstance.delete({ where: { id } })
@@ -2626,6 +2638,7 @@ export async function deletePlantInstance(fd: FormData) {
 export async function archivePlantInstance(fd: FormData) {
   const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const id = val(fd, 'id')!
+  await assertPlantInstanceAcceptsChanges(collection.id, id)
   await prisma.plantInstance.findFirstOrThrow({ where: { id, collectionId: collection.id }, select: { id: true } })
 
   const archivedAt = new Date()
@@ -2660,6 +2673,7 @@ export async function archivePlantInstance(fd: FormData) {
 export async function restorePlantInstance(fd: FormData) {
   const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const id = val(fd, 'id')!
+  await assertPlantInstanceAcceptsChanges(collection.id, id)
   await prisma.plantInstance.findFirstOrThrow({ where: { id, collectionId: collection.id }, select: { id: true } })
 
   const restoredAt = new Date()
@@ -2679,6 +2693,7 @@ export async function restorePlantInstance(fd: FormData) {
 
 export async function addNote(fd: FormData) {
   const { user, collection } = await requireCollectionLogger(await collectionSlug(fd))
+  if (val(fd, 'entityType') === 'PLANT_INSTANCE') await assertPlantInstanceAcceptsChanges(collection.id, val(fd, 'entityId')!)
   const note = await prisma.note.create({
     data: { collectionId: collection.id, entityType: val(fd, 'entityType')!, entityId: val(fd, 'entityId')!, note: val(fd, 'note')! },
   })
@@ -2728,6 +2743,7 @@ export async function createReminder(fd: FormData) {
   const timezone = timeZoneForPreference(preferences)
   const dueAt = parseDateTimeLocal(val(fd, 'dueAt'), timezone)
   const destination = back(fd)
+  if (val(fd, 'entityType') === 'PLANT_INSTANCE' && val(fd, 'entityId')) await assertPlantInstanceAcceptsChanges(context.collection.id, val(fd, 'entityId')!)
 
   if (!dueAt || Number.isNaN(dueAt.getTime())) {
     throw new Error('A valid reminder date is required.')
@@ -2970,7 +2986,7 @@ export async function completeCareTask(fd: FormData) {
 
   const plantInstanceId = val(fd, 'plantInstanceId')!
   const plant = await prisma.plantInstance.findFirstOrThrow({
-    where: { id: plantInstanceId, collectionId: context.collection.id },
+    where: { id: plantInstanceId, collectionId: context.collection.id, status: 'ACTIVE' },
     select: { id: true, plantId: true },
   })
   const fertilizerRecipeId = taskType === 'FERTILIZE'
@@ -3480,7 +3496,7 @@ export async function createPlantCondition(fd: FormData) {
   const timezone = timeZoneForPreference(preferences)
   const plantInstanceId = val(fd, 'plantInstanceId')!
   const plant = await prisma.plantInstance.findFirstOrThrow({
-    where: { id: plantInstanceId, collectionId: context.collection.id },
+    where: { id: plantInstanceId, collectionId: context.collection.id, status: 'ACTIVE' },
     select: { id: true, plantId: true },
   })
 
@@ -3581,6 +3597,7 @@ export async function resumeReminder(fd: FormData) {
   const id = val(fd, 'id')!
   const destination = back(fd)
   const { user, reminder } = await requireReminderAccess(id, await collectionSlug(fd))
+  if (reminder.entityType === 'PLANT_INSTANCE' && reminder.entityId && reminder.collectionId) await assertPlantInstanceAcceptsChanges(reminder.collectionId, reminder.entityId)
 
   await prisma.reminder.update({
     where: { id },
@@ -3607,6 +3624,7 @@ export async function deleteReminder(fd: FormData) {
 export async function markSportCandidate(fd: FormData) {
   const { user, collection } = await requireCollectionLogger(await collectionSlug(fd))
   const id = val(fd, 'id')!
+  await assertPlantInstanceAcceptsChanges(collection.id, id)
   const observation = val(fd, 'observation')
 
   await prisma.plantInstance.findFirstOrThrow({ where: { id, collectionId: collection.id }, select: { id: true } })
@@ -3647,6 +3665,7 @@ export async function markSportCandidate(fd: FormData) {
 export async function markSportReverted(fd: FormData) {
   const { user, collection } = await requireCollectionLogger(await collectionSlug(fd))
   const id = val(fd, 'id')!
+  await assertPlantInstanceAcceptsChanges(collection.id, id)
   const observation = val(fd, 'observation')
 
   await prisma.plantInstance.findFirstOrThrow({ where: { id, collectionId: collection.id }, select: { id: true } })
