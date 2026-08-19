@@ -22,6 +22,9 @@ npm run check:plant-identity
 echo "==> Checking Plant Definition Tag invariants"
 npm run check:plant-tags
 
+echo "==> Checking Plant Definition completeness invariants"
+npm run check:definition-completeness
+
 echo "==> Checking provenance model invariants"
 npm run check:provenance
 

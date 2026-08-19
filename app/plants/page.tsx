@@ -19,6 +19,8 @@ import { PlantTagPicker } from '@/components/PlantTagPicker'
 import { PlantTagRow } from '@/components/PlantTagChip'
 import { PlantTagFilter } from '@/components/PlantTagFilter'
 import { TAXONOMIC_AUTHORITY_TYPES, taxonomicAuthorityWhere } from '@/lib/taxonomic-authorities'
+import { PlantDefinitionCompletenessBar } from '@/components/PlantDefinitionCompleteness'
+import { completenessMatchesMissing, completenessMatchesReadiness, evaluatePlantDefinitionCompletenessBatch } from '@/lib/plant-definition-completeness'
 
 const selectClass = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
 
@@ -29,6 +31,8 @@ const plantSortOptions: SortOption[] = [
   { value: 'updatedAsc', label: 'Oldest updated' },
   { value: 'createdDesc', label: 'Newest created' },
   { value: 'createdAsc', label: 'Oldest created' },
+  { value: 'completenessDesc', label: 'Completeness: highest first' },
+  { value: 'completenessAsc', label: 'Completeness: lowest first' },
 ]
 
 function referencePrefill(log: { resultJson: unknown }) {
@@ -48,7 +52,7 @@ function referencePrefill(log: { resultJson: unknown }) {
 export default async function Plants({
   searchParams,
 }: {
-  searchParams: Promise<{ fromIdentification?: string; wishlist?: string; tag?: string | string[]; tagMode?: string; taxonomicAuthorityId?: string; authorityType?: string; registrationAuthority?: string }>
+  searchParams: Promise<{ fromIdentification?: string; wishlist?: string; tag?: string | string[]; tagMode?: string; taxonomicAuthorityId?: string; authorityType?: string; registrationAuthority?: string; readiness?: string; missing?: string }>
 }) {
   const user = await getCurrentUser()
   const sp = await searchParams
@@ -63,8 +67,10 @@ export default async function Plants({
   const authorityFilter = String(sp.taxonomicAuthorityId || '')
   const authorityTypeFilter = String(sp.authorityType || '')
   const registrationAuthorityOnly = sp.registrationAuthority === '1'
+  const readinessFilter = String(sp.readiness || '')
+  const missingFilter = String(sp.missing || '')
   const sortKey = await sortPreference(user?.id, 'plants', 'nameAsc', plantSortOptions.map((option) => option.value))
-  const [plants, bodies, follows, activeTags, outgoingTransferConnections] = await Promise.all([
+  const [plants, bodies, follows, activeTags, outgoingTransferConnections, completenessByDefinition] = await Promise.all([
     prisma.plantDefinition.findMany({
       where: { ...collectionWhere,
         ...(authorityFilter ? { taxonomicAuthorityId: authorityFilter } : {}),
@@ -95,6 +101,7 @@ export default async function Plants({
           orderBy: { requestedAt: 'desc' },
         })
       : [],
+    evaluatePlantDefinitionCompletenessBatch(prisma, { collectionId: collection.id }),
   ])
   const followsByDefinitionId = new Map(follows.map((follow) => [follow.entityId, follow]))
   const definitionSuggestions = {
@@ -144,7 +151,18 @@ export default async function Plants({
     if (!acc[photo.entityId]) acc[photo.entityId] = photo
     return acc
   }, {})
-  const sortedPlants = [...plants].sort((left, right) => {
+  const readinessCounts = [...completenessByDefinition.values()].reduce<Record<string, number>>((counts, result) => {
+    counts[result.status] = (counts[result.status] || 0) + 1
+    return counts
+  }, {})
+  const sortedPlants = plants.filter((plant) => {
+    const completeness = completenessByDefinition.get(plant.id)
+    return completeness && completenessMatchesReadiness(completeness, readinessFilter) && completenessMatchesMissing(completeness, missingFilter)
+  }).sort((left, right) => {
+    const leftCompleteness = completenessByDefinition.get(left.id)?.overallScore || 0
+    const rightCompleteness = completenessByDefinition.get(right.id)?.overallScore || 0
+    if (sortKey === 'completenessDesc') return rightCompleteness - leftCompleteness || compareText(plantName(left), plantName(right))
+    if (sortKey === 'completenessAsc') return leftCompleteness - rightCompleteness || compareText(plantName(left), plantName(right))
     if (sortKey === 'nameDesc') return compareText(plantName(right), plantName(left))
     if (sortKey === 'updatedDesc') return timeValue(right.updatedAt) - timeValue(left.updatedAt)
     if (sortKey === 'updatedAsc') return timeValue(left.updatedAt) - timeValue(right.updatedAt)
@@ -168,6 +186,7 @@ export default async function Plants({
           {canManage && <LinkButton href={collectionPath(collection.slug, '/id-history')}>ID History</LinkButton>}
           <LinkButton href={collectionPath(collection.slug, '/validated-definitions')}>Validated</LinkButton>
           <LinkButton href={collectionPath(collection.slug, '/search')}>Search</LinkButton>
+          {canManage && <a className="rounded-md border border-stone-300 bg-white/70 px-3 py-2 text-sm font-semibold" href={`/api/exports/plant-definitions?collectionSlug=${encodeURIComponent(collection.slug)}`}>Export CSV</a>}
           {canCreate && <LinkButton href={collectionPath(collection.slug, '/plant-tags')}>Plant Tags</LinkButton>}
         </div>
       </div>
@@ -244,12 +263,23 @@ export default async function Plants({
       )}
 
       <Card>
-        <form method="get" className="grid gap-2 sm:grid-cols-3 lg:grid-cols-[1fr_1fr_auto_auto] lg:items-end">
+        <form method="get" className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1fr_auto] lg:items-end">
           <label className="grid gap-1 text-sm font-medium">Taxonomic Authority<select className={selectClass} name="taxonomicAuthorityId" defaultValue={authorityFilter}><option value="">All authorities</option>{bodies.map((body) => <option key={body.id} value={body.id}>{body.name}</option>)}</select></label>
           <label className="grid gap-1 text-sm font-medium">Authority type<select className={selectClass} name="authorityType" defaultValue={authorityTypeFilter}><option value="">All types</option>{TAXONOMIC_AUTHORITY_TYPES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
           <label className="flex items-center gap-2 rounded-md border border-stone-300 px-3 py-2 text-sm"><input type="checkbox" name="registrationAuthority" value="1" defaultChecked={registrationAuthorityOnly} />Registration Authorities only</label>
-          <Button>Apply authority filters</Button>
+          <label className="grid gap-1 text-sm font-medium">Readiness<select className={selectClass} name="readiness" defaultValue={readinessFilter}><option value="">All readiness states</option><option value="COMPLETE">Complete</option><option value="MOSTLY_COMPLETE">Mostly complete</option><option value="NEEDS_WORK">Needs work</option><option value="SPARSE">Sparse</option><option value="MINIMAL">Minimal</option><option value="PROVISIONAL">Provisional</option></select></label>
+          <label className="grid gap-1 text-sm font-medium">Missing data<select className={selectClass} name="missing" defaultValue={missingFilter}><option value="">Any category</option><option value="images">Missing image</option><option value="husbandry">Missing husbandry</option><option value="fertilizer">Missing fertilizer</option><option value="substrate">Missing substrate</option><option value="authority">Missing authority</option><option value="references">Missing references</option><option value="tags">Missing tags</option></select></label>
+          <Button>Apply filters</Button>
         </form>
+        <p className="mt-2 text-xs text-stone-600">Definition completeness reflects how much applicable AxilDB metadata is populated. It does not guarantee taxonomic correctness.</p>
+        <div className="mt-3 flex flex-wrap gap-2 text-xs">
+          <span className="rounded-full border border-stone-300 px-2.5 py-1 font-semibold">{completenessByDefinition.size} total</span>
+          <span className="rounded-full border border-stone-300 px-2.5 py-1">{readinessCounts.COMPLETE || 0} complete</span>
+          <span className="rounded-full border border-stone-300 px-2.5 py-1">{readinessCounts.MOSTLY_COMPLETE || 0} mostly complete</span>
+          <span className="rounded-full border border-stone-300 px-2.5 py-1">{readinessCounts.NEEDS_WORK || 0} need work</span>
+          <span className="rounded-full border border-stone-300 px-2.5 py-1">{(readinessCounts.SPARSE || 0) + (readinessCounts.MINIMAL || 0)} sparse/minimal</span>
+          <span className="rounded-full border border-stone-300 px-2.5 py-1">{readinessCounts.PROVISIONAL || 0} provisional</span>
+        </div>
       </Card>
 
       {activeTags.length > 0 && (
@@ -261,6 +291,7 @@ export default async function Plants({
       <div className="grid auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
         {sortedPlants.map((plant) => {
           const typePhoto = typePhotoByDefinition[plant.id] || plant.instances.map((instance) => typePhotoByInstance[instance.id]).find(Boolean)
+          const completeness = completenessByDefinition.get(plant.id)!
           return (
             <Card key={plant.id} className="flex h-full flex-col overflow-hidden p-0">
               <div className="aspect-[4/3] overflow-hidden">
@@ -305,6 +336,7 @@ export default async function Plants({
                     <p className="mt-2 text-xs font-medium text-stone-500">
                       {followCountByDefinitionId.get(plant.id) || 0} follower{(followCountByDefinitionId.get(plant.id) || 0) === 1 ? '' : 's'}
                     </p>
+                    <PlantDefinitionCompletenessBar result={completeness} className="mt-3" />
                   </div>
                   {(canEdit || canCreate) && (
                     <div className="flex shrink-0 flex-col gap-1">
@@ -385,6 +417,7 @@ export default async function Plants({
           )
         })}
       </div>
+      {sortedPlants.length === 0 && <Card><p className="text-sm text-stone-600">No plant definitions match the selected readiness filters.</p></Card>}
     </div>
   )
 }

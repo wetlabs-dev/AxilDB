@@ -6,6 +6,7 @@ import { requireCollectionAdmin } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
 import { plantName } from '@/lib/utils'
 import { getUserUnitPreferences, lightInputValue, lightSymbol, temperatureInputValue, temperatureSymbol } from '@/lib/units'
+import { evaluatePlantDefinitionCompletenessBatch } from '@/lib/plant-definition-completeness'
 
 const baseHeaders = [
   'id',
@@ -32,6 +33,16 @@ const baseHeaders = [
   'tagCategories',
   'tagIds',
   'instanceCount',
+  'completenessPercent',
+  'readinessStatus',
+  'missingCriticalItems',
+  'missingRecommendedItems',
+  'taxonomyScore',
+  'husbandryScore',
+  'imageScore',
+  'authorityScore',
+  'substrateScore',
+  'fertilizerScore',
   'createdAt',
   'updatedAt',
 ]
@@ -67,7 +78,7 @@ export async function GET(request: Request) {
     `measuredLightMaximum (${lightSymbol(unitPreferences.lightUnit)})`,
   ]
 
-  const definitions = await prisma.plantDefinition.findMany({
+  const [definitions, completenessByDefinition] = await Promise.all([prisma.plantDefinition.findMany({
     where: { collectionId: collection.id },
     include: {
       taxonomicAuthority: true,
@@ -77,9 +88,12 @@ export async function GET(request: Request) {
       _count: { select: { instances: true } },
     },
     orderBy: [{ genus: 'asc' }, { species: 'asc' }, { cultivarName: 'asc' }],
-  })
+  }), evaluatePlantDefinitionCompletenessBatch(prisma, { collectionId: collection.id })])
 
-  const rows = definitions.map((definition) => csvRow([
+  const rows = definitions.map((definition) => {
+    const completeness = completenessByDefinition.get(definition.id)!
+    const categoryScore = (key: string) => completeness.categories.find((category) => category.key === key)?.score ?? ''
+    return csvRow([
     definition.id,
     plantName(definition),
     definition.genus,
@@ -104,6 +118,16 @@ export async function GET(request: Request) {
     definition.tags.map((item) => item.plantTag.category || 'OTHER').join('; '),
     definition.tags.map((item) => item.plantTagId).join('; '),
     definition._count.instances,
+    completeness.overallScore,
+    completeness.statusLabel,
+    completeness.criticalMissing.map((item) => item.label).join('; '),
+    completeness.recommendedNextActions.map((item) => item.label).join('; '),
+    categoryScore('taxonomy'),
+    categoryScore('husbandry'),
+    categoryScore('images'),
+    categoryScore('authority'),
+    categoryScore('substrate'),
+    categoryScore('fertilizer'),
     definition.createdAt,
     definition.updatedAt,
     temperatureInputValue(definition.husbandryGuide?.environmentTemperatureMinC, unitPreferences.temperatureUnit),
@@ -112,7 +136,8 @@ export async function GET(request: Request) {
     temperatureInputValue(definition.husbandryGuide?.environmentNightTemperatureMaxC, unitPreferences.temperatureUnit),
     lightInputValue(definition.husbandryGuide?.environmentLightMinLux, unitPreferences.lightUnit),
     lightInputValue(definition.husbandryGuide?.environmentLightMaxLux, unitPreferences.lightUnit),
-  ]))
+    ])
+  })
 
   const csv = `${csvRow(headers)}\n${rows.join('\n')}${rows.length ? '\n' : ''}`
 

@@ -26,6 +26,8 @@ import { authoritySelectionValue, taxonomicAuthorityWhere, taxonomicPlacementVal
 import { addSubstrateRecommendation, removeSubstrateRecommendation, updateSubstrateRecommendation } from '@/app/substrate-actions'
 import { substrateLabel, substrateSuitabilities } from '@/lib/substrates'
 import { SubstrateCompositionBar } from '@/components/SubstrateCompositionBar'
+import { PlantDefinitionReadinessPanel } from '@/components/PlantDefinitionCompleteness'
+import { evaluatePlantDefinitionCompleteness } from '@/lib/plant-definition-completeness'
 
 const selectClass = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
 
@@ -154,11 +156,14 @@ export default async function EditPlant({
       orderBy: [{ rank: 'asc' }, { createdAt: 'asc' }],
     }),
   ])
+  const completeness = await evaluatePlantDefinitionCompleteness(prisma, plant.id, collection.id)
+  const magicFillOpportunityCount = completeness.criticalMissing.length + completeness.recommendedNextActions.length
 
   return (
     <div className="space-y-6">
       <h2 className="text-3xl font-bold">Edit Plant Definition</h2>
-      <Card>
+      <PlantDefinitionReadinessPanel result={completeness} baseHref={collectionPath(collection.slug, `/plants/${plant.id}/edit`)} />
+      <Card id="definition-fields">
         <form action={updatePlantDefinition} className="grid max-w-6xl gap-x-3 gap-y-2 lg:grid-cols-4">
           <SuggestionDatalist id="definition-genus-suggestions" suggestions={definitionSuggestions.genus} />
           <SuggestionDatalist id="definition-species-suggestions" suggestions={definitionSuggestions.species} />
@@ -183,6 +188,7 @@ export default async function EditPlant({
               <span className="min-w-0">Update the core name first, then let AxilDB draft taxonomy metadata and suggested aliases.</span>
               <AIMagicFillButton taxonomicAuthorities={taxonomicAuthorityOptions} />
             </div>
+            {magicFillOpportunityCount > 0 && <p className="mt-1 text-xs text-stone-500">Magic Fill may help draft up to {magicFillOpportunityCount} missing or partial readiness item{magicFillOpportunityCount === 1 ? '' : 's'}. Suggestions do not count until you review and save them.</p>}
             <PlantIdentificationAssistant collectionSlug={collection.slug} plantDefinitionId={plant.id} className="mt-3" />
           </div>
           <Field label="Author citation" help="The author citation for the scientific name, such as (L.f.) R.Br. It records who validly published the name or combination." name="authority" defaultValue={plant.authority} list="definition-authority-suggestions" />
@@ -402,7 +408,7 @@ export default async function EditPlant({
             </details>
           )}
 
-          <details className="group rounded-lg border border-[#d6dfc9] bg-[#f7f4e8]/70" open={substrateRecommendations.length > 0}>
+          <details id="substrate-recommendations" className="group rounded-lg border border-[#d6dfc9] bg-[#f7f4e8]/70" open={substrateRecommendations.length > 0}>
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-semibold">
               <span>Recommended substrates · {substrateRecommendations.length}</span>
               <span className="rounded-md border border-stone-300 bg-white/70 px-2 py-1 text-xs group-open:hidden">Open</span>
@@ -490,7 +496,7 @@ export default async function EditPlant({
           </details>
         </div>
       </Card>
-      <Card>
+      <Card id="definition-photos">
         <h3 className="font-bold">Plant definition type image</h3>
         <p className="mt-1 text-sm text-stone-600">
           Use this when the best representative image is from a reference source rather than your own collection. Uploads are resized automatically.

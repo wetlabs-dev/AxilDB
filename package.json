@@ -43,6 +43,7 @@
     "check:timezone": "tsx scripts/check-timezone.ts",
     "check:plant-identity": "tsx scripts/check-plant-identity.ts",
     "check:plant-tags": "tsx scripts/check-plant-tags.ts",
+    "check:definition-completeness": "tsx scripts/check-definition-completeness.ts",
     "check:treatments": "tsx scripts/check-treatments.ts",
     "check:substrates": "tsx scripts/check-substrates.ts",
     "check:taxonomic-authorities": "tsx scripts/check-taxonomic-authorities.ts",

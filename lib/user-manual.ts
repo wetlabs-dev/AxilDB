@@ -91,6 +91,9 @@ export const manualSections: ManualSection[] = [
       'Use Share Definition when you have an active collection connection and want another collection to review and copy the definition.',
       'Use Plant Tags to maintain reusable collection traits, then select multiple active tags in a Plant Definition form. Search can match any or all selected tags.',
       'Review Magic Fill tag suggestions separately from taxonomy fields. Existing tags and proposed private tags require explicit selection, and proposed tags require a second creation confirmation.',
+      'Use the readiness filters to review complete, mostly complete, sparse, provisional, or category-specific incomplete definitions. Sort by completeness to work through the highest-value gaps first.',
+      'Open a definition to expand Definition Readiness. Its grouped checklist links directly to taxonomy, images, husbandry, substrate, tags, and validation sections.',
+      'Use Export CSV to include overall readiness, category scores, and missing critical or recommended items in an offline cleanup worksheet.',
     ],
     notes: [
       'Species values are normalized to lowercase on submission.',
@@ -104,6 +107,8 @@ export const manualSections: ManualSection[] = [
       'Use specimen-level husbandry overrides for local care differences before detaching from a validated definition.',
       'Tags belong to local Plant Definitions, not Plant Instances or site-level Validated Definitions. Archived tags remain visible historically but are not offered for new assignment.',
       'Tag icons use AxilDB’s curated botanical icon set so they render consistently across devices.',
+      'Definition completeness is a weighted metadata-readiness measure, not a statement that the taxonomy is scientifically correct. Provisional identification and validation remain separate statuses.',
+      'Linked husbandry and approved specimen fallback images contribute appropriately. Magic Fill drafts contribute only after they are reviewed and saved.',
     ],
     warnings: [
       'AI output is a draft. Review reference URLs, aliases, conservation notes, and toxicity before relying on them.',

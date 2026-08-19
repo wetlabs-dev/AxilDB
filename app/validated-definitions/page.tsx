@@ -3,6 +3,8 @@ import { Button, Card, TextArea } from '@/components/ui'
 import { canManageCollection, requireCollectionViewer } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
 import { plantName } from '@/lib/utils'
+import { PlantDefinitionCompletenessBar } from '@/components/PlantDefinitionCompleteness'
+import { evaluatePlantDefinitionCompletenessBatch } from '@/lib/plant-definition-completeness'
 
 const disputeReasons = [
   ['TAXONOMY_INCORRECT', 'Taxonomy incorrect'],
@@ -16,7 +18,7 @@ export default async function ValidatedDefinitions() {
   const context = await requireCollectionViewer()
   const { collection, user } = context
   const canManage = canManageCollection(user, context)
-  const [definitions, linkedInstances, pendingDisputes] = await Promise.all([
+  const [definitions, linkedInstances, pendingDisputes, completenessByDefinition] = await Promise.all([
     prisma.plantDefinition.findMany({
       where: { collectionId: null, isValidated: true },
       include: {
@@ -35,6 +37,7 @@ export default async function ValidatedDefinitions() {
       where: { collectionId: collection.id, status: 'PENDING' },
       select: { validatedPlantDefinitionId: true },
     }),
+    evaluatePlantDefinitionCompletenessBatch(prisma, { collectionId: null }),
   ])
   const linkedByDefinition = new Map<string, typeof linkedInstances>()
   for (const instance of linkedInstances) {
@@ -69,6 +72,7 @@ export default async function ValidatedDefinitions() {
               {definition.aliases.length > 0 && (
                 <p className="mt-2 text-sm text-stone-600">Aliases: {definition.aliases.slice(0, 6).map((alias) => alias.name).join(', ')}</p>
               )}
+              <PlantDefinitionCompletenessBar result={completenessByDefinition.get(definition.id)!} className="mt-3" />
               {canManage && (
                 <div className="mt-4 grid gap-4">
                   {linked.length > 0 && (

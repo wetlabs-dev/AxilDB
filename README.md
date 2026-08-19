@@ -10,6 +10,7 @@ It is designed for real collection work: messy taxonomy, acquisition names, alia
 - Main application at `https://app.axildb.com`.
 - Multi-collection workspaces at `/c/[collectionSlug]`, with private/public visibility and collection-scoped memberships.
 - Plant definitions with genus, species, hybrid notation, cultivar name, authority, taxonomic authority, registration number, confidence, provisional identity review, reference URLs, notes, and aliases.
+- Weighted Plant Definition readiness scoring across taxonomy, husbandry, references, images, Taxonomic Authorities, fertilizer, substrate, tags, and review state, with accessible card bars, actionable detail checklists, cleanup filters, sorting, and CSV fields.
 - Collection and shared Taxonomic Authority records with authority type, official resources, structured taxonomic scope, publications, deterministic matching, diagnostics, manual overrides, and a collection-scoped metadata API.
 - Collection-scoped Plant Definition Tags with curated Lucide icons, categories, public visibility, archive/merge tools, inherited specimen display, any/all filtering, exports, and review-only Magic Fill suggestions.
 - Acquisition Pipeline for pre-accession research and wishlist intent on plant definitions, with structured upstream sources, reusable sellers and sales channels, observations, price analytics, and acquisition records that can create one or more Plant Instances.
@@ -81,6 +82,12 @@ Plant Tags are reusable collection-defined traits for appearance, texture, behav
 Tag slugs are normalized per collection, preventing case and punctuation variants from becoming duplicates. Search supports matching any or all selected tags, while instance and wishlist filtering follows the linked definition. Definition and wishlist CSV exports include explicit multi-value tag columns. Exhibits expose tags only when **Show Plant Tags** is enabled, and public wishlist, exhibit, and hover-preview output includes only active tags explicitly marked public.
 
 Plant Definition Magic Fill receives only the active collection tag catalog and may suggest supported existing tags or proposed private tags. Suggestions never save automatically. Existing suggestions must be selected; proposed tags require a separate create confirmation. Manually assigned tags are preserved, including when other Magic Fill fields use Replace All.
+
+### Plant Definition Readiness
+
+Plant Definition cards show a thin completeness bar, percentage, and readiness label. The Plant Definitions page can sort by highest or lowest completeness and filter by readiness state or a missing category such as husbandry, image, fertilizer, substrate, authority, references, or tags. The definition edit page uses the same canonical evaluator for its expandable, actionable checklist. CSV exports include the overall score, status, missing critical/recommended items, and category scores.
+
+Completeness measures how much applicable AxilDB metadata is populated; it does not guarantee scientific or taxonomic correctness. Provisional identity remains a separate status even when care and reference data are otherwise thorough. Linked husbandry counts through its effective guide, an approved specimen photo provides partial image credit when no dedicated type image exists, and unsaved Magic Fill suggestions do not count. Site-level Validated Definitions use the same evaluator without being penalized for collection-local fertilizer, substrate, or tag data they cannot own.
 
 ### Taxonomic Authorities
 
