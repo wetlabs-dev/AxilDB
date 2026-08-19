@@ -1,6 +1,7 @@
 import type { PrismaClient } from '@prisma/client'
 import { collectionPath } from '@/lib/collections'
 import { findMatchingValidatedDefinition } from '@/lib/validated-definitions'
+import { acceptedPlantName } from '@/lib/utils'
 
 export type PlantIdentificationSuggestion = {
   genus?: string | null
@@ -26,9 +27,7 @@ export function identificationDisplayName(input: {
   hybridNotation?: string | null
   cultivarName?: string | null
 }) {
-  const genus = text(input.genus) || 'Unknown genus'
-  const species = text(input.species) || 'sp.'
-  return `${genus} ${input.hybridNotation ? `${input.hybridNotation} ` : ''}${species}${input.cultivarName ? ` '${input.cultivarName}'` : ''}`
+  return acceptedPlantName({ ...input, genus: text(input.genus) || 'Unknown genus' })
 }
 
 export function normalizePlantIdentificationSuggestion(raw: any): PlantIdentificationSuggestion {
@@ -52,13 +51,15 @@ export function localDefinitionIdentityWhere(collectionId: string, input: PlantI
   const species = text(input.species).toLowerCase()
   const hybridNotation = text(input.hybridNotation)
   const cultivarName = text(input.cultivarName)
-  if (!genus || !species) return null
+  if (!genus) return null
 
   return {
     collectionId,
     genus: { equals: genus, mode: 'insensitive' as const },
-    species: { equals: species, mode: 'insensitive' as const },
     AND: [
+      species
+        ? { species: { equals: species, mode: 'insensitive' as const } }
+        : { OR: [{ species: null }, { species: '' }] },
       hybridNotation
         ? { hybridNotation: { equals: hybridNotation, mode: 'insensitive' as const } }
         : { OR: [{ hybridNotation: null }, { hybridNotation: '' }] },

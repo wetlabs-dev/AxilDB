@@ -33,14 +33,18 @@ export function validatedIdentityWhere(input: DefinitionIdentity): Prisma.PlantD
     identificationStatus: 'IDENTIFIED',
     collectionId: null,
     genus: { equals: genus, mode: 'insensitive' },
-    species: { equals: species, mode: 'insensitive' },
-    AND: optionalIdentity,
+    AND: [
+      species
+        ? { species: { equals: species, mode: 'insensitive' } }
+        : { OR: [{ species: null }, { species: '' }] },
+      ...optionalIdentity,
+    ],
   }
 }
 
 export async function findMatchingValidatedDefinition(client: PrismaClient | Prisma.TransactionClient, input: DefinitionIdentity) {
   if (input.identificationStatus === 'PROVISIONAL' || normalizedText(input.provisionalTaxon)) return null
-  if (!normalizedText(input.genus) || !normalizedText(input.species)) return null
+  if (!normalizedText(input.genus)) return null
   return client.plantDefinition.findFirst({
     where: validatedIdentityWhere(input),
     orderBy: { validatedAt: 'desc' },

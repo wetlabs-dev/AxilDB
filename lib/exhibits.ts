@@ -350,7 +350,7 @@ export async function loadExhibitForDisplay(prisma: PrismaClient, slug: string) 
   }
 }
 
-export function definitionDisplayName(definition: { genus: string; species: string; hybridNotation?: string | null; cultivarName?: string | null }) {
+export function definitionDisplayName(definition: { genus: string; species?: string | null; hybridNotation?: string | null; cultivarName?: string | null }) {
   return plantName(definition)
 }
 

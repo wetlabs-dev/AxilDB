@@ -32,7 +32,7 @@ export default async function EditValidatedDefinition({
         <form action={updateValidatedPlantDefinition} className="mt-4 grid gap-x-3 gap-y-3 md:grid-cols-2">
           <input type="hidden" name="id" value={definition.id} />
           <Field label="Genus" name="genus" defaultValue={definition.genus} required />
-          <Field label="Species" name="species" defaultValue={definition.species} required />
+          <Field label="Species" help="Species epithet. Leave blank when the accepted horticultural name intentionally omits species (for example, Begonia 'Looking Glass'). Use sp. only when the species is genuinely unknown." name="species" defaultValue={definition.species || ''} />
           <Field label="Hybrid notation" name="hybridNotation" defaultValue={definition.hybridNotation || ''} />
           <Field label="Cultivar name" name="cultivarName" defaultValue={definition.cultivarName || ''} />
           <Field label="Authority" name="authority" defaultValue={definition.authority || ''} />

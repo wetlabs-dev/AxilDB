@@ -1274,7 +1274,7 @@ model PlantDefinition {
   id                          String             @id @default(cuid())
   collectionId                String?
   genus                       String
-  species                     String
+  species                     String?
   hybridNotation              String?
   cultivarName                String?
   authority                   String?

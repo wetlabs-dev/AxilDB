@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { audit } from '@/lib/auth'
 import { recordAiUsage, requireAiFeatureAccess, tokenUsage } from '@/lib/ai-usage'
 import { prisma } from '@/lib/prisma'
+import { acceptedPlantName } from '@/lib/utils'
 
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses'
 const DEFAULT_MODEL = 'gpt-5.4-mini'
@@ -164,15 +165,15 @@ export async function POST(req: Request) {
     stability: location.environmentProfile?.environmentStability,
   }))
 
-  if (!genus || !species) {
-    return NextResponse.json({ error: 'Genus and species are required.' }, { status: 400 })
+  if (!genus) {
+    return NextResponse.json({ error: 'Genus is required.' }, { status: 400 })
   }
 
-  const originalName = `${genus} ${species}${hybridNotation ? ` ${hybridNotation}` : ''}${cultivarName ? ` '${cultivarName}'` : ''}`
+  const originalName = acceptedPlantName({ genus, species: species || null, hybridNotation, cultivarName })
   const model = process.env.OPENAI_MAGIC_FILL_MODEL || process.env.OPENAI_DESCRIPTION_MODEL || DEFAULT_MODEL
   const prompt = {
     task: 'Fill plant definition fields for a horticultural accession database.',
-    originalInput: { genus, species, hybridNotation, cultivarName },
+    originalInput: { genus, species: species || null, hybridNotation, cultivarName },
     taxonomicAuthorities,
     collectionLocationProfiles: locationProfiles,
     collectionPlantTags: plantTags,
@@ -180,6 +181,8 @@ export async function POST(req: Request) {
       'Return only valid JSON, with no markdown.',
       'If the supplied genus/species is outdated, return the currently accepted genus/species and include the supplied name as an alias with aliasType OBSOLETE_TAXONOMY or SYNONYM.',
       'Use lowercase for species.',
+      'An accepted horticultural cultivar name may intentionally omit a species epithet. In that case return species as null; do not fill in sp. or infer an epithet merely to complete the binomial.',
+      'Return the literal species value sp. only when the species is genuinely undetermined. Blank/null and sp. are distinct identity states.',
       'Do not invent cultivar registration numbers. If unknown, use null.',
       'Prefer authoritative URLs. POWO should be Plants of the World Online, GBIF should be gbif.org, iNaturalist should be an iNaturalist taxon page, Wikipedia should be a relevant article if one exists.',
       'Taxonomic Authorities are provided only as compact scope context. Do not choose or invent an authority; AxilDB performs deterministic scope matching after the user saves.',
@@ -254,11 +257,11 @@ export async function POST(req: Request) {
     const catalogIds = new Set(plantTags.map((tag) => tag.id))
     fields.suggestedTags = fields.suggestedTags.map((suggestion: any) => ({ tagId: trimmedString(suggestion?.tagId, 100), tagName: trimmedString(suggestion?.tagName, 60), confidence: Math.max(0, Math.min(1, Number(suggestion?.confidence || 0))), reason: trimmedString(suggestion?.reason, 240) })).filter((suggestion: any) => catalogIds.has(suggestion.tagId) && suggestion.confidence >= 0.6)
     fields.newTagSuggestions = fields.newTagSuggestions.map((suggestion: any) => ({ name: trimmedString(suggestion?.name, 60), category: trimmedString(suggestion?.category, 40), description: trimmedString(suggestion?.description, 300), confidence: Math.max(0, Math.min(1, Number(suggestion?.confidence || 0))), reason: trimmedString(suggestion?.reason, 240) })).filter((suggestion: any) => suggestion.name && suggestion.confidence >= 0.7)
-    const acceptedBinomial = `${fields.genus || genus} ${fields.species || species}`.trim().toLowerCase()
-    const originalBinomial = `${genus} ${species}`.trim().toLowerCase()
-    if (acceptedBinomial !== originalBinomial && !fields.aliases.some((alias: { name: string }) => alias.name.toLowerCase() === originalBinomial)) {
+    const acceptedIdentity = acceptedPlantName({ genus: fields.genus || genus, species: fields.species, hybridNotation: fields.hybridNotation, cultivarName: fields.cultivarName }).toLowerCase()
+    const originalIdentity = originalName.toLowerCase()
+    if (acceptedIdentity !== originalIdentity && !fields.aliases.some((alias: { name: string }) => alias.name.toLowerCase() === originalIdentity)) {
       fields.aliases.unshift({
-        name: `${genus} ${species}`,
+        name: originalName,
         aliasType: 'OBSOLETE_TAXONOMY',
         confidence: 'PROBABLE',
         source: 'AxilDB AI draft',

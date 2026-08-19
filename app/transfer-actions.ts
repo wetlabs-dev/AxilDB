@@ -18,6 +18,7 @@ import {
   copyPlantDefinitionPackage,
 } from '@/lib/transfers'
 import { sendTransferWorkflowEmail } from '@/lib/transfer-emails'
+import { plantName } from '@/lib/utils'
 
 const val = (fd: FormData, key: string) => String(fd.get(key) || '').trim() || undefined
 const collectionSlug = async (fd: FormData) => val(fd, 'collectionSlug') || await getCurrentCollectionSlug()
@@ -26,8 +27,8 @@ const transfersStatusPath = (slug: string, status: string) => `${transfersPath(s
 const managerRoles = ['MANAGER']
 const transferReviewRoles = ['GARDENER', 'MANAGER']
 
-function definitionName(definition: { genus: string; species: string; cultivarName?: string | null }) {
-  return `${definition.genus} ${definition.species}${definition.cultivarName ? ` '${definition.cultivarName}'` : ''}`
+function definitionName(definition: { genus: string; species?: string | null; cultivarName?: string | null; hybridNotation?: string | null; provisionalTaxon?: string | null }) {
+  return plantName(definition)
 }
 
 function connectionResponseLabel(status: string) {
@@ -411,7 +412,7 @@ export async function createPlantDefinitionShareRequest(fd: FormData) {
     },
   })
 
-  await audit(user, 'REQUEST', 'PLANT_DEFINITION_SHARE_REQUEST', request.id, `Shared definition ${definition.genus} ${definition.species}${definition.cultivarName ? ` '${definition.cultivarName}'` : ''} with ${connection.targetCollection.name}`, { targetCollectionSlug: connection.targetCollection.slug }, collection.id)
+  await audit(user, 'REQUEST', 'PLANT_DEFINITION_SHARE_REQUEST', request.id, `Shared definition ${definitionName(definition)} with ${connection.targetCollection.name}`, { targetCollectionSlug: connection.targetCollection.slug }, collection.id)
   await sendTransferWorkflowEmail({
     actor: user,
     collectionId: connection.targetCollectionId,
@@ -572,7 +573,7 @@ export async function copyConnectedPlantDefinition(fd: FormData) {
     targetCollectionId: collection.id,
     sourcePlantDefinitionId,
   })
-  await audit(user, 'COPY', 'PLANT_DEFINITION', result.targetDefinition.id, `Copied definition ${result.sourceDefinition.genus} ${result.sourceDefinition.species} from ${incoming.sourceCollection.name}`, {
+  await audit(user, 'COPY', 'PLANT_DEFINITION', result.targetDefinition.id, `Copied definition ${definitionName(result.sourceDefinition)} from ${incoming.sourceCollection.name}`, {
     sourceCollection: incoming.sourceCollection.name,
     sourcePlantDefinitionId,
     createdDefinition: result.createdDefinition,

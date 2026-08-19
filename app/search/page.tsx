@@ -32,10 +32,12 @@ export default async function SearchPage({
   const tagMode = sp.tagMode === 'all' ? 'all' : 'any'
   const tagWhere = selectedTagIds.length ? tagMode === 'all' ? { AND: selectedTagIds.map((plantTagId) => ({ tags: { some: { plantTagId } } })) } : { tags: { some: { plantTagId: { in: selectedTagIds } } } } : {}
   const activeTags = await prisma.plantTag.findMany({ where: { collectionId: collection.id, active: true }, orderBy: { name: 'asc' } })
+  const identityTerms = q.split(/\s+/).map((term) => term.replace(/^['"]|['"]$/g, '')).filter(Boolean)
 
   const definitionSearch = q
     ? {
         OR: [
+          ...(identityTerms.length ? [{ AND: identityTerms.map((term) => ({ OR: [{ genus: contains(term) }, { species: contains(term) }, { cultivarName: contains(term) }] })) }] : []),
           { genus: contains(q) },
           { species: contains(q) },
           { cultivarName: contains(q) },

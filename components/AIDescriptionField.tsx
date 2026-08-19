@@ -81,8 +81,8 @@ export function AIDescriptionField({
     const cultivarName = String(formData.get('cultivarName') || '').trim()
     const collectionSlug = String(formData.get('collectionSlug') || '').trim()
 
-    if (!genus || !species) {
-      setStatus('Enter genus and species first.')
+    if (!genus) {
+      setStatus('Enter a genus first.')
       return
     }
 
@@ -188,8 +188,8 @@ export function AIMagicFillButton({
     const cultivarName = String(formData.get('cultivarName') || '').trim()
     const collectionSlug = String(formData.get('collectionSlug') || '').trim()
 
-    if (!genus || !species) {
-      setStatus('Enter genus and species first.')
+    if (!genus) {
+      setStatus('Enter a genus first.')
       return
     }
 
@@ -208,7 +208,7 @@ export function AIMagicFillButton({
       const aliases = Array.isArray(fields.aliases) ? fields.aliases.map(normalizeAlias).filter((alias: any) => alias.name) : []
       const draft = {
         genus: fields.genus,
-        species: fields.species?.toLowerCase(),
+        species: fields.species?.toLowerCase() || null,
         hybridNotation: fields.hybridNotation,
         cultivarName: fields.cultivarName,
         authority: fields.authority,
@@ -239,8 +239,9 @@ export function AIMagicFillButton({
         TRIBE: String(fields.taxonomicTribe || '').trim().toLowerCase(),
         GENUS: acceptedGenus,
         SECTION: String(fields.taxonomicSection || '').trim().toLowerCase(),
-        SPECIES: `${acceptedGenus} ${String(fields.species || species).trim().toLowerCase()}`,
       }
+      const acceptedSpecies = String(fields.species || '').trim().toLowerCase()
+      if (acceptedSpecies) placement.SPECIES = `${acceptedGenus} ${acceptedSpecies}`
       const specificity = ['ORDER', 'FAMILY', 'TRIBE', 'GENUS', 'SECTION', 'SPECIES']
       const authorityMatch = taxonomicAuthorities
         .flatMap((authority) => (authority.scopeRules || []).filter((rule) => placement[rule.rank] === rule.taxonName.trim().toLowerCase()).map((rule) => ({ authority, rule, score: specificity.indexOf(rule.rank) * 10_000 + rule.priority })))

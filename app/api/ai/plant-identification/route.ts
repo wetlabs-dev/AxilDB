@@ -173,6 +173,8 @@ export async function POST(req: Request) {
       'Never claim certainty. Prefer likely, possible, or uncertain language.',
       'If the evidence is weak, keep genus/species null or low confidence instead of hallucinating.',
       'Use lowercase for species.',
+      'Accepted horticultural cultivar names sometimes intentionally omit the species epithet. Return species as null for that accepted naming form.',
+      'Use the literal species value sp. only when the species is genuinely undetermined; do not use it as a substitute for an intentionally omitted epithet.',
       'Do not invent cultivar registration numbers, taxonomic authorities, or cultivar registration details.',
       'Do not fill cultivarName unless strongly supported by the user-provided evidence.',
       'Suggest common names and trade names as aliases when useful.',

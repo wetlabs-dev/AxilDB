@@ -2,11 +2,17 @@ import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import { dateInputValue, formatDate } from '@/lib/time'
 export function cn(...inputs: ClassValue[]) { return twMerge(clsx(inputs)) }
-export function acceptedPlantName(p: { genus:string; species:string; hybridNotation?:string|null; cultivarName?:string|null }) { return `${p.genus} ${p.hybridNotation ? p.hybridNotation + ' ' : ''}${p.species}${p.cultivarName ? ` '${p.cultivarName}'` : ''}` }
-export function plantName(p: { genus:string; species:string; hybridNotation?:string|null; cultivarName?:string|null; provisionalTaxon?:string|null; identificationStatus?:string|null }) {
+export type BotanicalNameInput = { genus?: string | null; species?: string | null; hybridNotation?: string | null; cultivarName?: string | null; authority?: string | null }
+export function acceptedPlantName(p: BotanicalNameInput, options: { includeAuthority?: boolean } = {}) {
+  const core = [p.genus?.trim(), p.hybridNotation?.trim(), p.species?.trim()].filter(Boolean).join(' ')
+  const cultivar = p.cultivarName?.trim() ? ` '${p.cultivarName.trim()}'` : ''
+  const authority = options.includeAuthority && p.authority?.trim() ? ` ${p.authority.trim()}` : ''
+  return `${core}${cultivar}${authority}`.trim()
+}
+export function plantName(p: BotanicalNameInput & { provisionalTaxon?:string|null; identificationStatus?:string|null }, options: { includeAuthority?: boolean } = {}) {
   return p.identificationStatus === 'PROVISIONAL' && p.provisionalTaxon?.trim()
     ? p.provisionalTaxon.trim()
-    : acceptedPlantName(p)
+    : acceptedPlantName(p, options)
 }
 export function plantNeedsIdentification(p: { provisionalTaxon?: string | null; identificationStatus?: string | null }) {
   return p.identificationStatus === 'PROVISIONAL' || Boolean(p.provisionalTaxon?.trim())

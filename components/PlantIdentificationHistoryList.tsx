@@ -11,7 +11,7 @@ type DefinitionSummary = {
   collectionId?: string | null
   isValidated?: boolean | null
   genus: string
-  species: string
+  species: string | null
   hybridNotation?: string | null
   cultivarName?: string | null
 }

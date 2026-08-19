@@ -5,6 +5,7 @@ import { recipeAiContext } from '@/lib/fertilizers'
 import { husbandryFieldNames } from '@/lib/husbandry'
 import { prisma } from '@/lib/prisma'
 import { normalizeAndRankSubstrateRecommendations, substrateRecipePhysicalProfile } from '@/lib/substrate-recommendations'
+import { acceptedPlantName } from '@/lib/utils'
 
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses'
 const DEFAULT_MODEL = 'gpt-5.4-mini'
@@ -106,8 +107,8 @@ export async function POST(req: Request) {
   const genus = trimmedString(plant.genus, 80)
   const species = trimmedString(plant.species, 80).toLowerCase()
   const cultivarName = trimmedString(plant.cultivarName, 120)
-  const name = `${genus} ${species}${cultivarName ? ` '${cultivarName}'` : ''}`.trim()
-  if (!genus || !species) return NextResponse.json({ error: 'Genus and species are required.' }, { status: 400 })
+  const name = acceptedPlantName({ genus, species: species || null, cultivarName })
+  if (!genus) return NextResponse.json({ error: 'Genus is required.' }, { status: 400 })
   const [fertilizerRecipes, substrateVersions, substrateComponents] = await Promise.all([
     prisma.fertilizerRecipe.findMany({
       where: { collectionId: collection.id, active: true },
@@ -132,7 +133,7 @@ export async function POST(req: Request) {
     task: 'Draft a complete plant husbandry guide for a horticultural accession system.',
     plant: {
       genus,
-      species,
+      species: species || null,
       hybridNotation: trimmedString(plant.hybridNotation, 120) || null,
       cultivarName: cultivarName || null,
       authority: trimmedString(plant.authority, 160) || null,

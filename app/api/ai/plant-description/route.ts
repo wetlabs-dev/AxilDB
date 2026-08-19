@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { audit } from '@/lib/auth'
 import { recordAiUsage, requireAiFeatureAccess, tokenUsage } from '@/lib/ai-usage'
+import { acceptedPlantName } from '@/lib/utils'
 
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses'
 const DEFAULT_MODEL = 'gpt-5.4-mini'
@@ -54,11 +55,11 @@ export async function POST(req: Request) {
   const species = trimmedString(body.species, 80).toLowerCase()
   const cultivarName = trimmedString(body.cultivarName, 100)
 
-  if (!genus || !species) {
-    return NextResponse.json({ error: 'Genus and species are required.' }, { status: 400 })
+  if (!genus) {
+    return NextResponse.json({ error: 'Genus is required.' }, { status: 400 })
   }
 
-  const name = `${genus} ${species}${cultivarName ? ` '${cultivarName}'` : ''}`
+  const name = acceptedPlantName({ genus, species: species || null, cultivarName })
   const model = process.env.OPENAI_DESCRIPTION_MODEL || DEFAULT_MODEL
   const prompt = `Write a brief botanical description of ${name} in under 40 words.`
 

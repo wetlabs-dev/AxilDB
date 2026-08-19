@@ -34,7 +34,8 @@ function dateSegment(value?: Date | string | null) {
 }
 
 export function plantDefinitionCode(definition: Pick<PlantDefinition, 'genus' | 'species' | 'cultivarName'>) {
-  return `${segment(definition.genus)}${segment(definition.species)}${cultivarSegment(definition.cultivarName)}`
+  const species = normalize(definition.species)
+  return `${segment(definition.genus)}${species ? segment(species) : ''}${cultivarSegment(definition.cultivarName)}`
 }
 
 export function plantIdContextCode(instanceType?: string | null, method?: string | null) {

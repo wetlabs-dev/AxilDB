@@ -25,7 +25,7 @@ function normalized(value: unknown) {
 
 function placementFor(definition: {
   genus: string
-  species: string
+  species?: string | null
   taxonomicPlacementJson?: unknown
 }) {
   const placement = typeof definition.taxonomicPlacementJson === 'object' && definition.taxonomicPlacementJson
@@ -50,7 +50,7 @@ export type AuthorityScopeCandidate = {
 }
 
 export function matchTaxonomicAuthorityScopes(
-  definition: { genus: string; species: string; taxonomicPlacementJson?: unknown },
+  definition: { genus: string; species?: string | null; taxonomicPlacementJson?: unknown },
   authorities: Array<{ id: string; name: string; scopeRules: Array<{ id: string; rank: string; taxonName: string; priority: number }> }>,
 ) {
   const placement = placementFor(definition)

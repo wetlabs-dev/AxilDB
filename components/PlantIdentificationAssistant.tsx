@@ -4,7 +4,7 @@ import { useRef, useState } from 'react'
 import { Search, Sparkles } from 'lucide-react'
 import { MagicFillConflictDialog } from '@/components/MagicFillConflictDialog'
 import { applyMagicFillDraftToForm, getMagicFillConflictState, isMagicFillValueEmpty, readMagicFillFormValues, type MagicFillApplyMode } from '@/lib/magic-fill'
-import { cn } from '@/lib/utils'
+import { acceptedPlantName, cn } from '@/lib/utils'
 
 const control = 'rounded-md border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] px-2.5 py-1.5 text-sm font-normal text-[var(--ax-text)] shadow-inner shadow-stone-200/30 outline-none transition placeholder:text-[var(--ax-muted)] file:mr-3 file:rounded-md file:border-0 file:bg-[var(--ax-surface-solid)] file:px-2 file:py-1 file:text-[var(--ax-text)] focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
 
@@ -26,7 +26,7 @@ type ValidatedMatch = {
   id: string
   matchType?: 'LOCAL' | 'VALIDATED'
   genus: string
-  species: string
+  species: string | null
   hybridNotation?: string | null
   cultivarName?: string | null
 }
@@ -52,7 +52,7 @@ function capitalizeGenus(value?: string | null) {
 }
 
 function displayName(definition: ValidatedMatch) {
-  return `${definition.genus} ${definition.hybridNotation ? `${definition.hybridNotation} ` : ''}${definition.species}${definition.cultivarName ? ` '${definition.cultivarName}'` : ''}`
+  return acceptedPlantName(definition)
 }
 
 function aliasesFromSuggestion(suggestion: PlantIdSuggestion) {
@@ -163,7 +163,7 @@ export function PlantIdentificationAssistant({
     if (!form || !suggestion) return
     const draft: Record<string, unknown> = {
       genus: capitalizeGenus(suggestion.genus),
-      species: suggestion.species?.toLowerCase(),
+      species: suggestion.species?.toLowerCase() || null,
       hybridNotation: suggestion.hybridNotation,
       cultivarName: suggestion.cultivarName,
       confidence: 'AI_DETERMINED',
@@ -304,8 +304,7 @@ export function PlantIdentificationAssistant({
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
                   <p className="font-semibold text-[var(--ax-heading)]">
-                    {suggestion.genus || 'Unknown genus'} {suggestion.hybridNotation ? `${suggestion.hybridNotation} ` : ''}{suggestion.species || 'sp.'}
-                    {suggestion.cultivarName ? ` '${suggestion.cultivarName}'` : ''}
+                    {acceptedPlantName({ ...suggestion, genus: suggestion.genus || 'Unknown genus' })}
                   </p>
                   <p className="mt-1 text-sm text-[var(--ax-muted)]">{suggestion.confidenceExplanation}</p>
                 </div>

@@ -1470,7 +1470,7 @@ export async function createPlantDefinition(fd: FormData) {
     await reconcileTaxonomicAuthorityMatches(tx, created.id, collection.id, taxonomicAuthoritySelection)
     return created
   })
-  await audit(user, 'CREATE', 'PLANT_DEFINITION', definition.id, `Created plant definition ${definition.genus} ${definition.species}`, undefined, collection.id)
+  await audit(user, 'CREATE', 'PLANT_DEFINITION', definition.id, `Created plant definition ${plantName(definition)}`, undefined, collection.id)
 
   redirect(collectionPath(collection.slug, '/plants'))
 }
@@ -1515,7 +1515,7 @@ export async function copyPlantDefinition(fd: FormData) {
     'CREATE',
     'PLANT_DEFINITION',
     definition.id,
-    `Copied plant definition ${source.genus} ${source.species}`,
+    `Copied plant definition ${plantName(source)}`,
     { sourcePlantDefinitionId: source.id },
     collection.id,
   )
@@ -1709,6 +1709,9 @@ export async function reviewPlantDefinitionDispute(fd: FormData) {
 export async function updateValidatedPlantDefinition(fd: FormData) {
   const user = await requireServerAdmin()
   const id = val(fd, 'id')!
+  const cultivarName = clearableVal(fd, 'cultivarName')
+  const identity = normalizePlantDefinitionIdentity({ genus: val(fd, 'genus'), species: speciesVal(fd), cultivarName })
+  if (identity.identificationStatus !== 'IDENTIFIED') throw new Error('Validated definitions require a resolved identity. Use a blank species only for an accepted genus-and-cultivar name.')
 
   const beforeDefinition = await prisma.plantDefinition.findFirstOrThrow({
     where: { id, collectionId: null, isValidated: true },
@@ -1723,10 +1726,10 @@ export async function updateValidatedPlantDefinition(fd: FormData) {
   await prisma.plantDefinition.update({
     where: { id },
     data: {
-      genus: val(fd, 'genus')!,
-      species: speciesVal(fd)!,
+      genus: identity.genus,
+      species: identity.species,
       hybridNotation: clearableVal(fd, 'hybridNotation'),
-      cultivarName: clearableVal(fd, 'cultivarName'),
+      cultivarName,
       authority: clearableVal(fd, 'authority'),
       cultivarRegistrationNumber: clearableVal(fd, 'cultivarRegistrationNumber'),
       confidence: val(fd, 'confidence') || 'VERIFIED',
@@ -1902,7 +1905,7 @@ export async function updatePlantDefinition(fd: FormData) {
     await reconcileTaxonomicAuthorityMatches(tx, id, collection.id, taxonomicAuthoritySelection)
     return updated
   })
-  await audit(user, 'UPDATE', 'PLANT_DEFINITION', id, `Updated plant definition ${definition.genus} ${definition.species}`, undefined, collection.id)
+  await audit(user, 'UPDATE', 'PLANT_DEFINITION', id, `Updated plant definition ${plantName(definition)}`, undefined, collection.id)
 
   redirect(collectionPath(collection.slug, `/plants/${id}/edit`))
 }
@@ -1925,7 +1928,7 @@ export async function deletePlantDefinition(fd: FormData) {
   await cleanupGenericEntity(collection.id, 'PLANT_DEFINITION', id)
   await prisma.plantDefinition.delete({ where: { id } })
   await cleanupOrphanPropagationEvents(collection.id)
-  await audit(user, 'DELETE', 'PLANT_DEFINITION', id, `Deleted plant definition ${definition ? `${definition.genus} ${definition.species}` : id}`, undefined, collection.id)
+  await audit(user, 'DELETE', 'PLANT_DEFINITION', id, `Deleted plant definition ${definition ? plantName(definition) : id}`, undefined, collection.id)
 
   redirect(collectionPath(collection.slug, '/plants'))
 }
@@ -4280,13 +4283,20 @@ export async function createCultivarFromSport(fd: FormData) {
     include: { plantDefinition: true },
   })
 
+  const cultivarName = val(fd, 'cultivarName')!
+  const identity = normalizePlantDefinitionIdentity({
+    genus: val(fd, 'genus') || inst.plantDefinition.genus,
+    species: speciesVal(fd),
+    cultivarName,
+  })
   const def = await prisma.plantDefinition.create({
     data: {
       collectionId: collection.id,
-      genus: val(fd, 'genus') || inst.plantDefinition.genus,
-      species: speciesVal(fd) || inst.plantDefinition.species,
+      genus: identity.genus,
+      species: identity.species,
       hybridNotation: val(fd, 'hybridNotation') || inst.plantDefinition.hybridNotation,
-      cultivarName: val(fd, 'cultivarName')!,
+      cultivarName,
+      identificationStatus: identity.identificationStatus,
       authority: val(fd, 'authority'),
       cultivarRegistrationNumber: val(fd, 'cultivarRegistrationNumber'),
       taxonomicAuthorityId: val(fd, 'taxonomicAuthorityId'),

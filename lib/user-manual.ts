@@ -78,7 +78,8 @@ export const manualSections: ManualSection[] = [
     howTo: [
       'Open Plant Definitions from the sidebar.',
       'Use Add plant definition to create a new definition.',
-      'Enter genus, species, cultivar, author citation, taxonomic authority, reference URLs, aliases, description, and notes. If the identity is unresolved, enter a Provisional / working taxon instead.',
+      'Enter the genus and, when the accepted name includes it, the species epithet. Leave Species blank for accepted genus-and-cultivar names such as Begonia \'Looking Glass\'; enter sp. only when the species is genuinely unknown.',
+      'Add cultivar, author citation, taxonomic authority, reference URLs, aliases, description, and notes as available. If the whole working identity remains uncertain, enter a Provisional / working taxon instead.',
       'Use AI draft for a short botanical description, Magic fill to draft taxonomy metadata and aliases, or ID My Plant to suggest an identification from your description, known names, and optional image when AI is enabled for the collection.',
       'When a Magic Fill-managed field already contains information, choose Fill Missing Only to preserve it, Replace All Fields to replace only that tool’s managed fields, or Cancel. Empty forms proceed directly, and every draft still requires review and an explicit save.',
       'Use ID History from the Plant Definitions header to review past ID My Plant suggestions for the collection and create a new plant definition prefilled from a saved result.',
@@ -97,8 +98,10 @@ export const manualSections: ManualSection[] = [
     ],
     notes: [
       'Species values are normalized to lowercase on submission.',
+      'A blank Species and sp. are intentionally different: blank omits the epithet from the accepted horticultural name, while sp. marks an undetermined species and keeps the definition provisional.',
+      'Genus-only definitions are allowed but remain taxonomically incomplete until a species, cultivar, or clearer identity is recorded. A cultivar with an intentionally blank Species receives full species-readiness credit.',
       'A provisional taxon takes precedence as the displayed name and marks the definition as needing identification review. AxilDB retains the genus/species working placement for plant ID generation.',
-      'Clear the provisional taxon only after entering the identified genus and species. Provisional definitions cannot be nominated as site-level Validated Definitions.',
+      'Clear the provisional taxon only after recording the accepted identity. That may be genus and cultivar when the accepted horticultural name omits species. Provisional definitions cannot be nominated as site-level Validated Definitions.',
       'Author Citation records the formal botanical author citation, such as “(L.f.) R.Br.”',
       'Aliases are useful for old taxonomy, trade names, common names, shorthand, and misapplied labels.',
       'Validated definitions are site-level records, not collection-owned records, so collection deletion does not remove approved validated definitions.',

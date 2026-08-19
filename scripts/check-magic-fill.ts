@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { applyMagicFillValues, getMagicFillConflictState, isMagicFillValueEmpty } from '../lib/magic-fill'
+import { readFileSync } from 'node:fs'
 
 assert.equal(isMagicFillValueEmpty(null), true)
 assert.equal(isMagicFillValueEmpty(undefined), true)
@@ -67,5 +68,10 @@ assert.deepEqual(applyMagicFillValues(current, draft, managed, 'REPLACE_ALL'), {
 assert.equal(applyMagicFillValues({ notes: 'Keep' }, { notes: null }, ['notes'], 'FILL_MISSING').notes, 'Keep')
 assert.equal(applyMagicFillValues({ notes: 'Keep' }, { notes: null }, ['notes'], 'REPLACE_ALL').notes, null)
 assert.equal(applyMagicFillValues({ notes: 'Keep' }, { notes: undefined }, ['notes'], 'REPLACE_ALL').notes, 'Keep')
+
+const definitionFillRoute = readFileSync('app/api/ai/plant-definition-fill/route.ts', 'utf8')
+assert.match(definitionFillRoute, /intentionally omit a species epithet/)
+assert.match(definitionFillRoute, /species value sp\. only when the species is genuinely undetermined/)
+assert.doesNotMatch(definitionFillRoute, /if \(!genus \|\| !species\)/)
 
 console.log('Magic Fill merge checks passed.')

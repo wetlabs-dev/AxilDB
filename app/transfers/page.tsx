@@ -25,7 +25,7 @@ type Preview = {
   sourcePlantId?: string
   definition?: {
     genus?: string
-    species?: string
+    species?: string | null
     cultivarName?: string | null
     provisionalTaxon?: string | null
     identificationStatus?: string | null
@@ -52,7 +52,7 @@ type DefinitionPreview = {
   plantName?: string
   definition?: {
     genus?: string
-    species?: string
+    species?: string | null
     cultivarName?: string | null
     provisionalTaxon?: string | null
     identificationStatus?: string | null

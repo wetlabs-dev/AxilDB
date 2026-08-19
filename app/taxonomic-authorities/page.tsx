@@ -133,7 +133,7 @@ export default async function TaxonomicAuthoritiesPage({ searchParams }: { searc
     <div className="grid gap-4">
       {authorities.map((authority) => {
         const genera = new Set(authority.plantDefinitions.map((definition) => definition.genus))
-        const species = new Set(authority.plantDefinitions.map((definition) => `${definition.genus} ${definition.species}`))
+        const species = new Set(authority.plantDefinitions.filter((definition) => definition.species).map((definition) => `${definition.genus} ${definition.species}`))
         const collections = new Set(authority.plantDefinitions.map((definition) => definition.collectionId))
         const cultivars = authority.plantDefinitions.filter((definition) => definition.cultivarName).length
         const imported = authority.collectionId === null

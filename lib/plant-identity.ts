@@ -16,8 +16,8 @@ function provisionalParts(provisionalTaxon: string) {
   return { genus, species }
 }
 
-function placeholderIdentity(genus: string, species: string) {
-  return genus.toLowerCase() === 'unidentified' || ['sp', 'sp.', 'unknown', 'unidentified'].includes(species.toLowerCase())
+function placeholderIdentity(genus: string, species?: string | null) {
+  return genus.toLowerCase() === 'unidentified' || ['sp', 'sp.', 'unknown', 'unidentified'].includes(text(species).toLowerCase())
 }
 
 export function normalizePlantDefinitionIdentity(input: {
@@ -28,7 +28,7 @@ export function normalizePlantDefinitionIdentity(input: {
 }) {
   const provisionalTaxon = text(input.provisionalTaxon) || null
   let genus = text(input.genus)
-  let species = text(input.species).toLowerCase()
+  let species = text(input.species).toLowerCase() || null
   const cultivarName = text(input.cultivarName)
 
   if (provisionalTaxon) {
@@ -38,12 +38,16 @@ export function normalizePlantDefinitionIdentity(input: {
     return { genus, species, provisionalTaxon, identificationStatus: 'PROVISIONAL' as const }
   }
 
-  if (genus.toLowerCase() !== 'unidentified' && ['sp', 'sp.'].includes(species) && cultivarName) {
+  if (!genus || genus.toLowerCase() === 'unidentified') {
+    throw new Error('Enter a genus. Leave species blank only when the accepted horticultural name omits it, or use sp. when the species is unknown.')
+  }
+
+  if (species && ['sp', 'sp.'].includes(species)) {
     return { genus, species: 'sp.', provisionalTaxon: null, identificationStatus: 'PROVISIONAL' as const }
   }
 
-  if (!genus || !species || placeholderIdentity(genus, species)) {
-    throw new Error('Enter genus and species, use sp. with a named cultivar, or provide a provisional taxon that clearly marks this definition for identification review.')
+  if (species && placeholderIdentity(genus, species)) {
+    throw new Error('Use sp. when the species is unknown, or provide a provisional taxon that clearly marks this definition for identification review.')
   }
   return { genus, species, provisionalTaxon: null, identificationStatus: 'IDENTIFIED' as const }
 }

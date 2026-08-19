@@ -180,7 +180,7 @@ export default async function EditPlant({
             </div>
           )}
           <Field label="Genus" help="Required when the provisional taxon is cleared. This working placement is also used for plant ID generation." name="genus" defaultValue={plant.genus} list="definition-genus-suggestions" />
-          <Field label="Species" help="Required when the provisional taxon is cleared. Use sp. with a named cultivar when the species is unresolved." name="species" defaultValue={plant.species} list="definition-species-suggestions" autoCapitalize="none" />
+          <Field label="Species" help="Species epithet. Leave blank when the accepted horticultural name intentionally omits species (for example, Begonia 'Looking Glass'). Use sp. only when the species is genuinely unknown." name="species" defaultValue={plant.species || ''} list="definition-species-suggestions" autoCapitalize="none" />
           <Field label="Hybrid notation" help="Use for botanical hybrid markers or formula context, such as x, grex, or parentage notation that belongs with the name." name="hybridNotation" defaultValue={plant.hybridNotation} list="definition-hybrid-notation-suggestions" />
           <Field label="Cultivar name" help="The named cultivated variety, usually written in single quotes, such as 'Morning Glow'. Leave blank for unnamed species or clones." name="cultivarName" defaultValue={plant.cultivarName} list="definition-cultivar-name-suggestions" />
           <div className="min-w-0 rounded-lg border border-[#d6dfc9] bg-[#f7f4e8]/80 px-3 py-2 text-sm text-stone-700 lg:col-span-4">
@@ -509,7 +509,7 @@ export default async function EditPlant({
         <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(16rem,22rem)_1fr]">
           <div className="overflow-hidden rounded-lg border border-stone-200 bg-white/70">
             <div className="aspect-[4/3] overflow-hidden">
-              <PlantImage src={currentTypePhoto} alt={`${plant.genus} ${plant.species} type image`} />
+              <PlantImage src={currentTypePhoto} alt={`${plantName(plant)} type image`} />
             </div>
             <div className="space-y-3 p-3 text-sm">
               {currentTypePhoto ? (
@@ -632,7 +632,7 @@ export default async function EditPlant({
           <input type="hidden" name="collectionSlug" value={collection.slug} />
           <ConfirmDeleteButton
             title="Delete plant definition?"
-            message={`This will permanently delete ${plant.genus} ${plant.species}${plant.cultivarName ? ` '${plant.cultivarName}'` : ''}. Related instances may also be affected.`}
+            message={`This will permanently delete ${plantName(plant)}. Related instances may also be affected.`}
             confirmLabel="Delete definition"
           >
             Delete plant definition

@@ -4,6 +4,7 @@ import {
   completenessMatchesMissing,
   completenessMatchesReadiness,
   readinessStatusForScore,
+  speciesReadiness,
   weightedCompletenessScore,
   type PlantDefinitionCompleteness,
 } from '../lib/plant-definition-completeness'
@@ -19,6 +20,9 @@ assert.deepEqual(readinessStatusForScore(75, false), { status: 'MOSTLY_COMPLETE'
 assert.deepEqual(readinessStatusForScore(50, false), { status: 'NEEDS_WORK', statusLabel: 'Needs work' })
 assert.deepEqual(readinessStatusForScore(25, false), { status: 'SPARSE', statusLabel: 'Sparse' })
 assert.deepEqual(readinessStatusForScore(100, true), { status: 'PROVISIONAL', statusLabel: 'Provisional' }, 'Provisional identity remains distinct from content completeness.')
+assert.equal(speciesReadiness(null, 'Looking Glass', false).state, 'COMPLETE')
+assert.equal(speciesReadiness(null, null, false).state, 'MISSING')
+assert.equal(speciesReadiness('sp.', 'Looking Glass', true).state, 'COMPLETE')
 
 const fixture = {
   status: 'NEEDS_WORK',

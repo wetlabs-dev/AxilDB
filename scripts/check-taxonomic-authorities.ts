@@ -15,6 +15,8 @@ const matches = matchTaxonomicAuthorityScopes({
 }, authorities)
 assert.deepEqual(matches.map((match) => match.authority.id), ['species', 'genus', 'family'])
 assert.equal(matches[0].rule.rank, 'SPECIES')
+const genusOnlyMatches = matchTaxonomicAuthorityScopes({ genus: 'Streptocarpus', species: null, taxonomicPlacementJson: { family: 'Gesneriaceae' } }, authorities)
+assert.deepEqual(genusOnlyMatches.map((match) => match.authority.id), ['genus', 'family'])
 assert.equal(authoritySelectionValue({ taxonomicAuthorityId: 'genus', taxonomicAuthoritySource: 'MANUAL' }), 'MANUAL:genus')
 assert.equal(authoritySelectionValue({ taxonomicAuthorityId: null, taxonomicAuthoritySource: 'NONE' }), 'NONE')
 assert.equal(authoritySelectionValue({ taxonomicAuthorityId: 'genus', taxonomicAuthoritySource: 'AUTO' }), 'AUTO')

@@ -78,6 +78,16 @@ function hasValue(value: unknown) {
   return typeof value === 'number' || typeof value === 'boolean' || Boolean(text(value))
 }
 
+export function speciesReadiness(species: unknown, cultivarName: unknown, provisional: boolean) {
+  if (text(species)) return { state: 'COMPLETE' as const, label: provisional ? 'Working species placement recorded' : 'Species recorded', detail: undefined }
+  if (!provisional && text(cultivarName)) return {
+    state: 'COMPLETE' as const,
+    label: 'Species intentionally omitted for cultivar',
+    detail: 'The accepted horticultural name is recorded at genus and cultivar level.',
+  }
+  return { state: 'MISSING' as const, label: provisional ? 'Working species placement recorded' : 'Species recorded', detail: undefined }
+}
+
 function item(
   key: string,
   label: string,
@@ -224,16 +234,17 @@ function evaluateDefinition(
 ): PlantDefinitionCompleteness {
   const provisional = Boolean(text(definition.provisionalTaxon)) || definition.identificationStatus !== 'IDENTIFIED'
   const isGlobal = definition.collectionId === null
+  const speciesState = speciesReadiness(definition.species, definition.cultivarName, provisional)
   const taxonomyItems: PlantDefinitionCompletenessItem[] = [
     item('genus', 'Genus recorded', text(definition.genus) ? 'COMPLETE' : 'MISSING', 'NEEDS_ATTENTION', { actionLabel: 'Edit taxonomy', actionHash: 'definition-fields' }),
-    item('species', provisional ? 'Working species placement recorded' : 'Species recorded', text(definition.species) ? 'COMPLETE' : 'MISSING', 'NEEDS_ATTENTION', { actionLabel: 'Edit taxonomy', actionHash: 'definition-fields' }),
+    item('species', speciesState.label, speciesState.state, 'NEEDS_ATTENTION', { detail: speciesState.detail, actionLabel: speciesState.state === 'MISSING' ? 'Edit taxonomy' : undefined, actionHash: 'definition-fields' }),
     item('author', 'Author citation recorded', text(definition.authority) ? 'COMPLETE' : 'MISSING', 'RECOMMENDED', { actionLabel: 'Add citation', actionHash: 'definition-fields' }),
     item('cultivar', 'Cultivar name recorded', definition.cultivarName ? 'COMPLETE' : 'NOT_APPLICABLE', 'OPTIONAL'),
     item('cultivar-registration', 'Cultivar registration documented', definition.cultivarName ? (definition.cultivarRegistrationNumber || definition.registrationStatus ? 'COMPLETE' : 'MISSING') : 'NOT_APPLICABLE', 'RECOMMENDED', { actionLabel: 'Review cultivar', actionHash: 'definition-fields' }),
     item('aliases', 'Aliases or common names recorded', definition.aliases.length ? 'COMPLETE' : 'MISSING', 'OPTIONAL', { actionLabel: 'Add alias', actionHash: 'definition-fields' }),
     item('identification', provisional ? 'Identification needs review' : 'Identification resolved', provisional ? 'PARTIAL' : 'COMPLETE', provisional ? 'NEEDS_ATTENTION' : 'RECOMMENDED', { actionLabel: 'Review identity', actionHash: 'definition-fields' }),
   ]
-  const taxonomyScore = (text(definition.genus) ? 25 : 0) + (text(definition.species) ? 25 : 0) + (text(definition.authority) ? 15 : 0) + (definition.aliases.length ? 10 : 0) + (definition.cultivarName ? (definition.cultivarRegistrationNumber || definition.registrationStatus ? 10 : 4) : 10) + (provisional ? 5 : 15)
+  const taxonomyScore = (text(definition.genus) ? 25 : 0) + (speciesState.state === 'COMPLETE' ? 25 : 0) + (text(definition.authority) ? 15 : 0) + (definition.aliases.length ? 10 : 0) + (definition.cultivarName ? (definition.cultivarRegistrationNumber || definition.registrationStatus ? 10 : 4) : 10) + (provisional ? 5 : 15)
 
   const resolvedGuide = effectiveGuide(definition.id, guides)
   const guide = resolvedGuide.guide
