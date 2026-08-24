@@ -10,6 +10,7 @@ import { PlantTagRow } from '@/components/PlantTagChip'
 import { isServerAdminRole } from '@/lib/roles'
 import { substrateAssignmentLabel } from '@/lib/substrates'
 import { SubstrateCompositionBar, SubstrateSwatch } from '@/components/SubstrateCompositionBar'
+import { descendantLocationIds } from '@/lib/locations'
 
 const control = 'rounded-md border border-stone-300 bg-[#fffdf7] px-3 py-2 text-sm shadow-inner shadow-stone-200/30 outline-none focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
 const contains = (value: string) => ({ contains: value, mode: 'insensitive' as const })
@@ -33,6 +34,10 @@ export default async function SearchPage({
   const tagWhere = selectedTagIds.length ? tagMode === 'all' ? { AND: selectedTagIds.map((plantTagId) => ({ tags: { some: { plantTagId } } })) } : { tags: { some: { plantTagId: { in: selectedTagIds } } } } : {}
   const activeTags = await prisma.plantTag.findMany({ where: { collectionId: collection.id, active: true }, orderBy: { name: 'asc' } })
   const identityTerms = q.split(/\s+/).map((term) => term.replace(/^['"]|['"]$/g, '')).filter(Boolean)
+  const locationNodes = q ? await prisma.location.findMany({ where: { collectionId: collection.id }, select: { id: true, parentLocationId: true, name: true, code: true } }) : []
+  const matchingLocationIds = locationNodes
+    .filter((location) => `${location.code} ${location.name}`.toLowerCase().includes(q.toLowerCase()))
+    .flatMap((location) => [location.id, ...descendantLocationIds(location.id, locationNodes)])
 
   const definitionSearch = q
     ? {
@@ -96,7 +101,7 @@ export default async function SearchPage({
           ? {
               OR: [
                 { plantId: contains(q) },
-                { location: contains(q) },
+                ...(matchingLocationIds.length ? [{ currentLocationId: { in: Array.from(new Set(matchingLocationIds)) } }] : []),
                 { source: contains(q) },
                 { distributor: contains(q) },
                 { stockNumber: contains(q) },
@@ -120,7 +125,7 @@ export default async function SearchPage({
           : {},
       ],
     },
-    include: { plantDefinition: { include: { aliases: true, tags: { include: { plantTag: true } } } }, currentSubstrate: { include: { recipeVersion: { include: { recipe: true } } } }, mergeConstituent: { include: { merge: { include: { survivingPlantInstance: true } } } } },
+    include: { plantDefinition: { include: { aliases: true, tags: { include: { plantTag: true } } } }, currentLocation: true, currentSubstrate: { include: { recipeVersion: { include: { recipe: true } } } }, mergeConstituent: { include: { merge: { include: { survivingPlantInstance: true } } } } },
     orderBy: { plantId: 'asc' },
   })
 

@@ -57,7 +57,7 @@ export default async function Instances({
     }),
     prisma.plantInstance.findMany({
       where: collectionWhere,
-      select: { location: true, source: true, distributor: true, stockNumber: true, acquisitionLabel: true },
+      select: { source: true, distributor: true, stockNumber: true, acquisitionLabel: true },
     }),
     prisma.location.findMany({
       where: { collectionId: collection.id, status: 'ACTIVE' },
@@ -107,7 +107,6 @@ export default async function Instances({
     include: { plantDefinition: { include: { tags: { include: { plantTag: true }, orderBy: { plantTag: { name: 'asc' } } } } }, currentLocation: { include: { locationType: true } }, currentSubstrate: { include: { recipeVersion: { include: { recipe: true } } } }, quarantines: { where: { status: 'ACTIVE' }, take: 1 } },
     orderBy: { plantId: 'asc' },
   })
-  const locationSuggestions = rankedSuggestions(instanceSuggestionRows.map((instance) => instance.location))
   const stockNumberSuggestions = rankedSuggestions(instanceSuggestionRows.map((instance) => instance.stockNumber))
   const acquisitionLabelSuggestions = rankedSuggestions(instanceSuggestionRows.map((instance) => instance.acquisitionLabel))
   const filteredDefinition = definitionFilter
@@ -220,7 +219,6 @@ export default async function Instances({
 
       {canCreateInCollection(user, context) && (
         <AddPanel label="Add plant instance">
-          <SuggestionDatalist id="instance-location-suggestions" suggestions={locationSuggestions} />
           <SuggestionDatalist id="instance-stock-number-suggestions" suggestions={stockNumberSuggestions} />
           <SuggestionDatalist id="instance-acquisition-label-suggestions" suggestions={acquisitionLabelSuggestions} />
           <form action={createPlantInstance} className="grid max-w-5xl gap-x-3 gap-y-2 lg:grid-cols-4">
@@ -249,7 +247,6 @@ export default async function Instances({
             <p className="rounded-md border border-[#d6dfc9] bg-[#f5f4e8] px-3 py-2 text-sm text-stone-700 lg:col-span-2">
               Plant ID will be generated automatically from the plant definition, relevant date, and record type.
             </p>
-            <Field label="Location" name="location" list="instance-location-suggestions" />
             <LocationCompatibilitySelect
               collectionSlug={collection.slug}
               name="currentLocationId"
@@ -274,7 +271,7 @@ export default async function Instances({
             <form action={createLocation} className="mt-4 grid max-w-5xl gap-x-3 gap-y-2 border-t border-stone-200 pt-4 lg:grid-cols-4">
               <input type="hidden" name="collectionSlug" value={collection.slug} />
               <input type="hidden" name="back" value={instancesBackPath} />
-              <p className="text-sm font-semibold text-stone-700 lg:col-span-4">Quick-create a structured location</p>
+              <p className="text-sm font-semibold text-stone-700 lg:col-span-4">Quick-create a location</p>
               <Field label="Location name" name="name" required />
               <label className="grid gap-1 text-sm font-medium">
                 Type
@@ -354,7 +351,7 @@ export default async function Instances({
                     {instance.plantDefinition.isValidated ? 'Validated: ' : ''}{plantName(instance.plantDefinition)}
                   </p>
                   <p className="truncate text-sm text-stone-600">
-                    {instance.instanceType} · {instance.currentLocation ? `${instance.currentLocation.code} · ${locationPath(instance.currentLocation.id, locationNodes)}` : instance.location || 'No location'}
+                    {instance.instanceType} · {instance.currentLocation ? `${instance.currentLocation.code} · ${locationPath(instance.currentLocation.id, locationNodes)}` : 'No location'}
                   </p>
                   <p className="mt-1 truncate text-xs text-stone-600">Substrate: {substrateAssignmentLabel(instance.currentSubstrate)}</p>
                   <div className="mt-2"><PlantTagRow tags={instance.plantDefinition.tags.map((item) => item.plantTag)} limit={3} /></div>

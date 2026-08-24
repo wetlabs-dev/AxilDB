@@ -150,7 +150,7 @@ export async function getPlantInstancePreview(
     coverPhotoUrl,
     currentLocationPath: instance.currentLocationId
       ? locationPathWithCodes(instance.currentLocationId, locationNodes)
-      : instance.legacyLocationText || instance.location || null,
+      : null,
     currentLocationCode: instance.currentLocation?.code || null,
     status: instance.status,
     activeConditionCount: instance.conditions.length,

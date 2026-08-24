@@ -123,7 +123,7 @@ function PlantHeading({ item, collectionSlug }: { item: CareQueueItem; collectio
         ) : item.title}
       </h3>
       <p className="text-sm text-stone-700">{item.plantName}</p>
-      {item.location && <p className="text-xs text-stone-500">{item.location}</p>}
+      {item.locationPath && <p className="text-xs text-stone-500">{item.locationPath}</p>}
     </div>
   )
 }

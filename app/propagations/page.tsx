@@ -1,12 +1,12 @@
 import { createPropagationEvent } from '@/app/actions'
 import { PlantImage } from '@/components/PlantImage'
 import { SortControl } from '@/components/SortControl'
-import { AddPanel, Button, Card, Field, HelpTooltip, SuggestionDatalist, TextArea } from '@/components/ui'
+import { AddPanel, Button, Card, Field, HelpTooltip, TextArea } from '@/components/ui'
 import { getCurrentUser } from '@/lib/auth'
 import { canCreateInCollection, canEditInCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
 import { compareText, sortPreference, timeValue, type SortOption } from '@/lib/sort-preferences'
-import { rankedSuggestions } from '@/lib/suggestions'
+import { locationPathWithCodes } from '@/lib/locations'
 import { fmtDate, plantName } from '@/lib/utils'
 import Link from 'next/link'
 
@@ -24,7 +24,7 @@ export default async function Propagations() {
   const { collection } = context
   const collectionWhere = { collectionId: collection.id }
   const sortKey = await sortPreference(user?.id, 'propagations', 'dateDesc', propagationSortOptions.map((option) => option.value))
-  const [instances, events, acquiredPropagations, instanceSuggestionRows] = await Promise.all([
+  const [instances, events, acquiredPropagations, locations] = await Promise.all([
     prisma.plantInstance.findMany({
       where: { ...collectionWhere, status: 'ACTIVE' },
       include: { plantDefinition: true },
@@ -43,12 +43,8 @@ export default async function Propagations() {
       include: { plantDefinition: true },
       orderBy: { propagationDate: 'desc' },
     }),
-    prisma.plantInstance.findMany({
-      where: collectionWhere,
-      select: { location: true },
-    }),
+    prisma.location.findMany({ where: { collectionId: collection.id, status: 'ACTIVE' }, include: { locationType: true }, orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }] }),
   ])
-  const locationSuggestions = rankedSuggestions(instanceSuggestionRows.map((instance) => instance.location))
 
   const instanceIds = Array.from(new Set(events.flatMap((event) => [
     ...event.parents.map((parent) => parent.parentPlantInstanceId),
@@ -98,7 +94,6 @@ export default async function Propagations() {
 
       {canCreateInCollection(user, context) && (
         <AddPanel label="Add propagation event">
-          <SuggestionDatalist id="propagation-location-suggestions" suggestions={locationSuggestions} />
           <form action={createPropagationEvent} className="grid max-w-5xl gap-x-3 gap-y-2 lg:grid-cols-4">
             <input type="hidden" name="collectionSlug" value={collection.slug} />
             <label className="grid gap-1 text-sm font-medium">
@@ -143,7 +138,7 @@ export default async function Propagations() {
             <p className="rounded-md border border-[#d6dfc9] bg-[#f5f4e8] px-3 py-2 text-sm text-stone-700 lg:col-span-2">
               Child plant IDs will be generated from the parent definition, propagation date, method, and sequence.
             </p>
-            <Field label="Child location" name="location" list="propagation-location-suggestions" />
+            <label className="grid gap-1 text-sm font-medium">Child location<select name="currentLocationId" className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal"><option value="">No location</option>{locations.map((location) => <option key={location.id} value={location.id}>{locationPathWithCodes(location.id, locations)}</option>)}</select></label>
             <label className="grid gap-1 text-sm font-medium">
               <span className="flex items-center gap-1.5">
                 <span>Success status</span>

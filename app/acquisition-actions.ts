@@ -386,8 +386,6 @@ export async function createPlantAcquisitionRecord(fd: FormData) {
             plantDefinitionId,
             plantId,
             instanceType,
-            location: location?.name || null,
-            legacyLocationText: location?.name || null,
             currentLocationId: location?.id || null,
             acquisitionDate: acquiredAt,
             acquisitionLabel: clearableVal(fd, 'acquisitionLabel'),
@@ -630,7 +628,7 @@ export async function createAcquisitionBatch(fd: FormData) {
           const plantId = await generatePlantId(tx as any, { collectionId: collection.id, plantDefinitionId: definition.id, instanceType: 'MOTHER', date: acquiredAt })
           const instance = await tx.plantInstance.create({ data: {
             collectionId: collection.id, plantDefinitionId: definition.id, plantId, instanceType: 'MOTHER',
-            location: location?.name || null, legacyLocationText: location?.name || null, currentLocationId: location?.id || null,
+            currentLocationId: location?.id || null,
             acquisitionDate: acquiredAt, distributor: seller?.name || distributor?.name || null, purchasePrice: dec(val(fd, `unitPrice:${definition.id}`)) as any,
             acquisitionLabel: clearableVal(fd, `acquisitionLabel:${definition.id}`),
           } })

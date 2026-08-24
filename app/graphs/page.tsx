@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { plantName } from '@/lib/utils'
 import Link from 'next/link'
 import { collectionPath, requireCollectionViewer } from '@/lib/collections'
+import { descendantLocationIds } from '@/lib/locations'
 
 const contains = (value: string) => ({ contains: value, mode: 'insensitive' as const })
 
@@ -16,6 +17,8 @@ export default async function Graphs({
   const sp = await searchParams
   const { collection } = await requireCollectionViewer()
   const q = (sp.q || '').trim()
+  const locations = q ? await prisma.location.findMany({ where: { collectionId: collection.id }, select: { id: true, parentLocationId: true, name: true, code: true } }) : []
+  const matchingLocationIds = locations.filter((location) => `${location.code} ${location.name}`.toLowerCase().includes(q.toLowerCase())).flatMap((location) => [location.id, ...descendantLocationIds(location.id, locations)])
   const roots = await prisma.plantInstance.findMany({
     where: {
       collectionId: collection.id,
@@ -24,7 +27,7 @@ export default async function Graphs({
         ? {
             OR: [
               { plantId: contains(q) },
-              { location: contains(q) },
+              ...(matchingLocationIds.length ? [{ currentLocationId: { in: Array.from(new Set(matchingLocationIds)) } }] : []),
               { plantDefinition: { is: { genus: contains(q) } } },
               { plantDefinition: { is: { species: contains(q) } } },
               { plantDefinition: { is: { cultivarName: contains(q) } } },

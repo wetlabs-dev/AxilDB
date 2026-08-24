@@ -6,6 +6,7 @@ import { effectiveFertilizerAssignment, fertilizerRecipeSummary } from '@/lib/fe
 import { nextOccurrence, reminderCategoryLabel } from '@/lib/reminders'
 import { addCalendarDays, calendarDayIndexInTimeZone, endOfDayInTimeZone, startOfDayInTimeZone } from '@/lib/time'
 import { plantName } from '@/lib/utils'
+import { locationPathWithCodes, type LocationNode } from '@/lib/locations'
 
 export const careTaskTypes = [
   'WATER',
@@ -45,7 +46,9 @@ export type CareQueueItem = {
   plantInstanceId?: string
   plantId?: string
   plantName?: string
-  location?: string | null
+  locationId?: string | null
+  locationName?: string | null
+  locationPath?: string | null
   image?: PlantImageFrame
   href: string
   reminderId?: string
@@ -306,10 +309,11 @@ export async function getCareQueue(
       },
       husbandryOverride: { include: { fertilizerRecipe: { include: { products: { include: { product: true }, orderBy: { sortOrder: 'asc' } } } } } },
       currentSubstrate: { include: { recipeVersion: { include: { recipe: true } } } },
+      currentLocation: { include: { locationType: true } },
     },
   })
   const activePlantInstanceIds = instances.map((instance) => instance.id)
-  const [careEvents, conditions, adjustments, photos, openBlooms, activeQuarantines, reminders, quietDays, quietRules, treatmentSteps] = await Promise.all([
+  const [careEvents, conditions, adjustments, photos, openBlooms, activeQuarantines, reminders, quietDays, quietRules, treatmentSteps, locations] = await Promise.all([
     latestCareEvents(prisma, collectionId, activePlantInstanceIds),
     prisma.plantCondition.findMany({
       where: { collectionId, plantInstanceId: { in: activePlantInstanceIds }, status: { in: ['OPEN', 'IMPROVING'] } },
@@ -319,12 +323,12 @@ export async function getCareQueue(
     latestInstancePhotos(prisma, collectionId, activePlantInstanceIds),
     prisma.bloomEvent.findMany({
       where: { collectionId, bloomEndDate: null, plantInstance: { status: 'ACTIVE' } },
-      include: { plantInstance: { include: { plantDefinition: true } } },
+      include: { plantInstance: { include: { plantDefinition: true, currentLocation: { include: { locationType: true } } } } },
       orderBy: { bloomStartDate: 'desc' },
     }),
     prisma.plantQuarantine.findMany({
       where: { collectionId, status: 'ACTIVE', plantInstance: { status: 'ACTIVE' } },
-      include: { plantInstance: { include: { plantDefinition: true } } },
+      include: { plantInstance: { include: { plantDefinition: true, currentLocation: { include: { locationType: true } } } } },
       orderBy: { targetReleaseDate: 'asc' },
     }),
     userId
@@ -345,10 +349,22 @@ export async function getCareQueue(
     prisma.collectionQuietDayShiftRule.findMany({ where: { collectionId, active: true } }),
     prisma.treatmentPlanStep.findMany({
       where: { collectionId, status: 'PENDING', plan: { status: 'ACTIVE', plantInstance: { status: 'ACTIVE' } } },
-      include: { treatment: true, plan: { include: { plantInstance: { include: { plantDefinition: true } }, steps: { select: { status: true } } } } },
+      include: { treatment: true, plan: { include: { plantInstance: { include: { plantDefinition: true, currentLocation: { include: { locationType: true } } } }, steps: { select: { status: true } } } } },
       orderBy: [{ scheduledAt: 'asc' }, { sortOrder: 'asc' }],
     }),
+    prisma.location.findMany({
+      where: { collectionId },
+      include: { locationType: true },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+    }),
   ])
+
+  const locationNodes = locations as LocationNode[]
+  const itemLocation = (instance?: { currentLocationId?: string | null; currentLocation?: { name: string } | null } | null) => ({
+    locationId: instance?.currentLocationId || null,
+    locationName: instance?.currentLocation?.name || null,
+    locationPath: instance?.currentLocationId ? locationPathWithCodes(instance.currentLocationId, locationNodes) : null,
+  })
 
   const photosByInstance = imageLookup(photos)
   const instanceById = new Map(instances.map((instance) => [instance.id, instance]))
@@ -436,7 +452,7 @@ export async function getCareQueue(
       plantInstanceId: instance.id,
       plantId: instance.plantId,
       plantName: plantDisplayName,
-      location: instance.location,
+      ...itemLocation(instance),
       image,
     })
 
@@ -460,7 +476,7 @@ export async function getCareQueue(
         plantInstanceId: instance.id,
         plantId: instance.plantId,
         plantName: plantDisplayName,
-        location: instance.location,
+        ...itemLocation(instance),
         image,
         fertilizerRecipeId: fertilizer.recipe?.id || null,
         fertilizerRecipeName: recipeName,
@@ -486,7 +502,7 @@ export async function getCareQueue(
         plantInstanceId: instance.id,
         plantId: instance.plantId,
         plantName: plantDisplayName,
-        location: instance.location,
+        ...itemLocation(instance),
         image,
         currentSubstrate: instance.currentSubstrate?.substrateMode === 'RECIPE'
           ? `${instance.currentSubstrate.recipeVersion?.recipe.name || 'Substrate recipe'} v${instance.currentSubstrate.recipeVersion?.versionNumber || '?'}`
@@ -518,7 +534,7 @@ export async function getCareQueue(
           plantInstanceId: instance.id,
           plantId: instance.plantId,
           plantName: plantDisplayName,
-          location: instance.location,
+          ...itemLocation(instance),
           image,
           propagationAgeDays: ageDays,
         })
@@ -539,7 +555,7 @@ export async function getCareQueue(
         plantInstanceId: instance.id,
         plantId: instance.plantId,
         plantName: plantDisplayName,
-        location: instance.location,
+        ...itemLocation(instance),
         image,
       })
     }
@@ -562,7 +578,7 @@ export async function getCareQueue(
         plantInstanceId: instance.id,
         plantId: instance.plantId,
         plantName: plantDisplayName,
-        location: instance.location,
+        ...itemLocation(instance),
         image,
         conditionId: condition.id,
         condition: {
@@ -593,7 +609,7 @@ export async function getCareQueue(
       plantInstanceId: bloom.plantInstanceId,
       plantId: bloom.plantInstance.plantId,
       plantName: plantName(bloom.plantInstance.plantDefinition),
-      location: bloom.plantInstance.location,
+      ...itemLocation(bloom.plantInstance),
       image: photosByInstance[bloom.plantInstanceId],
       bloomEventId: bloom.id,
     })
@@ -611,7 +627,7 @@ export async function getCareQueue(
       plantInstanceId: quarantine.plantInstanceId,
       plantId: quarantine.plantInstance.plantId,
       plantName: plantName(quarantine.plantInstance.plantDefinition),
-      location: quarantine.plantInstance.location,
+      ...itemLocation(quarantine.plantInstance),
       image: photosByInstance[quarantine.plantInstanceId],
     })
   }
@@ -643,7 +659,7 @@ export async function getCareQueue(
       plantInstanceId: instance.id,
       plantId: instance.plantId,
       plantName: plantName(instance.plantDefinition),
-      location: instance.location,
+      ...itemLocation(instance),
       image: photosByInstance[instance.id],
       href: collectionPath(collectionSlug, `/treatments/plans/${step.plan.id}#step-${step.id}`),
       treatmentPlanId: step.plan.id,
@@ -692,7 +708,7 @@ export async function getCareQueue(
       plantInstanceId: reminderInstance?.id || (reminder.entityType === 'PLANT_INSTANCE' ? reminder.entityId || undefined : undefined),
       plantId: reminderInstance?.plantId,
       plantName: reminderInstance ? plantName(reminderInstance.plantDefinition) : undefined,
-      location: reminderInstance?.location,
+      ...itemLocation(reminderInstance),
       image: reminderInstance ? photosByInstance[reminderInstance.id] : undefined,
       completedAt: reminder.completedAt,
       snoozedUntil: reminderAdjustment?.snoozedUntil || null,

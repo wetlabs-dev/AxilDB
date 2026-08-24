@@ -87,6 +87,40 @@ export function locationPathWithCodes(locationId: string | null | undefined, loc
   return path.map((location) => `${location.code} ${location.name}`).join(' / ')
 }
 
+export function locationAncestors(locationId: string | null | undefined, locations: LocationNode[]) {
+  if (!locationId) return []
+  const byId = new Map(locations.map((location) => [location.id, location]))
+  const path: LocationNode[] = []
+  const seen = new Set<string>()
+  let current = byId.get(locationId)
+  while (current && !seen.has(current.id)) {
+    path.unshift(current)
+    seen.add(current.id)
+    current = current.parentLocationId ? byId.get(current.parentLocationId) : undefined
+  }
+  return path
+}
+
+export function locationTreeOrder(locations: LocationNode[]) {
+  const children = new Map<string | null, LocationNode[]>()
+  for (const location of locations) {
+    const key = location.parentLocationId || null
+    children.set(key, [...(children.get(key) || []), location])
+  }
+  for (const siblings of children.values()) {
+    siblings.sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name))
+  }
+  const ordered: LocationNode[] = []
+  const visit = (parentId: string | null) => {
+    for (const location of children.get(parentId) || []) {
+      ordered.push(location)
+      visit(location.id)
+    }
+  }
+  visit(null)
+  return ordered
+}
+
 export function locationOptions(locations: LocationNode[], excludeId?: string) {
   return locations
     .filter((location) => location.status === 'ACTIVE' && location.id !== excludeId)

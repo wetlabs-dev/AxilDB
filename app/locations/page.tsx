@@ -279,7 +279,7 @@ export default async function LocationsPage({
                   <PlantIdPreviewLink collectionSlug={collection.slug} plantId={plant.plantId} href={collectionPath(collection.slug, `/instances/${plant.id}`)}>
                     {plant.plantId}
                   </PlantIdPreviewLink>
-                  <p className="truncate text-sm text-stone-600">{plantName(plant.plantDefinition)} · {plant.currentLocation ? `${plant.currentLocation.code} ${plant.currentLocation.name}` : plant.location || 'No location'}</p>
+                  <p className="truncate text-sm text-stone-600">{plantName(plant.plantDefinition)} · {plant.currentLocation ? `${plant.currentLocation.code} ${plant.currentLocation.name}` : 'No location'}</p>
                 </div>
                 <CompatibilityMoveForm collectionSlug={collection.slug} plantInstanceId={plant.id} currentLocationId={plant.currentLocationId} locations={locationNodes.map((location) => ({ id: location.id, label: `${location.code} · ${locationPath(location.id, locationNodes)}` }))} />
               </div>

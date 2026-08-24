@@ -10,7 +10,7 @@ const selectClass = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1
 export function LocationCompatibilitySelect({
   collectionSlug,
   name,
-  label = 'Structured location',
+  label = 'Location',
   defaultValue = '',
   locations,
   plantInstanceId,
@@ -49,7 +49,7 @@ export function LocationCompatibilitySelect({
       <label className="grid gap-1">
         {label}
         <select className={selectClass} name={name} defaultValue={defaultValue || ''} onChange={check}>
-          <option value="">No structured location</option>
+          <option value="">No location</option>
           {locations.map((location) => <option key={location.id} value={location.id}>{location.label}</option>)}
         </select>
       </label>
@@ -66,6 +66,7 @@ export function LocationCompatibilitySelect({
           )}
         </div>
       )}
+      {locations.length === 0 && <span className="text-xs text-stone-600">Create your first Location before assigning this plant.</span>}
     </div>
   )
 }

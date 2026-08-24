@@ -1,12 +1,14 @@
 import Link from 'next/link'
 import { CheckCircle2 } from 'lucide-react'
 import { startWorkflowRun } from '@/app/workflow-actions'
-import { CareQueueItemCard } from '@/components/CareQueueItemCard'
+import { CareQueueLocationBoard } from '@/components/CareQueueLocationBoard'
 import { Button, Card } from '@/components/ui'
 import { canCreateInCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { careQueueSummary, filterCareQueue, getCareQueue } from '@/lib/care-queue'
+import { careQueueLocationFilters, careQueueLocationSections, type CareQueueGroupingMode, type CareQueueLocationSort } from '@/lib/care-queue-locations'
 import { prisma } from '@/lib/prisma'
 import { ensureStarterWorkflowTemplates } from '@/lib/workflows'
+import { descendantLocationIds } from '@/lib/locations'
 
 const filters = [
   ['today', 'Today'],
@@ -23,7 +25,7 @@ const filters = [
   ['completed', 'Completed'],
 ] as const
 
-export default async function CareQueuePage({ searchParams }: { searchParams: Promise<{ filter?: string }> }) {
+export default async function CareQueuePage({ searchParams }: { searchParams: Promise<{ filter?: string; location?: string; grouping?: string; locationSort?: string; q?: string }> }) {
   const params = await searchParams
   const context = await requireCollectionViewer()
   const canAct = canCreateInCollection(context.user, context)
@@ -33,8 +35,10 @@ export default async function CareQueuePage({ searchParams }: { searchParams: Pr
     : null
   const timezone = preferences?.timezone
   const filter = params.filter || 'today'
-  const back = `${collectionPath(context.collection.slug, '/care')}?filter=${encodeURIComponent(filter)}`
-  const [allItems, substrateRecipeVersions] = await Promise.all([
+  const search = (params.q || '').trim()
+  const grouping: CareQueueGroupingMode = ['flat', 'hierarchy'].includes(params.grouping || '') ? params.grouping as CareQueueGroupingMode : 'parent'
+  const locationSort: CareQueueLocationSort = ['alphabetical', 'items', 'overdue'].includes(params.locationSort || '') ? params.locationSort as CareQueueLocationSort : 'tree'
+  const [allItems, substrateRecipeVersions, locations] = await Promise.all([
     getCareQueue(prisma, {
       collectionId: context.collection.id,
       collectionSlug: context.collection.slug,
@@ -47,10 +51,32 @@ export default async function CareQueuePage({ searchParams }: { searchParams: Pr
       include: { recipe: true },
       orderBy: [{ recipe: { name: 'asc' } }, { versionNumber: 'desc' }],
     }),
+    prisma.location.findMany({
+      where: { collectionId: context.collection.id, status: 'ACTIVE' },
+      include: { locationType: true },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+    }),
   ])
   const substrateVersions = substrateRecipeVersions.map((version) => ({ id: version.id, label: `${version.recipe.name} v${version.versionNumber}` }))
   const summary = careQueueSummary(allItems, new Date(), timezone)
-  const items = filterCareQueue(allItems, filter, new Date(), timezone)
+  const careTypeItems = filterCareQueue(allItems, filter, new Date(), timezone)
+  const filteredItems = search
+    ? careTypeItems.filter((item) => `${item.plantId || ''} ${item.plantName || ''} ${item.title} ${item.reason} ${item.locationPath || ''}`.toLowerCase().includes(search.toLowerCase()))
+    : careTypeItems
+  const locationFilters = careQueueLocationFilters(filteredItems, locations, grouping)
+  const selectedLocation = locationFilters.some((location) => location.id === params.location) ? params.location! : ''
+  const selectedLocationIds = selectedLocation ? new Set([selectedLocation, ...descendantLocationIds(selectedLocation, locations)]) : null
+  const items = selectedLocationIds ? filteredItems.filter((item) => item.locationId && selectedLocationIds.has(item.locationId)) : filteredItems
+  const sections = careQueueLocationSections(items, locations, grouping, locationSort)
+  const locationCount = new Set(filteredItems.map((item) => item.locationId).filter(Boolean)).size
+  const query = (updates: Record<string, string | undefined>) => {
+    const next = new URLSearchParams({ filter, grouping, locationSort })
+    if (search) next.set('q', search)
+    if (selectedLocation) next.set('location', selectedLocation)
+    for (const [key, value] of Object.entries(updates)) value ? next.set(key, value) : next.delete(key)
+    return `${collectionPath(context.collection.slug, '/care')}?${next.toString()}`
+  }
+  const back = query({})
   const workflowTemplates = canAct
     ? await prisma.workflowTemplate.findMany({
         where: {
@@ -108,12 +134,34 @@ export default async function CareQueuePage({ searchParams }: { searchParams: Pr
         {filters.map(([value, label]) => (
           <Link
             key={value}
-            href={`${collectionPath(context.collection.slug, '/care')}?filter=${value}`}
+            href={query({ filter: value, location: undefined })}
             className={`shrink-0 rounded-full border px-3 py-1 text-sm font-medium ${filter === value ? 'border-[#2f6b45] bg-[#d6dfc9] text-[#1f472f]' : 'border-stone-200 bg-white/60 text-stone-700'}`}
           >
             {label}
           </Link>
         ))}
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Filter care by location">
+          <Link href={query({ location: undefined })} className={`shrink-0 rounded-full border px-3 py-1 text-sm font-medium ${!selectedLocation ? 'border-[#2f6b45] bg-[#d6dfc9] text-[#1f472f]' : 'border-stone-200 bg-white/60 text-stone-700'}`}>All locations ({filteredItems.length})</Link>
+          {locationFilters.map((location) => (
+            <Link key={location.id} title={location.path} href={query({ location: location.id })} className={`shrink-0 rounded-full border px-3 py-1 text-sm font-medium ${selectedLocation === location.id ? 'border-[#2f6b45] bg-[#d6dfc9] text-[#1f472f]' : 'border-stone-200 bg-white/60 text-stone-700'}`}>
+              {location.label} ({location.count})
+            </Link>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-end justify-between gap-2 text-sm">
+          <p className="text-stone-600"><strong>{locationCount}</strong> location{locationCount === 1 ? '' : 's'} with visible care</p>
+          <form className="flex flex-wrap items-end gap-2">
+            <input type="hidden" name="filter" value={filter} />
+            {selectedLocation && <input type="hidden" name="location" value={selectedLocation} />}
+            <label className="grid gap-1 text-xs font-semibold">Search<input name="q" defaultValue={search} placeholder="Plant, task, or Location" className="w-44 rounded-md border border-stone-300 bg-[#fffdf7] px-2 py-1.5 text-sm font-normal" /></label>
+            <label className="grid gap-1 text-xs font-semibold">Grouping<select name="grouping" defaultValue={grouping} className="rounded-md border border-stone-300 bg-[#fffdf7] px-2 py-1.5 text-sm font-normal"><option value="parent">Parent grouped</option><option value="flat">Flat paths</option><option value="hierarchy">Full hierarchy</option></select></label>
+            <label className="grid gap-1 text-xs font-semibold">Location order<select name="locationSort" defaultValue={locationSort} className="rounded-md border border-stone-300 bg-[#fffdf7] px-2 py-1.5 text-sm font-normal"><option value="tree">Tree order</option><option value="alphabetical">Alphabetical</option><option value="items">Most items due</option><option value="overdue">Most overdue</option></select></label>
+            <Button className="px-3 py-1.5">Apply view</Button>
+          </form>
+        </div>
       </div>
 
       {canAct && workflowTemplates.length > 0 && (
@@ -142,19 +190,7 @@ export default async function CareQueuePage({ searchParams }: { searchParams: Pr
           <p className="mx-auto mt-2 max-w-xl text-sm text-stone-600">The queue is clear for this filter. Keep an eye on the leaves, but no task is asking for your hands right now.</p>
         </Card>
       ) : (
-        <div className="grid gap-3">
-          {items.map((item) => (
-            <CareQueueItemCard
-              key={item.key}
-              item={item}
-              collectionSlug={context.collection.slug}
-              back={back}
-              canAct={canAct}
-              timezone={timezone}
-              substrateVersions={substrateVersions}
-            />
-          ))}
-        </div>
+        <CareQueueLocationBoard sections={sections} collectionSlug={context.collection.slug} back={back} canAct={canAct} timezone={timezone} substrateVersions={substrateVersions} workflowTemplates={workflowTemplates.map((template) => ({ id: template.id, name: template.name }))} bulkCarePath={collectionPath(context.collection.slug, '/care/bulk')} />
       )}
     </div>
   )

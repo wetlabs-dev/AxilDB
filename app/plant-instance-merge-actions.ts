@@ -52,7 +52,6 @@ export async function mergePlantInstances(formData: FormData) {
       data: {
         instanceType: selected('instanceType').instanceType,
         currentLocationId: selected('currentLocationId').currentLocationId,
-        location: selected('currentLocationId').location,
         source: selected('source').source,
         distributor: selected('distributor').distributor,
         stockNumber: selected('stockNumber').stockNumber,
@@ -120,7 +119,6 @@ export async function mergePlantInstances(formData: FormData) {
               acquisitionDate: instance.acquisitionDate,
               propagationDate: instance.propagationDate,
               currentLocationId: instance.currentLocationId,
-              location: instance.location,
               source: instance.source,
               distributor: instance.distributor,
               stockNumber: instance.stockNumber,

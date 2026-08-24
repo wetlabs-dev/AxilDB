@@ -21,6 +21,7 @@ export const careSheetSectionOptions = husbandrySections.map((section) => ({
 export type CareSheetSectionKey = (typeof careSheetSectionOptions)[number]['key']
 
 export const careSheetPlantInclude = {
+  currentLocation: true,
   plantDefinition: {
     include: {
       aliases: true,

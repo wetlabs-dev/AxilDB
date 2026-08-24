@@ -50,7 +50,6 @@ type PlantTimelineInstance = {
   propagationDate: Date | null
   source: string | null
   distributor: string | null
-  location: string | null
   archiveDate: Date | null
   archiveReason: string | null
   archiveNotes: string | null
@@ -158,7 +157,6 @@ export async function collectPlantTimelineEvents(
       propagationDate: true,
       source: true,
       distributor: true,
-      location: true,
       archiveDate: true,
       archiveReason: true,
       archiveNotes: true,
@@ -319,22 +317,6 @@ export async function collectPlantTimelineEvents(
       summary: `${instance.plantId} has a recorded propagation date.`,
       icon: '🌿',
       colorVariant: 'mauve',
-      href: baseHref,
-      sourceModel: 'PlantInstance',
-      sourceId: instance.id,
-    })
-  }
-
-  if (instance.location) {
-    addEvent(events, {
-      id: `location-${instance.id}`,
-      type: 'LOCATION',
-      category: 'care',
-      date: instance.createdAt,
-      title: 'Location recorded',
-      summary: `Location: ${instance.location}`,
-      icon: '☀️',
-      colorVariant: 'sage',
       href: baseHref,
       sourceModel: 'PlantInstance',
       sourceId: instance.id,

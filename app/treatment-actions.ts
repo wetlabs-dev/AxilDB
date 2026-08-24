@@ -242,7 +242,7 @@ export async function recordTreatmentApplication(fd: FormData) {
       await emitDomainEvent(tx, { eventType: 'quarantine.started', collectionId: collection.id, aggregateId: quarantine.id, actor: { id: user.id, role: user.role }, idempotencyKey: `quarantine:${quarantine.id}:started`, payload: { subjectId: quarantine.id, plantInstanceId, plantId: context.plant.plantId, displayName: context.plant.plantId, summary: quarantine.reason } })
       if (moveToQuarantine && quarantineLocation) {
         const move = await tx.plantLocationMove.create({ data: { collectionId: collection.id, plantInstanceId, fromLocationId: context.plant.currentLocationId, toLocationId: quarantineLocation.id, movedByUserId: user.id, notes: `Moved for ${context.treatment.name} treatment quarantine.` } })
-        await tx.plantInstance.update({ where: { id: plantInstanceId }, data: { currentLocationId: quarantineLocation.id, location: quarantineLocation.name } })
+        await tx.plantInstance.update({ where: { id: plantInstanceId }, data: { currentLocationId: quarantineLocation.id } })
         await emitDomainEvent(tx, { eventType: 'plant.location_moved', collectionId: collection.id, aggregateId: plantInstanceId, actor: { id: user.id, role: user.role }, idempotencyKey: `location-move:${move.id}`, payload: { subjectId: move.id, plantInstanceId, plantId: context.plant.plantId, displayName: context.plant.plantId, toLocation: { id: quarantineLocation.id, name: quarantineLocation.name, code: quarantineLocation.code }, summary: move.notes || undefined } })
       }
     }

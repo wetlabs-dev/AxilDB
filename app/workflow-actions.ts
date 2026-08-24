@@ -430,7 +430,7 @@ export async function completeWorkflowRunStep(fd: FormData) {
     for (const plant of plants) {
       await prisma.plantInstance.update({
         where: { id: plant.id },
-        data: { currentLocationId: destination?.id || null, location: destination?.name || null },
+        data: { currentLocationId: destination?.id || null },
       })
       const move = await prisma.plantLocationMove.create({
         data: {

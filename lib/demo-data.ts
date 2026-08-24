@@ -285,17 +285,28 @@ export async function createDemoData(collectionId: string) {
     })
   }
 
-  const instance = async (code: string, suffix: string, data: Record<string, unknown>) =>
-    prisma.plantInstance.create({
+  const demoLocationType = await prisma.locationType.create({ data: { collectionId, name: 'Demo Growing Area', abbreviation: 'DEMO' } })
+  const demoLocationNames = ['Demo bench', 'Sunroom pole', 'Greenhouse bench 2', 'Light shelf A', 'East window', 'Hanging basket rail', 'Greenhouse bench 1', 'Demo propagation tray']
+  const demoLocations = new Map<string, string>()
+  for (const [index, name] of demoLocationNames.entries()) {
+    const location = await prisma.location.create({ data: { collectionId, locationTypeId: demoLocationType.id, name, code: `LOC-DEMO-${String(index + 1).padStart(2, '0')}`, sortOrder: index * 10 } })
+    demoLocations.set(name, location.id)
+  }
+
+  const instance = async (code: string, suffix: string, data: Record<string, unknown>) => {
+    const locationName = String(data.location || 'Demo bench')
+    const { location: _location, ...instanceData } = data
+    return prisma.plantInstance.create({
       data: {
         collectionId,
         plantDefinitionId: definitionsByCode.get(code)!.id,
         plantId: `${code}-${batch}-${suffix}`,
         instanceType: suffix.includes('P') || suffix.includes('C') || suffix.includes('D') ? 'PROPAGATION' : 'MOTHER',
-        location: 'Demo bench',
-        ...data,
+        currentLocationId: demoLocations.get(locationName) || null,
+        ...instanceData,
       } as any,
     })
+  }
 
   const dtrMother = await instance('DTR', '001', {
     acquisitionDate: d('2024-02-14'),

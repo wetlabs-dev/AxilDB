@@ -24,7 +24,7 @@ export default async function EditInstance({ params }: { params: Promise<{ id: s
     }),
     prisma.plantInstance.findMany({
       where: { collectionId: collection.id },
-      select: { location: true, stockNumber: true },
+      select: { stockNumber: true },
     }),
     prisma.location.findMany({
       where: { collectionId: collection.id, status: 'ACTIVE' },
@@ -47,7 +47,6 @@ export default async function EditInstance({ params }: { params: Promise<{ id: s
     sortOrder: location.sortOrder,
     locationType: location.locationType,
   }))
-  const locationSuggestions = rankedSuggestions(instanceSuggestionRows.map((item) => item.location))
   const stockNumberSuggestions = rankedSuggestions(instanceSuggestionRows.map((item) => item.stockNumber))
 
   return (
@@ -55,7 +54,6 @@ export default async function EditInstance({ params }: { params: Promise<{ id: s
       <h2 className="text-3xl font-bold">Edit Plant Instance</h2>
       <Card>
         <form action={updatePlantInstance} className="grid max-w-5xl gap-x-3 gap-y-2 lg:grid-cols-4">
-          <SuggestionDatalist id="instance-location-suggestions" suggestions={locationSuggestions} />
           <SuggestionDatalist id="instance-stock-number-suggestions" suggestions={stockNumberSuggestions} />
           <input type="hidden" name="id" value={id} />
           <input type="hidden" name="collectionSlug" value={collection.slug} />
@@ -88,7 +86,6 @@ export default async function EditInstance({ params }: { params: Promise<{ id: s
               <option>ARCHIVED</option>
             </select>
           </label>
-          <Field label="Location" name="location" defaultValue={instance.location} list="instance-location-suggestions" />
           <LocationCompatibilitySelect
             collectionSlug={collection.slug}
             name="currentLocationId"
@@ -106,7 +103,7 @@ export default async function EditInstance({ params }: { params: Promise<{ id: s
       </Card>
       {canManage && (
         <Card>
-          <h3 className="font-bold">Quick-create structured location</h3>
+          <h3 className="font-bold">Quick-create location</h3>
           <form action={createLocation} className="mt-3 grid max-w-5xl gap-x-3 gap-y-2 lg:grid-cols-4">
             <input type="hidden" name="collectionSlug" value={collection.slug} />
             <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}/edit`)} />

@@ -562,7 +562,6 @@ export async function acceptPlantTransferPackage(options: {
           plantId,
           instanceType: sourceInstance.instanceType,
           status: 'ACTIVE',
-          location: sourceInstance.location,
           acquisitionDate: sourceInstance.acquisitionDate,
           acquisitionLabel: sourceInstance.acquisitionLabel,
           propagationDate: sourceInstance.propagationDate,

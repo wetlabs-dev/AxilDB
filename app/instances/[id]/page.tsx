@@ -998,7 +998,7 @@ export default async function InstanceDetail({
           )}
           <p>Status: {i.status}</p>
           <p>Type: {i.instanceType}</p>
-          <p>Location: {i.currentLocation ? `${i.currentLocation.code} · ${i.currentLocation.name}` : i.location || '—'}</p>
+          <p>Location: {i.currentLocation ? `${i.currentLocation.code} · ${i.currentLocation.name}` : '—'}</p>
           <p>Propagated: {fmtDate(i.propagationDate, timezone)}</p>
           <p>Stock: {i.stockNumber || '—'}</p>
           <Link className="mt-3 inline-block underline" href={collectionPath(collection.slug, `/graphs?root=${i.id}`)}>
@@ -1100,7 +1100,7 @@ export default async function InstanceDetail({
                 {locationCompatibility ? (
                   <PlantLocationCompatibilityPanel result={locationCompatibility} unitPreferences={unitPreferences} />
                 ) : (
-                  <div className="rounded-lg border border-stone-300 bg-stone-100/80 p-3 text-sm text-stone-700">Assign a structured location to evaluate environmental compatibility.</div>
+                  <div className="rounded-lg border border-stone-300 bg-stone-100/80 p-3 text-sm text-stone-700">Assign a location to evaluate environmental compatibility.</div>
                 )}
                 {canCreateRecords && (
                   <details className="rounded-lg border border-stone-200 bg-white/50 p-3">

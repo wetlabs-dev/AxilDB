@@ -2377,8 +2377,6 @@ model PlantInstance {
   plantId                       String
   instanceType                  String
   status                        String    @default("ACTIVE")
-  location                      String?
-  legacyLocationText            String?
   currentLocationId             String?
   acquisitionDate               DateTime?
   propagationDate               DateTime?
@@ -2507,7 +2505,6 @@ model Location {
   description        String?
   sortOrder          Int      @default(0)
   status             String   @default("ACTIVE")
-  legacyLocationText String?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 

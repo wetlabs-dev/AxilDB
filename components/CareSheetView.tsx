@@ -88,7 +88,7 @@ export function CareSheetView({
                 <div>
                   <h3 className="font-serif text-2xl font-bold leading-tight">{instance.plantId}</h3>
                   <p className="text-sm text-stone-700">{instanceDisplayName(instance)}</p>
-                  {instance.location && <p className="text-xs text-stone-500">{instance.location}</p>}
+                  {instance.currentLocation && <p className="text-xs text-stone-500">{instance.currentLocation.code} · {instance.currentLocation.name}</p>}
                   {!publicMode && (
                     <Link href={plantPath(sheet.collection?.slug, instance.id)} className="mt-2 inline-block text-sm font-medium text-[#2f6b45] underline">
                       View record

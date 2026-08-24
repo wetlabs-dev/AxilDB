@@ -56,7 +56,7 @@ export default async function MergePlantInstancesPage({
                   <input type="checkbox" name="plantInstanceIds" value={candidate.id} defaultChecked={selected.has(candidate.id)} />
                   <span className="min-w-0 text-sm">
                     <span className="block font-bold text-[#2f6b45]">{candidate.plantId}</span>
-                    <span className="block">Acquired {fmtDate(candidate.acquisitionDate)} · {candidate.currentLocation ? locationPath(candidate.currentLocation.id, locationNodes) : candidate.location || 'No location'}</span>
+                    <span className="block">Acquired {fmtDate(candidate.acquisitionDate)} · {candidate.currentLocation ? locationPath(candidate.currentLocation.id, locationNodes) : 'No location'}</span>
                     <span className="block text-stone-600">{candidate.currentSubstrate?.recipeVersion?.recipe.name || candidate.currentSubstrate?.substrateMode.replaceAll('_', ' ').toLowerCase() || 'Substrate not recorded'}</span>
                   </span>
                 </label>
@@ -85,7 +85,7 @@ export default async function MergePlantInstancesPage({
                   <select name={`${field}SourceId`} defaultValue={oldest?.id} className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-2 font-normal">
                     {candidates.map((candidate) => {
                       const display = field === 'currentLocationId'
-                        ? candidate.currentLocation?.name || candidate.location
+                        ? candidate.currentLocation?.name
                         : field === 'substrate'
                           ? candidate.currentSubstrate?.recipeVersion?.recipe.name || candidate.currentSubstrate?.substrateMode
                           : field === 'husbandry'

@@ -143,7 +143,7 @@ const featureHighlights = [
 const workflow = [
   ['Create the collection', 'Start a scoped workspace, invite the right roles, and decide what stays private, public, or exhibit-ready.'],
   ['Define the plant', 'Use local or validated definitions, add aliases and references, and draft taxonomy or husbandry with review-first AI tools.'],
-  ['Place the specimen', 'Accession the plant, assign a structured location, print labels, and keep acquisition, source, and photo context together.'],
+  ['Place the specimen', 'Accession the plant, assign a location, print labels, and keep acquisition, source, and photo context together.'],
   ['Care by queue or shelf', 'Work from due care, bulk-log tasks by location, manage quarantine, and keep plant-sitter or weekly checklists aligned.'],
   ['Read the life story', 'Use timelines, blooms, photos, notes, moves, conditions, propagation, and lineage records to understand what happened and why.'],
   ['Share carefully', 'Publish exhibits, generate PDFs, send update subscriptions, transfer specimens, or share care links without exposing private data.'],
@@ -186,7 +186,7 @@ export default function SplashPage() {
             <h1 className="text-5xl leading-[1.02] sm:text-6xl lg:text-7xl">A living database for collections with complicated plants.</h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-stone-700">
               AxilDB is a self-hosted botanical accession system for serious personal and small-collection work:
-              structured locations, validated definitions, specimen history, care queues, exhibits, QR labels,
+              hierarchical locations, validated definitions, specimen history, care queues, exhibits, QR labels,
               cautious AI tools, notifications, and audit-friendly collaboration in one calm app.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">

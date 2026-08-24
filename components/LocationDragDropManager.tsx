@@ -439,7 +439,7 @@ export function LocationDragDropManager({
             ))}
           </div>
           {unassignedPlants.length > 0 && (
-            <p className="mt-3 text-xs text-stone-600">{unassignedPlants.length} active plant{unassignedPlants.length === 1 ? '' : 's'} currently have no structured location.</p>
+            <p className="mt-3 text-xs text-stone-600">{unassignedPlants.length} active plant{unassignedPlants.length === 1 ? '' : 's'} currently have no location.</p>
           )}
         </div>
         <DragOverlay>

@@ -20,7 +20,7 @@ function dateLabel(date: Date, timezone?: string | null) {
 
 function groupByLocation(items: CareQueueItem[]) {
   return items.reduce<Record<string, CareQueueItem[]>>((acc, item) => {
-    const location = item.location || 'Unspecified location'
+    const location = item.locationPath || 'No location'
     acc[location] ||= []
     acc[location].push(item)
     return acc

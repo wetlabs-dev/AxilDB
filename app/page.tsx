@@ -375,14 +375,14 @@ export default async function Dashboard({
     prisma.plantInstance.findMany({
       where: { ...collectionWhere, OR: [{ isSportCandidate: true }, { sportStatus: { not: 'NONE' } }] },
       take: includesActivityKind('sport') ? queryTake : 0,
-      include: { plantDefinition: true },
+      include: { plantDefinition: true, currentLocation: true },
       orderBy: { updatedAt: 'desc' },
     }),
     prisma.plantInstance.findMany({
       where: { ...collectionWhere, instanceType: { in: ['MOTHER', 'ACQUIRED_PROPAGATION'] } },
       take: includesActivityKind('acquired') || includesActivityKind('propagation') ? queryTake : 0,
       orderBy: [{ acquisitionDate: 'desc' }, { createdAt: 'desc' }],
-      include: { plantDefinition: true },
+      include: { plantDefinition: true, currentLocation: true },
     }),
     prisma.plantInstance.findMany({
       where: { ...collectionWhere, status: 'ARCHIVED' },
@@ -563,7 +563,7 @@ export default async function Dashboard({
         date: item.acquisitionDate || item.createdAt,
         title: item.plantId,
         subtitle: isAcquiredPropagation ? `ACQUIRED PROPAGATION · ${plantName(item.plantDefinition)}` : plantName(item.plantDefinition),
-        detail: [item.source, item.distributor, item.location].filter(Boolean).join(' · '),
+        detail: [item.source, item.distributor, item.currentLocation?.name].filter(Boolean).join(' · '),
         image: coverFor(coverPhotosByInstance, item.id),
       }
     }),

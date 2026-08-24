@@ -51,7 +51,7 @@ export function CompatibilityMoveForm({ collectionSlug, plantInstanceId, current
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-2">
       <select className={selectClass} value={destination} onChange={(event) => setDestination(event.target.value)} aria-label="Destination location">
-        <option value="">No structured location</option>
+        <option value="">No location</option>
         {locations.map((location) => <option key={location.id} value={location.id}>{location.label}</option>)}
       </select>
       <button type="button" onClick={move} disabled={pending || destination === (currentLocationId || '')} className="rounded-md bg-[#2f6b45] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50">

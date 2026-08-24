@@ -19,8 +19,8 @@ export default async function NewCareSheetPage({ searchParams }: { searchParams:
   const context = await requireCollectionLogger()
   const plants = await prisma.plantInstance.findMany({
     where: { collectionId: context.collection.id, status: 'ACTIVE' },
-    include: { plantDefinition: true },
-    orderBy: [{ location: 'asc' }, { plantId: 'asc' }],
+    include: { plantDefinition: true, currentLocation: true },
+    orderBy: [{ currentLocation: { name: 'asc' } }, { plantId: 'asc' }],
   })
   const defaultMode = params.mode === 'sitter' ? 'SITTER_SESSION' : params.mode === 'checklist' ? 'WEEKLY_CHECKLIST' : 'CARE_SHEET'
   const defaultPlant = params.plantInstanceId
@@ -61,7 +61,7 @@ export default async function NewCareSheetPage({ searchParams }: { searchParams:
                 <span>
                   <b className="block">{plant.plantId}</b>
                   <span className="text-stone-700">{plantName(plant.plantDefinition)}</span>
-                  {plant.location && <span className="block text-xs text-stone-500">{plant.location}</span>}
+                  {plant.currentLocation && <span className="block text-xs text-stone-500">{plant.currentLocation.code} · {plant.currentLocation.name}</span>}
                 </span>
               </label>
             ))}

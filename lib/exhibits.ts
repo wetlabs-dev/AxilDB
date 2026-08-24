@@ -45,7 +45,7 @@ export const exhibitSettingLabels: Array<[keyof ExhibitSettings, string, string]
   ['typeImages', 'Type images', 'Definition/type photos.'],
   ['specimenPhotos', 'Specimen photos', 'Photos for selected specimens.'],
   ['acquisitionSource', 'Acquisition/source data', 'Source, distributor, and acquisition/propagation dates.'],
-  ['location', 'Current location', 'Structured location path or legacy location text.'],
+  ['location', 'Current location', 'Canonical Location breadcrumb path.'],
   ['notes', 'Specimen notes', 'Freeform notes attached to selected specimens. Off by default.'],
   ['careNotes', 'Care notes', 'Care-event notes. Off by default.'],
   ['conditions', 'Problem/condition info', 'Open and recent condition records. Off by default.'],
@@ -332,7 +332,7 @@ export async function loadExhibitForDisplay(prisma: PrismaClient, slug: string) 
       notes: notesByPlant.get(entry.plantInstance.id) || [],
       locationPath: entry.plantInstance.currentLocationId
         ? locationPathWithCodes(entry.plantInstance.currentLocationId, locations)
-        : entry.plantInstance.legacyLocationText || entry.plantInstance.location,
+        : null,
     })
     groups.set(definition.id, existing)
   }

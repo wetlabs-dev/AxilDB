@@ -201,7 +201,7 @@ App route: `/acquisitions`
 
 ## Plant Instances
 
-Plant instances are the actual specimens in a collection. Each instance receives a generated plant ID, status, structured location, acquisition details, source, notes, photos, bloom records, propagation relationships, sport review, care history, reminders, follows, and a Plant Health Timeline.
+Plant instances are the actual specimens in a collection. Each instance receives a generated plant ID, status, hierarchical Location, acquisition details, source, notes, photos, bloom records, propagation relationships, sport review, care history, reminders, follows, and a Plant Health Timeline.
 
 App route: `/instances`
 
@@ -210,14 +210,14 @@ App route: `/instances`
 ### How It Is Used
 
 - Open Plant Instances and choose Add plant instance.
-- Select a plant definition and enter specimen details such as type, acquisition label, acquisition date, structured location, legacy location text, source, distributor, stock number, and notes.
+- Select a plant definition and enter specimen details such as type, acquisition label, acquisition date, Location, source, distributor, stock number, and notes.
 - Open a specimen detail page to review identity, photos, Plant Health Timeline, husbandry summary, sport status, follows, children, notes, reminders, bloom tracker, and archive actions.
 - Use the Plant Health Timeline to scan accession, propagation, care, condition, bloom, photo, note, reminder, archive, and sport activity in a compact strip, then open the Life Story list for grouped deterministic history.
 - Use the generated QR label to open the specimen record quickly from a printed label.
 - Give sunshine to plant instances as a quiet appreciation/bookmark marker, then use Most sunshine or Least sunshine sorting when reviewing instance lists.
 - Use the plant ID refresh action when the current ID no longer matches the generated ID format after type or date changes.
 - Use Green Thumb assist for one focused care question per specimen per day when AI is enabled for the collection.
-- Filter the instance list by structured location, with optional inclusion of child locations.
+- Filter the instance list by Location, with optional inclusion of child locations.
 - Filter instances by a Plant Tag inherited from their linked definition; specimen cards and plant ID previews show a compact inherited tag row.
 - Review quarantine status from the specimen page. Gardeners can start, update, release, or cancel quarantine records manually.
 - Managers can check two or more active specimens with the same definition and choose Pot together, or start from an individual specimen. Review the survivor, current metadata sources, merge date, reason, and irreversible confirmation before completing the merge.
@@ -226,7 +226,7 @@ App route: `/instances`
 
 - Plant IDs are generated from the plant definition and relevant date context, then made unique inside the collection.
 - Plant ID links in briefings, care lists, location views, recent activity, and related-specimen sections show compact hover/focus previews with a thumbnail and key status. On touch screens, tap once to preview and use Open plant inside the card to navigate.
-- Structured locations show stable codes and breadcrumb paths. Legacy freeform location text is preserved for audit and migration context.
+- Locations show stable codes and breadcrumb paths. A plant has one canonical current Location relationship.
 - Active quarantine records show on specimen pages and plant cards, and their target release dates create care queue review items.
 - Acquired propagation is for purchased or received cuttings, leaf props, starter plugs, and similar plants without an internal parent record.
 - Timeline v1 uses existing records and includes plant location moves plus quarantine start, update, release, and cancellation events. Dedicated label-change, restore, and sport-transition events are future data-source candidates.
@@ -269,7 +269,7 @@ App route: `/locations`
 - Compatibility is deterministic decision support, not an AI diagnosis or a guarantee. Seasonal changes and current measurements still need human judgment.
 - Drag/drop is an enhancement. Dropdown and button controls remain available for mobile and keyboard workflows.
 - Dragging a plant into a quarantine-type location prompts to start quarantine, move only, or cancel; it does not automatically create a quarantine record.
-- The migration creates top-level Legacy Location records from distinct old freeform location strings.
+- The canonical-location migration matches unique legacy names and creates clearly marked Legacy Imported Location reconciliation records when no safe match exists.
 
 ### Warnings
 
@@ -383,6 +383,8 @@ App route: `/care`
 ### How It Is Used
 
 - Open Care Queue from the sidebar to review today’s tasks, overdue work, watering, fertilizing, repotting, treatment plan steps, propagation checks, health issues, pest checks, bloom follow-ups, custom reminders, and completed care.
+- Use the dynamic Location chips to focus on one physical area. In All locations, work is grouped into collapsible Location sections with due, overdue, and care-type counts.
+- Choose Parent grouped for room-by-room rounds, Flat paths for one section per exact Location, or Full hierarchy for an indented tree view. Location sections can open bulk care or start a workflow already scoped to that Location and its children.
 - Expand a repot task to compare the current substrate with the top-ranked recommendation, then record the new recipe or explicit non-recipe substrate state when completing it.
 - Complete or snooze generated care tasks from the queue.
 - For condition-related queue items, use the condition actions to resolve the condition, update severity/status/follow-up details, or mark that it still needs attention with a follow-up date.

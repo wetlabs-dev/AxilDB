@@ -206,7 +206,7 @@ export default async function CareScheduleSyncPage({
                       <span className="block font-medium">{plantName(plant.plantDefinition)}</span>
                       {plant.quarantines.length > 0 && <span className="mt-1 inline-flex rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-amber-900">Quarantine</span>}
                     </span>
-                    <span className="text-xs text-stone-500">{plant.currentLocation ? locationPathWithCodes(plant.currentLocation.id, locationNodes) : plant.location || 'No location'}</span>
+                    <span className="text-xs text-stone-500">{plant.currentLocation ? locationPathWithCodes(plant.currentLocation.id, locationNodes) : 'No location'}</span>
                   </label>
                 ))}
               </div>

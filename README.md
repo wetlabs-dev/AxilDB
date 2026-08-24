@@ -442,7 +442,7 @@ Core models:
 - `PlantDefinitionSubstrateRecommendation`, `PlantInstanceSubstrate`, and `PlantSubstrateHistory`: ranked definition guidance, explicit current substrate state, and append-only specimen substrate history linked to repotting care events.
 - `LocationType`: collection-defined location categories such as Room, Cabinet, Shelf, or Greenhouse, with stable abbreviations used for location codes.
 - `Location`: collection-scoped hierarchical locations with stable generated codes such as `LOC-SH-01`; locations can contain other locations and direct plant assignments.
-- `PlantLocationMove`: move history for plants reassigned between structured locations.
+- `PlantLocationMove`: move history for plants reassigned between hierarchical Locations.
 - `PlantQuarantine`: plant-level quarantine workflow records with risk level, checklist, target release review date, release/cancel status, and optional quarantine location.
 - `PropagationEvent`: a propagation action with parent and child links.
 - `ParentageLink` and `PropagationChild`: graph edges for lineage.
@@ -502,7 +502,9 @@ Managers can add a structured environment profile to any location: day/night tem
 
 Plant husbandry guides and specimen overrides include matching structured environmental requirements. AxilDB resolves specimen overrides first, then local or linked definition husbandry, then a linked validated definition. Its deterministic compatibility engine compares ranges and categorical conditions and returns Good match, Review recommended, Poor match, or Not enough information with category-level explanations. Guidance is advisory: acquisition desired locations, plant pages, individual moves, drag/drop, and batch moves may warn, but users can continue. Move acknowledgments are retained in location-move history and audit/event records. Quarantine placement is treated as temporary and does not claim long-term suitability.
 
-The migration/backfill creates one top-level “Legacy Location” record for each distinct non-empty legacy plant instance location string and assigns matching plants to it. The original text is preserved as legacy location text. AxilDB does not attempt to parse old freeform values into rooms, cabinets, or shelves automatically.
+The original hierarchy backfill is followed by a canonical-location migration. It links each remaining legacy value to a unique exact Location match or creates a clearly marked `Legacy Imported Location` reconciliation record, verifies that no value is unresolved, and then removes both obsolete PlantInstance text columns. New code reads and writes only `currentLocationId`.
+
+The Care Queue is location-first: care-type filters are followed by dynamic Location chips, and visible work is grouped into collapsible Location sections. Parent-grouped, flat-path, and hierarchy views are available, along with tree/alphabetical/workload sorting. Section expansion is remembered for the browser session, and location sections can launch scoped workflows or open the existing bulk-care review.
 
 Location QR labels are generated through the existing bulk label PDF endpoint and include the collection name, location name, code, type, and breadcrumb when space allows. Bulk Tags can export plant labels, location labels, or both from one selection list. A location QR opens the location detail page and shows the plants currently assigned directly or through child locations. The Plant Instances page can filter by a location with optional child-location inclusion.
 

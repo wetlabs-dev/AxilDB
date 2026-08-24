@@ -95,7 +95,7 @@ export async function collectBriefingSource(prisma: PrismaClient, options: {
     }),
     prisma.plantInstance.findMany({
       where: { collectionId: options.collectionId, status: 'ACTIVE', updatedAt: { lte: staleCutoff } },
-      include: { plantDefinition: true },
+      include: { plantDefinition: true, currentLocation: true },
       orderBy: { updatedAt: 'asc' },
       take: 12,
     }),
@@ -226,7 +226,7 @@ export async function collectBriefingSource(prisma: PrismaClient, options: {
     stalePlants: stalePlants.map((item) => ({
       plantId: item.plantId,
       plantName: plantName(item.plantDefinition),
-      location: item.location,
+      location: item.currentLocation?.name || null,
       updatedAt: item.updatedAt.toISOString(),
     })),
     recentAcquisitions: acquisitions.map((item) => ({

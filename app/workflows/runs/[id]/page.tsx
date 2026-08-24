@@ -165,7 +165,7 @@ export default async function WorkflowRunPage({ params, searchParams }: { params
                   )}
                   {step.stepType === 'RELOCATE' && (
                     <Select label="Destination location" name="destinationLocationId" defaultValue="">
-                      <option value="">No structured location</option>
+                      <option value="">No location</option>
                       {locations.map((location) => <option key={location.id} value={location.id}>{location.code} · {location.name}</option>)}
                     </Select>
                   )}

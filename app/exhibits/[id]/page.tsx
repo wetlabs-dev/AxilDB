@@ -125,7 +125,7 @@ export default async function EditCollectionExhibitPage({ params }: { params: Pr
       scientificName: plantName(plant.plantDefinition),
       cultivarName: plant.plantDefinition.cultivarName,
       acquisitionLabel,
-      locationPath: plant.currentLocationId ? locationPathWithCodes(plant.currentLocationId, locations) : plant.legacyLocationText || plant.location || null,
+      locationPath: plant.currentLocationId ? locationPathWithCodes(plant.currentLocationId, locations) : null,
       status: plant.status,
       createdAt: plant.createdAt.toISOString(),
       updatedAt: plant.updatedAt.toISOString(),

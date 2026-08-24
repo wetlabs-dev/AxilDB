@@ -924,11 +924,7 @@ export async function movePlantInstanceLocation(fd: FormData) {
   await prisma.$transaction(async (tx) => {
     await tx.plantInstance.update({
       where: { id: plantInstanceId },
-      data: {
-        currentLocationId: target?.id || null,
-        location: target?.name || null,
-        legacyLocationText: instance.legacyLocationText || instance.location,
-      },
+      data: { currentLocationId: target?.id || null },
     })
     const move = await tx.plantLocationMove.create({
       data: {
@@ -977,7 +973,7 @@ export async function batchMovePlantLocations(fd: FormData) {
       currentLocationId: { in: sourceIds },
       NOT: { currentLocationId: target.id },
     },
-    select: { id: true, plantId: true, currentLocationId: true, legacyLocationText: true, location: true },
+    select: { id: true, plantId: true, currentLocationId: true },
     orderBy: { plantId: 'asc' },
   })
   if (!plants.length) throw new Error('No eligible active plants remain for this batch move.')
@@ -997,11 +993,7 @@ export async function batchMovePlantLocations(fd: FormData) {
     for (const plant of plants) {
       await tx.plantInstance.update({
       where: { id: plant.id },
-      data: {
-        currentLocationId: target.id,
-        location: target.name,
-        legacyLocationText: plant.legacyLocationText || plant.location,
-      },
+      data: { currentLocationId: target.id },
       })
       const move = await tx.plantLocationMove.create({
       data: {
@@ -1168,7 +1160,7 @@ export async function batchMovePlantsToLocation(input: {
       id: { in: plantIds },
       NOT: { currentLocationId: target?.id || null },
     },
-    select: { id: true, plantId: true, currentLocationId: true, legacyLocationText: true, location: true },
+    select: { id: true, plantId: true, currentLocationId: true },
     orderBy: { plantId: 'asc' },
   })
   if (!plants.length) throw new Error('No eligible active plants remain for this move.')
@@ -1195,11 +1187,7 @@ export async function batchMovePlantsToLocation(input: {
   const correlationId = randomUUID()
   await prisma.$transaction(async (tx) => {
     for (const plant of plants) {
-      await tx.plantInstance.update({ where: { id: plant.id }, data: {
-        currentLocationId: target?.id || null,
-        location: target?.name || null,
-        legacyLocationText: plant.legacyLocationText || plant.location,
-      } })
+      await tx.plantInstance.update({ where: { id: plant.id }, data: { currentLocationId: target?.id || null } })
       const move = await tx.plantLocationMove.create({ data: {
         collectionId: collection.id,
         plantInstanceId: plant.id,
@@ -2385,8 +2373,6 @@ export async function createPlantInstance(fd: FormData) {
       plantDefinitionId,
       plantId,
       instanceType,
-      location: currentLocation?.name || val(fd, 'location'),
-      legacyLocationText: val(fd, 'location'),
       currentLocationId: currentLocation?.id || null,
       acquisitionDate,
       propagationDate,
@@ -2483,8 +2469,6 @@ export async function updatePlantInstance(fd: FormData) {
       plantDefinitionId,
       instanceType: val(fd, 'instanceType')!,
       status: val(fd, 'status') || 'ACTIVE',
-      location: currentLocation?.name || clearableVal(fd, 'location'),
-      legacyLocationText: clearableVal(fd, 'location'),
       currentLocationId: currentLocation?.id || null,
       acquisitionDate: clearableDate(fd, 'acquisitionDate'),
       propagationDate: clearableDate(fd, 'propagationDate'),
@@ -2815,8 +2799,8 @@ export async function createCareSheet(fd: FormData) {
       collectionId: context.collection.id,
       ...(plantIds.length ? { id: { in: plantIds } } : { status: 'ACTIVE' }),
     },
-    select: { id: true, location: true },
-    orderBy: [{ location: 'asc' }, { plantId: 'asc' }],
+    select: { id: true, currentLocation: { select: { name: true } } },
+    orderBy: [{ currentLocation: { name: 'asc' } }, { plantId: 'asc' }],
   })
   if (plants.length === 0) throw new Error('Select at least one plant for this care sheet.')
 
@@ -4097,12 +4081,14 @@ export async function createPropagationEvent(fd: FormData) {
   const parent2 = val(fd, 'parent2')
   const eventDate = date(val(fd, 'date'))!
   const childCount = boundedInt(val(fd, 'childCount'), 1, 1, 50)
+  const childLocationId = clearableVal(fd, 'currentLocationId')
 
   if (method === 'SEED' && !parent2) {
     throw new Error('Sexual reproduction requires two parent plants.')
   }
 
   const parentPlant = await prisma.plantInstance.findFirstOrThrow({ where: { id: parent1, collectionId: collection.id } })
+  if (childLocationId) await prisma.location.findFirstOrThrow({ where: { id: childLocationId, collectionId: collection.id, status: 'ACTIVE' }, select: { id: true } })
   if (parent2) {
     await prisma.plantInstance.findFirstOrThrow({ where: { id: parent2, collectionId: collection.id }, select: { id: true } })
   }
@@ -4150,7 +4136,7 @@ export async function createPropagationEvent(fd: FormData) {
         plantId,
         instanceType: 'PROPAGATION',
         propagationDate: eventDate,
-        location: val(fd, 'location'),
+        currentLocationId: childLocationId,
         isSportCandidate: isSportLine(parentPlant.sportStatus),
         sportStatus: childSportStatus,
         sportDescription: childSportDescription,
