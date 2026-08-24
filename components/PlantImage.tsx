@@ -59,10 +59,12 @@ export function PlantImage({
   src,
   alt,
   className = '',
+  loading = 'lazy',
 }: {
   src?: string | null | PlantImageFrame
   alt: string
   className?: string
+  loading?: 'eager' | 'lazy'
 }) {
   const frame = typeof src === 'object' && src !== null ? src : null
   const imageSrc = frame ? frame.path : typeof src === 'string' ? src : null
@@ -72,7 +74,7 @@ export function PlantImage({
   }
 
   if (imageSrc) {
-    return <img src={imageSrc} alt={alt} className={cn('block h-full w-full object-cover', className)} style={frameStyle(frame)} />
+    return <img src={imageSrc} alt={alt} loading={loading} decoding="async" className={cn('block h-full w-full object-cover', className)} style={frameStyle(frame)} />
   }
 
   return (

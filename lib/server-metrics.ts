@@ -6,7 +6,11 @@ import { evaluateServerIncidents } from '@/lib/server-incidents'
 
 const HISTORY_HOURS = 36
 const SNAPSHOT_INTERVAL_MS = 5 * 60 * 1000
-const uploadsRoot = path.join(process.cwd(), 'public', 'uploads')
+const PHOTO_STORAGE_BATCH_SIZE = 1000
+
+function uploadsRoot() {
+  return path.resolve(process.cwd(), process.env.AXILDB_UPLOADS_ROOT || path.join('public', 'uploads'))
+}
 
 export type CollectionUsage = {
   id: string
@@ -21,10 +25,16 @@ export type CollectionUsage = {
 export type ServerMetricData = {
   memory: {
     rssBytes: number
+    peakRssBytes: number
     heapUsedBytes: number
     heapTotalBytes: number
+    externalBytes: number
+    arrayBuffersBytes: number
     systemTotalBytes: number
     systemFreeBytes: number
+    containerUsedBytes: number
+    containerLimitBytes: number
+    processUptimeSeconds: number
   }
   disk: {
     totalBytes: number
@@ -135,79 +145,139 @@ async function networkBytes() {
   }
 }
 
+async function readNumberFile(filePath: string) {
+  try {
+    const text = (await fs.readFile(filePath, 'utf8')).trim()
+    if (!text || text === 'max') return 0
+    const value = Number(text)
+    return Number.isFinite(value) ? value : 0
+  } catch {
+    return 0
+  }
+}
+
+async function cgroupMemoryBytes() {
+  const [v2Used, v2Limit] = await Promise.all([
+    readNumberFile('/sys/fs/cgroup/memory.current'),
+    readNumberFile('/sys/fs/cgroup/memory.max'),
+  ])
+  if (v2Used || v2Limit) return { containerUsedBytes: v2Used, containerLimitBytes: v2Limit }
+
+  const [v1Used, v1Limit] = await Promise.all([
+    readNumberFile('/sys/fs/cgroup/memory/memory.usage_in_bytes'),
+    readNumberFile('/sys/fs/cgroup/memory/memory.limit_in_bytes'),
+  ])
+  return { containerUsedBytes: v1Used, containerLimitBytes: v1Limit }
+}
+
 function photoUploadPath(photoPath: string) {
   if (!photoPath.startsWith('/uploads/')) return null
-  return path.join(process.cwd(), 'public', photoPath.replace(/^\/+/, ''))
+  return path.join(uploadsRoot(), photoPath.replace(/^\/uploads\/?/, ''))
+}
+
+async function photoUploadBytesByCollection() {
+  const fileSizeCache = new Map<string, number>()
+  const uploadBytesByCollection = new Map<string, number>()
+  let cursor: string | undefined
+
+  while (true) {
+    const photos = await prisma.photo.findMany({
+      where: { path: { startsWith: '/uploads/' } },
+      select: { id: true, collectionId: true, path: true },
+      orderBy: { id: 'asc' },
+      take: PHOTO_STORAGE_BATCH_SIZE,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+    })
+    if (!photos.length) break
+
+    for (const photo of photos) {
+      if (!photo.collectionId) continue
+      const filePath = photoUploadPath(photo.path)
+      if (!filePath) continue
+      if (!fileSizeCache.has(filePath)) fileSizeCache.set(filePath, await fileSize(filePath))
+      uploadBytesByCollection.set(photo.collectionId, (uploadBytesByCollection.get(photo.collectionId) || 0) + (fileSizeCache.get(filePath) || 0))
+    }
+
+    cursor = photos[photos.length - 1].id
+    if (photos.length < PHOTO_STORAGE_BATCH_SIZE) break
+  }
+
+  return uploadBytesByCollection
 }
 
 async function collectionUsages() {
-  const collections = await prisma.collection.findMany({
-    orderBy: [{ status: 'asc' }, { name: 'asc' }],
-    include: {
-      photos: { select: { path: true } },
-      _count: {
-        select: {
-          plantDefinitions: true,
-          plantAliases: true,
-          plantInstances: true,
-          propagationEvents: true,
-          bloomEvents: true,
-          notes: true,
-          photos: true,
-          reminders: true,
-          follows: true,
-          taxonomicAuthorities: true,
+  const [collections, uploadBytesByCollection] = await Promise.all([
+    prisma.collection.findMany({
+      orderBy: [{ status: 'asc' }, { name: 'asc' }],
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        status: true,
+        _count: {
+          select: {
+            plantDefinitions: true,
+            plantAliases: true,
+            plantInstances: true,
+            propagationEvents: true,
+            bloomEvents: true,
+            notes: true,
+            photos: true,
+            reminders: true,
+            follows: true,
+            taxonomicAuthorities: true,
+          },
         },
       },
-    },
-  })
-
-  const fileSizeCache = new Map<string, number>()
-  return Promise.all(
-    collections.map(async (collection) => {
-      const paths = [...new Set(collection.photos.map((photo) => photoUploadPath(photo.path)).filter(Boolean) as string[])]
-      let uploadBytes = 0
-      for (const filePath of paths) {
-        if (!fileSizeCache.has(filePath)) fileSizeCache.set(filePath, await fileSize(filePath))
-        uploadBytes += fileSizeCache.get(filePath) || 0
-      }
-
-      const recordCount = Object.values(collection._count).reduce((sum, count) => sum + count, 0)
-      return {
-        id: collection.id,
-        name: collection.name,
-        slug: collection.slug,
-        status: collection.status,
-        uploadBytes,
-        recordCount,
-        photos: collection._count.photos,
-      }
     }),
-  )
+    photoUploadBytesByCollection(),
+  ])
+
+  return collections.map((collection) => {
+    const recordCount = Object.values(collection._count).reduce((sum, count) => sum + count, 0)
+    return {
+      id: collection.id,
+      name: collection.name,
+      slug: collection.slug,
+      status: collection.status,
+      uploadBytes: uploadBytesByCollection.get(collection.id) || 0,
+      recordCount,
+      photos: collection._count.photos,
+    }
+  })
 }
 
 export async function collectServerMetricData(): Promise<ServerMetricData> {
-  await fs.mkdir(uploadsRoot, { recursive: true })
-  const [disk, uploadBytes, dbBytes, appBytes, net, collections] = await Promise.all([
-    statfsBytes(uploadsRoot),
-    directorySize(uploadsRoot),
+  const uploadDir = uploadsRoot()
+  await fs.mkdir(uploadDir, { recursive: true })
+  const [disk, uploadBytes, dbBytes, appBytes, net, collections, cgroupMemory] = await Promise.all([
+    statfsBytes(uploadDir),
+    directorySize(uploadDir),
     databaseBytes(),
     directorySize(process.cwd(), {
       exclude: (entryPath) => entryPath.includes('/public/uploads') || entryPath.includes('/public/labels') || entryPath.endsWith('/node_modules/.cache'),
     }),
     networkBytes(),
     collectionUsages(),
+    cgroupMemoryBytes(),
   ])
   const memory = process.memoryUsage()
+  const resourceUsage = process.resourceUsage()
   const categorizedBytes = uploadBytes + dbBytes + appBytes
 
   return {
     memory: {
       rssBytes: memory.rss,
+      peakRssBytes: resourceUsage.maxRSS > 0 ? resourceUsage.maxRSS * 1024 : 0,
       heapUsedBytes: memory.heapUsed,
       heapTotalBytes: memory.heapTotal,
+      externalBytes: memory.external,
+      arrayBuffersBytes: memory.arrayBuffers,
       systemTotalBytes: os.totalmem(),
       systemFreeBytes: os.freemem(),
+      containerUsedBytes: cgroupMemory.containerUsedBytes,
+      containerLimitBytes: cgroupMemory.containerLimitBytes,
+      processUptimeSeconds: Math.round(process.uptime()),
     },
     disk: {
       ...disk,

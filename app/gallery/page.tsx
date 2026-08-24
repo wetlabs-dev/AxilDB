@@ -13,15 +13,53 @@ const gallerySortOptions: SortOption[] = [
   { value: 'typeAsc', label: 'Photo type A-Z' },
 ]
 
-export default async function GalleryPage() {
+const GALLERY_PAGE_SIZE = 96
+
+export default async function GalleryPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>
+}) {
   const user = await getCurrentUser()
+  const params = await searchParams
   const { collection } = await requireCollectionViewer()
   const collectionWhere = { collectionId: collection.id }
   const sortKey = await sortPreference(user?.id, 'gallery', 'newest', gallerySortOptions.map((option) => option.value))
-  const photos = await prisma.photo.findMany({
-    where: { ...collectionWhere, entityType: { in: ['PLANT_INSTANCE', 'BLOOM_EVENT', 'PLANT_DEFINITION'] } },
-    orderBy: { createdAt: 'desc' },
-  })
+  const page = Math.max(1, Number(params.page || 1) || 1)
+  const photoWithCollectionWhere = { ...collectionWhere, entityType: { in: ['PLANT_INSTANCE', 'BLOOM_EVENT', 'PLANT_DEFINITION'] } }
+  const pagedByDatabase = sortKey === 'newest' || sortKey === 'oldest'
+  const photoOrder =
+    sortKey === 'oldest'
+      ? [{ createdAt: 'asc' as const }, { id: 'asc' as const }]
+      : sortKey === 'typeAsc'
+        ? [{ entityType: 'asc' as const }, { createdAt: 'desc' as const }, { id: 'desc' as const }]
+        : [{ createdAt: 'desc' as const }, { id: 'desc' as const }]
+  const [photos, totalPhotos] = await Promise.all([
+    prisma.photo.findMany({
+      where: photoWithCollectionWhere,
+      orderBy: photoOrder,
+      ...(pagedByDatabase ? { skip: (page - 1) * GALLERY_PAGE_SIZE, take: GALLERY_PAGE_SIZE } : {}),
+      select: {
+        id: true,
+        path: true,
+        entityType: true,
+        entityId: true,
+        moderationStatus: true,
+        nsfwFlagged: true,
+        caption: true,
+        cropX: true,
+        cropY: true,
+        cropWidth: true,
+        cropHeight: true,
+        focalX: true,
+        focalY: true,
+        createdAt: true,
+        isCover: true,
+        isType: true,
+      },
+    }),
+    prisma.photo.count({ where: photoWithCollectionWhere }),
+  ])
 
   const instanceIds = photos
     .filter((photo) => photo.entityType === 'PLANT_INSTANCE')
@@ -36,14 +74,33 @@ export default async function GalleryPage() {
   const [instances, blooms, definitions] = await Promise.all([
     prisma.plantInstance.findMany({
       where: { ...collectionWhere, id: { in: instanceIds } },
-      include: { plantDefinition: true },
+      select: {
+        id: true,
+        plantId: true,
+        plantDefinition: {
+          select: { genus: true, species: true, hybridNotation: true, cultivarName: true, authority: true, provisionalTaxon: true, identificationStatus: true },
+        },
+      },
     }),
     prisma.bloomEvent.findMany({
       where: { ...collectionWhere, id: { in: bloomIds } },
-      include: { plantInstance: { include: { plantDefinition: true } } },
+      select: {
+        id: true,
+        bloomStartDate: true,
+        plantInstance: {
+          select: {
+            id: true,
+            plantId: true,
+            plantDefinition: {
+              select: { genus: true, species: true, hybridNotation: true, cultivarName: true, authority: true, provisionalTaxon: true, identificationStatus: true },
+            },
+          },
+        },
+      },
     }),
     prisma.plantDefinition.findMany({
       where: { ...collectionWhere, id: { in: definitionIds } },
+      select: { id: true, genus: true, species: true, hybridNotation: true, cultivarName: true, authority: true, provisionalTaxon: true, identificationStatus: true },
     }),
   ])
 
@@ -133,6 +190,11 @@ export default async function GalleryPage() {
     if (sortKey === 'typeAsc') return compareText(left.kind, right.kind) || timeValue(right.createdAt) - timeValue(left.createdAt)
     return timeValue(right.createdAt) - timeValue(left.createdAt)
   })
+  const pageHref = (nextPage: number) => {
+    const query = new URLSearchParams()
+    query.set('page', String(nextPage))
+    return `?${query.toString()}`
+  }
 
   return (
     <div className="space-y-5">
@@ -149,7 +211,13 @@ export default async function GalleryPage() {
           disabled={!user}
         />
       </div>
-      <PhotoGallery photos={sortedPhotos} />
+      <PhotoGallery
+        photos={sortedPhotos}
+        totalPhotos={totalPhotos}
+        page={pagedByDatabase ? page : 1}
+        pageSize={pagedByDatabase ? GALLERY_PAGE_SIZE : Math.max(totalPhotos, 1)}
+        pageHref={pagedByDatabase ? pageHref : undefined}
+      />
     </div>
   )
 }

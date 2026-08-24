@@ -183,7 +183,7 @@ for (const root of roots) {
         const pattern = new RegExp(`prisma\\.${model}\\.${op}\\s*\\(`, 'g')
         for (let match = pattern.exec(source); match; match = pattern.exec(source)) {
           const snippet = balancedCall(source, match.index)
-          if (snippet.includes('collectionId') || snippet.includes('collectionWhere')) continue
+          if (snippet.includes('collectionId') || snippet.toLowerCase().includes('collectionwhere')) continue
           if (isAllowed(file, model, op)) continue
 
           findings.push({

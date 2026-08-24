@@ -47,6 +47,7 @@
     "check:definition-completeness": "tsx scripts/check-definition-completeness.ts",
     "check:treatments": "tsx scripts/check-treatments.ts",
     "check:substrates": "tsx scripts/check-substrates.ts",
+    "check:memory": "tsx scripts/check-memory-footprint.ts",
     "check:taxonomic-authorities": "tsx scripts/check-taxonomic-authorities.ts",
     "check:plant-instance-merges": "node scripts/check-plant-instance-merges.mjs"
   },

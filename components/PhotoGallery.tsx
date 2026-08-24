@@ -28,9 +28,22 @@ export type GalleryPhoto = {
   focalY?: number | null
 }
 
-export function PhotoGallery({ photos }: { photos: GalleryPhoto[] }) {
+export function PhotoGallery({
+  photos,
+  totalPhotos = photos.length,
+  page = 1,
+  pageSize = photos.length || 1,
+  pageHref,
+}: {
+  photos: GalleryPhoto[]
+  totalPhotos?: number
+  page?: number
+  pageSize?: number
+  pageHref?: (page: number) => string
+}) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
   const activePhoto = activeIndex === null ? null : photos[activeIndex]
+  const pageCount = Math.max(1, Math.ceil(totalPhotos / pageSize))
 
   const byPlant = useMemo(() => {
     return photos.reduce<Record<string, number>>((acc, photo) => {
@@ -74,8 +87,9 @@ export function PhotoGallery({ photos }: { photos: GalleryPhoto[] }) {
   return (
     <>
       <div className="mb-4 flex flex-wrap gap-2 text-xs text-stone-600">
-        <span className="rounded-full border border-stone-200 bg-white/70 px-3 py-1">{photos.length} photos</span>
+        <span className="rounded-full border border-stone-200 bg-white/70 px-3 py-1">{totalPhotos} photos</span>
         <span className="rounded-full border border-stone-200 bg-white/70 px-3 py-1">{Object.keys(byPlant).length} records</span>
+        {totalPhotos > photos.length && <span className="rounded-full border border-stone-200 bg-white/70 px-3 py-1">Showing {photos.length} on page {page}</span>}
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-6">
@@ -86,7 +100,7 @@ export function PhotoGallery({ photos }: { photos: GalleryPhoto[] }) {
           >
             <button type="button" onClick={() => setActiveIndex(index)} className="block w-full text-left focus:outline-none focus:ring-2 focus:ring-[#8fa58f]/40">
               <div className="aspect-square overflow-hidden bg-[#d6dfc9]/45">
-                <PlantImage src={photo} alt={photo.caption || photo.plantId} className="transition duration-300 group-hover:scale-[1.04]" />
+                <PlantImage src={photo} alt={photo.caption || photo.plantId} className="transition duration-300 group-hover:scale-[1.04]" loading={index < 8 ? 'eager' : 'lazy'} />
               </div>
             </button>
             <div className="grid gap-2 p-2.5">
@@ -142,7 +156,7 @@ export function PhotoGallery({ photos }: { photos: GalleryPhoto[] }) {
               {isImageHiddenByModeration(activePhoto) ? (
                 <ModeratedImagePlaceholder status={activePhoto.moderationStatus} className="max-h-full max-w-full rounded-lg border border-white/15 p-10 shadow-2xl" />
               ) : (
-                <img src={activePhoto.path} alt={activePhoto.caption || activePhoto.plantId} className="max-h-full max-w-full object-contain shadow-2xl" />
+                <img src={activePhoto.path} alt={activePhoto.caption || activePhoto.plantId} decoding="async" className="max-h-full max-w-full object-contain shadow-2xl" />
               )}
             </div>
             <div className="border-t border-white/10 bg-black/35 p-4 backdrop-blur">
@@ -161,6 +175,16 @@ export function PhotoGallery({ photos }: { photos: GalleryPhoto[] }) {
                 </Link>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {pageHref && pageCount > 1 && (
+        <div className="mt-5 flex items-center justify-between gap-3 text-sm">
+          <span className="text-stone-600">Page {page} of {pageCount}</span>
+          <div className="flex gap-2">
+            {page > 1 && <Link href={pageHref(page - 1)} className="rounded-md border border-stone-300 bg-white/70 px-3 py-1.5 font-semibold">Previous</Link>}
+            {page < pageCount && <Link href={pageHref(page + 1)} className="rounded-md border border-stone-300 bg-white/70 px-3 py-1.5 font-semibold">Next</Link>}
           </div>
         </div>
       )}

@@ -14,6 +14,7 @@ import { descendantLocationIds } from '@/lib/locations'
 
 const control = 'rounded-md border border-stone-300 bg-[#fffdf7] px-3 py-2 text-sm shadow-inner shadow-stone-200/30 outline-none focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
 const contains = (value: string) => ({ contains: value, mode: 'insensitive' as const })
+const SEARCH_RESULT_LIMIT = 80
 
 export default async function SearchPage({
   searchParams,
@@ -89,55 +90,90 @@ export default async function SearchPage({
       }
     : {}
 
-  const instances = await prisma.plantInstance.findMany({
-    where: {
-      AND: [
-        status ? { status } : {},
-        { collectionId: collection.id },
-        type ? { instanceType: type } : {},
-        sport ? { sportStatus: sport } : {},
-        selectedTagIds.length ? { plantDefinition: tagWhere } : {},
-        q
-          ? {
-              OR: [
-                { plantId: contains(q) },
-                ...(matchingLocationIds.length ? [{ currentLocationId: { in: Array.from(new Set(matchingLocationIds)) } }] : []),
-                { source: contains(q) },
-                { distributor: contains(q) },
-                { stockNumber: contains(q) },
-                { acquisitionLabel: contains(q) },
-                { currentSubstrate: { is: { OR: [
-                  { receivedSubstrateDescription: contains(q) },
-                  { notes: contains(q) },
-                  { recipeVersion: { recipe: { name: contains(q) } } },
-                  { recipeVersion: { components: { some: { component: { name: contains(q) } } } } },
-                ] } } },
-                { acquisitionRecordLinks: { some: { acquisitionRecord: { OR: [
-                  { distributor: { name: contains(q) } },
-                  { distributorOutlet: { name: contains(q) } },
-                  { seller: { OR: [{ name: contains(q) }, { websiteUrl: contains(q) }] } },
-                  { sellerStorefront: { OR: [{ handleOrName: contains(q) }, { profileUrl: contains(q) }, { salesChannelType: { name: contains(q) } }] } },
-                  { sources: { some: { OR: [{ role: contains(q) }, { source: { OR: [{ name: contains(q) }, { websiteUrl: contains(q) }] } }] } } },
-                ] } } } },
-                { plantDefinition: { AND: [definitionSearch, tagWhere] } },
-              ],
-            }
-          : {},
-      ],
-    },
-    include: { plantDefinition: { include: { aliases: true, tags: { include: { plantTag: true } } } }, currentLocation: true, currentSubstrate: { include: { recipeVersion: { include: { recipe: true } } } }, mergeConstituent: { include: { merge: { include: { survivingPlantInstance: true } } } } },
-    orderBy: { plantId: 'asc' },
-  })
-
-  const defs = await prisma.plantDefinition.findMany({
-    where: { AND: [{ OR: [{ collectionId: collection.id }, { collectionId: null, isValidated: true }] }, definitionSearch, tagWhere] },
-    include: {
-      aliases: { orderBy: { name: 'asc' } },
-      _count: { select: { instances: true } },
-      tags: { include: { plantTag: true } },
-    },
-    orderBy: [{ isValidated: 'desc' }, { genus: 'asc' }, { species: 'asc' }, { cultivarName: 'asc' }],
-  })
+  const instanceWithCollectionWhere = {
+    AND: [
+      status ? { status } : {},
+      { collectionId: collection.id },
+      type ? { instanceType: type } : {},
+      sport ? { sportStatus: sport } : {},
+      selectedTagIds.length ? { plantDefinition: tagWhere } : {},
+      q
+        ? {
+            OR: [
+              { plantId: contains(q) },
+              ...(matchingLocationIds.length ? [{ currentLocationId: { in: Array.from(new Set(matchingLocationIds)) } }] : []),
+              { source: contains(q) },
+              { distributor: contains(q) },
+              { stockNumber: contains(q) },
+              { acquisitionLabel: contains(q) },
+              { currentSubstrate: { is: { OR: [
+                { receivedSubstrateDescription: contains(q) },
+                { notes: contains(q) },
+                { recipeVersion: { recipe: { name: contains(q) } } },
+                { recipeVersion: { components: { some: { component: { name: contains(q) } } } } },
+              ] } } },
+              { acquisitionRecordLinks: { some: { acquisitionRecord: { OR: [
+                { distributor: { name: contains(q) } },
+                { distributorOutlet: { name: contains(q) } },
+                { seller: { OR: [{ name: contains(q) }, { websiteUrl: contains(q) }] } },
+                { sellerStorefront: { OR: [{ handleOrName: contains(q) }, { profileUrl: contains(q) }, { salesChannelType: { name: contains(q) } }] } },
+                { sources: { some: { OR: [{ role: contains(q) }, { source: { OR: [{ name: contains(q) }, { websiteUrl: contains(q) }] } }] } } },
+              ] } } } },
+              { plantDefinition: { AND: [definitionSearch, tagWhere] } },
+            ],
+          }
+        : {},
+    ],
+  }
+  const definitionWithCollectionWhere = { AND: [{ OR: [{ collectionId: collection.id }, { collectionId: null, isValidated: true }] }, definitionSearch, tagWhere] }
+  const [instances, totalInstances, defs, totalDefinitions] = await Promise.all([
+    prisma.plantInstance.findMany({
+      where: instanceWithCollectionWhere,
+      select: {
+        id: true,
+        plantId: true,
+        status: true,
+        propagationDate: true,
+        acquisitionDate: true,
+        plantDefinition: {
+          select: { genus: true, species: true, hybridNotation: true, cultivarName: true, authority: true, provisionalTaxon: true, identificationStatus: true },
+        },
+        currentSubstrate: {
+          select: {
+            substrateMode: true,
+            recipeVersion: { select: { versionNumber: true, recipe: { select: { name: true } } } },
+          },
+        },
+        mergeConstituent: { select: { merge: { select: { survivingPlantInstanceId: true, survivingPlantInstance: { select: { plantId: true } } } } } },
+      },
+      orderBy: { plantId: 'asc' },
+      take: SEARCH_RESULT_LIMIT,
+    }),
+    prisma.plantInstance.count({ where: instanceWithCollectionWhere }),
+    prisma.plantDefinition.findMany({
+      where: definitionWithCollectionWhere,
+      select: {
+        id: true,
+        isValidated: true,
+        genus: true,
+        species: true,
+        hybridNotation: true,
+        cultivarName: true,
+        authority: true,
+        provisionalTaxon: true,
+        identificationStatus: true,
+        confidence: true,
+        aliases: { select: { name: true }, orderBy: { name: 'asc' }, take: 8 },
+        _count: { select: { instances: true } },
+        tags: {
+          select: { plantTag: { select: { id: true, name: true, icon: true, colorToken: true, publicVisible: true, active: true } } },
+        },
+      },
+      orderBy: [{ isValidated: 'desc' }, { genus: 'asc' }, { species: 'asc' }, { cultivarName: 'asc' }],
+      take: SEARCH_RESULT_LIMIT,
+    }),
+    prisma.plantDefinition.count({ where: definitionWithCollectionWhere }),
+  ])
   const treatmentResults = q && canSearchTreatments ? await prisma.treatmentDefinition.findMany({
     where: { collectionId: collection.id, OR: [{ name: contains(q) }, { description: contains(q) }, { targetSummary: contains(q) }, { instructions: contains(q) }, { products: { some: { product: { OR: [{ name: contains(q) }, { manufacturer: contains(q) }, { activeIngredient: contains(q) }] } } } }, { applications: { some: { notes: contains(q) } } }] },
     include: { products: { include: { product: true } }, conditionTypes: true, _count: { select: { applications: true, planSteps: true } } }, orderBy: { name: 'asc' }, take: 50,
@@ -201,6 +237,7 @@ export default async function SearchPage({
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <h3 className="mb-3 font-bold">Plant instances</h3>
+          <p className="mb-2 text-xs text-stone-600">Showing {instances.length} of {totalInstances} match{totalInstances === 1 ? '' : 'es'}.</p>
           {instances.map((instance) => (
             <div key={instance.id} className="flex flex-wrap items-center justify-between gap-3 border-t border-stone-200 py-2 text-sm">
               <p className="min-w-0">
@@ -224,6 +261,7 @@ export default async function SearchPage({
         </Card>
         <Card>
           <h3 className="mb-3 font-bold">Plant definitions</h3>
+          <p className="mb-2 text-xs text-stone-600">Showing {defs.length} of {totalDefinitions} match{totalDefinitions === 1 ? '' : 'es'}.</p>
           {defs.map((definition) => (
             <div key={definition.id} className="border-t border-stone-200 py-2 text-sm">
               <p>
