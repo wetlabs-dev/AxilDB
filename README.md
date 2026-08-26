@@ -196,6 +196,7 @@ Production is managed with Docker Compose:
 - `app`: Next.js production server exposed internally on port 3000.
 - `reminders`: scheduled worker that checks for due reminders, sends opt-out-aware care queue digest emails, and sends email through the configured SMTP provider.
 - `image-moderation`: scheduled worker that checks newly uploaded images with OpenAI Moderation first, hides unsafe images pending server-admin review, and runs a separate plant-content vision check only for images that pass the safety layer.
+- `ai-curator`: scheduled worker that seeds and processes AI Curator jobs for enabled collections under the server-admin model, retry, expiry, and budget settings.
 - `events`: scheduled worker that atomically claims queued domain events, invokes registered consumers, retries failures with bounded exponential backoff, recovers stale claims, and dead-letters events after the configured attempt limit.
 - `metrics`: scheduled worker that samples best-effort server metrics and collection storage estimates for the server dashboard, opens/resolves lightweight server incidents when thresholds are crossed, and sends rate-limited server health emails to verified server admins when health is degraded.
 - `backups`: scheduled worker that processes server-admin sitewide backup requests into timestamped backup folders.
@@ -598,6 +599,7 @@ AXILDB_DEFAULT_TIMEZONE=America/New_York
 REMINDER_WORKER_INTERVAL_SECONDS=300
 METRICS_WORKER_INTERVAL_SECONDS=300
 IMAGE_MODERATION_WORKER_INTERVAL_SECONDS=180
+AI_CURATOR_WORKER_INTERVAL_SECONDS=120
 AXILDB_EVENT_ENGINE_ENABLED=true
 EVENT_WORKER_INTERVAL_SECONDS=15
 EVENT_WORKER_BATCH_SIZE=50

@@ -113,6 +113,27 @@ services:
     volumes:
       - ./public/uploads:/app/public/uploads
     command: sh -c "while true; do npm run images:moderate; sleep $${IMAGE_MODERATION_WORKER_INTERVAL_SECONDS:-180}; done"
+  ai-curator:
+    build:
+      context: .
+      target: builder
+    restart: unless-stopped
+    env_file:
+      - path: ./.env
+        required: false
+      - path: /etc/axildb/axildb.env
+        required: false
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      TZ: ${TZ:-America/New_York}
+      AXILDB_DEFAULT_TIMEZONE: ${AXILDB_DEFAULT_TIMEZONE:-America/New_York}
+      DATABASE_URL: postgresql://plants:plants@db:5432/axildb?schema=public
+      NEXT_PUBLIC_APP_URL: https://app.axildb.com
+    command: sh -c "while true; do npm run ai-curator:process; sleep $${AI_CURATOR_WORKER_INTERVAL_SECONDS:-120}; done"
   events:
     build:
       context: .

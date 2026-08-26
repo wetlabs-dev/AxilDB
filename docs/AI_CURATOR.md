@@ -15,7 +15,7 @@ The dedicated dashboard is available at **Server Management -> AI Curator**.
 
 ## Worker Lifecycle
 
-The worker runs one wake cycle at a time through `npm run ai-curator:process`.
+The worker runs one wake cycle at a time through `npm run ai-curator:process`. In Docker Compose deployments, the `ai-curator` service repeats that command every `AI_CURATOR_WORKER_INTERVAL_SECONDS` seconds, defaulting to 120 seconds.
 
 1. Load global Curator settings.
 2. Skip when the service is disabled.
@@ -27,7 +27,7 @@ The worker runs one wake cycle at a time through `npm run ai-curator:process`.
 8. Mark the job completed, deferred, waiting for human, cancelled, skipped, or expired.
 9. Record the worker run and sleep until the scheduler wakes it again.
 
-Default cadence is every 2 minutes, with concurrency 1.
+Default cadence is every 2 minutes, with concurrency 1. Enabling AI Curator in the UI only changes database settings; the scheduled worker service must also be running before jobs are created.
 
 ## Job Lifecycle
 
