@@ -13,7 +13,7 @@ const TERMINAL_JOB_STATUSES = ['COMPLETED', 'SKIPPED', 'CANCELLED', 'EXPIRED']
 const SIMPLE_ACCEPT_FIELDS = ['description', 'authority', 'wikipediaUrl', 'inaturalistUrl', 'powoUrl', 'gbifUrl'] as const
 
 type CuratorPhase = 'ENRICHMENT' | 'REVIEW' | 'STEWARDSHIP'
-type CuratorJobInput = {
+export type CuratorJobInput = {
   collectionId: string
   plantDefinitionId?: string | null
   phase: CuratorPhase
@@ -95,6 +95,16 @@ function estimatedJobCost(model: string, targetField?: string | null) {
   return estimateAiCostDollars(1800, outputTokens, model)
 }
 
+export function curatorJobScope(input: Pick<CuratorJobInput, 'collectionId' | 'plantDefinitionId' | 'targetEntityType' | 'targetEntityId' | 'targetField'>) {
+  const plantDefinitionId = input.plantDefinitionId || null
+  return {
+    plantDefinitionId,
+    targetEntityType: input.targetEntityType || (plantDefinitionId ? 'PLANT_DEFINITION' : 'COLLECTION'),
+    targetEntityId: input.targetEntityId || plantDefinitionId || input.collectionId,
+    targetField: input.targetField || null,
+  }
+}
+
 export async function ensureAiCuratorSettings(prisma: PrismaClient) {
   return prisma.aiCuratorSettings.upsert({
     where: { id: SETTINGS_ID },
@@ -134,15 +144,16 @@ export function curatorPriorityScore(input: {
 }
 
 async function hasDuplicateWork(prisma: PrismaClient, input: CuratorJobInput, rejectedCooldownDays: number) {
+  const scope = curatorJobScope(input)
   const activeJob = await prisma.aiCuratorJob.findFirst({
     where: {
       collectionId: input.collectionId,
       jobType: input.jobType,
       phase: input.phase,
-      plantDefinitionId: input.plantDefinitionId || null,
-      targetEntityType: input.targetEntityType || null,
-      targetEntityId: input.targetEntityId || null,
-      targetField: input.targetField || null,
+      plantDefinitionId: scope.plantDefinitionId,
+      targetEntityType: scope.targetEntityType,
+      targetEntityId: scope.targetEntityId,
+      targetField: scope.targetField,
       status: { in: ACTIVE_JOB_STATUSES },
     },
     select: { id: true },
@@ -152,9 +163,9 @@ async function hasDuplicateWork(prisma: PrismaClient, input: CuratorJobInput, re
   const pendingSuggestion = await prisma.aiCuratorSuggestion.findFirst({
     where: {
       collectionId: input.collectionId,
-      plantDefinitionId: input.plantDefinitionId || null,
+      plantDefinitionId: scope.plantDefinitionId,
       phase: input.phase,
-      targetField: input.targetField || null,
+      targetField: scope.targetField,
       status: 'PENDING',
       OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
     },
@@ -165,9 +176,9 @@ async function hasDuplicateWork(prisma: PrismaClient, input: CuratorJobInput, re
   const recentlyRejected = await prisma.aiCuratorSuggestion.findFirst({
     where: {
       collectionId: input.collectionId,
-      plantDefinitionId: input.plantDefinitionId || null,
+      plantDefinitionId: scope.plantDefinitionId,
       phase: input.phase,
-      targetField: input.targetField || null,
+      targetField: scope.targetField,
       status: 'REJECTED',
       reviewedAt: { gt: addDays(new Date(), -rejectedCooldownDays) },
     },
@@ -178,26 +189,32 @@ async function hasDuplicateWork(prisma: PrismaClient, input: CuratorJobInput, re
 
 export async function enqueueAiCuratorJob(prisma: PrismaClient, input: CuratorJobInput) {
   const settings = await ensureAiCuratorSettings(prisma)
+  const scope = curatorJobScope(input)
   if (await hasDuplicateWork(prisma, input, Number(settings.rejectedSuggestionCooldownDays || 90))) return null
-  return prisma.aiCuratorJob.create({
-    data: {
-      collectionId: input.collectionId,
-      plantDefinitionId: input.plantDefinitionId || null,
-      phase: input.phase,
-      jobType: input.jobType,
-      targetEntityType: input.targetEntityType || (input.plantDefinitionId ? 'PLANT_DEFINITION' : 'COLLECTION'),
-      targetEntityId: input.targetEntityId || input.plantDefinitionId || input.collectionId,
-      targetField: input.targetField || null,
-      reason: input.reason,
-      priority: input.priority,
-      dataHash: input.dataHash,
-      estimatedCostDollars: estimatedJobCost(settings.model, input.targetField).toFixed(6),
-      maxAttempts: settings.maxAttempts,
-      model: settings.model,
-      promptVersion: settings.promptVersion,
-      expiresAt: suggestionExpiry(settings),
-    },
-  })
+  try {
+    return await prisma.aiCuratorJob.create({
+      data: {
+        collectionId: input.collectionId,
+        plantDefinitionId: scope.plantDefinitionId,
+        phase: input.phase,
+        jobType: input.jobType,
+        targetEntityType: scope.targetEntityType,
+        targetEntityId: scope.targetEntityId,
+        targetField: scope.targetField,
+        reason: input.reason,
+        priority: input.priority,
+        dataHash: input.dataHash,
+        estimatedCostDollars: estimatedJobCost(settings.model, scope.targetField).toFixed(6),
+        maxAttempts: settings.maxAttempts,
+        model: settings.model,
+        promptVersion: settings.promptVersion,
+        expiresAt: suggestionExpiry(settings),
+      },
+    })
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') return null
+    throw error
+  }
 }
 
 function jobsForCompleteness(collectionId: string, definition: any, completeness: PlantDefinitionCompleteness, settings: any, manualBoost = false): CuratorJobInput[] {

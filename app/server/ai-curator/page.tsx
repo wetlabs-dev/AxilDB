@@ -252,7 +252,10 @@ export default async function AiCuratorPage({
           <div>
             <h4 className="text-sm font-bold uppercase tracking-[0.14em] text-stone-500">Recent errors</h4>
             <div className="mt-2 grid gap-2">
-              {dashboard.recentErrors.length === 0 && <p className="text-sm text-stone-600">No recent Curator blockers.</p>}
+              {dashboard.health.recentErrors.length === 0 && dashboard.recentErrors.length === 0 && <p className="text-sm text-stone-600">No recent Curator blockers.</p>}
+              {dashboard.health.recentErrors.map((error, index) => (
+                <p key={`worker-${index}`} className="rounded-lg border border-red-200 bg-red-50/80 p-2 text-sm text-red-950">Worker failure: {error}</p>
+              ))}
               {dashboard.recentErrors.map((error, index) => (
                 <p key={`${error.updatedAt.toISOString()}-${index}`} className="rounded-lg border border-amber-200 bg-amber-50/55 p-2 text-sm text-amber-950">{error.blockingReason}</p>
               ))}

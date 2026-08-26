@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { aiModelPricing, estimateAiCostDollars } from '../lib/ai-pricing'
-import { canApplyCuratorSuggestion, curatorPriorityScore, suggestedScalarValue } from '../lib/ai-curator'
+import { canApplyCuratorSuggestion, curatorJobScope, curatorPriorityScore, suggestedScalarValue } from '../lib/ai-curator'
 
 const baseline = curatorPriorityScore({
   completenessScore: 70,
@@ -31,5 +31,24 @@ assert.equal(canApplyCuratorSuggestion('description'), true)
 assert.equal(canApplyCuratorSuggestion('husbandry'), false)
 assert.equal(suggestedScalarValue({ value: 'Begonia research draft' }), 'Begonia research draft')
 assert.equal(suggestedScalarValue({ value: '   ' }), null)
+assert.deepEqual(curatorJobScope({
+  collectionId: 'collection-1',
+  plantDefinitionId: 'definition-1',
+  targetField: 'taxonomy',
+}), {
+  plantDefinitionId: 'definition-1',
+  targetEntityType: 'PLANT_DEFINITION',
+  targetEntityId: 'definition-1',
+  targetField: 'taxonomy',
+})
+assert.deepEqual(curatorJobScope({
+  collectionId: 'collection-1',
+  targetField: 'stewardship',
+}), {
+  plantDefinitionId: null,
+  targetEntityType: 'COLLECTION',
+  targetEntityId: 'collection-1',
+  targetField: 'stewardship',
+})
 
 console.log('AI Curator checks passed.')
