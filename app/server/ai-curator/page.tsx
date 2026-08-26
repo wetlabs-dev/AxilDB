@@ -4,6 +4,7 @@ import { requireServerAdmin } from '@/lib/auth'
 import { aiCuratorDashboard, aiCuratorReviewQueue, canApplyCuratorSuggestion } from '@/lib/ai-curator'
 import { prisma } from '@/lib/prisma'
 import { formatDateTime } from '@/lib/time'
+import { plantName } from '@/lib/utils'
 
 function money(value: unknown) {
   return `$${(Number(value) || 0).toFixed(2)}`
@@ -161,12 +162,17 @@ export default async function AiCuratorPage({
               <div key={job.id} className="rounded-lg border border-amber-200 bg-amber-50/55 p-3">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <p className="font-semibold">{job.plantDefinition ? job.plantDefinition.genus : job.collection.name}</p>
+                    <p className="font-semibold">{job.plantDefinition ? plantName(job.plantDefinition) : job.collection.name}</p>
                     <p className="text-sm text-amber-950">{job.blockingReason}</p>
                     {job.humanActionRequired && <p className="mt-1 text-sm text-stone-700">Suggested action: {job.humanActionRequired}</p>}
                     {job.retryConditions && <p className="mt-1 text-xs text-stone-600">Retry when: {job.retryConditions}</p>}
                   </div>
                   <div className="flex flex-wrap gap-2">
+                    {job.plantDefinitionId && (
+                      <LinkButton href={`/c/${job.collection.slug}/plants/${job.plantDefinitionId}/edit`} className="px-3 py-1.5 text-xs">
+                        Open definition
+                      </LinkButton>
+                    )}
                     <form action={resolveAiCuratorJob}>
                       <input type="hidden" name="jobId" value={job.id} />
                       <input type="hidden" name="action" value="RETRY" />
