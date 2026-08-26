@@ -255,6 +255,7 @@ model Collection {
   isDefault                  Boolean   @default(false)
   aiFeaturesEnabled          Boolean   @default(true)
   aiBriefingEnabled          Boolean   @default(false)
+  aiCuratorEnabled           Boolean   @default(false)
   acquisitionVisibility      String    @default("PRIVATE")
   wishlistIntro              String?
   wishlistPublicSettingsJson Json?
@@ -275,6 +276,8 @@ model Collection {
   collectionRequests                  CollectionRequest[]
   aiAccessRequests                    AiAccessRequest[]
   aiUsageEvents                       AiUsageEvent[]
+  aiCuratorJobs                       AiCuratorJob[]
+  aiCuratorSuggestions                AiCuratorSuggestion[]
   briefings                           CollectionBriefing[]
   sunshine                            Sunshine[]
   auditLogs                           AuditLog[]
@@ -368,6 +371,7 @@ model Collection {
   @@index([isDefault])
   @@index([aiFeaturesEnabled])
   @@index([aiBriefingEnabled])
+  @@index([aiCuratorEnabled])
   @@index([acquisitionVisibility])
 }
 
@@ -661,6 +665,116 @@ model AiUsageEvent {
   @@index([feature])
   @@index([success])
   @@index([createdAt])
+}
+
+model AiCuratorSettings {
+  id                              String   @id @default("global")
+  enabled                         Boolean  @default(false)
+  model                           String   @default("gpt-5.4-mini")
+  temperature                     Float    @default(0.2)
+  reasoningEffort                 String   @default("low")
+  maxTokens                       Int      @default(1200)
+  dailyBudgetDollars              Decimal  @default(5.00)
+  monthlyBudgetDollars            Decimal  @default(100.00)
+  softLimitPercent                Int      @default(80)
+  hardLimitPercent                Int      @default(100)
+  concurrency                     Int      @default(1)
+  cadenceMinutes                  Int      @default(2)
+  timeSliceSeconds                Int      @default(75)
+  maxAttempts                     Int      @default(3)
+  suggestionExpiryDays            Int      @default(90)
+  rejectedSuggestionCooldownDays  Int      @default(90)
+  promptVersion                   String   @default("ai-curator-v1")
+  createdAt                       DateTime @default(now())
+  updatedAt                       DateTime @updatedAt
+}
+
+model AiCuratorJob {
+  id                  String    @id @default(cuid())
+  jobType             String
+  priority            Float     @default(0)
+  phase               String
+  collectionId        String
+  plantDefinitionId   String?
+  targetEntityType    String?
+  targetEntityId      String?
+  targetField         String?
+  status              String    @default("QUEUED")
+  claimedBy           String?
+  claimedAt           DateTime?
+  completedAt         DateTime?
+  attempts            Int       @default(0)
+  lastAttemptAt       DateTime?
+  nextRetryAt         DateTime?
+  maxAttempts         Int       @default(3)
+  estimatedCostDollars Decimal  @default(0.00)
+  actualCostDollars   Decimal?
+  model               String?
+  promptVersion       String?
+  confidence          Float?
+  reason              String?
+  blockingReason      String?
+  humanActionRequired String?
+  retryConditions     String?
+  resultSummary       String?
+  dataHash            String?
+  expiresAt           DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  collection      Collection           @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  plantDefinition PlantDefinition?     @relation(fields: [plantDefinitionId], references: [id], onDelete: Cascade)
+  suggestion      AiCuratorSuggestion? @relation("AiCuratorJobSuggestion")
+
+  @@index([collectionId, status, priority])
+  @@index([phase])
+  @@index([jobType])
+  @@index([plantDefinitionId])
+  @@index([status, nextRetryAt])
+  @@index([claimedAt])
+  @@index([createdAt])
+  @@unique([collectionId, jobType, phase, plantDefinitionId, targetEntityType, targetEntityId, targetField, status], map: "AiCuratorJob_active_scope_key")
+}
+
+model AiCuratorSuggestion {
+  id                   String    @id @default(cuid())
+  collectionId         String
+  plantDefinitionId    String?
+  jobId                String?   @unique
+  phase                String
+  suggestionType       String
+  targetEntityType     String?
+  targetEntityId       String?
+  targetField          String?
+  status               String    @default("PENDING")
+  title                String
+  currentValue         Json?
+  suggestedValue       Json
+  reasoning            String
+  confidence           Float?
+  supportingReferences Json?
+  promptVersion        String?
+  model                String?
+  estimatedCostDollars Decimal?
+  actualCostDollars    Decimal?
+  sourceDataHash       String?
+  expiresAt            DateTime?
+  reviewedAt           DateTime?
+  reviewedByUserId     String?
+  reviewNote           String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  collection      Collection        @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  plantDefinition PlantDefinition?  @relation(fields: [plantDefinitionId], references: [id], onDelete: Cascade)
+  job             AiCuratorJob?     @relation("AiCuratorJobSuggestion", fields: [jobId], references: [id], onDelete: SetNull)
+
+  @@index([collectionId, status, createdAt])
+  @@index([plantDefinitionId, status])
+  @@index([phase])
+  @@index([suggestionType])
+  @@index([targetField])
+  @@index([expiresAt])
 }
 
 model ServerMetricSnapshot {
@@ -1351,6 +1465,8 @@ model PlantDefinition {
   preferredSellers                PlantDefinitionPreferredSeller[]
   preferredDistributors           PlantDefinitionPreferredDistributor[]
   substrateRecommendations        PlantDefinitionSubstrateRecommendation[]
+  aiCuratorJobs                   AiCuratorJob[]
+  aiCuratorSuggestions            AiCuratorSuggestion[]
 
   @@index([collectionId])
   @@index([taxonomicAuthorityId])

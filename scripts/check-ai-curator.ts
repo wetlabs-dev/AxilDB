@@ -1,0 +1,35 @@
+import assert from 'node:assert/strict'
+import { aiModelPricing, estimateAiCostDollars } from '../lib/ai-pricing'
+import { canApplyCuratorSuggestion, curatorPriorityScore, suggestedScalarValue } from '../lib/ai-curator'
+
+const baseline = curatorPriorityScore({
+  completenessScore: 70,
+  category: 'references',
+  instanceCount: 1,
+  estimatedCostDollars: 0.01,
+})
+const highImpact = curatorPriorityScore({
+  completenessScore: 20,
+  category: 'husbandry',
+  instanceCount: 10,
+  estimatedCostDollars: 0.01,
+})
+const manuallyRequested = curatorPriorityScore({
+  completenessScore: 70,
+  category: 'references',
+  instanceCount: 1,
+  estimatedCostDollars: 0.01,
+  manualBoost: true,
+})
+
+assert.ok(highImpact > baseline, 'Lower-completeness, higher-instance work should rank above lower-value work.')
+assert.ok(manuallyRequested > baseline, 'Research Now jobs should be boosted above ordinary readiness jobs.')
+assert.ok(curatorPriorityScore({ completenessScore: 20, category: 'substrate', estimatedCostDollars: 0.01 }) < curatorPriorityScore({ completenessScore: 20, category: 'references', estimatedCostDollars: 0.01 }), 'Dependency readiness should penalize substrate work when the definition is too sparse.')
+assert.deepEqual(aiModelPricing('gpt-5.4-mini'), { inputPerMillion: 0.25, outputPerMillion: 2.00 })
+assert.equal(Number(estimateAiCostDollars(1_000_000, 1_000_000, 'gpt-5.4-mini').toFixed(2)), 2.25)
+assert.equal(canApplyCuratorSuggestion('description'), true)
+assert.equal(canApplyCuratorSuggestion('husbandry'), false)
+assert.equal(suggestedScalarValue({ value: 'Begonia research draft' }), 'Begonia research draft')
+assert.equal(suggestedScalarValue({ value: '   ' }), null)
+
+console.log('AI Curator checks passed.')

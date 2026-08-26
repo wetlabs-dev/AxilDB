@@ -1,3 +1,4 @@
+import { setCollectionAiCurator } from '@/app/ai-curator-actions'
 import { archiveCollection, permanentlyDeleteCollection, restoreCollection, setCollectionAiFeatures, setDefaultCollection } from '@/app/collection-actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { Button, Card, Field, LinkButton } from '@/components/ui'
@@ -72,6 +73,7 @@ export default async function ServerCollections() {
                   /c/{collection.slug} · {collection.visibility.toLowerCase()} · {collection.status.toLowerCase()}
                   {collection.isDefault ? ' · default' : ''}
                   {' · '}AI {collection.aiFeaturesEnabled ? 'enabled' : 'disabled'}
+                  {' · '}Curator {collection.aiCuratorEnabled ? 'enabled' : 'disabled'}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -86,6 +88,13 @@ export default async function ServerCollections() {
                   <input type="hidden" name="enabled" value={collection.aiFeaturesEnabled ? 'false' : 'true'} />
                   <Button className="bg-[#6d7f6d] px-3 py-1.5 hover:bg-[#536453]">
                     {collection.aiFeaturesEnabled ? 'Disable AI' : 'Enable AI'}
+                  </Button>
+                </form>
+                <form action={setCollectionAiCurator}>
+                  <input type="hidden" name="collectionId" value={collection.id} />
+                  <input type="hidden" name="enabled" value={collection.aiCuratorEnabled ? 'false' : 'true'} />
+                  <Button className="bg-[#3f6f52] px-3 py-1.5 hover:bg-[#31563f]">
+                    {collection.aiCuratorEnabled ? 'Disable Curator' : 'Enable Curator'}
                   </Button>
                 </form>
                 {collection.status === 'ACTIVE' && !collection.isDefault && (

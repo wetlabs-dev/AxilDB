@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { copyPlantDefinition, createPlantDefinition, followEntity, unfollowEntity } from '@/app/actions'
+import { requestAiCuratorResearchNow } from '@/app/ai-curator-actions'
 import { createPlantDefinitionShareRequest } from '@/app/transfer-actions'
 import { AddPanel, Button, Card, Field, HelpTooltip, TextArea, LinkButton, SuggestionDatalist } from '@/components/ui'
 import { ConfidenceSelect, PlantAliasFields } from '@/components/PlantAliasFields'
@@ -52,7 +53,7 @@ function referencePrefill(log: { resultJson: unknown }) {
 export default async function Plants({
   searchParams,
 }: {
-  searchParams: Promise<{ fromIdentification?: string; wishlist?: string; tag?: string | string[]; tagMode?: string; taxonomicAuthorityId?: string; authorityType?: string; registrationAuthority?: string; readiness?: string; missing?: string }>
+  searchParams: Promise<{ fromIdentification?: string; wishlist?: string; tag?: string | string[]; tagMode?: string; taxonomicAuthorityId?: string; authorityType?: string; registrationAuthority?: string; readiness?: string; missing?: string; curatorStatus?: string; curator?: string }>
 }) {
   const user = await getCurrentUser()
   const sp = await searchParams
@@ -69,8 +70,9 @@ export default async function Plants({
   const registrationAuthorityOnly = sp.registrationAuthority === '1'
   const readinessFilter = String(sp.readiness || '')
   const missingFilter = String(sp.missing || '')
+  const curatorStatusFilter = String(sp.curatorStatus || '')
   const sortKey = await sortPreference(user?.id, 'plants', 'nameAsc', plantSortOptions.map((option) => option.value))
-  const [plants, bodies, follows, activeTags, outgoingTransferConnections, completenessByDefinition] = await Promise.all([
+  const [plants, bodies, follows, activeTags, outgoingTransferConnections, completenessByDefinition, curatorSuggestionCounts, curatorWaitingCounts] = await Promise.all([
     prisma.plantDefinition.findMany({
       where: { ...collectionWhere,
         ...(authorityFilter ? { taxonomicAuthorityId: authorityFilter } : {}),
@@ -102,7 +104,19 @@ export default async function Plants({
         })
       : [],
     evaluatePlantDefinitionCompletenessBatch(prisma, { collectionId: collection.id }),
+    prisma.aiCuratorSuggestion.groupBy({
+      by: ['plantDefinitionId'],
+      where: { collectionId: collection.id, status: 'PENDING', plantDefinitionId: { not: null } },
+      _count: { _all: true },
+    }),
+    prisma.aiCuratorJob.groupBy({
+      by: ['plantDefinitionId'],
+      where: { collectionId: collection.id, status: 'WAITING_FOR_HUMAN', plantDefinitionId: { not: null } },
+      _count: { _all: true },
+    }),
   ])
+  const curatorSuggestionsByDefinitionId = new Map(curatorSuggestionCounts.map((row) => [row.plantDefinitionId, row._count._all]))
+  const curatorWaitingByDefinitionId = new Map(curatorWaitingCounts.map((row) => [row.plantDefinitionId, row._count._all]))
   const followsByDefinitionId = new Map(follows.map((follow) => [follow.entityId, follow]))
   const definitionSuggestions = {
     genus: rankedSuggestions(plants.map((plant) => plant.genus)),
@@ -157,7 +171,11 @@ export default async function Plants({
   }, {})
   const sortedPlants = plants.filter((plant) => {
     const completeness = completenessByDefinition.get(plant.id)
-    return completeness && completenessMatchesReadiness(completeness, readinessFilter) && completenessMatchesMissing(completeness, missingFilter)
+    const curatorMatch = !curatorStatusFilter
+      || (curatorStatusFilter === 'suggested' && (curatorSuggestionsByDefinitionId.get(plant.id) || 0) > 0)
+      || (curatorStatusFilter === 'waiting' && (curatorWaitingByDefinitionId.get(plant.id) || 0) > 0)
+      || (curatorStatusFilter === 'complete' && Boolean(completeness && completeness.overallScore >= 90) && (curatorSuggestionsByDefinitionId.get(plant.id) || 0) === 0 && (curatorWaitingByDefinitionId.get(plant.id) || 0) === 0)
+    return completeness && completenessMatchesReadiness(completeness, readinessFilter) && completenessMatchesMissing(completeness, missingFilter) && curatorMatch
   }).sort((left, right) => {
     const leftCompleteness = completenessByDefinition.get(left.id)?.overallScore || 0
     const rightCompleteness = completenessByDefinition.get(right.id)?.overallScore || 0
@@ -262,13 +280,16 @@ export default async function Plants({
         </AddPanel>
       )}
 
+      {sp.curator === 'queued' && <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900">AI Curator research was queued for that plant definition.</p>}
+
       <Card>
-        <form method="get" className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1fr_auto] lg:items-end">
+        <form method="get" className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1fr_1fr_auto] lg:items-end">
           <label className="grid gap-1 text-sm font-medium">Taxonomic Authority<select className={selectClass} name="taxonomicAuthorityId" defaultValue={authorityFilter}><option value="">All authorities</option>{bodies.map((body) => <option key={body.id} value={body.id}>{body.name}</option>)}</select></label>
           <label className="grid gap-1 text-sm font-medium">Authority type<select className={selectClass} name="authorityType" defaultValue={authorityTypeFilter}><option value="">All types</option>{TAXONOMIC_AUTHORITY_TYPES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
           <label className="flex items-center gap-2 rounded-md border border-stone-300 px-3 py-2 text-sm"><input type="checkbox" name="registrationAuthority" value="1" defaultChecked={registrationAuthorityOnly} />Registration Authorities only</label>
           <label className="grid gap-1 text-sm font-medium">Readiness<select className={selectClass} name="readiness" defaultValue={readinessFilter}><option value="">All readiness states</option><option value="COMPLETE">Complete</option><option value="MOSTLY_COMPLETE">Mostly complete</option><option value="NEEDS_WORK">Needs work</option><option value="SPARSE">Sparse</option><option value="MINIMAL">Minimal</option><option value="PROVISIONAL">Provisional</option></select></label>
           <label className="grid gap-1 text-sm font-medium">Missing data<select className={selectClass} name="missing" defaultValue={missingFilter}><option value="">Any category</option><option value="images">Missing image</option><option value="husbandry">Missing husbandry</option><option value="fertilizer">Missing fertilizer</option><option value="substrate">Missing substrate</option><option value="authority">Missing authority</option><option value="references">Missing references</option><option value="tags">Missing tags</option></select></label>
+          <label className="grid gap-1 text-sm font-medium">AI Curator<select className={selectClass} name="curatorStatus" defaultValue={curatorStatusFilter}><option value="">Any Curator state</option><option value="suggested">AI suggested</option><option value="waiting">Waiting for Human</option><option value="complete">Curator complete</option></select></label>
           <Button>Apply filters</Button>
         </form>
         <p className="mt-2 text-xs text-stone-600">Definition completeness reflects how much applicable AxilDB metadata is populated. It does not guarantee taxonomic correctness.</p>
@@ -337,6 +358,12 @@ export default async function Plants({
                       {followCountByDefinitionId.get(plant.id) || 0} follower{(followCountByDefinitionId.get(plant.id) || 0) === 1 ? '' : 's'}
                     </p>
                     <PlantDefinitionCompletenessBar result={completeness} className="mt-3" />
+                    {(curatorSuggestionsByDefinitionId.get(plant.id) || 0) > 0 && (
+                      <p className="mt-2 rounded-md border border-green-200 bg-green-50 px-2 py-1 text-xs font-semibold text-green-900">AI has prepared suggestions</p>
+                    )}
+                    {(curatorWaitingByDefinitionId.get(plant.id) || 0) > 0 && (
+                      <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-900">AI Curator is waiting for human input</p>
+                    )}
                   </div>
                   {(canEdit || canCreate) && (
                     <div className="flex shrink-0 flex-col gap-1">
@@ -344,6 +371,16 @@ export default async function Plants({
                         <Link className="plant-card-action rounded-md border px-2 py-1 text-center text-xs" href={collectionPath(collection.slug, `/plants/${plant.id}/edit`)}>
                           Edit
                         </Link>
+                      )}
+                      {canEdit && collection.aiFeaturesEnabled && collection.aiCuratorEnabled && (
+                        <form action={requestAiCuratorResearchNow}>
+                          <input type="hidden" name="plantDefinitionId" value={plant.id} />
+                          <input type="hidden" name="collectionSlug" value={collection.slug} />
+                          <input type="hidden" name="back" value={collectionPath(collection.slug, '/plants')} />
+                          <button type="submit" className="plant-card-action w-full rounded-md border px-2 py-1 text-center text-xs">
+                            Research Now
+                          </button>
+                        </form>
                       )}
                       {canCreate && (
                         <form action={copyPlantDefinition}>

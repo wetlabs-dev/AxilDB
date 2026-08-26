@@ -125,6 +125,9 @@ export default async function CollectionSettingsPage({
           </div>
         )}
         <div className="mt-4 rounded-lg border border-stone-200 bg-white/50 p-3">
+          <p className="mb-3 text-sm font-medium text-stone-800">
+            AI Curator is {collection.aiCuratorEnabled ? 'enabled' : 'disabled'} for this collection.
+          </p>
           <label className={`flex items-start gap-2 text-sm ${collection.aiFeaturesEnabled ? 'text-stone-800' : 'text-stone-500'}`}>
             <input
               type="checkbox"

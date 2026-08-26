@@ -132,6 +132,8 @@ App route: `/plants`
 - Use Plant Tags to maintain reusable collection traits, then select multiple active tags in a Plant Definition form. Search can match any or all selected tags.
 - Review Magic Fill tag suggestions separately from taxonomy fields. Existing tags and proposed private tags require explicit selection, and proposed tags require a second creation confirmation.
 - Use the readiness filters to review complete, mostly complete, sparse, provisional, or category-specific incomplete definitions. Sort by completeness to work through the highest-value gaps first.
+- When AI Curator is enabled for the collection, use Research Now on a plant definition card to queue high-priority background research for that definition.
+- Filter by AI Suggested or Waiting for Human to find definitions with prepared Curator suggestions or blocked Curator jobs.
 - Open a definition to expand Definition Readiness. Its grouped checklist links directly to taxonomy, images, husbandry, substrate, tags, and validation sections.
 - Use Export CSV to include overall readiness, category scores, and missing critical or recommended items in an offline cleanup worksheet.
 
@@ -152,6 +154,7 @@ App route: `/plants`
 - Tag icons use AxilDB’s curated botanical icon set so they render consistently across devices.
 - Definition completeness is a weighted metadata-readiness measure, not a statement that the taxonomy is scientifically correct. Provisional identification and validation remain separate statuses.
 - Linked husbandry and approved specimen fallback images contribute appropriately. Magic Fill drafts contribute only after they are reviewed and saved.
+- AI Curator suggestions also do not count toward readiness until a human reviews and applies the accepted change.
 
 ### Warnings
 
@@ -753,6 +756,7 @@ App route: `/server`
 - Use Server Collections to create, archive, restore, or permanently delete collections.
 - Use Validated Definitions to review nominations and disputes, edit approved site-level reference definitions, and preserve reusable taxonomy outside any one collection.
 - Use Image Moderation to review censored uploads, override false alarms, remove images, or remove an image and block the uploader.
+- Use AI Curator to configure the autonomous botanical research worker, monitor daily/monthly spend, inspect queue health, resolve Waiting for Human jobs, and review suggestions grouped by plant definition.
 - Use Incident History to search/filter open or resolved incidents, inspect clustered memory/disk graph markers, create manual incidents, and attach notes or postmortem details.
 - Use Event Processing to review pending, processing, failed, and dead-letter counts; inspect processing attempts and safe payload details; retry failures; or mark an event ignored with a required reason.
 - Use Maintenance Mode before planned downtime so public visitors and normal users see a maintenance screen while server admins retain access.
@@ -767,6 +771,7 @@ App route: `/server`
 - Validated definitions are site-level records; they can be linked by collection specimens without making them collection-owned.
 - Image moderation is two-layered when enabled: unsafe-content moderation runs before plant-content vision analysis.
 - AI availability can be toggled per collection by server admins, and collection managers can request AI access.
+- AI Curator has separate global model, budget, cadence, retry, and expiry settings from Magic Fill. Collections also need their own Curator participation switch enabled before they produce jobs.
 - Incidents are durable operational records. Memory incidents open after three consecutive samples above warning or critical thresholds; disk incidents open on threshold crossing; metric incidents resolve automatically after three clear samples. Worker, SMTP, email backlog, AI, and moderation incidents are detected from durable worker/delivery records. Manual incidents remain until a server admin resolves them.
 - Domain events are immutable domain history, while Audit Log remains the security and administrative accountability record. Server-admin redaction records a new redaction event and hides the original payload without silently rewriting it.
 - Orphaned Image Cleanup only scans the upload image directory and re-checks database references immediately before deleting selected files.
@@ -776,5 +781,5 @@ App route: `/server`
 
 - Permanent collection deletion cascades collection-owned records. Archive first and verify backups before deleting.
 - Do not treat image moderation as a substitute for human review when a censored upload is disputed or unclear.
+- AI Curator never silently modifies plant data. Even accepted complex suggestions may require manual follow-up when no structured apply flow exists yet.
 - Back up before bulk orphaned-image deletion. Cleanup does not delete database records and does not touch labels, manuals, backups, or generated PDFs.
-

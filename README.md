@@ -11,6 +11,7 @@ It is designed for real collection work: messy taxonomy, acquisition names, alia
 - Multi-collection workspaces at `/c/[collectionSlug]`, with private/public visibility and collection-scoped memberships.
 - Plant definitions with genus, optional species epithet, hybrid notation, cultivar name, authority, taxonomic authority, registration number, confidence, provisional identity review, reference URLs, notes, and aliases. Blank species (an intentionally omitted epithet) remains distinct from `sp.` (an undetermined species).
 - Weighted Plant Definition readiness scoring across taxonomy, husbandry, references, images, Taxonomic Authorities, fertilizer, substrate, tags, and review state, with accessible card bars, actionable detail checklists, cleanup filters, sorting, and CSV fields.
+- AI Curator background service for autonomous Definition Readiness-driven enrichment, fact-checking, and collection stewardship jobs that create human-reviewable suggestions without silently changing plant data.
 - Collection and shared Taxonomic Authority records with authority type, official resources, structured taxonomic scope, publications, deterministic matching, diagnostics, manual overrides, and a collection-scoped metadata API.
 - Collection-scoped Plant Definition Tags with curated Lucide icons, categories, public visibility, archive/merge tools, inherited specimen display, any/all filtering, exports, and review-only Magic Fill suggestions.
 - Acquisition Pipeline for pre-accession research and wishlist intent on plant definitions, with structured upstream sources, reusable sellers and sales channels, observations, price analytics, and acquisition records that can create one or more Plant Instances.
@@ -88,6 +89,14 @@ Plant Definition Magic Fill receives only the active collection tag catalog and 
 Plant Definition cards show a thin completeness bar, percentage, and readiness label. The Plant Definitions page can sort by highest or lowest completeness and filter by readiness state or a missing category such as husbandry, image, fertilizer, substrate, authority, references, or tags. The definition edit page uses the same canonical evaluator for its expandable, actionable checklist. CSV exports include the overall score, status, missing critical/recommended items, and category scores.
 
 Completeness measures how much applicable AxilDB metadata is populated; it does not guarantee scientific or taxonomic correctness. Provisional identity remains a separate status even when care and reference data are otherwise thorough. Linked husbandry counts through its effective guide, an approved specimen photo provides partial image credit when no dedicated type image exists, and unsaved Magic Fill suggestions do not count. Site-level Validated Definitions use the same evaluator without being penalized for collection-local fertilizer, substrate, or tag data they cannot own.
+
+### AI Curator
+
+AI Curator is a server-admin controlled background service that continually wakes, seeds Definition Readiness work across enabled collections, processes bounded batches under dollar budgets, and sleeps. It progresses from enrichment jobs for missing definition data to holistic review of practically complete definitions and collection-level stewardship suggestions.
+
+Collections must have AI features and AI Curator participation enabled before they produce jobs. Plant Definition cards expose **Research Now**, which queues high-priority Curator work for that definition instead of running an immediate synchronous AI call. Pending suggestions are grouped by Plant Definition on **Server Management -> AI Curator** with Accept, Reject, and Edit then Accept review controls. Simple suggestions such as descriptions, author citations, and reference URLs can be applied by explicit acceptance; complex husbandry, substrate, fertilizer, tag, and stewardship suggestions are recorded for manual follow-up.
+
+Curator jobs never retry forever. Jobs that need human evidence or judgment become **Waiting for Human** with a problem, recommended action, and retry conditions. Daily/monthly budget estimates use centralized model pricing in `lib/ai-pricing.ts`. See [docs/AI_CURATOR.md](docs/AI_CURATOR.md) and [docs/BACKGROUND_SERVICES.md](docs/BACKGROUND_SERVICES.md).
 
 ### Taxonomic Authorities
 

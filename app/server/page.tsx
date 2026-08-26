@@ -277,6 +277,7 @@ export default async function ServerDashboard({
           <LinkButton href="/server/incidents">Incident History</LinkButton>
           <LinkButton href="/server/events">Event Processing</LinkButton>
           <LinkButton href="/server/image-moderation">Image Moderation</LinkButton>
+          <LinkButton href="/server/ai-curator">AI Curator</LinkButton>
           <LinkButton href="/server/orphaned-images">Orphaned Images</LinkButton>
           <LinkButton href="/server/collections">Collections</LinkButton>
           <LinkButton href="/server/users">Users</LinkButton>

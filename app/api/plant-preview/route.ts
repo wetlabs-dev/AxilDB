@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   const user = await getCurrentUser()
   const collection = await prisma.collection.findUnique({
     where: { slug: collectionSlug },
-    select: { id: true, name: true, slug: true, visibility: true, status: true, aiFeaturesEnabled: true, aiBriefingEnabled: true, acquisitionVisibility: true, wishlistIntro: true, wishlistPublicSettingsJson: true, showSourceProvenance: true, showDistributorIdentity: true, showDistributorOutlet: true, showSellerIdentity: true, showSellerStorefront: true, description: true },
+    select: { id: true, name: true, slug: true, visibility: true, status: true, aiFeaturesEnabled: true, aiBriefingEnabled: true, aiCuratorEnabled: true, acquisitionVisibility: true, wishlistIntro: true, wishlistPublicSettingsJson: true, showSourceProvenance: true, showDistributorIdentity: true, showDistributorOutlet: true, showSellerIdentity: true, showSellerStorefront: true, description: true },
   })
   if (!collection) return NextResponse.json({ error: 'Not found.' }, { status: 404 })
   const membership = user
