@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'crypto'
 import { Prisma, type PrismaClient } from '@prisma/client'
-import { evaluatePlantDefinitionCompletenessBatch, type CompletenessCategoryKey, type PlantDefinitionCompleteness } from '@/lib/plant-definition-completeness'
+import { evaluatePlantDefinitionCompletenessBatch, isUsableRepresentativeImagePhoto, UNUSABLE_REPRESENTATIVE_IMAGE_STATUSES, type CompletenessCategoryKey, type PlantDefinitionCompleteness } from '@/lib/plant-definition-completeness'
 import { tokenUsage } from '@/lib/ai-usage'
 import { estimateAiCostDollars, tokenUsageCostDollars } from '@/lib/ai-pricing'
 import { backgroundServiceHealth } from '@/lib/background-services'
@@ -11,6 +11,7 @@ const SETTINGS_ID = 'global'
 const ACTIVE_JOB_STATUSES = ['QUEUED', 'RUNNING', 'DEFERRED', 'WAITING_FOR_HUMAN']
 const TERMINAL_JOB_STATUSES = ['COMPLETED', 'SKIPPED', 'CANCELLED', 'EXPIRED']
 const SIMPLE_ACCEPT_FIELDS = ['description', 'authority', 'wikipediaUrl', 'inaturalistUrl', 'powoUrl', 'gbifUrl'] as const
+const IMAGE_HUMAN_BLOCK_REASON = 'AI Curator cannot create a reliable type image without a human-provided photograph.'
 
 type CuratorPhase = 'ENRICHMENT' | 'REVIEW' | 'STEWARDSHIP'
 export type CuratorJobInput = {
@@ -717,11 +718,88 @@ async function releaseLegacyTaxonomyHumanBlocks(prisma: PrismaClient) {
 
 function waitingForHumanForJob(job: any) {
   if (job.targetField === 'images') return {
-    blockingReason: 'AI Curator cannot create a reliable type image without a human-provided photograph.',
+    blockingReason: IMAGE_HUMAN_BLOCK_REASON,
     humanActionRequired: 'Upload or mark a representative type image for this plant definition.',
     retryConditions: 'Retry after a type image is attached or a specimen photo is marked as representative.',
   }
   return null
+}
+
+export const isUsableAiCuratorRepresentativePhoto = isUsableRepresentativeImagePhoto
+
+async function hasUsableRepresentativeImageForJob(prisma: PrismaClient, job: any) {
+  if (job.targetField !== 'images' || !job.plantDefinitionId) return false
+  const usablePhotoWhere = {
+    collectionId: job.collectionId,
+    nsfwFlagged: false,
+    moderationStatus: { notIn: UNUSABLE_REPRESENTATIVE_IMAGE_STATUSES },
+  }
+  const definitionTypePhoto = await prisma.photo.findFirst({
+    where: {
+      ...usablePhotoWhere,
+      entityType: 'PLANT_DEFINITION',
+      entityId: job.plantDefinitionId,
+      isType: true,
+    },
+    select: { id: true },
+  })
+  if (definitionTypePhoto) return true
+
+  const instanceIds = (await prisma.plantInstance.findMany({
+    where: { collectionId: job.collectionId, plantDefinitionId: job.plantDefinitionId },
+    select: { id: true },
+  })).map((instance) => instance.id)
+  if (!instanceIds.length) return false
+
+  const specimenRepresentativePhoto = await prisma.photo.findFirst({
+    where: {
+      ...usablePhotoWhere,
+      entityType: 'PLANT_INSTANCE',
+      entityId: { in: instanceIds },
+      OR: [{ isType: true }, { isCover: true }],
+    },
+    select: { id: true },
+  })
+  return Boolean(specimenRepresentativePhoto)
+}
+
+async function skipSatisfiedImageJob(prisma: PrismaClient, jobId: string) {
+  await prisma.aiCuratorJob.update({
+    where: { id: jobId },
+    data: {
+      status: 'SKIPPED',
+      completedAt: new Date(),
+      actualCostDollars: '0.000000',
+      blockingReason: null,
+      humanActionRequired: null,
+      retryConditions: null,
+      resultSummary: 'Skipped because a representative type image is already available.',
+    },
+  })
+}
+
+async function resolveSatisfiedImageHumanBlocks(prisma: PrismaClient) {
+  const jobs = await prisma.aiCuratorJob.findMany({
+    where: {
+      status: 'WAITING_FOR_HUMAN',
+      targetField: 'images',
+      blockingReason: IMAGE_HUMAN_BLOCK_REASON,
+      collection: { status: 'ACTIVE', aiFeaturesEnabled: true, aiCuratorEnabled: true },
+    },
+    select: {
+      id: true,
+      collectionId: true,
+      plantDefinitionId: true,
+      targetField: true,
+    },
+  })
+  let resolved = 0
+  for (const job of jobs) {
+    if (!(await hasUsableRepresentativeImageForJob(prisma, job))) continue
+    await skipSatisfiedImageJob(prisma, job.id)
+    resolved += 1
+  }
+  return { resolved }
 }
 
 async function callCuratorModel(settings: any, job: any, currentValue: unknown) {
@@ -839,6 +917,10 @@ async function claimNextJob(prisma: PrismaClient, workerId: string) {
 }
 
 async function processJob(prisma: PrismaClient, settings: any, job: any) {
+  if (job.targetField === 'images' && await hasUsableRepresentativeImageForJob(prisma, job)) {
+    await skipSatisfiedImageJob(prisma, job.id)
+    return { status: 'SKIPPED' as const, cost: 0 }
+  }
   const humanBlock = waitingForHumanForJob(job)
   if (humanBlock) {
     await prisma.aiCuratorJob.update({
@@ -939,6 +1021,7 @@ export async function processAiCuratorWake(prisma: PrismaClient) {
 
   const expired = await expireAiCuratorWork(prisma)
   const releasedTaxonomyBlocks = await releaseLegacyTaxonomyHumanBlocks(prisma)
+  const resolvedImageBlocks = await resolveSatisfiedImageHumanBlocks(prisma)
   const seeded = await enqueueReadinessCuratorJobs(prisma)
   const workerId = randomUUID()
   const deadline = Date.now() + Number(settings.timeSliceSeconds || 75) * 1000
@@ -953,7 +1036,7 @@ export async function processAiCuratorWake(prisma: PrismaClient) {
   while (processed < maxJobs && Date.now() < deadline) {
     const budget = await budgetSnapshot(prisma, settings)
     if (budget.hardStop || budget.remainingToday <= 0 || budget.remainingMonth <= 0) {
-      return { status: 'WAITING' as const, processed, created: seeded.created, expired, releasedTaxonomyBlocks, summary: 'Budget exhausted.', spent }
+      return { status: 'WAITING' as const, processed, created: seeded.created, expired, releasedTaxonomyBlocks, resolvedImageBlocks, summary: 'Budget exhausted.', spent }
     }
     const job = await claimNextJob(prisma, workerId)
     if (!job) break
@@ -976,9 +1059,10 @@ export async function processAiCuratorWake(prisma: PrismaClient) {
     created: seeded.created,
     expired,
     releasedTaxonomyBlocks,
+    resolvedImageBlocks,
     spent,
     durationMs: Date.now() - startedAt.getTime(),
-    summary: `Released ${releasedTaxonomyBlocks.released} legacy taxonomy blockers; seeded ${seeded.created}; processed ${processed}; completed ${completed}; skipped ${skipped}; waiting ${waitingForHuman}; deferred ${deferred}.`,
+    summary: `Released ${releasedTaxonomyBlocks.released} legacy taxonomy blockers; resolved ${resolvedImageBlocks.resolved} image blockers; seeded ${seeded.created}; processed ${processed}; completed ${completed}; skipped ${skipped}; waiting ${waitingForHuman}; deferred ${deferred}.`,
   }
 }
 

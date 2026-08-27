@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { aiModelPricing, estimateAiCostDollars } from '../lib/ai-pricing'
-import { aiCuratorChangedFields, canApplyCuratorSuggestion, curatorJobScope, curatorPriorityScore, effectiveAiCuratorSpend, hasAiCuratorSuggestionChange, suggestedScalarValue } from '../lib/ai-curator'
+import { aiCuratorChangedFields, canApplyCuratorSuggestion, curatorJobScope, curatorPriorityScore, effectiveAiCuratorSpend, hasAiCuratorSuggestionChange, isUsableAiCuratorRepresentativePhoto, suggestedScalarValue } from '../lib/ai-curator'
 
 const baseline = curatorPriorityScore({
   completenessScore: 70,
@@ -64,6 +64,10 @@ assert.equal(canApplyCuratorSuggestion('description'), true)
 assert.equal(canApplyCuratorSuggestion('husbandry'), false)
 assert.equal(suggestedScalarValue({ value: 'Begonia research draft' }), 'Begonia research draft')
 assert.equal(suggestedScalarValue({ value: '   ' }), null)
+assert.equal(isUsableAiCuratorRepresentativePhoto({ moderationStatus: 'APPROVED', nsfwFlagged: false }), true)
+assert.equal(isUsableAiCuratorRepresentativePhoto({ moderationStatus: 'PENDING', nsfwFlagged: false }), true)
+assert.equal(isUsableAiCuratorRepresentativePhoto({ moderationStatus: 'CENSORED', nsfwFlagged: false }), false)
+assert.equal(isUsableAiCuratorRepresentativePhoto({ moderationStatus: 'APPROVED', nsfwFlagged: true }), false)
 assert.deepEqual(curatorJobScope({
   collectionId: 'collection-1',
   plantDefinitionId: 'definition-1',

@@ -12,6 +12,11 @@ export const PLANT_DEFINITION_COMPLETENESS_WEIGHTS = {
   tags: 2.5,
   validation: 2.5,
 } as const
+export const UNUSABLE_REPRESENTATIVE_IMAGE_STATUSES: string[] = ['CENSORED', 'REMOVED']
+
+export function isUsableRepresentativeImagePhoto(photo: { moderationStatus?: string | null; nsfwFlagged?: boolean | null }) {
+  return !photo.nsfwFlagged && !UNUSABLE_REPRESENTATIVE_IMAGE_STATUSES.includes(photo.moderationStatus || '')
+}
 
 export type CompletenessCategoryKey = keyof typeof PLANT_DEFINITION_COMPLETENESS_WEIGHTS
 export type CompletenessItemLevel = 'NEEDS_ATTENTION' | 'RECOMMENDED' | 'OPTIONAL'
@@ -198,12 +203,12 @@ export async function evaluatePlantDefinitionCompletenessBatch(
   const [guides, definitionPhotos, instancePhotos] = await Promise.all([
     completenessGuides(prisma, collectionId, definitionIds),
     prisma.photo.findMany({
-      where: { collectionId, entityType: 'PLANT_DEFINITION', entityId: { in: definitionIds }, isType: true, moderationStatus: 'APPROVED' },
+      where: { collectionId, entityType: 'PLANT_DEFINITION', entityId: { in: definitionIds }, isType: true, nsfwFlagged: false, moderationStatus: { notIn: UNUSABLE_REPRESENTATIVE_IMAGE_STATUSES } },
       select: { entityId: true },
     }),
     instanceIds.length
       ? prisma.photo.findMany({
-          where: { collectionId, entityType: 'PLANT_INSTANCE', entityId: { in: instanceIds }, moderationStatus: 'APPROVED', OR: [{ isType: true }, { isCover: true }] },
+          where: { collectionId, entityType: 'PLANT_INSTANCE', entityId: { in: instanceIds }, nsfwFlagged: false, moderationStatus: { notIn: UNUSABLE_REPRESENTATIVE_IMAGE_STATUSES }, OR: [{ isType: true }, { isCover: true }] },
           select: { entityId: true },
         })
       : [],
