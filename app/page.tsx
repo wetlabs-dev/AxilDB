@@ -4,9 +4,10 @@ import { startWorkflowRun } from '@/app/workflow-actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { PlantIdPreviewLink } from '@/components/PlantIdPreviewLink'
 import { Button, Card, Select } from '@/components/ui'
+import { hasAiCuratorSuggestionChange } from '@/lib/ai-curator'
 import { getOrCreateTodaysCollectionBriefing } from '@/lib/briefing'
 import { careQueueSummary, getCareQueue } from '@/lib/care-queue'
-import { canCreateInCollection, canEditInCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
+import { canCreateInCollection, canEditInCollection, canManageCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { recentCollectionUpdates } from '@/lib/collection-updates'
 import { prisma } from '@/lib/prisma'
 import { isServerAdminRole } from '@/lib/roles'
@@ -20,6 +21,8 @@ import type { ReactNode } from 'react'
 
 type PhotoLookup = Record<string, PlantImageFrame | undefined>
 type BriefingPlantLink = { plantId: string; href: string; aliases: string[] }
+type DashboardStat = [label: string, value: number, Icon: typeof Leaf, href: string]
+type OpenReviewItem = { label: string; count: number; href: string; description: string }
 type ActivityKind = 'propagation' | 'bloom' | 'sport' | 'acquired' | 'archive' | 'sunshine' | 'location' | 'condition' | 'workflow' | 'exhibit'
 type ActivityItem = {
   id: string
@@ -326,6 +329,9 @@ export default async function Dashboard({
   const canViewCollectionUpdates = canEditInCollection(context.user, context)
   const canStartWorkflows = canCreateInCollection(context.user, context)
   const canViewTreatmentRecords = Boolean(context.user && (context.membership?.status === 'ACTIVE' || isServerAdminRole(context.user.role)))
+  const canReviewCollectionWork = canEditInCollection(context.user, context)
+  const canManageReviews = canManageCollection(context.user, context)
+  const canReviewServerWork = Boolean(context.user && isServerAdminRole(context.user.role))
   await ensureStarterWorkflowTemplates(prisma, collection.id)
   const briefing = canGenerateBriefing
     ? await getOrCreateTodaysCollectionBriefing(prisma, {
@@ -425,6 +431,39 @@ export default async function Dashboard({
     canViewTreatmentRecords ? prisma.treatmentPlanStep.count({ where: { collectionId: collection.id, status: 'PENDING', scheduledAt: { lt: new Date() }, plan: { status: 'ACTIVE' } } }) : Promise.resolve(0),
     canViewTreatmentRecords ? prisma.treatmentApplication.count({ where: { collectionId: collection.id, adverseReaction: true, appliedAt: { gte: new Date(Date.now() - 30 * 86_400_000) } } }) : Promise.resolve(0),
   ])
+  const [
+    pendingMembers,
+    pendingConnections,
+    pendingPlantTransfers,
+    pendingDefinitionShares,
+    accountImageReviews,
+    serverImageReviews,
+    aiCuratorSuggestionRows,
+  ] = await Promise.all([
+    canManageReviews ? prisma.collectionMembership.count({ where: { collectionId: collection.id, status: 'PENDING' } }) : Promise.resolve(0),
+    canReviewCollectionWork ? prisma.collectionTransferConnection.count({ where: { status: 'PENDING', OR: [{ sourceCollectionId: collection.id }, { targetCollectionId: collection.id }] } }) : Promise.resolve(0),
+    canReviewCollectionWork ? prisma.plantTransferRequest.count({ where: { status: 'PENDING', OR: [{ sourceCollectionId: collection.id }, { targetCollectionId: collection.id }] } }) : Promise.resolve(0),
+    canReviewCollectionWork ? prisma.plantDefinitionShareRequest.count({ where: { status: 'PENDING', OR: [{ sourceCollectionId: collection.id }, { targetCollectionId: collection.id }] } }) : Promise.resolve(0),
+    context.user ? prisma.imageModerationReview.count({ where: { uploaderUserId: context.user.id, reviewType: { in: ['NO_PLANT_DETECTED', 'UNCERTAIN_PLANT_CONTENT'] }, status: 'PENDING' } }) : Promise.resolve(0),
+    canReviewServerWork ? prisma.imageModerationReview.count({ where: { collectionId: collection.id, reviewType: 'NSFW', status: 'PENDING' } }) : Promise.resolve(0),
+    canReviewServerWork ? prisma.aiCuratorSuggestion.findMany({
+      where: { collectionId: collection.id, status: 'PENDING', OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
+      select: { currentValue: true, suggestedValue: true, targetField: true },
+    }) : Promise.resolve([]),
+  ])
+  const pendingTransfers = pendingConnections + pendingPlantTransfers + pendingDefinitionShares
+  const aiCuratorReviews = aiCuratorSuggestionRows.filter((suggestion) => hasAiCuratorSuggestionChange(suggestion.currentValue, suggestion.suggestedValue, suggestion.targetField)).length
+  const reviewItems: OpenReviewItem[] = [
+    canReviewServerWork ? { label: 'AI Curator suggestions', count: aiCuratorReviews, href: '/server/ai-curator', description: 'Botanical enrichment waiting for human approval.' } : null,
+    canReviewCollectionWork ? { label: 'Sport review', count: sportCandidates, href: collectionPath(collection.slug, '/sports'), description: 'Plants marked as sport candidates or under sport tracking.' } : null,
+    canReviewCollectionWork ? { label: 'Transfers and shares', count: pendingTransfers, href: collectionPath(collection.slug, '/transfers'), description: 'Collection connections, plant transfers, and definition shares.' } : null,
+    canManageReviews ? { label: 'Member requests', count: pendingMembers, href: collectionPath(collection.slug, '/members'), description: 'People waiting for access to this collection.' } : null,
+    context.user ? { label: 'Image checks', count: accountImageReviews, href: '/account', description: 'Your uploads needing plant-content confirmation.' } : null,
+    canReviewServerWork ? { label: 'Hidden image moderation', count: serverImageReviews, href: '/server/image-moderation', description: 'Hidden images awaiting server review.' } : null,
+  ].filter((item): item is OpenReviewItem => Boolean(item))
+  const openReviewItems = reviewItems.filter((item) => item.count > 0)
+  const openReviewCount = reviewItems.reduce((sum, item) => sum + item.count, 0)
+  const openReviewHref = openReviewItems.length ? `${collectionPath(collection.slug)}#open-review-items` : collectionPath(collection.slug, '/sports')
 
   const domainActivityPlantIds = domainActivityEvents.map((event) => {
     const payload = event.payloadJson && typeof event.payloadJson === 'object' && !Array.isArray(event.payloadJson) ? event.payloadJson as Record<string, unknown> : {}
@@ -592,14 +631,15 @@ export default async function Dashboard({
     .filter((item) => includesActivityKind(item.kind))
     .slice(0, activityTake)
   const wishlistCount = await prisma.plantDefinition.count({ where: { ...collectionWhere, acquisitionStatus: { in: ['RESEARCHING', 'WISHLIST', 'ACTIVELY_SEEKING', 'ON_HOLD'] } } })
-  const stats = [
+  const stats: DashboardStat[] = [
     ['Care today', care.today, ClipboardCheck, collectionPath(collection.slug, '/care')],
     ['Active plants', active, Leaf, collectionPath(collection.slug, '/instances')],
     ['Propagations', propagationEvents + acquiredPropagations, GitBranch, activityHref(collection.slug, activityTake, ['propagation'])],
     ['Recent blooms', bloomCount, Flower2, collectionPath(collection.slug, '/blooms')],
     ['Sport candidates', sportCandidates, Sprout, collectionPath(collection.slug, '/sports')],
+    ['Open reviews', openReviewCount, ListChecks, openReviewHref],
     ['Wishlist', wishlistCount, ClipboardList, collectionPath(collection.slug, '/wishlist')],
-  ] as const
+  ]
   const collectionUpdates = canViewCollectionUpdates
     ? await recentCollectionUpdates(prisma, collection.id, collection.slug, 5)
     : []
@@ -631,6 +671,33 @@ export default async function Dashboard({
       </div>
 
       {(activeTreatmentPlans > 0 || overdueTreatmentSteps > 0 || adverseTreatmentApplications > 0) && <Card><div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="font-serif text-xl font-semibold">Treatment attention</h3><p className="mt-1 text-sm text-stone-600">{activeTreatmentPlans} active plans · {overdueTreatmentSteps} overdue steps · {adverseTreatmentApplications} adverse reactions in the last 30 days</p></div><Link className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm font-semibold" href={collectionPath(collection.slug, '/treatments/reports')}>Open treatment reports</Link></div></Card>}
+
+      {openReviewItems.length > 0 && (
+        <Card id="open-review-items">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="font-serif text-xl font-semibold">Open review items</h3>
+              <p className="mt-1 text-sm text-stone-600">{openReviewCount} item{openReviewCount === 1 ? '' : 's'} waiting for a decision.</p>
+            </div>
+            <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-900">
+              {openReviewItems.length} queue{openReviewItems.length === 1 ? '' : 's'}
+            </span>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {openReviewItems.map((item) => (
+              <Link key={item.label} href={item.href} className="group rounded-lg border border-stone-200 bg-white/60 p-3 transition hover:border-[#8fa58f] hover:bg-white">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-stone-900">{item.label}</p>
+                    <p className="mt-1 text-sm text-stone-600">{item.description}</p>
+                  </div>
+                  <span className="rounded-md bg-[#d6dfc9]/70 px-2 py-1 text-sm font-bold text-[#2f6b45]">{item.count}</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {briefing && (
         <Card>
