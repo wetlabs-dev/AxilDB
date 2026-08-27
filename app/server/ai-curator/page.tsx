@@ -7,11 +7,23 @@ import { formatDateTime } from '@/lib/time'
 import { plantName } from '@/lib/utils'
 
 function money(value: unknown) {
-  return `$${(Number(value) || 0).toFixed(2)}`
+  const amount = Number(value) || 0
+  if (amount > 0 && amount < 0.01) return `$${amount.toFixed(4)}`
+  if (amount > 0 && amount < 10 && Math.abs(amount - Number(amount.toFixed(2))) >= 0.0001) return `$${amount.toFixed(4)}`
+  return `$${amount.toFixed(2)}`
 }
 
 function pct(value: number) {
   return `${Math.round(value)}%`
+}
+
+function budgetPct(spend: unknown, budget: unknown) {
+  const amount = Number(spend) || 0
+  const limit = Number(budget) || 0
+  if (limit <= 0) return '0%'
+  const value = Math.min(100, Math.max(0, (amount / limit) * 100))
+  if (value > 0 && value < 1) return `${value.toFixed(2)}%`
+  return pct(value)
 }
 
 function statusClass(status: string) {
@@ -300,7 +312,7 @@ export default async function AiCuratorPage({
           <div className="rounded-lg border border-stone-200 bg-white/55 p-3">
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-stone-500">Today&apos;s spend</p>
             <p className="mt-1 text-2xl font-semibold">{money(dashboard.budget.todaySpend)}</p>
-            <p className="text-xs text-stone-600">{money(dashboard.budget.remainingToday)} remaining of {money(dashboard.budget.dailyBudget)}</p>
+            <p className="text-xs text-stone-600">{money(dashboard.budget.remainingToday)} remaining of {money(dashboard.budget.dailyBudget)} · {budgetPct(dashboard.budget.todaySpend, dashboard.budget.dailyBudget)} used</p>
           </div>
           <div className="rounded-lg border border-stone-200 bg-white/55 p-3">
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-stone-500">Jobs</p>

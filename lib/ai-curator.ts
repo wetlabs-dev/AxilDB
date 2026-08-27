@@ -52,6 +52,13 @@ function dollars(value: unknown) {
   return Number(value) || 0
 }
 
+export function effectiveAiCuratorSpend(rows: Array<{ actualCostDollars?: unknown; estimatedCostDollars?: unknown }>) {
+  return rows.reduce((total, row) => {
+    const actual = row.actualCostDollars == null ? null : dollars(row.actualCostDollars)
+    return total + (actual && actual > 0 ? actual : dollars(row.estimatedCostDollars))
+  }, 0)
+}
+
 function hashPayload(payload: unknown) {
   return createHash('sha256').update(JSON.stringify(payload)).digest('hex')
 }
@@ -792,7 +799,8 @@ async function processJob(prisma: PrismaClient, settings: any, job: any) {
     const currentValue = await currentValueForJob(prisma, job)
     const { payload, result } = await callCuratorModel(settings, job, currentValue)
     const usage = tokenUsage(payload)
-    const actualCost = tokenUsageCostDollars(usage, settings.model)
+    const hasUsage = Boolean((usage.inputTokens || 0) + (usage.outputTokens || 0))
+    const actualCost = hasUsage ? tokenUsageCostDollars(usage, settings.model) : null
     await createSuggestionFromResult(prisma, settings, job, currentValue, result, actualCost)
     await prisma.aiUsageEvent.create({
       data: {
@@ -804,7 +812,7 @@ async function processJob(prisma: PrismaClient, settings: any, job: any) {
         totalTokens: usage.totalTokens,
       },
     })
-    return { status: 'COMPLETED' as const, cost: actualCost }
+    return { status: 'COMPLETED' as const, cost: actualCost || dollars(job.estimatedCostDollars) }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     const exhausted = job.attempts >= job.maxAttempts
@@ -831,17 +839,17 @@ async function processJob(prisma: PrismaClient, settings: any, job: any) {
 
 async function budgetSnapshot(prisma: PrismaClient, settings: any) {
   const [today, month] = await Promise.all([
-    prisma.aiCuratorJob.aggregate({
+    prisma.aiCuratorJob.findMany({
       where: { completedAt: { gte: startOfLocalDay() } },
-      _sum: { actualCostDollars: true, estimatedCostDollars: true },
+      select: { actualCostDollars: true, estimatedCostDollars: true },
     }),
-    prisma.aiCuratorJob.aggregate({
+    prisma.aiCuratorJob.findMany({
       where: { completedAt: { gte: startOfMonth() } },
-      _sum: { actualCostDollars: true, estimatedCostDollars: true },
+      select: { actualCostDollars: true, estimatedCostDollars: true },
     }),
   ])
-  const todaySpend = dollars(today._sum.actualCostDollars) || dollars(today._sum.estimatedCostDollars)
-  const monthSpend = dollars(month._sum.actualCostDollars) || dollars(month._sum.estimatedCostDollars)
+  const todaySpend = effectiveAiCuratorSpend(today)
+  const monthSpend = effectiveAiCuratorSpend(month)
   const dailyBudget = dollars(settings.dailyBudgetDollars)
   const monthlyBudget = dollars(settings.monthlyBudgetDollars)
   const hardLimit = Number(settings.hardLimitPercent || 100) / 100
