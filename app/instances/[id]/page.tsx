@@ -465,7 +465,7 @@ export default async function InstanceDetail({
             <input type="hidden" name="entityId" value={id} />
             <input type="hidden" name="collectionSlug" value={collection.slug} />
             <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}`)} />
-            <PhotoFramingEditor fileInputName="photo" />
+            <PhotoFramingEditor fileInputName="photo" enablePhoneCapture />
             <Field label="Caption" name="caption" />
             <Button>Upload photo</Button>
           </form>
