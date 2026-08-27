@@ -3761,6 +3761,79 @@ export async function setTypePhoto(fd: FormData) {
   redirect(back(fd))
 }
 
+export async function setPlantDefinitionTypeImageFromInstancePhoto(fd: FormData) {
+  const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
+  const id = val(fd, 'id')!
+  const plantDefinitionId = val(fd, 'plantDefinitionId')!
+  const destination = back(fd)
+  const photo = await prisma.photo.findFirstOrThrow({ where: { id, collectionId: collection.id, entityType: 'PLANT_INSTANCE' } })
+  const instance = await prisma.plantInstance.findFirstOrThrow({
+    where: { id: photo.entityId, collectionId: collection.id, plantDefinitionId },
+    select: { id: true, plantId: true, plantDefinitionId: true },
+  })
+  const existingDefinitionPhoto = await prisma.photo.findFirst({
+    where: { collectionId: collection.id, entityType: 'PLANT_DEFINITION', entityId: plantDefinitionId, path: photo.path },
+    orderBy: { createdAt: 'desc' },
+  })
+
+  const selected = await prisma.$transaction(async (tx) => {
+    await tx.photo.updateMany({
+      where: { collectionId: collection.id, entityType: 'PLANT_DEFINITION', entityId: plantDefinitionId },
+      data: { isType: false },
+    })
+    if (existingDefinitionPhoto) {
+      return tx.photo.update({
+        where: { id: existingDefinitionPhoto.id },
+        data: {
+          caption: existingDefinitionPhoto.caption || photo.caption || `${instance.plantId} specimen image`,
+          source: existingDefinitionPhoto.source || photo.source || `Specimen photo ${instance.plantId}`,
+          sourceUrl: existingDefinitionPhoto.sourceUrl || photo.sourceUrl,
+          cropX: existingDefinitionPhoto.cropX ?? photo.cropX,
+          cropY: existingDefinitionPhoto.cropY ?? photo.cropY,
+          cropWidth: existingDefinitionPhoto.cropWidth ?? photo.cropWidth,
+          cropHeight: existingDefinitionPhoto.cropHeight ?? photo.cropHeight,
+          focalX: existingDefinitionPhoto.focalX ?? photo.focalX,
+          focalY: existingDefinitionPhoto.focalY ?? photo.focalY,
+          isType: true,
+        },
+      })
+    }
+    return tx.photo.create({
+      data: {
+        collectionId: collection.id,
+        uploadedByUserId: user.id,
+        entityType: 'PLANT_DEFINITION',
+        entityId: plantDefinitionId,
+        filename: photo.filename,
+        path: photo.path,
+        caption: photo.caption || `${instance.plantId} specimen image`,
+        source: photo.source || `Specimen photo ${instance.plantId}`,
+        sourceUrl: photo.sourceUrl,
+        cropX: photo.cropX,
+        cropY: photo.cropY,
+        cropWidth: photo.cropWidth,
+        cropHeight: photo.cropHeight,
+        focalX: photo.focalX,
+        focalY: photo.focalY,
+        isType: true,
+        moderationStatus: photo.moderationStatus,
+        nsfwFlagged: photo.nsfwFlagged,
+        plantDetected: photo.plantDetected,
+        plantConfidence: photo.plantConfidence,
+        moderationCheckedAt: photo.moderationCheckedAt,
+        moderationReason: photo.moderationReason,
+        moderationModel: photo.moderationModel,
+        moderationResultJson: photo.moderationResultJson === null ? undefined : photo.moderationResultJson as Prisma.InputJsonValue,
+        plantAnalysisJson: photo.plantAnalysisJson === null ? undefined : photo.plantAnalysisJson as Prisma.InputJsonValue,
+      },
+    })
+  })
+
+  await audit(user, 'UPDATE', 'PHOTO', selected.id, `Selected specimen photo ${photo.id} as type image for plant definition ${plantDefinitionId}`, { sourcePhotoId: photo.id, plantInstanceId: instance.id }, collection.id)
+  revalidateDestination(destination)
+  redirect(destination)
+}
+
 export async function deletePhoto(fd: FormData) {
   const { user, collection } = await requireCollectionManager(await collectionSlug(fd))
   const id = val(fd, 'id')!

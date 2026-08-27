@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
-import { deletePhoto, deletePlantDefinition, deletePlantHusbandryGuide, forkPlantHusbandryGuide, linkPlantHusbandryGuide, mergePlantDefinition, nominatePlantDefinitionForValidation, savePlantHusbandryGuide, savePlantHusbandryGuideField, updatePhotoCaption, updatePhotoFraming, updatePlantDefinition } from '@/app/actions'
+import { deletePhoto, deletePlantDefinition, deletePlantHusbandryGuide, forkPlantHusbandryGuide, linkPlantHusbandryGuide, mergePlantDefinition, nominatePlantDefinitionForValidation, savePlantHusbandryGuide, savePlantHusbandryGuideField, setPlantDefinitionTypeImageFromInstancePhoto, updatePhotoCaption, updatePhotoFraming, updatePlantDefinition } from '@/app/actions'
 import { Button, Card, Field, HelpTooltip, SuggestionDatalist, TextArea } from '@/components/ui'
 import { ConfidenceSelect, PlantAliasFields } from '@/components/PlantAliasFields'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
@@ -74,6 +74,7 @@ export default async function EditPlant({
         husbandryGuide: { include: { fertilizerRecipe: true } },
         validationCandidates: { orderBy: { createdAt: 'desc' }, take: 5 },
         _count: { select: { instances: true } },
+        instances: { select: { id: true, plantId: true, status: true }, orderBy: { plantId: 'asc' } },
         tags: { include: { plantTag: true }, orderBy: { plantTag: { name: 'asc' } } },
       },
     }),
@@ -125,6 +126,15 @@ export default async function EditPlant({
     locationType: location.locationType,
   }))
   const currentTypePhoto = typePhotos[0]
+  const instanceIds = plant.instances.map((instance) => instance.id)
+  const instanceById = new Map(plant.instances.map((instance) => [instance.id, instance]))
+  const instanceTypePhotoCandidates = instanceIds.length
+    ? await prisma.photo.findMany({
+        where: { collectionId: collection.id, entityType: 'PLANT_INSTANCE', entityId: { in: instanceIds } },
+        orderBy: { createdAt: 'desc' },
+        take: 6,
+      })
+    : []
   const sourceDefinition = plant.husbandryGuide?.sourcePlantDefinitionId
     ? await prisma.plantDefinition.findFirst({
         where: { id: plant.husbandryGuide.sourcePlantDefinitionId, collectionId: collection.id },
@@ -506,7 +516,7 @@ export default async function EditPlant({
             {uploadErrorMessages[uploadError]}
           </div>
         )}
-        <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(16rem,22rem)_1fr]">
+        <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(16rem,22rem)_minmax(22rem,34rem)_minmax(20rem,1fr)]">
           <div className="overflow-hidden rounded-lg border border-stone-200 bg-white/70">
             <div className="aspect-[4/3] overflow-hidden">
               <PlantImage src={currentTypePhoto} alt={`${plantName(plant)} type image`} />
@@ -587,6 +597,53 @@ export default async function EditPlant({
             <Field label="Source URL" help="Optional link back to the image source or license page." name="sourceUrl" type="url" />
             <Button className="justify-self-start">Upload type image</Button>
           </form>
+          <section className="min-w-0 self-start rounded-lg border border-[#d6dfc9] bg-[#f7f4e8]/70 p-3">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <h4 className="font-semibold">Recent specimen images</h4>
+                <p className="mt-1 text-sm text-stone-600">Choose from photos already attached to matching specimens.</p>
+              </div>
+              {instanceTypePhotoCandidates.length > 0 && (
+                <span className="rounded-full border border-stone-200 bg-white/65 px-2.5 py-1 text-xs font-medium text-stone-700">
+                  {instanceTypePhotoCandidates.length} shown
+                </span>
+              )}
+            </div>
+            {instanceTypePhotoCandidates.length === 0 ? (
+              <p className="mt-3 rounded-md border border-dashed border-stone-300 bg-white/45 p-3 text-sm text-stone-600">No specimen images are available for this definition yet.</p>
+            ) : (
+              <div className="mt-3 overflow-x-auto pb-2">
+                <div className="grid auto-cols-[12rem] grid-flow-col gap-3">
+                  {instanceTypePhotoCandidates.map((photo) => {
+                    const instance = instanceById.get(photo.entityId)
+                    const alreadySelected = currentTypePhoto?.path === photo.path
+                    return (
+                      <figure key={photo.id} className="overflow-hidden rounded-lg border border-stone-200 bg-white/70">
+                        <div className="aspect-[4/3] overflow-hidden">
+                          <PlantImage src={photo} alt={photo.caption || `${instance?.plantId || 'Specimen'} image`} />
+                        </div>
+                        <figcaption className="grid gap-2 p-2 text-xs">
+                          <div className="min-w-0">
+                            <p className="truncate font-medium">{photo.caption || 'Untitled photo'}</p>
+                            <p className="text-stone-600">{instance?.plantId || 'Specimen'} · {instance?.status?.toLowerCase() || 'unknown'}</p>
+                          </div>
+                          <form action={setPlantDefinitionTypeImageFromInstancePhoto}>
+                            <input type="hidden" name="id" value={photo.id} />
+                            <input type="hidden" name="plantDefinitionId" value={plant.id} />
+                            <input type="hidden" name="collectionSlug" value={collection.slug} />
+                            <input type="hidden" name="back" value={collectionPath(collection.slug, `/plants/${id}/edit#definition-photos`)} />
+                            <Button className="w-full px-3 py-1.5 text-xs" disabled={alreadySelected}>
+                              {alreadySelected ? 'Current type image' : 'Set as type image'}
+                            </Button>
+                          </form>
+                        </figcaption>
+                      </figure>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </section>
         </div>
       </Card>
       <Card>
