@@ -49,7 +49,7 @@
     "check:ai-curator": "tsx scripts/check-ai-curator.ts",
     "check:treatments": "tsx scripts/check-treatments.ts",
     "check:substrates": "tsx scripts/check-substrates.ts",
-    "check:label-print": "node scripts/check-label-print.mjs",
+    "check:label-download": "node scripts/check-label-download.mjs",
     "check:memory": "tsx scripts/check-memory-footprint.ts",
     "check:taxonomic-authorities": "tsx scripts/check-taxonomic-authorities.ts",
     "check:plant-instance-merges": "node scripts/check-plant-instance-merges.mjs"

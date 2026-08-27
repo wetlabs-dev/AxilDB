@@ -82,6 +82,7 @@ export default async function BulkLabels({
           <input type="hidden" name="collectionSlug" value={collection.slug} />
           <input type="hidden" name="target" value={target} />
           <input type="hidden" name="sort" value={sort} />
+          <input type="hidden" name="download" value="1" />
           <LabelExportControls />
           <div className="grid max-h-[520px] gap-2 overflow-auto rounded-lg border border-stone-200 bg-[#fffdf7] p-3">
             {showPlants && (

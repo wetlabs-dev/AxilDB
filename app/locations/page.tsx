@@ -180,7 +180,7 @@ export default async function LocationsPage({
                     </Link>
                     <p className="text-sm text-stone-600">{location.code} · {location.locationType.name} · {location._count.plantInstances} direct plant(s) · {location._count.childLocations} child location(s)</p>
                   </div>
-                  <Link className="rounded-md border border-stone-300 bg-white/70 px-3 py-1.5 text-xs font-semibold" href={`/api/labels/bulk?collectionSlug=${encodeURIComponent(collection.slug)}&target=locations&id=${encodeURIComponent(location.id)}`}>
+                  <Link className="rounded-md border border-stone-300 bg-white/70 px-3 py-1.5 text-xs font-semibold" href={`/api/labels/bulk?collectionSlug=${encodeURIComponent(collection.slug)}&target=locations&download=1&id=${encodeURIComponent(location.id)}`}>
                     QR label
                   </Link>
                 </div>

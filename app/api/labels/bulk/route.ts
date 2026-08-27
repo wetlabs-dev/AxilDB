@@ -32,10 +32,6 @@ const SHEET_GUTTER_Y = 0
 type LabelItem = Awaited<ReturnType<typeof getLabelItems>>[number]
 type LabelTarget = 'plants' | 'locations' | 'both'
 type PlantLabelSort = 'plant-id' | 'added-newest' | 'added-oldest'
-type PdfDocumentWithCatalog = PDFKit.PDFDocument & {
-  _root: { data: Record<string, unknown> }
-  addNamedJavaScript?: (name: string, js: string) => void
-}
 
 function oneLineFontSize(doc: PDFKit.PDFDocument, text: string, font: string, max: number, min: number, width: number) {
   for (let size = max; size >= min; size -= 0.5) {
@@ -331,24 +327,6 @@ function filenameFor(format: LabelFormat, orientation: LabelOrientation) {
   return `axildb-plant-labels${suffix}.pdf`
 }
 
-function isMobileRequest(req: Request) {
-  const mobileHint = req.headers.get('sec-ch-ua-mobile') || ''
-  const userAgent = req.headers.get('user-agent') || ''
-  return mobileHint.includes('?1') || /\b(iPhone|iPad|iPod|Android|Mobile)\b/i.test(userAgent) || (/Macintosh/i.test(userAgent) && /Mobile/i.test(userAgent))
-}
-
-function addOpenPrintAction(doc: PDFKit.PDFDocument) {
-  const internalDoc = doc as PdfDocumentWithCatalog
-  const printScript = 'this.print({ bUI: true, bSilent: false, bShrinkToFit: false });'
-  internalDoc.addNamedJavaScript?.('axildb-mobile-label-print', printScript)
-  const action = doc.ref({
-    S: 'JavaScript',
-    JS: new String(printScript),
-  })
-  internalDoc._root.data.OpenAction = action
-  action.end(undefined)
-}
-
 function labelPageSize(format: LabelFormat, orientation: LabelOrientation, brotherLength = 170): [number, number] {
   if (format === 'sheet') return orientSize(LETTER_WIDTH_PT, LETTER_HEIGHT_PT, orientation)
   if (format === 'brother-dk-2210') {
@@ -375,7 +353,7 @@ function sheetGrid(pageWidth: number, pageHeight: number) {
 
 export async function GET(req: Request) {
   const url=new URL(req.url)
-  const autoPrintOnOpen = isMobileRequest(req)
+  const forceDownload = url.searchParams.get('download') === '1'
   const ids=url.searchParams.getAll('id')
   const all=url.searchParams.get('all')==='1'
   const rawTarget = url.searchParams.get('target')
@@ -412,7 +390,6 @@ export async function GET(req: Request) {
   const initialSize = labelPageSize(format, orientation, firstBrotherLength)
   const doc=new PDFDocument({size:initialSize,margin:0})
   doc.registerFont(LABEL_ID_FONT, LABEL_ID_FONT_PATH)
-  if (autoPrintOnOpen) addOpenPrintAction(doc)
   const chunks:Buffer[]=[]
   doc.on('data',c=>chunks.push(c))
   const done=new Promise<Buffer>(resolve=>doc.on('end',()=>resolve(Buffer.concat(chunks))))
@@ -465,9 +442,10 @@ export async function GET(req: Request) {
   const filename = filenameFor(format, orientation)
   return new NextResponse(new Uint8Array(pdf), {
     headers: {
-      'Content-Type': 'application/pdf',
-      'Content-Disposition': `${autoPrintOnOpen ? 'inline' : 'attachment'}; filename="${filename}"`,
+      'Content-Type': forceDownload ? 'application/octet-stream' : 'application/pdf',
+      'Content-Disposition': `attachment; filename="${filename}"`,
       'Cache-Control': 'no-store',
+      ...(forceDownload ? { 'X-Content-Type-Options': 'nosniff' } : {}),
     },
   })
 }
