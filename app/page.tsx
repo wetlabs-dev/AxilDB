@@ -463,7 +463,7 @@ export default async function Dashboard({
   ].filter((item): item is OpenReviewItem => Boolean(item))
   const openReviewItems = reviewItems.filter((item) => item.count > 0)
   const openReviewCount = reviewItems.reduce((sum, item) => sum + item.count, 0)
-  const openReviewHref = openReviewItems.length ? `${collectionPath(collection.slug)}#open-review-items` : collectionPath(collection.slug, '/sports')
+  const openReviewHref = '/server/ai-curator'
 
   const domainActivityPlantIds = domainActivityEvents.map((event) => {
     const payload = event.payloadJson && typeof event.payloadJson === 'object' && !Array.isArray(event.payloadJson) ? event.payloadJson as Record<string, unknown> : {}
