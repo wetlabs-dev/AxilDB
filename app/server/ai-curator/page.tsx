@@ -49,8 +49,11 @@ export default async function AiCuratorPage({
   ])
   const timezone = preferences?.timezone
   const status = dashboard.currentJob ? 'Running' : !dashboard.settings.enabled ? 'Stopped' : dashboard.budget.hardStop ? 'Paused' : 'Waiting'
-  const currentPhase = dashboard.currentJob?.phase || (queueCount(dashboard.queueStats, 'QUEUED') ? 'ENRICHMENT' : 'STEWARDSHIP')
-  const totalQueue = Object.values(dashboard.queueStats).reduce((total, value) => total + value, 0)
+  const queuedJobs = queueCount(dashboard.queueStats, 'QUEUED')
+  const waitingJobs = queueCount(dashboard.queueStats, 'WAITING_FOR_HUMAN')
+  const currentPhase = dashboard.currentJob?.phase || (queuedJobs ? 'ENRICHMENT' : waitingJobs ? 'WAITING FOR HUMAN' : 'STEWARDSHIP')
+  const activeQueueTotal = ['QUEUED', 'RUNNING', 'DEFERRED', 'WAITING_FOR_HUMAN'].reduce((total, key) => total + queueCount(dashboard.queueStats, key), 0)
+  const waitingJobBadge = waitingJobs > dashboard.waitingJobs.length ? `${waitingJobs} jobs · showing ${dashboard.waitingJobs.length}` : `${waitingJobs} jobs`
   const averageConfidenceRows = await prisma.aiCuratorSuggestion.aggregate({ where: { confidence: { not: null } }, _avg: { confidence: true } })
   const latestRun = await prisma.serverWorkerRun.findFirst({ where: { workerName: 'ai-curator' }, orderBy: { startedAt: 'desc' } })
 
@@ -89,12 +92,12 @@ export default async function AiCuratorPage({
           <div className="rounded-lg border border-stone-200 bg-white/55 p-3">
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-stone-500">Jobs</p>
             <p className="mt-1 text-2xl font-semibold">{dashboard.completedToday} today</p>
-            <p className="text-xs text-stone-600">{dashboard.completedWeek} this week · {queueCount(dashboard.queueStats, 'QUEUED')} pending</p>
+            <p className="text-xs text-stone-600">{dashboard.completedWeek} this week · {queuedJobs} ready</p>
           </div>
           <div className="rounded-lg border border-stone-200 bg-white/55 p-3">
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-stone-500">Review</p>
             <p className="mt-1 text-2xl font-semibold">{dashboard.pendingSuggestions}</p>
-            <p className="text-xs text-stone-600">{queueCount(dashboard.queueStats, 'WAITING_FOR_HUMAN')} waiting for human</p>
+            <p className="text-xs text-stone-600">{waitingJobs} waiting for human</p>
           </div>
           <div className="rounded-lg border border-stone-200 bg-white/55 p-3">
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-stone-500">Collection quality</p>
@@ -103,7 +106,7 @@ export default async function AiCuratorPage({
           </div>
         </div>
         <div className="mt-4 grid gap-2 text-sm sm:grid-cols-2 xl:grid-cols-4">
-          <span>Queue total: {totalQueue}</span>
+          <span>Active jobs: {activeQueueTotal}</span>
           <span>Estimated queue completion: {dashboard.estimatedQueueCompletion}</span>
           <span>Last wake: {latestRun ? formatDateTime(latestRun.startedAt, timezone) : 'never'}</span>
           <span>Last sleep: {latestRun?.finishedAt ? formatDateTime(latestRun.finishedAt, timezone) : 'not recorded'}</span>
@@ -155,7 +158,7 @@ export default async function AiCuratorPage({
               <h3 className="font-serif text-xl font-semibold">Waiting for Human</h3>
               <p className="mt-1 text-sm text-stone-600">These jobs need a curator to clear an ambiguity, add missing evidence, or cancel the work.</p>
             </div>
-            <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-900">{dashboard.waitingJobs.length} jobs</span>
+            <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-900">{waitingJobBadge}</span>
           </div>
           <div className="mt-4 grid gap-3">
             {dashboard.waitingJobs.map((job) => (

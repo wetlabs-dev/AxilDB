@@ -83,7 +83,9 @@ function boundedConfidence(value: unknown) {
 
 function jsonOrNull(value: unknown) {
   if (value === undefined || value === null) return Prisma.JsonNull
-  return value as Prisma.InputJsonValue
+  const serialized = JSON.stringify(value)
+  if (!serialized) return Prisma.JsonNull
+  return JSON.parse(serialized) as Prisma.InputJsonValue
 }
 
 function suggestionExpiry(settings: any) {
@@ -357,49 +359,301 @@ export async function expireAiCuratorWork(prisma: PrismaClient, now = new Date()
 }
 
 async function currentValueForJob(prisma: PrismaClient, job: any) {
-  if (!job.plantDefinitionId) return null
+  if (!job.plantDefinitionId) {
+    const collection = await prisma.collection.findUnique({
+      where: { id: job.collectionId },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        description: true,
+        aiFeaturesEnabled: true,
+        aiCuratorEnabled: true,
+        plantDefinitions: {
+          take: 40,
+          orderBy: { updatedAt: 'desc' },
+          select: {
+            id: true,
+            genus: true,
+            species: true,
+            hybridNotation: true,
+            cultivarName: true,
+            authority: true,
+            confidence: true,
+            provisionalTaxon: true,
+            identificationStatus: true,
+            description: true,
+            wikipediaUrl: true,
+            inaturalistUrl: true,
+            powoUrl: true,
+            gbifUrl: true,
+            aliases: { select: { name: true, aliasType: true, source: true, confidence: true, notes: true } },
+            tags: { include: { plantTag: { select: { name: true, category: true } } } },
+            _count: { select: { instances: true } },
+          },
+        },
+        _count: {
+          select: {
+            plantDefinitions: true,
+            plantInstances: true,
+            plantTags: true,
+            plantHusbandryGuides: true,
+            substrateRecipes: true,
+            substrateRecommendations: true,
+          },
+        },
+      },
+    })
+    if (!collection) return null
+    return {
+      scope: 'collection',
+      focus: {
+        phase: job.phase,
+        jobType: job.jobType,
+        targetField: job.targetField,
+        reason: job.reason,
+      },
+      collection: {
+        id: collection.id,
+        name: collection.name,
+        slug: collection.slug,
+        description: collection.description,
+        aiFeaturesEnabled: collection.aiFeaturesEnabled,
+        aiCuratorEnabled: collection.aiCuratorEnabled,
+        counts: collection._count,
+      },
+      recentPlantDefinitions: collection.plantDefinitions.map((definition) => ({
+        ...definition,
+        displayName: plantName(definition),
+        tags: definition.tags.map((tag) => tag.plantTag),
+      })),
+    }
+  }
   const definition = await prisma.plantDefinition.findUnique({
     where: { id: job.plantDefinitionId },
     include: {
-      aliases: { select: { name: true, aliasType: true, source: true } },
+      collection: { select: { id: true, name: true, slug: true, description: true, aiFeaturesEnabled: true, aiCuratorEnabled: true } },
+      aliases: { select: { name: true, aliasType: true, source: true, confidence: true, notes: true } },
       tags: { include: { plantTag: { select: { name: true, category: true } } } },
-      substrateRecommendations: { select: { notes: true, suitability: true } },
+      substrateRecommendations: {
+        orderBy: [{ rank: 'asc' }, { createdAt: 'asc' }],
+        select: {
+          rank: true,
+          suitability: true,
+          notes: true,
+          source: true,
+          confidence: true,
+          recipeVersion: {
+            select: {
+              versionNumber: true,
+              status: true,
+              totalPercent: true,
+              notes: true,
+              recipe: { select: { name: true, description: true, intendedUse: true } },
+            },
+          },
+        },
+      },
       husbandryGuide: true,
-      taxonomicAuthority: { select: { name: true, abbreviation: true, authorityType: true } },
+      taxonomicAuthority: { select: { name: true, abbreviation: true, authorityType: true, description: true, website: true, registrationUrl: true, cultivarSearchUrl: true, externalAuthorityUrl: true } },
+      automaticTaxonomicAuthority: { select: { name: true, abbreviation: true, authorityType: true, description: true, website: true, registrationUrl: true, cultivarSearchUrl: true, externalAuthorityUrl: true } },
+      taxonomicAuthorityMatches: {
+        orderBy: { priority: 'asc' },
+        take: 8,
+        select: {
+          matchReason: true,
+          priority: true,
+          isSelected: true,
+          taxonomicAuthority: { select: { name: true, abbreviation: true, authorityType: true, website: true, registrationUrl: true, cultivarSearchUrl: true, externalAuthorityUrl: true } },
+        },
+      },
+      desiredLocation: { select: { name: true, code: true, description: true } },
+      acquisitionResearchEntries: {
+        orderBy: { occurredAt: 'desc' },
+        take: 8,
+        select: { title: true, body: true, urlsJson: true, sourceCitation: true, occurredAt: true },
+      },
+      instances: {
+        orderBy: { plantId: 'asc' },
+        take: 12,
+        select: {
+          plantId: true,
+          instanceType: true,
+          status: true,
+          acquisitionDate: true,
+          propagationDate: true,
+          source: true,
+          distributor: true,
+          stockNumber: true,
+          acquisitionLabel: true,
+          originCollectionSlug: true,
+          originPlantId: true,
+          currentLocation: { select: { name: true, code: true } },
+        },
+      },
+      _count: { select: { instances: true, acquisitionResearchEntries: true, plantObservations: true, acquisitionRecords: true } },
     },
   })
   if (!definition) return null
-  if (job.targetField === 'description') return definition.description
-  if (job.targetField === 'authority') return definition.authority
-  if (job.targetField === 'references') return {
+  const references = {
     wikipediaUrl: definition.wikipediaUrl,
     inaturalistUrl: definition.inaturalistUrl,
     powoUrl: definition.powoUrl,
     gbifUrl: definition.gbifUrl,
-    description: definition.description,
   }
-  if (job.targetField === 'tags') return definition.tags.map((tag) => tag.plantTag)
-  if (job.targetField === 'taxonomy' || job.targetField === 'review') return {
-    name: plantName(definition),
-    genus: definition.genus,
-    species: definition.species,
-    hybridNotation: definition.hybridNotation,
-    cultivarName: definition.cultivarName,
-    authority: definition.authority,
-    taxonomicAuthority: definition.taxonomicAuthority,
-    references: {
-      wikipediaUrl: definition.wikipediaUrl,
-      inaturalistUrl: definition.inaturalistUrl,
-      powoUrl: definition.powoUrl,
-      gbifUrl: definition.gbifUrl,
+  const tags = definition.tags.map((tag) => tag.plantTag)
+  const focusCurrentValue =
+    job.targetField === 'description' ? definition.description
+    : job.targetField === 'authority' ? definition.authority
+    : job.targetField === 'references' ? references
+    : job.targetField === 'tags' ? tags
+    : job.targetField ? (definition as any)[job.targetField] ?? null
+    : null
+  const {
+    collection,
+    aliases,
+    tags: _definitionTags,
+    substrateRecommendations,
+    husbandryGuide,
+    taxonomicAuthority,
+    automaticTaxonomicAuthority,
+    taxonomicAuthorityMatches,
+    desiredLocation,
+    acquisitionResearchEntries,
+    instances,
+    _count,
+    ...plantDefinition
+  } = definition as any
+  return {
+    scope: 'plantDefinition',
+    focus: {
+      phase: job.phase,
+      jobType: job.jobType,
+      targetField: job.targetField,
+      reason: job.reason,
+      currentValue: focusCurrentValue,
     },
-    description: definition.description,
-    aliases: definition.aliases,
-    tags: definition.tags.map((tag) => tag.plantTag),
-    husbandryGuide: definition.husbandryGuide,
-    substrateRecommendations: definition.substrateRecommendations,
+    plantDefinition: {
+      ...plantDefinition,
+      displayName: plantName(definition),
+    },
+    taxonomy: {
+      genus: definition.genus,
+      species: definition.species,
+      hybridNotation: definition.hybridNotation,
+      cultivarName: definition.cultivarName,
+      authority: definition.authority,
+      cultivarRegistrationNumber: definition.cultivarRegistrationNumber,
+      provisionalTaxon: definition.provisionalTaxon,
+      identificationStatus: definition.identificationStatus,
+      confidence: definition.confidence,
+      taxonomicPlacementJson: definition.taxonomicPlacementJson,
+    },
+    registration: {
+      registrationRequired: definition.registrationRequired,
+      registrationStatus: definition.registrationStatus,
+      registrationDate: definition.registrationDate,
+      registrationApplicationDate: definition.registrationApplicationDate,
+      cultivarAccepted: definition.cultivarAccepted,
+      officialCultivarName: definition.officialCultivarName,
+      registrationPublicationReference: definition.registrationPublicationReference,
+    },
+    selectedTaxonomicAuthority: taxonomicAuthority,
+    automaticTaxonomicAuthority,
+    taxonomicAuthorityMatches,
+    references,
+    descriptiveFields: {
+      description: definition.description,
+      notes: definition.notes,
+      acquisitionResearchSummary: definition.acquisitionResearchSummary,
+    },
+    acquisitionIntent: {
+      acquisitionStatus: definition.acquisitionStatus,
+      acquisitionPriority: definition.acquisitionPriority,
+      acquisitionInterestNotes: definition.acquisitionInterestNotes,
+      desiredSpecimenSize: definition.desiredSpecimenSize,
+      idealPurchasePrice: definition.idealPurchasePrice,
+      maximumPurchasePrice: definition.maximumPurchasePrice,
+      desiredLocation,
+      preferredVendorsJson: definition.preferredVendorsJson,
+    },
+    collection,
+    aliases,
+    tags,
+    husbandryGuide,
+    substrateRecommendations,
+    acquisitionResearchEntries,
+    instances,
+    counts: _count,
   }
-  return (definition as any)[job.targetField] ?? null
+}
+
+async function releaseLegacyTaxonomyHumanBlocks(prisma: PrismaClient) {
+  const jobs = await prisma.aiCuratorJob.findMany({
+    where: {
+      status: 'WAITING_FOR_HUMAN',
+      targetField: 'taxonomy',
+      blockingReason: { startsWith: 'Taxonomy is incomplete enough' },
+      collection: { status: 'ACTIVE', aiFeaturesEnabled: true, aiCuratorEnabled: true },
+    },
+    select: {
+      id: true,
+      collectionId: true,
+      jobType: true,
+      phase: true,
+      plantDefinitionId: true,
+      targetEntityType: true,
+      targetEntityId: true,
+      targetField: true,
+    },
+  })
+  let released = 0
+  let superseded = 0
+  for (const job of jobs) {
+    const duplicate = await prisma.aiCuratorJob.findFirst({
+      where: {
+        id: { not: job.id },
+        collectionId: job.collectionId,
+        jobType: job.jobType,
+        phase: job.phase,
+        plantDefinitionId: job.plantDefinitionId,
+        targetEntityType: job.targetEntityType,
+        targetEntityId: job.targetEntityId,
+        targetField: job.targetField,
+        status: 'QUEUED',
+      },
+      select: { id: true },
+    })
+    if (duplicate) {
+      await prisma.aiCuratorJob.update({
+        where: { id: job.id },
+        data: {
+          status: 'CANCELLED',
+          completedAt: new Date(),
+          resultSummary: 'Cancelled legacy taxonomy blocker because a queued replacement already exists.',
+        },
+      })
+      superseded += 1
+      continue
+    }
+    await prisma.aiCuratorJob.update({
+      where: { id: job.id },
+      data: {
+        status: 'QUEUED',
+        attempts: 0,
+        claimedBy: null,
+        claimedAt: null,
+        lastAttemptAt: null,
+        nextRetryAt: null,
+        blockingReason: null,
+        humanActionRequired: null,
+        retryConditions: null,
+        resultSummary: 'Requeued after taxonomy enrichment blocker was removed.',
+      },
+    })
+    released += 1
+  }
+  return { released, superseded }
 }
 
 function waitingForHumanForJob(job: any) {
@@ -407,11 +661,6 @@ function waitingForHumanForJob(job: any) {
     blockingReason: 'AI Curator cannot create a reliable type image without a human-provided photograph.',
     humanActionRequired: 'Upload or mark a representative type image for this plant definition.',
     retryConditions: 'Retry after a type image is attached or a specimen photo is marked as representative.',
-  }
-  if (job.targetField === 'taxonomy') return {
-    blockingReason: 'Taxonomy is incomplete enough that downstream research would be speculative.',
-    humanActionRequired: 'Record the best known genus/species/cultivar placement or mark the definition as provisional.',
-    retryConditions: 'Retry after the core identity is clarified.',
   }
   return null
 }
@@ -425,13 +674,16 @@ async function callCuratorModel(settings: any, job: any, currentValue: unknown) 
     },
     body: JSON.stringify({
       model: settings.model,
-      temperature: Number(settings.temperature),
       max_output_tokens: Number(settings.maxTokens),
       reasoning: settings.reasoningEffort ? { effort: settings.reasoningEffort } : undefined,
       instructions: [
         'You are AI Curator for AxilDB, a botanical collection database.',
         'Prepare human-reviewable research suggestions only. Never instruct the system to directly modify records.',
         'Do not include private user details, emails, or unrelated collection data.',
+        'Use the supplied plantDefinition or collection context as the source record. The focus object identifies the field being reviewed, but the rest of the context is available evidence and must be considered.',
+        'Accuracy is more important than filling a field. Do not guess taxonomy, cultivar names, authorities, care guidance, or reference URLs.',
+        'Only suggest botanical information that is supported by the supplied record context or by reliable, broadly known public botanical sources. When reliable information is unavailable, make suggestedValue null and explain the uncertainty and recommended human follow-up.',
+        'For taxonomy, preserve known genus/species/hybrid/cultivar boundaries and never turn an informal trade name into a Latin binomial without reliable support.',
         'Return strict JSON with keys: title, suggestedValue, reasoning, confidence, supportingReferences.',
         'supportingReferences must be an array of short objects with label and url when reliable public references are known; otherwise use an empty array.',
         'confidence must be from 0 to 1. Keep reasoning concise and explain uncertainty.',
@@ -445,7 +697,7 @@ async function callCuratorModel(settings: any, job: any, currentValue: unknown) 
             jobType: job.jobType,
             targetField: job.targetField,
             reason: job.reason,
-            currentValue,
+            context: currentValue,
           }),
         }],
       }],
@@ -612,6 +864,7 @@ export async function processAiCuratorWake(prisma: PrismaClient) {
   if (!settings.enabled) return { status: 'STOPPED' as const, processed: 0, created: 0, summary: 'AI Curator is disabled.' }
 
   const expired = await expireAiCuratorWork(prisma)
+  const releasedTaxonomyBlocks = await releaseLegacyTaxonomyHumanBlocks(prisma)
   const seeded = await enqueueReadinessCuratorJobs(prisma)
   const workerId = randomUUID()
   const deadline = Date.now() + Number(settings.timeSliceSeconds || 75) * 1000
@@ -625,7 +878,7 @@ export async function processAiCuratorWake(prisma: PrismaClient) {
   while (processed < maxJobs && Date.now() < deadline) {
     const budget = await budgetSnapshot(prisma, settings)
     if (budget.hardStop || budget.remainingToday <= 0 || budget.remainingMonth <= 0) {
-      return { status: 'WAITING' as const, processed, created: seeded.created, expired, summary: 'Budget exhausted.', spent }
+      return { status: 'WAITING' as const, processed, created: seeded.created, expired, releasedTaxonomyBlocks, summary: 'Budget exhausted.', spent }
     }
     const job = await claimNextJob(prisma, workerId)
     if (!job) break
@@ -645,9 +898,10 @@ export async function processAiCuratorWake(prisma: PrismaClient) {
     deferred,
     created: seeded.created,
     expired,
+    releasedTaxonomyBlocks,
     spent,
     durationMs: Date.now() - startedAt.getTime(),
-    summary: `Seeded ${seeded.created}; processed ${processed}; completed ${completed}; waiting ${waitingForHuman}; deferred ${deferred}.`,
+    summary: `Released ${releasedTaxonomyBlocks.released} legacy taxonomy blockers; seeded ${seeded.created}; processed ${processed}; completed ${completed}; waiting ${waitingForHuman}; deferred ${deferred}.`,
   }
 }
 
@@ -689,6 +943,14 @@ export async function aiCuratorDashboard(prisma: PrismaClient) {
     budgetSnapshot(prisma, settings),
   ])
   const queueStats = Object.fromEntries(queueRows.map((row) => [row.status, row._count._all]))
+  const readyJobs = queueStats.QUEUED || 0
+  const runningJobs = queueStats.RUNNING || 0
+  const deferredJobs = queueStats.DEFERRED || 0
+  const waitingForHumanJobs = queueStats.WAITING_FOR_HUMAN || 0
+  const estimatedQueueCompletion =
+    readyJobs ? `${Math.ceil(readyJobs / Math.max(1, settings.concurrency))} wake(s) for ready jobs`
+    : runningJobs || deferredJobs || waitingForHumanJobs ? 'No ready jobs; deferred or human-waiting jobs remain'
+    : 'Queue empty'
   const completedDefinitions = await prisma.plantDefinition.count({ where: { collection: { aiCuratorEnabled: true }, isValidated: true } })
   const collections = await prisma.collection.findMany({ where: { status: 'ACTIVE', aiCuratorEnabled: true }, select: { id: true } })
   let averageCompleteness = 0
@@ -712,7 +974,7 @@ export async function aiCuratorDashboard(prisma: PrismaClient) {
       dailyBudget: budget.dailyBudget,
       todaySpend: budget.todaySpend,
       pendingSuggestions,
-      waitingForHuman: queueStats.WAITING_FOR_HUMAN || 0,
+      waitingForHuman: waitingForHumanJobs,
     },
   })
 
@@ -732,7 +994,7 @@ export async function aiCuratorDashboard(prisma: PrismaClient) {
     completedDefinitions,
     averageCompleteness,
     health,
-    estimatedQueueCompletion: queueStats.QUEUED ? `${Math.ceil((queueStats.QUEUED || 0) / Math.max(1, settings.concurrency))} wake(s)` : 'Queue empty',
+    estimatedQueueCompletion,
   }
 }
 
