@@ -1,7 +1,7 @@
 import { updateAiCuratorSettings, reviewAiCuratorSuggestion, resolveAiCuratorJob } from '@/app/ai-curator-actions'
 import { Button, Card, Field, LinkButton, Select, TextArea } from '@/components/ui'
 import { requireServerAdmin } from '@/lib/auth'
-import { aiCuratorDashboard, aiCuratorReviewQueue, canApplyCuratorSuggestion } from '@/lib/ai-curator'
+import { aiCuratorChangedFields, aiCuratorCurrentFocusValue, aiCuratorDashboard, aiCuratorReviewQueue, canApplyCuratorSuggestion } from '@/lib/ai-curator'
 import { prisma } from '@/lib/prisma'
 import { formatDateTime } from '@/lib/time'
 import { plantName } from '@/lib/utils'
@@ -103,15 +103,6 @@ function compactValue(value: unknown): string {
   return String(value)
 }
 
-function currentFocusValue(value: unknown) {
-  if (isRecord(value) && isRecord(value.focus) && Object.prototype.hasOwnProperty.call(value.focus, 'currentValue')) {
-    if (value.focus.targetField === 'taxonomy' && isRecord(value.taxonomy)) return value.taxonomy
-    return value.focus.currentValue
-  }
-  if (isRecord(value) && isRecord(value.taxonomy)) return value.taxonomy
-  return value
-}
-
 function contextHighlights(value: unknown) {
   if (!isRecord(value)) return []
   const highlights: string[] = []
@@ -152,12 +143,14 @@ function referenceList(value: unknown) {
     .filter((reference) => reference.label !== 'No value recorded')
 }
 
-function PrettyValue({ value }: { value: unknown }) {
+function PrettyValue({ value, changedFields }: { value: unknown; changedFields?: Set<string> }) {
   if (value === null || value === undefined || value === '') {
-    return <p className="rounded-md border border-dashed border-stone-300 bg-white/45 p-3 text-sm italic text-stone-500">No value recorded.</p>
+    const changed = Boolean(changedFields?.size)
+    return <p className={`rounded-md border p-3 text-sm italic ${changed ? 'border-green-300 bg-green-50 text-green-950' : 'border-dashed border-stone-300 bg-white/45 text-stone-500'}`}>No value recorded.</p>
   }
   if (typeof value !== 'object') {
-    return <p className="whitespace-pre-wrap rounded-md border border-stone-200 bg-white/55 p-3 text-sm text-stone-800">{compactValue(value)}</p>
+    const changed = Boolean(changedFields?.size)
+    return <p className={`whitespace-pre-wrap rounded-md border p-3 text-sm ${changed ? 'border-green-300 bg-green-50 text-green-950' : 'border-stone-200 bg-white/55 text-stone-800'}`}>{compactValue(value)}{changed && <span className="ml-2 rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-900">Changed</span>}</p>
   }
   if (Array.isArray(value)) {
     if (value.length === 0) return <p className="rounded-md border border-dashed border-stone-300 bg-white/45 p-3 text-sm italic text-stone-500">No items.</p>
@@ -172,18 +165,25 @@ function PrettyValue({ value }: { value: unknown }) {
   }
   return (
     <dl className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-      {orderedEntries(value as Record<string, unknown>).slice(0, 18).map(([key, entryValue]) => (
-        <div key={key} className="min-w-0 rounded-md border border-stone-200 bg-white/60 p-3">
-          <dt className="text-xs font-bold uppercase tracking-[0.12em] text-stone-500">{fieldLabel(key)}</dt>
+      {orderedEntries(value as Record<string, unknown>).slice(0, 18).map(([key, entryValue]) => {
+        const changed = Boolean(changedFields?.has(key))
+        return (
+        <div key={key} className={`min-w-0 rounded-md border p-3 ${changed ? 'border-green-300 bg-green-50 shadow-sm shadow-green-900/5' : 'border-stone-200 bg-white/60'}`}>
+          <dt className={`flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] ${changed ? 'text-green-900' : 'text-stone-500'}`}>
+            <span>{fieldLabel(key)}</span>
+            {changed && <span className="rounded-full bg-green-100 px-2 py-0.5 text-[0.65rem] normal-case tracking-normal text-green-900">Changed</span>}
+          </dt>
           <dd className="mt-1 min-w-0 break-words text-sm text-stone-900">{compactValue(entryValue)}</dd>
         </div>
-      ))}
+        )
+      })}
     </dl>
   )
 }
 
 function ReviewSuggestionCard({ suggestion }: { suggestion: any }) {
-  const currentValue = currentFocusValue(suggestion.currentValue)
+  const currentValue = aiCuratorCurrentFocusValue(suggestion.currentValue, suggestion.targetField)
+  const changedFields = new Set(aiCuratorChangedFields(suggestion.currentValue, suggestion.suggestedValue, suggestion.targetField))
   const highlights = contextHighlights(suggestion.currentValue)
   const references = referenceList(suggestion.supportingReferences)
   const appliesDirectly = canApplyCuratorSuggestion(suggestion.targetField)
@@ -228,9 +228,15 @@ function ReviewSuggestionCard({ suggestion }: { suggestion: any }) {
             )}
           </section>
           <section className="rounded-lg border border-green-200 bg-green-50/35 p-3">
-            <h5 className="font-semibold text-green-950">Proposed change</h5>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h5 className="font-semibold text-green-950">Proposed change</h5>
+              <span className="rounded-full border border-green-200 bg-white/70 px-2.5 py-1 text-xs font-medium text-green-900">
+                {changedFields.size ? `${changedFields.size} changed` : 'No field changes'}
+              </span>
+            </div>
+            {!changedFields.size && <p className="mt-2 rounded-md border border-amber-200 bg-amber-50/70 p-2 text-xs text-amber-950">This suggestion restates the current value. New no-change suggestions are skipped automatically.</p>}
             <div className="mt-2">
-              <PrettyValue value={suggestion.suggestedValue} />
+              <PrettyValue value={suggestion.suggestedValue} changedFields={changedFields} />
             </div>
           </section>
         </div>

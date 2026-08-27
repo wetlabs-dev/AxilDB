@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { aiModelPricing, estimateAiCostDollars } from '../lib/ai-pricing'
-import { canApplyCuratorSuggestion, curatorJobScope, curatorPriorityScore, effectiveAiCuratorSpend, suggestedScalarValue } from '../lib/ai-curator'
+import { aiCuratorChangedFields, canApplyCuratorSuggestion, curatorJobScope, curatorPriorityScore, effectiveAiCuratorSpend, hasAiCuratorSuggestionChange, suggestedScalarValue } from '../lib/ai-curator'
 
 const baseline = curatorPriorityScore({
   completenessScore: 70,
@@ -32,6 +32,34 @@ assert.equal(effectiveAiCuratorSpend([
   { actualCostDollars: null, estimatedCostDollars: '0.010000' },
   { actualCostDollars: '0.000000', estimatedCostDollars: '0.020000' },
 ]), 0.030625)
+const currentTaxonomyContext = {
+  focus: { targetField: 'taxonomy', currentValue: null },
+  taxonomy: {
+    genus: 'Hoya',
+    species: 'lyi',
+    hybridNotation: null,
+    cultivarName: null,
+    authority: null,
+    confidence: 'UNCERTAIN',
+    provisionalTaxon: null,
+    identificationStatus: 'IDENTIFIED',
+    cultivarRegistrationNumber: null,
+    taxonomicPlacementJson: null,
+  },
+}
+const repeatedTaxonomy = {
+  genus: 'Hoya',
+  species: 'lyi',
+  hybridNotation: null,
+  cultivarName: null,
+  authority: null,
+  confidence: 'UNCERTAIN',
+  provisionalTaxon: null,
+  identificationStatus: 'IDENTIFIED',
+}
+assert.equal(hasAiCuratorSuggestionChange(currentTaxonomyContext, repeatedTaxonomy, 'taxonomy'), false)
+assert.equal(hasAiCuratorSuggestionChange(currentTaxonomyContext, null, 'taxonomy'), false)
+assert.deepEqual(aiCuratorChangedFields(currentTaxonomyContext, { ...repeatedTaxonomy, authority: 'Kloppenb.' }, 'taxonomy'), ['authority'])
 assert.equal(canApplyCuratorSuggestion('description'), true)
 assert.equal(canApplyCuratorSuggestion('husbandry'), false)
 assert.equal(suggestedScalarValue({ value: 'Begonia research draft' }), 'Begonia research draft')

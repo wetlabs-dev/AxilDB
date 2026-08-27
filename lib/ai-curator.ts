@@ -95,6 +95,58 @@ function jsonOrNull(value: unknown) {
   return JSON.parse(serialized) as Prisma.InputJsonValue
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value))
+}
+
+function normalizedSuggestionValue(value: unknown): unknown {
+  if (value === undefined || value === null || value === '') return null
+  if (typeof value === 'string') return value.trim() || null
+  if (typeof value !== 'object') return value
+  if (Array.isArray(value)) {
+    const entries = value.map(normalizedSuggestionValue).filter((entry) => entry !== null)
+    return entries.length ? entries : null
+  }
+  const entries = Object.entries(value)
+    .map(([key, entryValue]) => [key, normalizedSuggestionValue(entryValue)] as const)
+    .filter(([, entryValue]) => {
+      if (entryValue === null) return false
+      if (Array.isArray(entryValue) && entryValue.length === 0) return false
+      return !(isRecord(entryValue) && Object.keys(entryValue).length === 0)
+    })
+    .sort(([a], [b]) => a.localeCompare(b))
+  return entries.length ? Object.fromEntries(entries) : null
+}
+
+function comparableSuggestionValue(value: unknown) {
+  return JSON.stringify(normalizedSuggestionValue(value))
+}
+
+export function aiCuratorCurrentFocusValue(currentValue: unknown, targetField?: string | null) {
+  if (isRecord(currentValue) && isRecord(currentValue.focus) && Object.prototype.hasOwnProperty.call(currentValue.focus, 'currentValue')) {
+    if ((targetField || currentValue.focus.targetField) === 'taxonomy' && isRecord(currentValue.taxonomy)) return currentValue.taxonomy
+    return currentValue.focus.currentValue
+  }
+  if (isRecord(currentValue) && isRecord(currentValue.taxonomy)) return currentValue.taxonomy
+  return currentValue
+}
+
+export function aiCuratorChangedFields(currentValue: unknown, suggestedValue: unknown, targetField?: string | null) {
+  if (normalizedSuggestionValue(suggestedValue) === null) return []
+  const currentFocus = aiCuratorCurrentFocusValue(currentValue, targetField)
+  if (isRecord(currentFocus) && isRecord(suggestedValue)) {
+    return Object.keys(suggestedValue).filter((key) => comparableSuggestionValue(currentFocus[key]) !== comparableSuggestionValue(suggestedValue[key]))
+  }
+  if (isRecord(suggestedValue) && Object.prototype.hasOwnProperty.call(suggestedValue, 'value')) {
+    return comparableSuggestionValue(currentFocus) !== comparableSuggestionValue(suggestedValue.value) ? ['value'] : []
+  }
+  return comparableSuggestionValue(currentFocus) !== comparableSuggestionValue(suggestedValue) ? [targetField || 'value'] : []
+}
+
+export function hasAiCuratorSuggestionChange(currentValue: unknown, suggestedValue: unknown, targetField?: string | null) {
+  return aiCuratorChangedFields(currentValue, suggestedValue, targetField).length > 0
+}
+
 function suggestionExpiry(settings: any) {
   return addDays(new Date(), Number(settings.suggestionExpiryDays || 90))
 }
@@ -690,6 +742,7 @@ async function callCuratorModel(settings: any, job: any, currentValue: unknown) 
         'Use the supplied plantDefinition or collection context as the source record. The focus object identifies the field being reviewed, but the rest of the context is available evidence and must be considered.',
         'Accuracy is more important than filling a field. Do not guess taxonomy, cultivar names, authorities, care guidance, or reference URLs.',
         'Only suggest botanical information that is supported by the supplied record context or by reliable, broadly known public botanical sources. When reliable information is unavailable, make suggestedValue null and explain the uncertainty and recommended human follow-up.',
+        'Do not return a confirmation of values that already exist in the current focus. If no field should change, make suggestedValue null and explain that no change is recommended.',
         'For taxonomy, preserve known genus/species/hybrid/cultivar boundaries and never turn an informal trade name into a Latin binomial without reliable support.',
         'Return strict JSON with keys: title, suggestedValue, reasoning, confidence, supportingReferences.',
         'supportingReferences must be an array of short objects with label and url when reliable public references are known; otherwise use an empty array.',
@@ -716,6 +769,19 @@ async function callCuratorModel(settings: any, job: any, currentValue: unknown) 
 }
 
 async function createSuggestionFromResult(prisma: PrismaClient, settings: any, job: any, currentValue: unknown, modelResult: any, actualCost: number | null) {
+  if (!hasAiCuratorSuggestionChange(currentValue, modelResult.suggestedValue, job.targetField)) {
+    await prisma.aiCuratorJob.update({
+      where: { id: job.id },
+      data: {
+        status: 'SKIPPED',
+        completedAt: new Date(),
+        actualCostDollars: actualCost == null ? undefined : actualCost.toFixed(6),
+        confidence: boundedConfidence(modelResult.confidence),
+        resultSummary: `Skipped no-change suggestion: ${String(modelResult.title || job.jobType).slice(0, 160)}`,
+      },
+    })
+    return null
+  }
   const suggestion = await prisma.aiCuratorSuggestion.create({
     data: {
       collectionId: job.collectionId,
@@ -801,7 +867,7 @@ async function processJob(prisma: PrismaClient, settings: any, job: any) {
     const usage = tokenUsage(payload)
     const hasUsage = Boolean((usage.inputTokens || 0) + (usage.outputTokens || 0))
     const actualCost = hasUsage ? tokenUsageCostDollars(usage, settings.model) : null
-    await createSuggestionFromResult(prisma, settings, job, currentValue, result, actualCost)
+    const suggestion = await createSuggestionFromResult(prisma, settings, job, currentValue, result, actualCost)
     await prisma.aiUsageEvent.create({
       data: {
         collectionId: job.collectionId,
@@ -812,7 +878,7 @@ async function processJob(prisma: PrismaClient, settings: any, job: any) {
         totalTokens: usage.totalTokens,
       },
     })
-    return { status: 'COMPLETED' as const, cost: actualCost || dollars(job.estimatedCostDollars) }
+    return { status: suggestion ? 'COMPLETED' as const : 'SKIPPED' as const, cost: actualCost || dollars(job.estimatedCostDollars) }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     const exhausted = job.attempts >= job.maxAttempts
@@ -879,6 +945,7 @@ export async function processAiCuratorWake(prisma: PrismaClient) {
   const maxJobs = Math.max(1, Number(settings.concurrency || 1))
   let processed = 0
   let completed = 0
+  let skipped = 0
   let waitingForHuman = 0
   let deferred = 0
   let spent = 0
@@ -894,6 +961,7 @@ export async function processAiCuratorWake(prisma: PrismaClient) {
     processed += 1
     spent += result.cost
     if (result.status === 'COMPLETED') completed += 1
+    if (result.status === 'SKIPPED') skipped += 1
     if (result.status === 'WAITING_FOR_HUMAN') waitingForHuman += 1
     if (result.status === 'DEFERRED') deferred += 1
   }
@@ -902,6 +970,7 @@ export async function processAiCuratorWake(prisma: PrismaClient) {
     status: 'SUCCEEDED' as const,
     processed,
     completed,
+    skipped,
     waitingForHuman,
     deferred,
     created: seeded.created,
@@ -909,7 +978,7 @@ export async function processAiCuratorWake(prisma: PrismaClient) {
     releasedTaxonomyBlocks,
     spent,
     durationMs: Date.now() - startedAt.getTime(),
-    summary: `Released ${releasedTaxonomyBlocks.released} legacy taxonomy blockers; seeded ${seeded.created}; processed ${processed}; completed ${completed}; waiting ${waitingForHuman}; deferred ${deferred}.`,
+    summary: `Released ${releasedTaxonomyBlocks.released} legacy taxonomy blockers; seeded ${seeded.created}; processed ${processed}; completed ${completed}; skipped ${skipped}; waiting ${waitingForHuman}; deferred ${deferred}.`,
   }
 }
 
@@ -918,9 +987,12 @@ export async function aiCuratorDashboard(prisma: PrismaClient) {
   const now = new Date()
   const today = startOfLocalDay(now)
   const week = startOfWeek(now)
-  const [queueRows, pendingSuggestions, completedToday, completedWeek, waitingJobs, currentJob, recentErrors, recentAccomplishments, enabledCollections, totalCollections, budget] = await Promise.all([
+  const [queueRows, pendingSuggestionRows, completedToday, completedWeek, waitingJobs, currentJob, recentErrors, recentAccomplishments, enabledCollections, totalCollections, budget] = await Promise.all([
     prisma.aiCuratorJob.groupBy({ by: ['status'], _count: { _all: true } }),
-    prisma.aiCuratorSuggestion.count({ where: { status: 'PENDING', OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] } }),
+    prisma.aiCuratorSuggestion.findMany({
+      where: { status: 'PENDING', OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
+      select: { currentValue: true, suggestedValue: true, targetField: true },
+    }),
     prisma.aiCuratorJob.count({ where: { status: 'COMPLETED', completedAt: { gte: today } } }),
     prisma.aiCuratorJob.count({ where: { status: 'COMPLETED', completedAt: { gte: week } } }),
     prisma.aiCuratorJob.findMany({
@@ -955,6 +1027,7 @@ export async function aiCuratorDashboard(prisma: PrismaClient) {
   const runningJobs = queueStats.RUNNING || 0
   const deferredJobs = queueStats.DEFERRED || 0
   const waitingForHumanJobs = queueStats.WAITING_FOR_HUMAN || 0
+  const pendingSuggestions = pendingSuggestionRows.filter((suggestion) => hasAiCuratorSuggestionChange(suggestion.currentValue, suggestion.suggestedValue, suggestion.targetField)).length
   const estimatedQueueCompletion =
     readyJobs ? `${Math.ceil(readyJobs / Math.max(1, settings.concurrency))} wake(s) for ready jobs`
     : runningJobs || deferredJobs || waitingForHumanJobs ? 'No ready jobs; deferred or human-waiting jobs remain'
@@ -1007,11 +1080,11 @@ export async function aiCuratorDashboard(prisma: PrismaClient) {
 }
 
 export async function aiCuratorReviewQueue(prisma: PrismaClient) {
-  const suggestions = await prisma.aiCuratorSuggestion.findMany({
+  const suggestions = (await prisma.aiCuratorSuggestion.findMany({
     where: { status: 'PENDING', OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
     orderBy: [{ plantDefinitionId: 'asc' }, { createdAt: 'asc' }],
     include: { collection: { select: { name: true, slug: true } }, plantDefinition: true },
-  })
+  })).filter((suggestion) => hasAiCuratorSuggestionChange(suggestion.currentValue, suggestion.suggestedValue, suggestion.targetField))
   const groups = new Map<string, { key: string; collectionName: string; collectionSlug: string; plantName: string; plantDefinitionId: string | null; suggestions: typeof suggestions }>()
   for (const suggestion of suggestions) {
     const key = suggestion.plantDefinitionId || `collection:${suggestion.collectionId}`
