@@ -8,16 +8,21 @@ import { locationPath } from '@/lib/locations'
 export default async function BulkLabels({
   searchParams,
 }: {
-  searchParams: Promise<{ target?: string }>
+  searchParams: Promise<{ target?: string; sort?: string }>
 }) {
   const { collection } = await requireCollectionViewer()
   const sp = await searchParams
   const target = sp.target === 'locations' ? 'locations' : sp.target === 'both' ? 'both' : 'plants'
+  const sort = sp.sort === 'added-newest' || sp.sort === 'added-oldest' ? sp.sort : 'plant-id'
   const [instances, locations] = await Promise.all([
     prisma.plantInstance.findMany({
       where: { collectionId: collection.id, status: 'ACTIVE' },
       include: { plantDefinition: true },
-      orderBy: { plantId: 'asc' },
+      orderBy: sort === 'added-newest'
+        ? [{ createdAt: 'desc' }, { plantId: 'asc' }]
+        : sort === 'added-oldest'
+          ? [{ createdAt: 'asc' }, { plantId: 'asc' }]
+          : [{ plantId: 'asc' }],
     }),
     prisma.location.findMany({
       where: { collectionId: collection.id, status: 'ACTIVE' },
@@ -52,16 +57,31 @@ export default async function BulkLabels({
           ].map(([value, label]) => (
             <a
               key={value}
-              href={collectionPath(collection.slug, `/labels?target=${value}`)}
+              href={collectionPath(collection.slug, `/labels?target=${value}&sort=${sort}`)}
               className={`rounded-full border px-3 py-1.5 text-sm font-semibold ${target === value ? 'border-[#2f6b45] bg-[#e8efdf] text-[#2f6b45]' : 'border-stone-300 bg-white/70 text-stone-700'}`}
             >
               {label}
             </a>
           ))}
         </div>
+        {showPlants && (
+          <form action={collectionPath(collection.slug, '/labels')} method="get" className="mb-4 flex flex-wrap items-end gap-2">
+            <input type="hidden" name="target" value={target} />
+            <label className="grid min-w-52 gap-1 text-sm font-semibold">
+              Sort plants by
+              <select className="rounded-md border border-stone-300 bg-[#fffdf7] px-3 py-2 font-normal" name="sort" defaultValue={sort}>
+                <option value="plant-id">Plant ID</option>
+                <option value="added-newest">Date added, newest first</option>
+                <option value="added-oldest">Date added, oldest first</option>
+              </select>
+            </label>
+            <Button>Sort</Button>
+          </form>
+        )}
         <form action="/api/labels/bulk" method="get" className="grid gap-3">
           <input type="hidden" name="collectionSlug" value={collection.slug} />
           <input type="hidden" name="target" value={target} />
+          <input type="hidden" name="sort" value={sort} />
           <LabelExportControls />
           <div className="grid max-h-[520px] gap-2 overflow-auto rounded-lg border border-stone-200 bg-[#fffdf7] p-3">
             {showPlants && (

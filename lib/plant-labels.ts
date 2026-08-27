@@ -27,15 +27,17 @@ export function orientSize(width: number, height: number, orientation: LabelOrie
 
 type LabelDefinition = {
   genus: string | null
+  hybridNotation?: string | null
   species: string | null
   cultivarName?: string | null
 }
 
 export function plantLabelNameLines(definition: LabelDefinition) {
   const genus = (definition.genus || '').trim()
+  const hybrid = (definition.hybridNotation || '').trim()
   const species = (definition.species || '').trim()
   const cultivar = (definition.cultivarName || '').trim()
-  return [genus, species, cultivar ? `'${cultivar}'` : ''].filter(Boolean)
+  return [genus, hybrid, species, cultivar ? `'${cultivar}'` : ''].filter(Boolean)
 }
 
 export function approximatePreviewFontSize(lines: string[], maxSize: number, minSize: number, maxChars: number) {

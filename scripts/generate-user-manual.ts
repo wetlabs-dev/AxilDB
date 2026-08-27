@@ -46,7 +46,7 @@ async function main() {
     if (section.warnings?.length) lines.push('### Warnings', '', list(section.warnings), '')
   }
 
-  const markdown = `${lines.join('\n')}\n`
+  const markdown = `${lines.join('\n').trimEnd()}\n`
   await writeFile(path.join(docsDir, 'USER_MANUAL.md'), markdown)
   await writeFile(path.join(publicManualDir, 'USER_MANUAL.md'), markdown)
 }

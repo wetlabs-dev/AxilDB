@@ -554,9 +554,10 @@ export const manualSections: ManualSection[] = [
       'Choose a label format: 2.25 × 1.25 inch single labels, a legacy ganged print sheet, or Brother DK-2210 continuous labels.',
       'Choose portrait or landscape orientation independently of the label format.',
       'Scan a plant label QR code to open the specimen detail page, or a location label QR code to open the location detail page.',
+      'Sort the plant selection list by plant ID or by the date the plant instance was added before exporting labels.',
     ],
     notes: [
-      'Plant labels show collection name, plant name, QR code, and plant ID. Location labels show collection name, location name, type, breadcrumb when space allows, QR code, and location code.',
+      'Plant labels show collection name, plant name including hybrid notation when recorded, QR code, and plant ID. Location labels show collection name, location name, type, breadcrumb when space allows, QR code, and location code.',
       'Private collection labels require sign-in before showing the specimen record.',
     ],
   },

@@ -31,6 +31,7 @@ const SHEET_GUTTER_Y = 0
 
 type LabelItem = Awaited<ReturnType<typeof getLabelItems>>[number]
 type LabelTarget = 'plants' | 'locations' | 'both'
+type PlantLabelSort = 'plant-id' | 'added-newest' | 'added-oldest'
 
 function oneLineFontSize(doc: PDFKit.PDFDocument, text: string, font: string, max: number, min: number, width: number) {
   for (let size = max; size >= min; size -= 0.5) {
@@ -50,7 +51,7 @@ function multiLineFontSize(doc: PDFKit.PDFDocument, lines: string[], font: strin
   return min
 }
 
-async function getLabelItems(collectionId: string, all: boolean, ids: string[], target: LabelTarget) {
+async function getLabelItems(collectionId: string, all: boolean, ids: string[], target: LabelTarget, sort: PlantLabelSort) {
   const parsedPlantIds = ids
     .filter((id) => id.startsWith('plant:'))
     .map((id) => id.slice('plant:'.length))
@@ -89,7 +90,11 @@ async function getLabelItems(collectionId: string, all: boolean, ids: string[], 
   const plantItems = () => prisma.plantInstance.findMany({
     where: all ? { collectionId, status: 'ACTIVE' } : { collectionId, id: { in: plantIds } },
     include: { plantDefinition: true },
-    orderBy: { plantId: 'asc' },
+    orderBy: sort === 'added-newest'
+      ? [{ createdAt: 'desc' }, { plantId: 'asc' }]
+      : sort === 'added-oldest'
+        ? [{ createdAt: 'asc' }, { plantId: 'asc' }]
+        : [{ plantId: 'asc' }],
   })
 
   if (target === 'locations') return locationItems()
@@ -352,6 +357,8 @@ export async function GET(req: Request) {
   const all=url.searchParams.get('all')==='1'
   const rawTarget = url.searchParams.get('target')
   const target: LabelTarget = rawTarget === 'locations' ? 'locations' : rawTarget === 'both' ? 'both' : 'plants'
+  const rawSort = url.searchParams.get('sort')
+  const sort: PlantLabelSort = rawSort === 'added-newest' || rawSort === 'added-oldest' ? rawSort : 'plant-id'
   const slug=url.searchParams.get('collectionSlug')
   const format = parseFormat(url)
   const orientation = labelOrientationFromValue(url.searchParams.get('orientation'), format)
@@ -370,7 +377,7 @@ export async function GET(req: Request) {
     const membership=await prisma.collectionMembership.findUnique({where:{collectionId_userId:{collectionId:collection.id,userId:user.id}},select:{status:true}})
     if (membership?.status !== 'ACTIVE') return NextResponse.json({error:'Forbidden'}, {status:403})
   }
-  const items=await getLabelItems(collection.id, all, ids, target)
+  const items=await getLabelItems(collection.id, all, ids, target, sort)
   const sizingDoc = new PDFDocument({ size: [BROTHER_DK_2210_WIDTH_PT, 170], margin: 0 })
   sizingDoc.registerFont(LABEL_ID_FONT, LABEL_ID_FONT_PATH)
   const firstBrotherLength = items[0]
