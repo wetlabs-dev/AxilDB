@@ -27,7 +27,220 @@ function queueCount(stats: Record<string, number>, key: string) {
 
 function jsonDisplay(value: unknown) {
   if (typeof value === 'string') return value
-  return JSON.stringify(value, null, 2)
+  return JSON.stringify(value, null, 2) || ''
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value))
+}
+
+function fieldLabel(value?: string | null) {
+  if (!value) return 'Suggestion'
+  return value
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replaceAll('_', ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+}
+
+function fieldWeight(field: string) {
+  const order = [
+    'genus',
+    'species',
+    'hybridNotation',
+    'cultivarName',
+    'authority',
+    'confidence',
+    'provisionalTaxon',
+    'identificationStatus',
+    'description',
+    'notes',
+    'wikipediaUrl',
+    'inaturalistUrl',
+    'powoUrl',
+    'gbifUrl',
+  ]
+  const index = order.indexOf(field)
+  return index === -1 ? order.length : index
+}
+
+function orderedEntries(value: Record<string, unknown>) {
+  return Object.entries(value)
+    .filter(([, entryValue]) => entryValue !== undefined)
+    .sort(([a], [b]) => fieldWeight(a) - fieldWeight(b) || a.localeCompare(b))
+}
+
+function compactValue(value: unknown): string {
+  if (value === null || value === undefined || value === '') return 'No value recorded'
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No'
+  if (typeof value === 'number') return String(value)
+  if (typeof value === 'string') return value
+  if (Array.isArray(value)) return value.length ? `${value.length} item${value.length === 1 ? '' : 's'}` : 'No items'
+  if (isRecord(value)) {
+    if (typeof value.label === 'string') return value.label
+    if (typeof value.name === 'string' && typeof value.category === 'string') return `${value.name} (${fieldLabel(value.category)})`
+    if (typeof value.name === 'string') return value.name
+    if (typeof value.displayName === 'string') return value.displayName
+    const parts = orderedEntries(value)
+      .filter(([, entryValue]) => entryValue !== null && entryValue !== undefined && typeof entryValue !== 'object')
+      .slice(0, 3)
+      .map(([key, entryValue]) => `${fieldLabel(key)}: ${compactValue(entryValue)}`)
+    return parts.length ? parts.join(' · ') : `${Object.keys(value).length} fields`
+  }
+  return String(value)
+}
+
+function currentFocusValue(value: unknown) {
+  if (isRecord(value) && isRecord(value.focus) && Object.prototype.hasOwnProperty.call(value.focus, 'currentValue')) {
+    if (value.focus.targetField === 'taxonomy' && isRecord(value.taxonomy)) return value.taxonomy
+    return value.focus.currentValue
+  }
+  if (isRecord(value) && isRecord(value.taxonomy)) return value.taxonomy
+  return value
+}
+
+function contextHighlights(value: unknown) {
+  if (!isRecord(value)) return []
+  const highlights: string[] = []
+  const plantDefinition = isRecord(value.plantDefinition) ? value.plantDefinition : null
+  const collection = isRecord(value.collection) ? value.collection : null
+  const taxonomy = isRecord(value.taxonomy) ? value.taxonomy : null
+  const counts = isRecord(value.counts) ? value.counts : null
+  const tags = Array.isArray(value.tags) ? value.tags : []
+  const aliases = Array.isArray(value.aliases) ? value.aliases : []
+  const references = isRecord(value.references) ? value.references : null
+  if (plantDefinition?.displayName) highlights.push(`Record: ${compactValue(plantDefinition.displayName)}`)
+  if (!plantDefinition?.displayName && taxonomy?.genus) highlights.push(`Record: ${compactValue(taxonomy.genus)}${taxonomy.species ? ` ${compactValue(taxonomy.species)}` : ''}`)
+  if (collection?.name) highlights.push(`Collection: ${compactValue(collection.name)}`)
+  if (counts?.instances) highlights.push(`${compactValue(counts.instances)} instance${Number(counts.instances) === 1 ? '' : 's'}`)
+  if (aliases.length) highlights.push(`${aliases.length} alias${aliases.length === 1 ? '' : 'es'}`)
+  if (tags.length) highlights.push(`Tags: ${tags.slice(0, 4).map(compactValue).join(', ')}`)
+  if (references) {
+    const present = Object.entries(references).filter(([, ref]) => Boolean(ref)).map(([key]) => fieldLabel(key.replace(/Url$/, '')))
+    if (present.length) highlights.push(`References: ${present.join(', ')}`)
+  }
+  return highlights.slice(0, 6)
+}
+
+function confidenceText(value: unknown) {
+  const number = Number(value)
+  if (!Number.isFinite(number)) return 'Confidence not scored'
+  return `${Math.round(number * 100)}% confidence`
+}
+
+function referenceList(value: unknown) {
+  if (!Array.isArray(value)) return []
+  return value
+    .filter(isRecord)
+    .map((reference) => ({
+      label: compactValue(reference.label || reference.url),
+      url: typeof reference.url === 'string' ? reference.url : null,
+    }))
+    .filter((reference) => reference.label !== 'No value recorded')
+}
+
+function PrettyValue({ value }: { value: unknown }) {
+  if (value === null || value === undefined || value === '') {
+    return <p className="rounded-md border border-dashed border-stone-300 bg-white/45 p-3 text-sm italic text-stone-500">No value recorded.</p>
+  }
+  if (typeof value !== 'object') {
+    return <p className="whitespace-pre-wrap rounded-md border border-stone-200 bg-white/55 p-3 text-sm text-stone-800">{compactValue(value)}</p>
+  }
+  if (Array.isArray(value)) {
+    if (value.length === 0) return <p className="rounded-md border border-dashed border-stone-300 bg-white/45 p-3 text-sm italic text-stone-500">No items.</p>
+    return (
+      <div className="flex flex-wrap gap-2">
+        {value.slice(0, 12).map((item, index) => (
+          <span key={`${compactValue(item)}-${index}`} className="rounded-full border border-stone-200 bg-white/70 px-3 py-1 text-sm text-stone-800">{compactValue(item)}</span>
+        ))}
+        {value.length > 12 && <span className="rounded-full border border-stone-200 bg-stone-50 px-3 py-1 text-sm text-stone-600">+{value.length - 12} more</span>}
+      </div>
+    )
+  }
+  return (
+    <dl className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+      {orderedEntries(value as Record<string, unknown>).slice(0, 18).map(([key, entryValue]) => (
+        <div key={key} className="min-w-0 rounded-md border border-stone-200 bg-white/60 p-3">
+          <dt className="text-xs font-bold uppercase tracking-[0.12em] text-stone-500">{fieldLabel(key)}</dt>
+          <dd className="mt-1 min-w-0 break-words text-sm text-stone-900">{compactValue(entryValue)}</dd>
+        </div>
+      ))}
+    </dl>
+  )
+}
+
+function ReviewSuggestionCard({ suggestion }: { suggestion: any }) {
+  const currentValue = currentFocusValue(suggestion.currentValue)
+  const highlights = contextHighlights(suggestion.currentValue)
+  const references = referenceList(suggestion.supportingReferences)
+  const appliesDirectly = canApplyCuratorSuggestion(suggestion.targetField)
+  return (
+    <details className="rounded-lg border border-stone-200 bg-[#fffdf7] p-3">
+      <summary className="cursor-pointer list-none">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="font-semibold">{suggestion.title}</p>
+            <p className="mt-1 text-sm text-stone-600">{fieldLabel(suggestion.targetField)} · {confidenceText(suggestion.confidence)}</p>
+          </div>
+          <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${appliesDirectly ? 'border-green-200 bg-green-50 text-green-900' : 'border-amber-200 bg-amber-50 text-amber-900'}`}>
+            {appliesDirectly ? 'Can apply' : 'Manual follow-up'}
+          </span>
+        </div>
+      </summary>
+      <div className="mt-3 grid gap-4">
+        <p className="rounded-md border border-stone-200 bg-white/50 p-3 text-sm leading-6 text-stone-800">{suggestion.reasoning}</p>
+        {references.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {references.map((reference, index) => reference.url ? (
+              <a key={`${reference.url}-${index}`} href={reference.url} target="_blank" rel="noreferrer" className="rounded-full border border-green-200 bg-green-50 px-3 py-1 text-sm font-medium text-green-900 underline-offset-2 hover:underline">
+                {reference.label}
+              </a>
+            ) : (
+              <span key={`${reference.label}-${index}`} className="rounded-full border border-stone-200 bg-white/65 px-3 py-1 text-sm text-stone-700">{reference.label}</span>
+            ))}
+          </div>
+        )}
+        <div className="grid gap-3 lg:grid-cols-2">
+          <section className="rounded-lg border border-stone-200 bg-white/35 p-3">
+            <h5 className="font-semibold">Current focus</h5>
+            <div className="mt-2">
+              <PrettyValue value={currentValue} />
+            </div>
+            {highlights.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {highlights.map((highlight) => (
+                  <span key={highlight} className="rounded-full border border-stone-200 bg-[#f5f0e2] px-3 py-1 text-xs font-medium text-stone-700">{highlight}</span>
+                ))}
+              </div>
+            )}
+          </section>
+          <section className="rounded-lg border border-green-200 bg-green-50/35 p-3">
+            <h5 className="font-semibold text-green-950">Proposed change</h5>
+            <div className="mt-2">
+              <PrettyValue value={suggestion.suggestedValue} />
+            </div>
+          </section>
+        </div>
+        <form action={reviewAiCuratorSuggestion} className="grid gap-3 rounded-lg border border-stone-200 bg-white/45 p-3">
+          <input type="hidden" name="suggestionId" value={suggestion.id} />
+          <TextArea label="Review note" name="reviewNote" className="min-h-16" />
+          <details className="rounded-md border border-stone-200 bg-[#fffdf7] p-3">
+            <summary className="cursor-pointer text-sm font-semibold text-stone-800">Advanced edit</summary>
+            <TextArea label="Suggested value JSON" name="suggestedValueJson" defaultValue={jsonDisplay(suggestion.suggestedValue)} className="mt-2 min-h-32 font-mono text-xs" />
+          </details>
+          <p className="text-xs text-stone-600">
+            {appliesDirectly ? 'Accept applies this field to the plant definition.' : 'Accept records curator approval for manual follow-up.'}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button name="action" value="ACCEPT" className="px-3 py-1.5 text-xs">Accept</Button>
+            <Button name="action" value="EDIT_ACCEPT" className="bg-[#6d7f6d] px-3 py-1.5 text-xs hover:bg-[#536453]">Edit then Accept</Button>
+            <Button name="action" value="REJECT" className="bg-[#9a3f35] px-3 py-1.5 text-xs hover:bg-[#7d3028]">Reject</Button>
+          </div>
+        </form>
+      </div>
+    </details>
+  )
 }
 
 export default async function AiCuratorPage({
@@ -209,31 +422,7 @@ export default async function AiCuratorPage({
                 {group.plantDefinitionId && <LinkButton href={`/c/${group.collectionSlug}/plants/${group.plantDefinitionId}/edit`} className="px-3 py-1.5 text-xs">Open definition</LinkButton>}
               </div>
               <div className="mt-3 grid gap-3">
-                {group.suggestions.map((suggestion) => (
-                  <details key={suggestion.id} className="rounded-lg border border-stone-200 bg-[#fffdf7] p-3">
-                    <summary className="cursor-pointer font-semibold">{suggestion.title}</summary>
-                    <p className="mt-2 text-sm text-stone-700">{suggestion.reasoning}</p>
-                    <div className="mt-3 grid gap-3 lg:grid-cols-2">
-                      <div>
-                        <p className="text-xs font-bold uppercase tracking-[0.14em] text-stone-500">Current value</p>
-                        <pre className="mt-1 max-h-48 overflow-auto rounded-md border border-stone-200 bg-white/70 p-2 text-xs">{jsonDisplay(suggestion.currentValue)}</pre>
-                      </div>
-                      <form action={reviewAiCuratorSuggestion} className="grid gap-2">
-                        <input type="hidden" name="suggestionId" value={suggestion.id} />
-                        <TextArea label="Suggested value" name="suggestedValueJson" defaultValue={jsonDisplay(suggestion.suggestedValue)} className="min-h-32 font-mono text-xs" />
-                        <TextArea label="Review note" name="reviewNote" className="min-h-16" />
-                        <p className="text-xs text-stone-600">
-                          {canApplyCuratorSuggestion(suggestion.targetField) ? 'Accept applies this field to the plant definition.' : 'Accept records curator approval for manual follow-up.'}
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          <Button name="action" value="ACCEPT" className="px-3 py-1.5 text-xs">Accept</Button>
-                          <Button name="action" value="EDIT_ACCEPT" className="bg-[#6d7f6d] px-3 py-1.5 text-xs hover:bg-[#536453]">Edit then Accept</Button>
-                          <Button name="action" value="REJECT" className="bg-[#9a3f35] px-3 py-1.5 text-xs hover:bg-[#7d3028]">Reject</Button>
-                        </div>
-                      </form>
-                    </div>
-                  </details>
-                ))}
+                {group.suggestions.map((suggestion) => <ReviewSuggestionCard key={suggestion.id} suggestion={suggestion} />)}
               </div>
             </div>
           ))}
