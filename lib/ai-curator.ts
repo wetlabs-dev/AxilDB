@@ -4,14 +4,16 @@ import { evaluatePlantDefinitionCompletenessBatch, isUsableRepresentativeImagePh
 import { tokenUsage } from '@/lib/ai-usage'
 import { estimateAiCostDollars, tokenUsageCostDollars } from '@/lib/ai-pricing'
 import { backgroundServiceHealth } from '@/lib/background-services'
+import { environmentalHusbandryFields, husbandryFieldNames } from '@/lib/husbandry'
 import { plantName } from '@/lib/utils'
 
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses'
 const SETTINGS_ID = 'global'
 const ACTIVE_JOB_STATUSES = ['QUEUED', 'RUNNING', 'DEFERRED', 'WAITING_FOR_HUMAN']
 const TERMINAL_JOB_STATUSES = ['COMPLETED', 'SKIPPED', 'CANCELLED', 'EXPIRED']
-const SIMPLE_ACCEPT_FIELDS = ['description', 'authority', 'wikipediaUrl', 'inaturalistUrl', 'powoUrl', 'gbifUrl'] as const
+const SIMPLE_ACCEPT_FIELDS = ['description', 'wikipediaUrl', 'inaturalistUrl', 'powoUrl', 'gbifUrl'] as const
 const IMAGE_HUMAN_BLOCK_REASON = 'AI Curator cannot create a reliable type image without a human-provided photograph.'
+const APPLYABLE_TARGET_FIELDS = ['references', 'tags', 'aliases', 'substrate', 'fertilizer', 'authority', 'husbandry'] as const
 
 type CuratorPhase = 'ENRICHMENT' | 'REVIEW' | 'STEWARDSHIP'
 export type CuratorJobInput = {
@@ -301,7 +303,7 @@ function jobsForCompleteness(collectionId: string, definition: any, completeness
     }]
   }
 
-  return completeness.missingCategoryKeys.slice(0, manualBoost ? 5 : 3).map((category) => ({
+  const jobs: CuratorJobInput[] = completeness.missingCategoryKeys.slice(0, manualBoost ? 5 : 3).map((category) => ({
     collectionId,
     plantDefinitionId: definition.id,
     phase: 'ENRICHMENT' as const,
@@ -318,6 +320,28 @@ function jobsForCompleteness(collectionId: string, definition: any, completeness
     dataHash: hashPayload({ id: definition.id, updatedAt: definition.updatedAt, category, score: completeness.overallScore }),
     manualBoost,
   }))
+
+  if ((definition._count?.aliases || 0) === 0) {
+    jobs.push({
+      collectionId,
+      plantDefinitionId: definition.id,
+      phase: 'ENRICHMENT',
+      jobType: 'SUGGEST_ALIASES',
+      targetField: 'aliases',
+      reason: `${completeness.statusLabel} definition has no recorded aliases, common names, trade names, or shorthand.`,
+      priority: curatorPriorityScore({
+        completenessScore: completeness.overallScore,
+        category: 'references',
+        instanceCount: definition._count?.instances || 0,
+        estimatedCostDollars,
+        manualBoost,
+      }),
+      dataHash: hashPayload({ id: definition.id, updatedAt: definition.updatedAt, category: 'aliases', score: completeness.overallScore }),
+      manualBoost,
+    })
+  }
+
+  return jobs
 }
 
 const categoryLabels: Record<CompletenessCategoryKey, string> = {
@@ -330,6 +354,98 @@ const categoryLabels: Record<CompletenessCategoryKey, string> = {
   substrate: 'substrate',
   tags: 'plant tags',
   validation: 'validation',
+}
+
+async function collectionResourceContext(prisma: PrismaClient, collectionId: string) {
+  const [plantTags, substrateRecipeVersions, fertilizerRecipes, fertilizerProducts, taxonomicAuthorities] = await Promise.all([
+    prisma.plantTag.findMany({
+      where: { collectionId, active: true },
+      orderBy: [{ category: 'asc' }, { name: 'asc' }],
+      take: 80,
+      select: { id: true, name: true, slug: true, category: true, description: true },
+    }),
+    prisma.substrateRecipeVersion.findMany({
+      where: { collectionId, status: 'ACTIVE', recipe: { archivedAt: null } },
+      orderBy: [{ recipe: { name: 'asc' } }, { versionNumber: 'desc' }],
+      take: 60,
+      select: {
+        id: true,
+        versionNumber: true,
+        totalPercent: true,
+        notes: true,
+        recipe: { select: { id: true, name: true, description: true, intendedUse: true } },
+        components: {
+          orderBy: { sortOrder: 'asc' },
+          select: {
+            percentByVolume: true,
+            notes: true,
+            component: { select: { name: true, category: true, waterRetention: true, aeration: true, drainage: true, phTendency: true } },
+          },
+        },
+      },
+    }),
+    prisma.fertilizerRecipe.findMany({
+      where: { collectionId, active: true },
+      orderBy: [{ draft: 'asc' }, { name: 'asc' }],
+      take: 60,
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        declaredNpk: true,
+        calculatedNpk: true,
+        applicationMethod: true,
+        dilutionInstructions: true,
+        doseAmount: true,
+        doseUnit: true,
+        waterVolume: true,
+        waterVolumeUnit: true,
+        strengthLabel: true,
+        frequencyDays: true,
+        frequencyNotes: true,
+        seasonalNotes: true,
+        safetyNotes: true,
+        draft: true,
+        products: {
+          orderBy: { sortOrder: 'asc' },
+          select: { amount: true, unit: true, notes: true, product: { select: { id: true, name: true, brand: true, productType: true, nitrogen: true, phosphorus: true, potassium: true } } },
+        },
+      },
+    }),
+    prisma.fertilizerProduct.findMany({
+      where: { collectionId, active: true },
+      orderBy: [{ brand: 'asc' }, { name: 'asc' }],
+      take: 80,
+      select: { id: true, name: true, brand: true, productType: true, nitrogen: true, phosphorus: true, potassium: true, calcium: true, magnesium: true, sulfur: true, iron: true, defaultDilution: true, manufacturerFeedAmount: true, manufacturerFeedUnit: true, manufacturerFeedWaterVolume: true, manufacturerFeedWaterUnit: true, notes: true },
+    }),
+    prisma.taxonomicAuthority.findMany({
+      where: { OR: [{ collectionId }, { collectionId: null }] },
+      orderBy: [{ collectionId: 'desc' }, { name: 'asc' }],
+      take: 80,
+      select: {
+        id: true,
+        collectionId: true,
+        name: true,
+        abbreviation: true,
+        authorityType: true,
+        description: true,
+        website: true,
+        registrationUrl: true,
+        cultivarSearchUrl: true,
+        externalAuthorityUrl: true,
+        scopeRules: { orderBy: { priority: 'asc' }, select: { rank: true, taxonName: true, qualifier: true, priority: true, notes: true } },
+      },
+    }),
+  ])
+
+  return {
+    validHusbandryFields: [...husbandryFieldNames, ...environmentalHusbandryFields],
+    existingPlantTags: plantTags,
+    existingSubstrateRecipeVersions: substrateRecipeVersions,
+    existingFertilizerRecipes: fertilizerRecipes,
+    existingFertilizerProducts: fertilizerProducts,
+    existingTaxonomicAuthorities: taxonomicAuthorities,
+  }
 }
 
 export async function enqueueReadinessCuratorJobs(prisma: PrismaClient, options: { collectionLimit?: number; definitionsPerCollection?: number } = {}) {
@@ -347,7 +463,7 @@ export async function enqueueReadinessCuratorJobs(prisma: PrismaClient, options:
       where: { collectionId: collection.id },
       orderBy: { updatedAt: 'asc' },
       take: options.definitionsPerCollection || 60,
-      include: { _count: { select: { instances: true } } },
+      include: { _count: { select: { aliases: true, instances: true } } },
     })
     const completenessByDefinition = await evaluatePlantDefinitionCompletenessBatch(prisma, {
       collectionId: collection.id,
@@ -392,7 +508,7 @@ export async function enqueueDefinitionResearchNow(prisma: PrismaClient, collect
   const settings = await ensureAiCuratorSettings(prisma)
   const definition = await prisma.plantDefinition.findFirstOrThrow({
     where: { id: plantDefinitionId, collectionId },
-    include: { _count: { select: { instances: true } } },
+    include: { _count: { select: { aliases: true, instances: true } } },
   })
   const completenessByDefinition = await evaluatePlantDefinitionCompletenessBatch(prisma, { collectionId, definitionIds: [plantDefinitionId] })
   const completeness = completenessByDefinition.get(plantDefinitionId)
@@ -465,6 +581,7 @@ async function currentValueForJob(prisma: PrismaClient, job: any) {
       },
     })
     if (!collection) return null
+    const resources = await collectionResourceContext(prisma, job.collectionId)
     return {
       scope: 'collection',
       focus: {
@@ -487,6 +604,7 @@ async function currentValueForJob(prisma: PrismaClient, job: any) {
         displayName: plantName(definition),
         tags: definition.tags.map((tag) => tag.plantTag),
       })),
+      resources,
     }
   }
   const definition = await prisma.plantDefinition.findUnique({
@@ -555,6 +673,7 @@ async function currentValueForJob(prisma: PrismaClient, job: any) {
     },
   })
   if (!definition) return null
+  const resources = await collectionResourceContext(prisma, job.collectionId)
   const references = {
     wikipediaUrl: definition.wikipediaUrl,
     inaturalistUrl: definition.inaturalistUrl,
@@ -564,9 +683,26 @@ async function currentValueForJob(prisma: PrismaClient, job: any) {
   const tags = definition.tags.map((tag) => tag.plantTag)
   const focusCurrentValue =
     job.targetField === 'description' ? definition.description
-    : job.targetField === 'authority' ? definition.authority
+    : job.targetField === 'authority' ? {
+      taxonomicAuthorityId: definition.taxonomicAuthorityId,
+      taxonomicAuthoritySource: definition.taxonomicAuthoritySource,
+      taxonomicAuthorityMatchReason: definition.taxonomicAuthorityMatchReason,
+      selectedTaxonomicAuthority: definition.taxonomicAuthority,
+      automaticTaxonomicAuthority: definition.automaticTaxonomicAuthority,
+      candidateMatches: definition.taxonomicAuthorityMatches,
+    }
     : job.targetField === 'references' ? references
     : job.targetField === 'tags' ? tags
+    : job.targetField === 'aliases' ? definition.aliases
+    : job.targetField === 'substrate' ? definition.substrateRecommendations
+    : job.targetField === 'fertilizer' ? {
+      fertilizerRecipeId: definition.husbandryGuide?.fertilizerRecipeId || null,
+      fertilizationType: definition.husbandryGuide?.fertilizationType || null,
+      fertilizationStrength: definition.husbandryGuide?.fertilizationStrength || null,
+      fertilizationFrequency: definition.husbandryGuide?.fertilizationFrequency || null,
+      fertilizationCadenceDays: definition.husbandryGuide?.fertilizationCadenceDays || null,
+    }
+    : job.targetField === 'husbandry' ? definition.husbandryGuide
     : job.targetField ? (definition as any)[job.targetField] ?? null
     : null
   const {
@@ -644,6 +780,7 @@ async function currentValueForJob(prisma: PrismaClient, job: any) {
     substrateRecommendations,
     acquisitionResearchEntries,
     instances,
+    resources,
     counts: _count,
   }
 }
@@ -802,6 +939,27 @@ async function resolveSatisfiedImageHumanBlocks(prisma: PrismaClient) {
   return { resolved }
 }
 
+function curatorTargetInstructions(targetField?: string | null) {
+  switch (targetField) {
+    case 'references':
+      return 'For references, suggestedValue must be an object containing only missing or corrected fields from wikipediaUrl, inaturalistUrl, powoUrl, gbifUrl, description. Use stable canonical URLs and leave uncertain URLs out.'
+    case 'tags':
+      return 'For tags, suggest only existing active plant tags from context.resources.existingPlantTags. suggestedValue must be { "tags": [{ "id": "existing-tag-id", "name": "tag name", "reason": "short reason" }] }. Never invent tag IDs or new tags.'
+    case 'aliases':
+      return 'For aliases, suggestedValue must be { "aliases": [{ "name": "alias/common/trade/shorthand", "aliasType": "SYNONYM|TRADE_NAME|OBSOLETE_TAXONOMY|COMMON_NAME|MISAPPLIED_NAME|SHORTHAND", "confidence": "CONFIRMED|PROBABLE|AI_DETERMINED|UNCERTAIN|TRADE_ASSUMED|DISPUTED", "source": "short source", "notes": "short note|null" }] }. Only suggest aliases supported by supplied context or reliable botanical/common usage.'
+    case 'substrate':
+      return 'For substrate, suggest existing active substrate recipe versions only. suggestedValue must be { "recommendations": [{ "recipeVersionId": "existing-version-id", "rank": 1, "suitability": "PREFERRED|RECOMMENDED|ACCEPTABLE|SPECIAL_PURPOSE", "reason": "short reason", "confidence": 0.0 }] }. Never invent recipeVersionId values.'
+    case 'fertilizer':
+      return 'For fertilizer, you may suggest an existing fertilizer recipe assignment, a new draft recipe using existing fertilizer products, and/or purchase ideas for a specific nutrient/care gap. suggestedValue may include "fertilizerRecipeId": "existing-recipe-id", "fertilizationCadenceDays": number, "newRecipe": { "name": "draft name", "description": "why this recipe fills the gap", "declaredNpk": "optional", "applicationMethod": "ROOT_DRENCH|FOLIAR|TOP_DRESS|OTHER", "dilutionInstructions": "string|null", "strengthLabel": "string|null", "frequencyDays": number|null, "frequencyNotes": "string|null", "seasonalNotes": "string|null", "safetyNotes": "string|null", "products": [{ "productId": "existing-product-id", "amount": "string|null", "unit": "string|null", "notes": "string|null" }] }, and "purchaseSuggestions": [{ "name": "product or product class", "gap": "specific gap filled", "reason": "short reason" }]. Never invent existing recipe/product IDs.'
+    case 'authority':
+      return 'For taxonomic authority coverage, suggest only authorities from context.resources.existingTaxonomicAuthorities. suggestedValue must be { "taxonomicAuthorityId": "existing-authority-id", "matchReason": "why its scope covers this definition" }. Never use this field for botanical authorship text.'
+    case 'husbandry':
+      return `For husbandry, fill as many missing care fields as can be supported. suggestedValue must be { "fields": { ... } } where keys are valid PlantHusbandryGuide fields from context.resources.validHusbandryFields: ${[...husbandryFieldNames, ...environmentalHusbandryFields].join(', ')}. Use strings for text fields, numbers for numeric environment fields, booleans for boolean fields. Omit unsupported fields rather than guessing.`
+    default:
+      return 'Return suggestedValue in the smallest shape needed for the requested target field.'
+  }
+}
+
 async function callCuratorModel(settings: any, job: any, currentValue: unknown) {
   const response = await fetch(OPENAI_RESPONSES_URL, {
     method: 'POST',
@@ -822,6 +980,8 @@ async function callCuratorModel(settings: any, job: any, currentValue: unknown) 
         'Only suggest botanical information that is supported by the supplied record context or by reliable, broadly known public botanical sources. When reliable information is unavailable, make suggestedValue null and explain the uncertainty and recommended human follow-up.',
         'Do not return a confirmation of values that already exist in the current focus. If no field should change, make suggestedValue null and explain that no change is recommended.',
         'For taxonomy, preserve known genus/species/hybrid/cultivar boundaries and never turn an informal trade name into a Latin binomial without reliable support.',
+        'When suggesting existing AxilDB records such as tags, recipes, products, or taxonomic authorities, use only IDs that appear in the supplied context.resources lists.',
+        curatorTargetInstructions(job.targetField),
         'Return strict JSON with keys: title, suggestedValue, reasoning, confidence, supportingReferences.',
         'supportingReferences must be an array of short objects with label and url when reliable public references are known; otherwise use an empty array.',
         'confidence must be from 0 to 1. Keep reasoning concise and explain uncertainty.',
@@ -1188,7 +1348,7 @@ export async function aiCuratorReviewQueue(prisma: PrismaClient) {
 }
 
 export function canApplyCuratorSuggestion(targetField?: string | null) {
-  return SIMPLE_ACCEPT_FIELDS.includes(targetField as any) || targetField === 'references'
+  return SIMPLE_ACCEPT_FIELDS.includes(targetField as any) || APPLYABLE_TARGET_FIELDS.includes(targetField as any)
 }
 
 export function suggestedScalarValue(value: unknown) {
