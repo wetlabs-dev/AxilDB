@@ -889,10 +889,10 @@ export default async function InstanceDetail({
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between gap-4">
-        <div>
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 sm:flex sm:justify-between sm:gap-4">
+        <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-3xl font-bold">{i.plantId}</h2>
+            <h2 className="min-w-0 text-2xl font-bold [overflow-wrap:anywhere] sm:text-3xl">{i.plantId}</h2>
             {activeQuarantine && (
               <span className="rounded-full border border-[#c9a15b] bg-[#fff2cf] px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-[#6f4b12]">
                 Quarantine
@@ -928,9 +928,16 @@ export default async function InstanceDetail({
             />
           </div>
         </div>
-        <div className="flex flex-col items-end gap-2">
-          <img src={qr} className="h-28 w-28" alt="QR code" />
-          {canManageRecords && <Link className="rounded-md border border-[#c7d8bd] bg-white/70 px-3 py-2 text-sm font-semibold text-[#2f6b45]" href={collectionPath(collection.slug, `/instances/merge?definition=${i.plantDefinitionId}&ids=${i.id}`)}>Pot together</Link>}
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          <img src={qr} className="h-20 w-20 sm:h-28 sm:w-28" alt="QR code" />
+          {canManageRecords && (
+            <Link
+              className="inline-flex min-h-10 min-w-20 items-center justify-center whitespace-nowrap rounded-md border border-[#c7d8bd] bg-white/70 px-2.5 py-2 text-center text-xs font-semibold leading-none text-[#2f6b45] sm:min-w-28 sm:px-3 sm:text-sm"
+              href={collectionPath(collection.slug, `/instances/merge?definition=${i.plantDefinitionId}&ids=${i.id}`)}
+            >
+              Pot together
+            </Link>
+          )}
         </div>
       </div>
 
