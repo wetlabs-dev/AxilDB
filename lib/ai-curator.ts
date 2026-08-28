@@ -4,7 +4,7 @@ import { evaluatePlantDefinitionCompletenessBatch, isUsableRepresentativeImagePh
 import { tokenUsage } from '@/lib/ai-usage'
 import { estimateAiCostDollars, tokenUsageCostDollars } from '@/lib/ai-pricing'
 import { backgroundServiceHealth } from '@/lib/background-services'
-import { environmentalHusbandryFields, husbandryFieldNames } from '@/lib/husbandry'
+import { environmentalHusbandryFields, husbandryFieldNames, husbandrySummaryChoices, isHusbandrySummaryChoiceField, type HusbandrySummaryField } from '@/lib/husbandry'
 import { plantName } from '@/lib/utils'
 
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses'
@@ -14,6 +14,30 @@ const TERMINAL_JOB_STATUSES = ['COMPLETED', 'SKIPPED', 'CANCELLED', 'EXPIRED']
 const SIMPLE_ACCEPT_FIELDS = ['description', 'wikipediaUrl', 'inaturalistUrl', 'powoUrl', 'gbifUrl'] as const
 const IMAGE_HUMAN_BLOCK_REASON = 'AI Curator cannot create a reliable type image without a human-provided photograph.'
 const APPLYABLE_TARGET_FIELDS = ['references', 'tags', 'aliases', 'substrate', 'fertilizer', 'authority', 'husbandry'] as const
+const NUMERIC_HUSBANDRY_FIELDS = new Set([
+  'environmentTemperatureMinC',
+  'environmentTemperatureMaxC',
+  'environmentNightTemperatureMinC',
+  'environmentNightTemperatureMaxC',
+  'environmentHumidityMinPercent',
+  'environmentHumidityMaxPercent',
+  'environmentLightMinLux',
+  'environmentLightMaxLux',
+  'environmentPhotoperiodMinHours',
+  'environmentPhotoperiodMaxHours',
+])
+const BOOLEAN_HUSBANDRY_FIELDS = new Set(['environmentAvoidDrafts'])
+const HUSBANDRY_ENUM_VALUES: Record<string, string[]> = {
+  environmentLightLevel: ['VERY_LOW', 'LOW', 'MODERATE', 'BRIGHT', 'VERY_BRIGHT'],
+  environmentLightExposure: ['INDIRECT', 'FILTERED', 'MORNING_DIRECT', 'AFTERNOON_DIRECT', 'FULL_DIRECT', 'ARTIFICIAL_ONLY', 'MIXED', 'UNKNOWN'],
+  environmentAirflowLevel: ['STILL', 'LOW', 'MODERATE', 'HIGH', 'DRAFTY', 'UNKNOWN'],
+  environmentStability: ['STABLE', 'MODERATELY_VARIABLE', 'HIGHLY_VARIABLE', 'SEASONAL', 'UNKNOWN'],
+}
+const FERTILIZER_TEXT_FIELDS = new Set(['fertilizationType', 'fertilizationStrength', 'fertilizationFrequency'])
+const FERTILIZER_RECIPE_TEXT_FIELDS = new Set(['name', 'description', 'declaredNpk', 'dilutionInstructions', 'strengthLabel', 'frequencyNotes', 'seasonalNotes', 'safetyNotes', 'notes'])
+const FERTILIZER_PURCHASE_TEXT_FIELDS = new Set(['name', 'gap', 'reason'])
+const FERTILIZER_APPLICATION_METHODS = new Set(['ROOT_DRENCH', 'FOLIAR', 'TOP_DRESS', 'OTHER'])
+const UPPERCASE_TERMS = new Set(['CITES', 'IUCN', 'LED', 'NPK', 'POWO', 'PPM', 'TDS', 'USDA'])
 
 type CuratorPhase = 'ENRICHMENT' | 'REVIEW' | 'STEWARDSHIP'
 export type CuratorJobInput = {
@@ -100,6 +124,174 @@ function jsonOrNull(value: unknown) {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value))
+}
+
+function machineTokenText(value: string) {
+  const trimmed = value.trim()
+  if (!trimmed) return false
+  if (/[A-Z0-9]+_[A-Z0-9_]+/.test(trimmed)) return true
+  return /^[A-Z][A-Z0-9-]{3,}$/.test(trimmed) && !UPPERCASE_TERMS.has(trimmed)
+}
+
+function humanizeMachineToken(value: string) {
+  const spaced = value.trim().replaceAll('_', ' ').toLowerCase()
+  return spaced
+    .replace(/\b(cites|iucn|led|npk|powo|ppm|tds|usda)\b/g, (term) => term.toUpperCase())
+    .replace(/^\w/, (char) => char.toUpperCase())
+}
+
+function formatPlainTextValue(value: unknown) {
+  if (typeof value !== 'string') return value
+  return machineTokenText(value) ? humanizeMachineToken(value) : value.trim()
+}
+
+function normalizedMachineToken(value: unknown) {
+  return typeof value === 'string' ? value.trim().replace(/\s+/g, '_').toUpperCase() : null
+}
+
+function formatEnumValue(value: unknown, allowed: Iterable<string>) {
+  const token = normalizedMachineToken(value)
+  if (!token) return value
+  const allowedValues = new Set(allowed)
+  return allowedValues.has(token) ? token : value
+}
+
+function formatSummaryChoice(field: string, value: unknown) {
+  if (typeof value !== 'string' || !isHusbandrySummaryChoiceField(field as any)) return value
+  const readable = formatPlainTextValue(value)
+  const normalizedReadable = String(readable).toLowerCase()
+  const summaryField = field as HusbandrySummaryField
+  const match = husbandrySummaryChoices[summaryField].find((choice) => choice.value.toLowerCase() === normalizedReadable || choice.label.toLowerCase() === normalizedReadable)
+  return match?.value || readable
+}
+
+function formatHusbandryField(field: string, value: unknown) {
+  if (NUMERIC_HUSBANDRY_FIELDS.has(field)) {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? (field.includes('Lux') ? Math.floor(parsed) : parsed) : value
+  }
+  if (BOOLEAN_HUSBANDRY_FIELDS.has(field)) {
+    if (typeof value === 'boolean') return value
+    if (typeof value === 'string' && ['true', 'false'].includes(value.toLowerCase())) return value.toLowerCase() === 'true'
+    return value
+  }
+  if (HUSBANDRY_ENUM_VALUES[field]) return formatEnumValue(value, HUSBANDRY_ENUM_VALUES[field])
+  if (isHusbandrySummaryChoiceField(field as any)) return formatSummaryChoice(field, value)
+  return formatPlainTextValue(value)
+}
+
+function formatHusbandryFields(fields: Record<string, unknown>) {
+  return Object.fromEntries(Object.entries(fields).map(([field, value]) => [field, formatHusbandryField(field, value)]))
+}
+
+function formatFertilizerRecipe(value: unknown) {
+  if (!isRecord(value)) return value
+  return Object.fromEntries(Object.entries(value).map(([field, entryValue]) => {
+    if (field === 'applicationMethod') return [field, formatEnumValue(entryValue, FERTILIZER_APPLICATION_METHODS)]
+    if (field === 'products' && Array.isArray(entryValue)) {
+      return [field, entryValue.map((product) => isRecord(product)
+        ? Object.fromEntries(Object.entries(product).map(([productField, productValue]) => [
+          productField,
+          productField === 'productId' ? productValue : formatPlainTextValue(productValue),
+        ]))
+        : product)]
+    }
+    return [field, FERTILIZER_RECIPE_TEXT_FIELDS.has(field) ? formatPlainTextValue(entryValue) : entryValue]
+  }))
+}
+
+function formatPurchaseSuggestions(value: unknown) {
+  if (!Array.isArray(value)) return value
+  return value.map((suggestion) => isRecord(suggestion)
+    ? Object.fromEntries(Object.entries(suggestion).map(([field, entryValue]) => [
+      field,
+      FERTILIZER_PURCHASE_TEXT_FIELDS.has(field) ? formatPlainTextValue(entryValue) : entryValue,
+    ]))
+    : suggestion)
+}
+
+export function formatAiCuratorSuggestionValue(value: unknown, targetField?: string | null): unknown {
+  if (value === null || value === undefined) return null
+  if (targetField === 'husbandry' && isRecord(value)) {
+    if (isRecord(value.fields)) return { ...value, fields: formatHusbandryFields(value.fields) }
+    return formatHusbandryFields(value)
+  }
+  if (targetField === 'fertilizer' && isRecord(value)) {
+    return Object.fromEntries(Object.entries(value).map(([field, entryValue]) => {
+      if (FERTILIZER_TEXT_FIELDS.has(field)) return [field, formatPlainTextValue(entryValue)]
+      if (field === 'newRecipe') return [field, formatFertilizerRecipe(entryValue)]
+      if (field === 'purchaseSuggestions') return [field, formatPurchaseSuggestions(entryValue)]
+      return [field, entryValue]
+    }))
+  }
+  if (targetField === 'references' && isRecord(value)) {
+    return Object.fromEntries(Object.entries(value).map(([field, entryValue]) => [field, field === 'description' ? formatPlainTextValue(entryValue) : entryValue]))
+  }
+  if (SIMPLE_ACCEPT_FIELDS.includes(targetField as any)) return formatPlainTextValue(value)
+  return value
+}
+
+function invalidPlainText(field: string, value: unknown) {
+  return typeof value === 'string' && machineTokenText(value) ? `${field} must be plain English, not an internal enum-style token.` : null
+}
+
+function addPlainTextIssue(issues: string[], field: string, value: unknown) {
+  const issue = invalidPlainText(field, value)
+  if (issue) issues.push(issue)
+}
+
+function addHusbandryFormatIssues(issues: string[], field: string, value: unknown) {
+  if (NUMERIC_HUSBANDRY_FIELDS.has(field)) {
+    if (value !== null && value !== undefined && !Number.isFinite(Number(value))) issues.push(`${field} must be a number.`)
+    return
+  }
+  if (BOOLEAN_HUSBANDRY_FIELDS.has(field)) {
+    if (value !== null && value !== undefined && typeof value !== 'boolean') issues.push(`${field} must be true or false.`)
+    return
+  }
+  if (HUSBANDRY_ENUM_VALUES[field]) {
+    if (value !== null && value !== undefined && !HUSBANDRY_ENUM_VALUES[field].includes(String(value))) issues.push(`${field} must be one of ${HUSBANDRY_ENUM_VALUES[field].join(', ')}.`)
+    return
+  }
+  if (isHusbandrySummaryChoiceField(field as any)) {
+    const choices = husbandrySummaryChoices[field as HusbandrySummaryField].map((choice) => choice.value)
+    if (value !== null && value !== undefined && !choices.includes(String(value))) issues.push(`${field} must be one of ${choices.join(', ')}.`)
+    return
+  }
+  addPlainTextIssue(issues, field, value)
+}
+
+export function aiCuratorSuggestionFormatIssues(value: unknown, targetField?: string | null) {
+  const issues: string[] = []
+  if (value === null || value === undefined || value === '') return issues
+  if (targetField === 'husbandry' && isRecord(value)) {
+    const fields = isRecord(value.fields) ? value.fields : value
+    for (const [field, entryValue] of Object.entries(fields)) {
+      if (![...husbandryFieldNames, ...environmentalHusbandryFields].includes(field as any)) issues.push(`${field} is not a valid husbandry field.`)
+      else addHusbandryFormatIssues(issues, field, entryValue)
+    }
+    return issues
+  }
+  if (targetField === 'fertilizer' && isRecord(value)) {
+    for (const field of FERTILIZER_TEXT_FIELDS) addPlainTextIssue(issues, field, value[field])
+    if (value.fertilizationCadenceDays !== undefined && value.fertilizationCadenceDays !== null && (!Number.isInteger(Number(value.fertilizationCadenceDays)) || Number(value.fertilizationCadenceDays) < 1)) issues.push('fertilizationCadenceDays must be a positive whole number.')
+    if (isRecord(value.newRecipe)) {
+      for (const [field, entryValue] of Object.entries(value.newRecipe)) {
+        if (field === 'applicationMethod' && !FERTILIZER_APPLICATION_METHODS.has(String(entryValue))) issues.push(`newRecipe.applicationMethod must be one of ${[...FERTILIZER_APPLICATION_METHODS].join(', ')}.`)
+        else if (FERTILIZER_RECIPE_TEXT_FIELDS.has(field)) addPlainTextIssue(issues, `newRecipe.${field}`, entryValue)
+      }
+    }
+    if (Array.isArray(value.purchaseSuggestions)) {
+      value.purchaseSuggestions.forEach((suggestion, index) => {
+        if (!isRecord(suggestion)) return
+        for (const field of FERTILIZER_PURCHASE_TEXT_FIELDS) addPlainTextIssue(issues, `purchaseSuggestions[${index}].${field}`, suggestion[field])
+      })
+    }
+    return issues
+  }
+  if (targetField === 'references' && isRecord(value)) addPlainTextIssue(issues, 'description', value.description)
+  if (SIMPLE_ACCEPT_FIELDS.includes(targetField as any)) addPlainTextIssue(issues, targetField || 'value', value)
+  return issues
 }
 
 function normalizedSuggestionValue(value: unknown): unknown {
@@ -950,11 +1142,11 @@ function curatorTargetInstructions(targetField?: string | null) {
     case 'substrate':
       return 'For substrate, suggest existing active substrate recipe versions only. suggestedValue must be { "recommendations": [{ "recipeVersionId": "existing-version-id", "rank": 1, "suitability": "PREFERRED|RECOMMENDED|ACCEPTABLE|SPECIAL_PURPOSE", "reason": "short reason", "confidence": 0.0 }] }. Never invent recipeVersionId values.'
     case 'fertilizer':
-      return 'For fertilizer, you may suggest an existing fertilizer recipe assignment, a new draft recipe using existing fertilizer products, and/or purchase ideas for a specific nutrient/care gap. suggestedValue may include "fertilizerRecipeId": "existing-recipe-id", "fertilizationCadenceDays": number, "newRecipe": { "name": "draft name", "description": "why this recipe fills the gap", "declaredNpk": "optional", "applicationMethod": "ROOT_DRENCH|FOLIAR|TOP_DRESS|OTHER", "dilutionInstructions": "string|null", "strengthLabel": "string|null", "frequencyDays": number|null, "frequencyNotes": "string|null", "seasonalNotes": "string|null", "safetyNotes": "string|null", "products": [{ "productId": "existing-product-id", "amount": "string|null", "unit": "string|null", "notes": "string|null" }] }, and "purchaseSuggestions": [{ "name": "product or product class", "gap": "specific gap filled", "reason": "short reason" }]. Never invent existing recipe/product IDs.'
+      return 'For fertilizer, you may suggest an existing fertilizer recipe assignment, a new draft recipe using existing fertilizer products, and/or purchase ideas for a specific nutrient/care gap. suggestedValue may include "fertilizerRecipeId": "existing-recipe-id", "fertilizationCadenceDays": number, "fertilizationType": "plain English text such as balanced liquid feeding", "fertilizationStrength": "plain English text such as light or quarter strength", "fertilizationFrequency": "plain English text such as every 2 weeks during active growth", "newRecipe": { "name": "draft name in plain English", "description": "why this recipe fills the gap", "declaredNpk": "optional", "applicationMethod": "ROOT_DRENCH|FOLIAR|TOP_DRESS|OTHER", "dilutionInstructions": "plain English string|null", "strengthLabel": "plain English string|null", "frequencyDays": number|null, "frequencyNotes": "plain English string|null", "seasonalNotes": "plain English string|null", "safetyNotes": "plain English string|null", "products": [{ "productId": "existing-product-id", "amount": "string|null", "unit": "string|null", "notes": "plain English string|null" }] }, and "purchaseSuggestions": [{ "name": "product or product class in plain English", "gap": "specific gap filled in plain English", "reason": "short plain English reason" }]. Never invent existing recipe/product IDs.'
     case 'authority':
       return 'For taxonomic authority coverage, suggest only authorities from context.resources.existingTaxonomicAuthorities. suggestedValue must be { "taxonomicAuthorityId": "existing-authority-id", "matchReason": "why its scope covers this definition" }. Never use this field for botanical authorship text.'
     case 'husbandry':
-      return `For husbandry, fill as many missing care fields as can be supported. suggestedValue must be { "fields": { ... } } where keys are valid PlantHusbandryGuide fields from context.resources.validHusbandryFields: ${[...husbandryFieldNames, ...environmentalHusbandryFields].join(', ')}. Use strings for text fields, numbers for numeric environment fields, booleans for boolean fields. Omit unsupported fields rather than guessing.`
+      return `For husbandry, fill as many missing care fields as can be supported. suggestedValue must be { "fields": { ... } } where keys are valid PlantHusbandryGuide fields from context.resources.validHusbandryFields: ${[...husbandryFieldNames, ...environmentalHusbandryFields].join(', ')}. Use natural plain English for text fields, numbers for numeric environment fields, and booleans for boolean fields. summaryWater must be one of ${husbandrySummaryChoices.summaryWater.map((choice) => choice.value).join(' | ')}. summaryLight must be one of ${husbandrySummaryChoices.summaryLight.map((choice) => choice.value).join(' | ')}. summaryToxicity must be one of ${husbandrySummaryChoices.summaryToxicity.map((choice) => choice.value).join(' | ')}. environmentLightLevel must be one of ${HUSBANDRY_ENUM_VALUES.environmentLightLevel.join(' | ')}. environmentLightExposure must be one of ${HUSBANDRY_ENUM_VALUES.environmentLightExposure.join(' | ')}. environmentAirflowLevel must be one of ${HUSBANDRY_ENUM_VALUES.environmentAirflowLevel.join(' | ')}. environmentStability must be one of ${HUSBANDRY_ENUM_VALUES.environmentStability.join(' | ')}. Omit unsupported fields rather than guessing.`
     default:
       return 'Return suggestedValue in the smallest shape needed for the requested target field.'
   }
@@ -981,6 +1173,7 @@ async function callCuratorModel(settings: any, job: any, currentValue: unknown) 
         'Do not return a confirmation of values that already exist in the current focus. If no field should change, make suggestedValue null and explain that no change is recommended.',
         'For taxonomy, preserve known genus/species/hybrid/cultivar boundaries and never turn an informal trade name into a Latin binomial without reliable support.',
         'When suggesting existing AxilDB records such as tags, recipes, products, or taxonomic authorities, use only IDs that appear in the supplied context.resources lists.',
+        'Every suggested value must match the expected storage format for that field. Use ALL_CAPS or SNAKE_CASE only where the target instructions explicitly list fixed enum options. For ordinary text fields, return human-readable plain English without underscores, for example "every other watering during active growth" instead of "EVERY_OTHER_WATERING_DURING_GROWING_SEASON".',
         curatorTargetInstructions(job.targetField),
         'Return strict JSON with keys: title, suggestedValue, reasoning, confidence, supportingReferences.',
         'supportingReferences must be an array of short objects with label and url when reliable public references are known; otherwise use an empty array.',
@@ -1007,7 +1200,22 @@ async function callCuratorModel(settings: any, job: any, currentValue: unknown) 
 }
 
 async function createSuggestionFromResult(prisma: PrismaClient, settings: any, job: any, currentValue: unknown, modelResult: any, actualCost: number | null) {
-  if (!hasAiCuratorSuggestionChange(currentValue, modelResult.suggestedValue, job.targetField)) {
+  const suggestedValue = formatAiCuratorSuggestionValue(modelResult.suggestedValue, job.targetField)
+  const formatIssues = aiCuratorSuggestionFormatIssues(suggestedValue, job.targetField)
+  if (formatIssues.length) {
+    await prisma.aiCuratorJob.update({
+      where: { id: job.id },
+      data: {
+        status: 'SKIPPED',
+        completedAt: new Date(),
+        actualCostDollars: actualCost == null ? undefined : actualCost.toFixed(6),
+        confidence: boundedConfidence(modelResult.confidence),
+        resultSummary: `Skipped invalid suggestion format: ${formatIssues.slice(0, 3).join(' ')}`.slice(0, 240),
+      },
+    })
+    return null
+  }
+  if (!hasAiCuratorSuggestionChange(currentValue, suggestedValue, job.targetField)) {
     await prisma.aiCuratorJob.update({
       where: { id: job.id },
       data: {
@@ -1032,7 +1240,7 @@ async function createSuggestionFromResult(prisma: PrismaClient, settings: any, j
       targetField: job.targetField,
       title: String(modelResult.title || `${job.phase.toLowerCase()} suggestion`).slice(0, 180),
       currentValue: jsonOrNull(currentValue),
-      suggestedValue: jsonOrNull(modelResult.suggestedValue),
+      suggestedValue: jsonOrNull(suggestedValue),
       reasoning: String(modelResult.reasoning || 'AI Curator prepared this suggestion for human review.').slice(0, 4000),
       confidence: boundedConfidence(modelResult.confidence),
       supportingReferences: jsonOrNull(Array.isArray(modelResult.supportingReferences) ? modelResult.supportingReferences : []),

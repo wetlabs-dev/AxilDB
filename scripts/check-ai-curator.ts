@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { aiModelPricing, estimateAiCostDollars } from '../lib/ai-pricing'
-import { aiCuratorChangedFields, canApplyCuratorSuggestion, curatorJobScope, curatorPriorityScore, effectiveAiCuratorSpend, hasAiCuratorSuggestionChange, isUsableAiCuratorRepresentativePhoto, suggestedScalarValue } from '../lib/ai-curator'
+import { aiCuratorChangedFields, aiCuratorSuggestionFormatIssues, canApplyCuratorSuggestion, curatorJobScope, curatorPriorityScore, effectiveAiCuratorSpend, formatAiCuratorSuggestionValue, hasAiCuratorSuggestionChange, isUsableAiCuratorRepresentativePhoto, suggestedScalarValue } from '../lib/ai-curator'
 
 const baseline = curatorPriorityScore({
   completenessScore: 70,
@@ -70,6 +70,25 @@ assert.equal(canApplyCuratorSuggestion('authority'), true)
 assert.equal(canApplyCuratorSuggestion('taxonomy'), false)
 assert.equal(suggestedScalarValue({ value: 'Begonia research draft' }), 'Begonia research draft')
 assert.equal(suggestedScalarValue({ value: '   ' }), null)
+const formattedFertilizer = formatAiCuratorSuggestionValue({
+  fertilizationFrequency: 'EVERY_OTHER_WATERING_DURING_GROWING_SEASON',
+  fertilizationStrength: 'LIGHT',
+  fertilizationType: 'LIGHT_BALANCED_FEEDING',
+  fertilizationCadenceDays: 14,
+  newRecipe: {
+    name: 'LIGHT_BALANCED_HOYA_FEED',
+    applicationMethod: 'ROOT_DRENCH',
+    frequencyNotes: 'EVERY_OTHER_WATERING_DURING_GROWING_SEASON',
+  },
+}, 'fertilizer') as any
+assert.equal(formattedFertilizer.fertilizationFrequency, 'Every other watering during growing season')
+assert.equal(formattedFertilizer.fertilizationStrength, 'Light')
+assert.equal(formattedFertilizer.fertilizationType, 'Light balanced feeding')
+assert.equal(formattedFertilizer.newRecipe.name, 'Light balanced hoya feed')
+assert.equal(formattedFertilizer.newRecipe.applicationMethod, 'ROOT_DRENCH')
+assert.deepEqual(aiCuratorSuggestionFormatIssues(formattedFertilizer, 'fertilizer'), [])
+assert.match(aiCuratorSuggestionFormatIssues({ fields: { environmentLightLevel: 'bright indirect light' } }, 'husbandry')[0], /environmentLightLevel must be one of/)
+assert.deepEqual(aiCuratorSuggestionFormatIssues({ fields: { environmentLightLevel: 'BRIGHT', wateringCadence: 'Water weekly' } }, 'husbandry'), [])
 assert.equal(isUsableAiCuratorRepresentativePhoto({ moderationStatus: 'APPROVED', nsfwFlagged: false }), true)
 assert.equal(isUsableAiCuratorRepresentativePhoto({ moderationStatus: 'PENDING', nsfwFlagged: false }), true)
 assert.equal(isUsableAiCuratorRepresentativePhoto({ moderationStatus: 'CENSORED', nsfwFlagged: false }), false)
