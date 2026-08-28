@@ -10,9 +10,11 @@ import {
   updateRestoreRequest,
   validateRestoreRequest,
 } from '@/app/server-actions'
+import { AiUsageBreakdown, type AiUsageBreakdownEvent } from '@/components/AiUsageBreakdown'
 import { MetricChart } from '@/components/MetricChart'
 import { Button, Card, LinkButton, TextArea } from '@/components/ui'
 import { backupCleanupPreview, backupDetail, backupRootRelativePath, listBackupFolders, type BackupFolder, type RestoreValidationResult } from '@/lib/admin/restore-management'
+import { tokenUsageCostDollars } from '@/lib/ai-pricing'
 import { requireServerAdmin } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { formatIncidentDuration, incidentSummary } from '@/lib/server-incidents'
@@ -89,7 +91,11 @@ function featureLabel(feature: string) {
   if (feature === 'AI_HUSBANDRY_FILL') return 'Husbandry Magic Fill'
   if (feature === 'AI_GREEN_THUMB') return 'Green Thumb assist'
   if (feature === 'AI_COLLECTION_BRIEFING') return 'Collection Briefing'
-  return feature.replace(/^AI_/, '').toLowerCase().replaceAll('_', ' ')
+  if (feature === 'AI_FERTILIZER_PRODUCT_FILL') return 'Fertilizer product fill'
+  if (feature === 'AI_IMAGE_MODERATION') return 'Image moderation'
+  if (feature === 'AI_IMAGE_PLANT_CHECK') return 'Image plant check'
+  if (feature === 'AI_CURATOR') return 'AI Curator'
+  return feature.replace(/^AI_/, '').toLowerCase().replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
 }
 
 function markerTooltip(incident: {
@@ -129,7 +135,7 @@ export default async function ServerDashboard({
 }) {
   const admin = await requireServerAdmin()
   const sp = await searchParams
-  const [preferences, users, collections, archived, memberships, photos, latestSnapshot, backupRuns, backupFolders, maintenanceMode, restoreRequests, collectionRequests, aiAccessRequests, aiUsageByCollection, aiUsageByFeature, incidentStats, recentIncidents] = await Promise.all([
+  const [preferences, users, collections, archived, memberships, photos, latestSnapshot, backupRuns, backupFolders, maintenanceMode, restoreRequests, collectionRequests, aiAccessRequests, aiUsageEvents, incidentStats, recentIncidents] = await Promise.all([
     prisma.emailPreference.findUnique({ where: { userId: admin.id } }),
     prisma.user.count(),
     prisma.collection.count({ where: { status: 'ACTIVE' } }),
@@ -174,17 +180,10 @@ export default async function ServerDashboard({
         requestedBy: { select: { email: true } },
       },
     }),
-    prisma.aiUsageEvent.groupBy({
-      by: ['collectionId'],
-      _count: { _all: true },
-      _sum: { inputTokens: true, outputTokens: true, totalTokens: true },
-      orderBy: { _count: { collectionId: 'desc' } },
-      take: 12,
-    }),
-    prisma.aiUsageEvent.groupBy({
-      by: ['collectionId', 'feature'],
-      _count: { _all: true },
-      _sum: { totalTokens: true },
+    prisma.aiUsageEvent.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 5000,
+      include: { collection: { select: { name: true, slug: true, aiFeaturesEnabled: true } } },
     }),
     incidentSummary(prisma),
     prisma.serverIncident.findMany({
@@ -213,19 +212,27 @@ export default async function ServerDashboard({
     })),
   ].sort((a, b) => b.sortAt.getTime() - a.sortAt.getTime())
   const availableBackupPaths = new Set(backupFolders.map((folder) => folder.relativePath))
-  const aiUsageCollections = aiUsageByCollection.length
-    ? await prisma.collection.findMany({
-        where: { id: { in: aiUsageByCollection.map((row) => row.collectionId) } },
-        select: { id: true, name: true, slug: true, aiFeaturesEnabled: true },
-      })
-    : []
-  const aiUsageCollectionMap = new Map(aiUsageCollections.map((collection) => [collection.id, collection]))
-  const aiFeatureRows = new Map<string, typeof aiUsageByFeature>()
-  for (const row of aiUsageByFeature) {
-    const existing = aiFeatureRows.get(row.collectionId) || []
-    existing.push(row)
-    aiFeatureRows.set(row.collectionId, existing)
-  }
+  const aiUsageBreakdownEvents: AiUsageBreakdownEvent[] = aiUsageEvents.map((event) => {
+    const inputTokens = event.inputTokens || 0
+    const outputTokens = event.outputTokens || 0
+    const totalTokens = event.totalTokens || inputTokens + outputTokens
+    const costInputTokens = inputTokens || (outputTokens ? 0 : totalTokens)
+    return {
+      id: event.id,
+      collectionId: event.collectionId,
+      collectionName: event.collection.name,
+      collectionSlug: event.collection.slug,
+      collectionAiEnabled: event.collection.aiFeaturesEnabled,
+      feature: event.feature,
+      featureLabel: featureLabel(event.feature),
+      model: event.model,
+      inputTokens,
+      outputTokens,
+      totalTokens,
+      costDollars: tokenUsageCostDollars({ inputTokens: costInputTokens, outputTokens }, event.model),
+      createdAt: event.createdAt.toISOString(),
+    }
+  })
   const metricHistory = await serverMetricHistory()
   const metricIncidentMarkers = await prisma.serverIncident.findMany({
     where: {
@@ -420,48 +427,11 @@ export default async function ServerDashboard({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h3 className="font-serif text-xl font-semibold">AI usage by collection</h3>
-            <p className="mt-1 text-sm text-stone-600">Counts and token estimates are recorded when AxilDB calls the AI endpoints.</p>
+            <p className="mt-1 text-sm text-stone-600">Usage is estimated from recorded input/output tokens and current model pricing.</p>
           </div>
           <LinkButton href="/server/collections">Toggle AI availability</LinkButton>
         </div>
-        <div className="mt-4 grid gap-3">
-          {aiUsageByCollection.length === 0 && <p className="rounded-lg border border-stone-200 bg-white/50 p-3 text-sm text-stone-600">No AI usage has been recorded yet.</p>}
-          {aiUsageByCollection.map((usage) => {
-            const collection = aiUsageCollectionMap.get(usage.collectionId)
-            const featureRows = aiFeatureRows.get(usage.collectionId) || []
-            return (
-              <div key={usage.collectionId} className="rounded-lg border border-stone-200 bg-white/50 p-3">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate font-serif text-lg font-semibold">{collection?.name || 'Deleted collection'}</p>
-                    <p className="text-sm text-stone-600">
-                      {collection ? `/${collection.slug}` : usage.collectionId} · AI {collection?.aiFeaturesEnabled ? 'enabled' : 'disabled'}
-                    </p>
-                  </div>
-                  <div className="text-right text-sm">
-                    <p className="font-semibold">{usage._count._all} calls</p>
-                    <p className="text-stone-600">{(usage._sum.totalTokens || 0).toLocaleString()} total tokens</p>
-                  </div>
-                </div>
-                <div className="mt-3 grid gap-2 text-sm md:grid-cols-3">
-                  <span>Input: {(usage._sum.inputTokens || 0).toLocaleString()}</span>
-                  <span>Output: {(usage._sum.outputTokens || 0).toLocaleString()}</span>
-                  <span>Total: {(usage._sum.totalTokens || 0).toLocaleString()}</span>
-                </div>
-                {featureRows.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {featureRows.map((feature) => (
-                      <span key={`${feature.collectionId}-${feature.feature}`} className="rounded-full border border-stone-200 bg-white px-2 py-1 text-xs text-stone-700">
-                        {featureLabel(feature.feature)}: {feature._count._all} calls
-                        {feature._sum.totalTokens ? `, ${feature._sum.totalTokens.toLocaleString()} tokens` : ''}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
+        <AiUsageBreakdown events={aiUsageBreakdownEvents} timezone={timezone} now={new Date().toISOString()} />
       </Card>
 
       <Card>
