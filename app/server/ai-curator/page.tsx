@@ -2,7 +2,9 @@ import { updateAiCuratorSettings, reviewAiCuratorSuggestion, resolveAiCuratorJob
 import { Button, Card, Field, LinkButton, Select, TextArea } from '@/components/ui'
 import { requireServerAdmin } from '@/lib/auth'
 import { aiCuratorChangedFields, aiCuratorCurrentFocusValue, aiCuratorDashboard, aiCuratorReviewQueue, canApplyCuratorSuggestion } from '@/lib/ai-curator'
+import { environmentalHusbandryFields, husbandryFieldNames, husbandrySections } from '@/lib/husbandry'
 import { prisma } from '@/lib/prisma'
+import { substrateLabel } from '@/lib/substrates'
 import { formatDateTime } from '@/lib/time'
 import { plantName } from '@/lib/utils'
 
@@ -103,6 +105,12 @@ function compactValue(value: unknown): string {
   return String(value)
 }
 
+function displayValue(value: unknown): string {
+  const compact = compactValue(value)
+  const displayAcronyms = new Set(['CITES', 'GBIF', 'IUCN', 'LED', 'NPK', 'POWO', 'PPM', 'TDS', 'USDA'])
+  return /^[A-Z0-9]+(?:_[A-Z0-9]+)*$/.test(compact) && !displayAcronyms.has(compact) ? fieldLabel(compact) : compact
+}
+
 function contextHighlights(value: unknown) {
   if (!isRecord(value)) return []
   const highlights: string[] = []
@@ -143,11 +151,185 @@ function referenceList(value: unknown) {
     .filter((reference) => reference.label !== 'No value recorded')
 }
 
-function PrettyValue({ value, changedFields }: { value: unknown; changedFields?: Set<string> }) {
+const husbandryFieldLabels = new Map<string, string>([
+  ...husbandrySections.flatMap((section) => section.fields.map(([field, label]) => [field, label] as const)),
+  ['environmentTemperatureMinC', 'Min day temperature'],
+  ['environmentTemperatureMaxC', 'Max day temperature'],
+  ['environmentNightTemperatureMinC', 'Min night temperature'],
+  ['environmentNightTemperatureMaxC', 'Max night temperature'],
+  ['environmentHumidityMinPercent', 'Min humidity'],
+  ['environmentHumidityMaxPercent', 'Max humidity'],
+  ['environmentLightLevel', 'Light level'],
+  ['environmentLightExposure', 'Light exposure'],
+  ['environmentLightMinLux', 'Min light'],
+  ['environmentLightMaxLux', 'Max light'],
+  ['environmentPhotoperiodMinHours', 'Min photoperiod'],
+  ['environmentPhotoperiodMaxHours', 'Max photoperiod'],
+  ['environmentAirflowLevel', 'Airflow'],
+  ['environmentStability', 'Environment stability'],
+  ['environmentAvoidDrafts', 'Avoid drafts'],
+  ['environmentSeasonalNotes', 'Seasonal environment notes'],
+])
+
+function visibleHusbandryValue(value: unknown) {
+  if (value === null || value === undefined || value === '') return null
+  if (typeof value === 'number') return String(value)
+  return displayValue(value)
+}
+
+function changedField(changedFields: Set<string> | undefined, field: string) {
+  return Boolean(changedFields?.has(field) || changedFields?.has('fields'))
+}
+
+function suggestedList(value: unknown, key: string) {
+  if (Array.isArray(value)) return value
+  if (isRecord(value) && Array.isArray(value[key])) return value[key]
+  return []
+}
+
+function AliasListValue({ value, changedFields }: { value: unknown; changedFields?: Set<string> }) {
+  const aliases = suggestedList(value, 'aliases').filter(isRecord)
+  if (!aliases.length) return <p className="rounded-md border border-dashed border-stone-300 bg-white/45 p-3 text-sm italic text-stone-500">No aliases.</p>
+  return (
+    <ul className="grid gap-2">
+      {aliases.map((alias, index) => {
+        const changed = Boolean(changedFields?.size)
+        return (
+          <li key={`${compactValue(alias.name)}-${index}`} className={`rounded-md border p-3 ${changed ? 'border-green-300 bg-green-50 shadow-sm shadow-green-900/5' : 'border-stone-200 bg-white/60'}`}>
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <p className="font-semibold text-stone-950">{compactValue(alias.name)}</p>
+              <div className="flex flex-wrap gap-1.5">
+                {alias.aliasType ? <span className="rounded-full bg-white/75 px-2 py-0.5 text-xs font-medium text-stone-700">{displayValue(alias.aliasType)}</span> : null}
+                {alias.confidence ? <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-900">{displayValue(alias.confidence)}</span> : null}
+              </div>
+            </div>
+            {alias.source ? <p className="mt-1 text-sm text-stone-700">Source: {compactValue(alias.source)}</p> : null}
+            {alias.notes ? <p className="mt-1 text-sm leading-5 text-stone-700">{compactValue(alias.notes)}</p> : null}
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
+function husbandryEntries(value: unknown) {
+  const fields = isRecord(value) && isRecord(value.fields) ? value.fields : isRecord(value) ? value : {}
+  return Object.entries(fields).filter(([field, entryValue]) => husbandryFieldLabels.has(field) && visibleHusbandryValue(entryValue) !== null)
+}
+
+function HusbandryValue({ value, changedFields }: { value: unknown; changedFields?: Set<string> }) {
+  const entries = husbandryEntries(value)
+  if (!entries.length) return <p className="rounded-md border border-dashed border-stone-300 bg-white/45 p-3 text-sm italic text-stone-500">No husbandry fields.</p>
+  const fields = isRecord(value) && isRecord(value.fields) ? value.fields : isRecord(value) ? value : {}
+  const sections: Array<{ key: string; title: string; entries: Array<readonly [string, string, string | null]> }> = husbandrySections
+    .map((section) => ({
+      key: section.key,
+      title: section.title,
+      entries: section.fields
+        .map(([field, label]) => [field, label, visibleHusbandryValue(fields[field])] as const)
+        .filter(([, , entryValue]) => entryValue !== null),
+    }))
+    .filter((section) => section.entries.length)
+  const environmentEntries = environmentalHusbandryFields
+    .map((field) => [field, husbandryFieldLabels.get(field) || fieldLabel(field), visibleHusbandryValue(fields[field])] as const)
+    .filter(([, , entryValue]) => entryValue !== null)
+  if (environmentEntries.length) sections.push({ key: 'environment', title: 'Growing environment', entries: environmentEntries })
+  const remainingEntries = entries.filter(([field]) => !husbandryFieldNames.includes(field as any) && !environmentalHusbandryFields.includes(field as any))
+  if (remainingEntries.length) sections.push({ key: 'other', title: 'Other fields', entries: remainingEntries.map(([field, entryValue]) => [field, fieldLabel(field), visibleHusbandryValue(entryValue)] as const) })
+
+  return (
+    <div className="grid gap-3">
+      {sections.map((section) => (
+        <section key={section.key} className="rounded-md border border-stone-200 bg-white/60 p-3">
+          <h6 className="text-xs font-bold uppercase tracking-[0.14em] text-stone-500">{section.title}</h6>
+          <dl className="mt-2 grid gap-2 md:grid-cols-2">
+            {section.entries.map(([field, label, entryValue]: readonly [string, string, string | null]) => {
+              const changed = changedField(changedFields, field)
+              return (
+                <div key={field} className={`rounded-md border p-2.5 ${changed ? 'border-green-300 bg-green-50' : 'border-stone-200 bg-[#fffdf7]'}`}>
+                  <dt className={`flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] ${changed ? 'text-green-900' : 'text-stone-500'}`}>
+                    <span>{label}</span>
+                    {changed && <span className="rounded-full bg-green-100 px-2 py-0.5 text-[0.65rem] normal-case tracking-normal text-green-900">Changed</span>}
+                  </dt>
+                  <dd className="mt-1 break-words text-sm leading-5 text-stone-900">{entryValue}</dd>
+                </div>
+              )
+            })}
+          </dl>
+        </section>
+      ))}
+    </div>
+  )
+}
+
+function substrateResources(contextValue: unknown) {
+  const resources = isRecord(contextValue) && isRecord(contextValue.resources) ? contextValue.resources : null
+  const versions = Array.isArray(resources?.existingSubstrateRecipeVersions) ? resources.existingSubstrateRecipeVersions.filter(isRecord) : []
+  return new Map(versions.map((version) => [String(version.id), version]))
+}
+
+function recipeVersionTitle(value: unknown) {
+  if (!isRecord(value)) return null
+  const recipe = isRecord(value.recipe) ? value.recipe : null
+  return `${compactValue(recipe?.name || 'Substrate recipe')} v${compactValue(value.versionNumber || '?')}`
+}
+
+function substrateComposition(value: unknown) {
+  if (!isRecord(value) || !Array.isArray(value.components)) return []
+  return value.components.filter(isRecord).map((row) => {
+    const component = isRecord(row.component) ? row.component : null
+    const percent = Number(row.percentByVolume)
+    return `${Number.isFinite(percent) ? `${percent}% ` : ''}${compactValue(component?.name || 'component')}`
+  }).filter(Boolean)
+}
+
+function SubstrateValue({ value, changedFields, contextValue }: { value: unknown; changedFields?: Set<string>; contextValue?: unknown }) {
+  const recommendations = suggestedList(value, 'recommendations').filter(isRecord)
+  const resources = substrateResources(contextValue)
+  if (!recommendations.length) return <p className="rounded-md border border-dashed border-stone-300 bg-white/45 p-3 text-sm italic text-stone-500">No substrate recommendations.</p>
+  return (
+    <ol className="grid gap-2">
+      {recommendations.map((recommendation, index) => {
+        const versionId = String(recommendation.recipeVersionId || recommendation.substrateRecipeVersionId || '')
+        const version = isRecord(recommendation.recipeVersion) ? recommendation.recipeVersion : resources.get(versionId)
+        const title = recipeVersionTitle(version) || compactValue(recommendation.displayName || versionId || 'Substrate recipe')
+        const composition = substrateComposition(version)
+        const changed = Boolean(changedFields?.size)
+        return (
+          <li key={`${versionId || title}-${index}`} className={`rounded-md border p-3 ${changed ? 'border-green-300 bg-green-50 shadow-sm shadow-green-900/5' : 'border-stone-200 bg-white/60'}`}>
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <p className="font-semibold text-stone-950">{Number(recommendation.rank || index + 1)}. {title}</p>
+                {recommendation.reason ? <p className="mt-1 text-sm leading-5 text-stone-700">{compactValue(recommendation.reason)}</p> : null}
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {recommendation.suitability ? <span className="rounded-full bg-white/75 px-2 py-0.5 text-xs font-medium text-stone-700">{substrateLabel(String(recommendation.suitability))}</span> : null}
+                {recommendation.confidence !== null && recommendation.confidence !== undefined ? <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-900">{confidenceText(recommendation.confidence)}</span> : null}
+              </div>
+            </div>
+            {composition.length ? <p className="mt-2 text-xs leading-5 text-stone-600">{composition.join(' · ')}</p> : null}
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
+
+function prettyChangedCount(targetField: string | null | undefined, value: unknown, changedFields: Set<string>) {
+  if (targetField === 'aliases') return suggestedList(value, 'aliases').length || changedFields.size
+  if (targetField === 'substrate') return suggestedList(value, 'recommendations').length || changedFields.size
+  if (targetField === 'husbandry') return husbandryEntries(value).length || changedFields.size
+  return changedFields.size
+}
+
+function PrettyValue({ value, changedFields, targetField, contextValue }: { value: unknown; changedFields?: Set<string>; targetField?: string | null; contextValue?: unknown }) {
   if (value === null || value === undefined || value === '') {
     const changed = Boolean(changedFields?.size)
     return <p className={`rounded-md border p-3 text-sm italic ${changed ? 'border-green-300 bg-green-50 text-green-950' : 'border-dashed border-stone-300 bg-white/45 text-stone-500'}`}>No value recorded.</p>
   }
+  if (targetField === 'aliases') return <AliasListValue value={value} changedFields={changedFields} />
+  if (targetField === 'husbandry') return <HusbandryValue value={value} changedFields={changedFields} />
+  if (targetField === 'substrate') return <SubstrateValue value={value} changedFields={changedFields} contextValue={contextValue} />
   if (typeof value !== 'object') {
     const changed = Boolean(changedFields?.size)
     return <p className={`whitespace-pre-wrap rounded-md border p-3 text-sm ${changed ? 'border-green-300 bg-green-50 text-green-950' : 'border-stone-200 bg-white/55 text-stone-800'}`}>{compactValue(value)}{changed && <span className="ml-2 rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-900">Changed</span>}</p>
@@ -184,6 +366,7 @@ function PrettyValue({ value, changedFields }: { value: unknown; changedFields?:
 function ReviewSuggestionCard({ suggestion }: { suggestion: any }) {
   const currentValue = aiCuratorCurrentFocusValue(suggestion.currentValue, suggestion.targetField)
   const changedFields = new Set(aiCuratorChangedFields(suggestion.currentValue, suggestion.suggestedValue, suggestion.targetField))
+  const changedCount = prettyChangedCount(suggestion.targetField, suggestion.suggestedValue, changedFields)
   const highlights = contextHighlights(suggestion.currentValue)
   const references = referenceList(suggestion.supportingReferences)
   const appliesDirectly = canApplyCuratorSuggestion(suggestion.targetField)
@@ -217,7 +400,7 @@ function ReviewSuggestionCard({ suggestion }: { suggestion: any }) {
           <section className="rounded-lg border border-stone-200 bg-white/35 p-3">
             <h5 className="font-semibold">Current focus</h5>
             <div className="mt-2">
-              <PrettyValue value={currentValue} />
+              <PrettyValue value={currentValue} targetField={suggestion.targetField} contextValue={suggestion.currentValue} />
             </div>
             {highlights.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-2">
@@ -231,12 +414,12 @@ function ReviewSuggestionCard({ suggestion }: { suggestion: any }) {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h5 className="font-semibold text-green-950">Proposed change</h5>
               <span className="rounded-full border border-green-200 bg-white/70 px-2.5 py-1 text-xs font-medium text-green-900">
-                {changedFields.size ? `${changedFields.size} changed` : 'No field changes'}
+                {changedCount ? `${changedCount} changed` : 'No field changes'}
               </span>
             </div>
             {!changedFields.size && <p className="mt-2 rounded-md border border-amber-200 bg-amber-50/70 p-2 text-xs text-amber-950">This suggestion restates the current value. New no-change suggestions are skipped automatically.</p>}
             <div className="mt-2">
-              <PrettyValue value={suggestion.suggestedValue} changedFields={changedFields} />
+              <PrettyValue value={suggestion.suggestedValue} changedFields={changedFields} targetField={suggestion.targetField} contextValue={suggestion.currentValue} />
             </div>
           </section>
         </div>
