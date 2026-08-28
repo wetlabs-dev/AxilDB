@@ -719,6 +719,8 @@ model AiCuratorJob {
   resultSummary       String?
   dataHash            String?
   expiresAt           DateTime?
+  errorClearedAt       DateTime?
+  errorClearedByUserId String?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
@@ -733,6 +735,7 @@ model AiCuratorJob {
   @@index([status, nextRetryAt])
   @@index([claimedAt])
   @@index([createdAt])
+  @@index([errorClearedAt])
   @@unique([collectionId, jobType, phase, plantDefinitionId, targetEntityType, targetEntityId, targetField, status], map: "AiCuratorJob_active_scope_key")
 }
 
@@ -855,20 +858,23 @@ model ServerIncidentNotification {
 }
 
 model ServerWorkerRun {
-  id         String    @id @default(cuid())
-  workerName String
-  status     String
-  startedAt  DateTime  @default(now())
-  finishedAt DateTime?
-  durationMs Int?
-  summary    String?
-  error      String?
-  metadata   Json?
-  createdAt  DateTime  @default(now())
+  id                   String    @id @default(cuid())
+  workerName           String
+  status               String
+  startedAt            DateTime  @default(now())
+  finishedAt           DateTime?
+  durationMs           Int?
+  summary              String?
+  error                String?
+  metadata             Json?
+  errorClearedAt       DateTime?
+  errorClearedByUserId String?
+  createdAt            DateTime  @default(now())
 
   @@index([workerName])
   @@index([status])
   @@index([startedAt])
+  @@index([errorClearedAt])
 }
 
 model DomainEvent {

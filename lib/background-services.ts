@@ -12,7 +12,7 @@ export type BackgroundServiceHealth = {
   lastRunStatus: string
   currentTask: string
   queueStats: Record<string, number>
-  recentErrors: string[]
+  recentErrors: Array<{ message: string; startedAt: Date; finishedAt: Date | null }>
   runtimeMetrics: Record<string, unknown>
 }
 
@@ -39,10 +39,10 @@ export async function backgroundServiceHealth(
   const [latest, recentFailures] = await Promise.all([
     prisma.serverWorkerRun.findFirst({ where: { workerName: input.name }, orderBy: { startedAt: 'desc' } }),
     prisma.serverWorkerRun.findMany({
-      where: { workerName: input.name, status: 'FAILED' },
+      where: { workerName: input.name, status: 'FAILED', errorClearedAt: null },
       orderBy: { startedAt: 'desc' },
       take: 3,
-      select: { error: true, summary: true },
+      select: { error: true, summary: true, startedAt: true, finishedAt: true },
     }),
   ])
 
@@ -56,7 +56,11 @@ export async function backgroundServiceHealth(
     lastRunStatus: latest?.status || 'NEVER_RUN',
     currentTask: input.currentTask || (latest?.status === 'RUNNING' ? latest.summary || 'Working' : 'Idle'),
     queueStats: input.queueStats || {},
-    recentErrors: recentFailures.map((run) => run.error || run.summary || 'Worker failed.').filter(Boolean),
+    recentErrors: recentFailures.map((run) => ({
+      message: run.error || run.summary || 'Worker failed.',
+      startedAt: run.startedAt,
+      finishedAt: run.finishedAt,
+    })),
     runtimeMetrics: input.runtimeMetrics || {},
   }
 }

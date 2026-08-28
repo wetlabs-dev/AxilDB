@@ -1,4 +1,4 @@
-import { updateAiCuratorSettings, reviewAiCuratorSuggestion, resolveAiCuratorJob } from '@/app/ai-curator-actions'
+import { clearAiCuratorRecentErrors, updateAiCuratorSettings, reviewAiCuratorSuggestion, resolveAiCuratorJob } from '@/app/ai-curator-actions'
 import { Button, Card, Field, LinkButton, Select, TextArea } from '@/components/ui'
 import { requireServerAdmin } from '@/lib/auth'
 import { aiCuratorChangedFields, aiCuratorCurrentFocusValue, aiCuratorDashboard, aiCuratorReviewQueue, canApplyCuratorSuggestion } from '@/lib/ai-curator'
@@ -447,7 +447,7 @@ function ReviewSuggestionCard({ suggestion }: { suggestion: any }) {
 export default async function AiCuratorPage({
   searchParams,
 }: {
-  searchParams: Promise<{ settings?: string; review?: string }>
+  searchParams: Promise<{ settings?: string; review?: string; errors?: string }>
 }) {
   const admin = await requireServerAdmin()
   const sp = await searchParams
@@ -485,6 +485,7 @@ export default async function AiCuratorPage({
 
       {sp.settings === 'updated' && <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900">AI Curator settings updated.</p>}
       {sp.review && <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900">Review action recorded.</p>}
+      {sp.errors === 'cleared' && <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900">Recent AI Curator errors cleared.</p>}
 
       <Card>
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -643,14 +644,27 @@ export default async function AiCuratorPage({
             </div>
           </div>
           <div>
-            <h4 className="text-sm font-bold uppercase tracking-[0.14em] text-stone-500">Recent errors</h4>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h4 className="text-sm font-bold uppercase tracking-[0.14em] text-stone-500">Recent errors</h4>
+              {(dashboard.health.recentErrors.length > 0 || dashboard.recentErrors.length > 0) && (
+                <form action={clearAiCuratorRecentErrors}>
+                  <Button className="bg-white px-3 py-1.5 text-xs text-stone-800 ring-1 ring-stone-200 hover:bg-stone-50">Clear</Button>
+                </form>
+              )}
+            </div>
             <div className="mt-2 grid gap-2">
-              {dashboard.health.recentErrors.length === 0 && dashboard.recentErrors.length === 0 && <p className="text-sm text-stone-600">No recent Curator blockers.</p>}
+              {dashboard.health.recentErrors.length === 0 && dashboard.recentErrors.length === 0 && <p className="text-sm text-stone-600">No recent AI Curator errors.</p>}
               {dashboard.health.recentErrors.map((error, index) => (
-                <p key={`worker-${index}`} className="rounded-lg border border-red-200 bg-red-50/80 p-2 text-sm text-red-950">Worker failure: {error}</p>
+                <div key={`${error.startedAt.toISOString()}-${index}`} className="rounded-lg border border-red-200 bg-red-50/80 p-2 text-sm text-red-950">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-red-800">{formatDateTime(error.startedAt, timezone)}</p>
+                  <p className="mt-1">Worker failure: {error.message}</p>
+                </div>
               ))}
               {dashboard.recentErrors.map((error, index) => (
-                <p key={`${error.updatedAt.toISOString()}-${index}`} className="rounded-lg border border-amber-200 bg-amber-50/55 p-2 text-sm text-amber-950">{error.blockingReason}</p>
+                <div key={`${error.updatedAt.toISOString()}-${index}`} className="rounded-lg border border-amber-200 bg-amber-50/55 p-2 text-sm text-amber-950">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-amber-800">{formatDateTime(error.updatedAt, timezone)}</p>
+                  <p className="mt-1">{error.blockingReason}</p>
+                </div>
               ))}
             </div>
           </div>

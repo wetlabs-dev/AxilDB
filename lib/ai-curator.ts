@@ -1306,6 +1306,8 @@ async function processJob(prisma: PrismaClient, settings: any, job: any) {
         retryConditions: 'Configure the OpenAI API key, then let the worker wake again.',
         nextRetryAt: addDays(new Date(), 1),
         resultSummary: 'Deferred because AI credentials are unavailable.',
+        errorClearedAt: null,
+        errorClearedByUserId: null,
       },
     })
     return { status: 'DEFERRED' as const, cost: 0 }
@@ -1341,12 +1343,16 @@ async function processJob(prisma: PrismaClient, settings: any, job: any) {
             humanActionRequired: 'Review this job and either cancel it, adjust the definition, or retry after the underlying issue is resolved.',
             retryConditions: 'Manual review clears the blocker or changes the source record.',
             resultSummary: 'Stopped after repeated AI Curator failures.',
+            errorClearedAt: null,
+            errorClearedByUserId: null,
           }
         : {
             status: 'DEFERRED',
             blockingReason: message.slice(0, 800),
             nextRetryAt: addDays(new Date(), Math.min(7, job.attempts + 1)),
             resultSummary: 'Deferred after a model or parsing error.',
+            errorClearedAt: null,
+            errorClearedByUserId: null,
           },
     })
     return { status: exhausted ? 'WAITING_FOR_HUMAN' as const : 'DEFERRED' as const, cost: 0 }
@@ -1459,7 +1465,7 @@ export async function aiCuratorDashboard(prisma: PrismaClient) {
       include: { collection: { select: { name: true, slug: true } }, plantDefinition: true },
     }),
     prisma.aiCuratorJob.findMany({
-      where: { status: { in: ['DEFERRED', 'WAITING_FOR_HUMAN'] }, blockingReason: { not: null } },
+      where: { status: 'DEFERRED', blockingReason: { not: null }, errorClearedAt: null },
       orderBy: { updatedAt: 'desc' },
       take: 5,
       select: { blockingReason: true, updatedAt: true },

@@ -443,3 +443,20 @@ export async function resolveAiCuratorJob(fd: FormData) {
   revalidatePath('/server/ai-curator')
   redirect('/server/ai-curator')
 }
+
+export async function clearAiCuratorRecentErrors() {
+  const user = await requireServerAdmin()
+  const now = new Date()
+  await Promise.all([
+    prisma.serverWorkerRun.updateMany({
+      where: { workerName: 'ai-curator', status: 'FAILED', errorClearedAt: null },
+      data: { errorClearedAt: now, errorClearedByUserId: user.id },
+    }),
+    prisma.aiCuratorJob.updateMany({
+      where: { status: 'DEFERRED', blockingReason: { not: null }, errorClearedAt: null },
+      data: { errorClearedAt: now, errorClearedByUserId: user.id },
+    }),
+  ])
+  revalidatePath('/server/ai-curator')
+  redirect('/server/ai-curator?errors=cleared')
+}
