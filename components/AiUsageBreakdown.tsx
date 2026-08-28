@@ -252,12 +252,12 @@ export function AiUsageBreakdown({ events, timezone, now }: { events: AiUsageBre
               <h4 className="text-sm font-bold uppercase tracking-[0.14em] text-stone-500">Usage over time</h4>
               <p className="text-xs text-stone-600">{metricLabel(Math.max(...buckets.map((bucket) => bucket.total), 0), metric)} peak bucket</p>
             </div>
-            <div className="mt-3 overflow-x-auto">
+            <div className="mt-3 overflow-x-auto pt-24">
               <div className="flex min-h-56 min-w-[42rem] items-end gap-1 border-b border-stone-200 px-1 pb-8">
                 {buckets.map((bucket) => {
                   let bottom = 0
                   return (
-                    <div key={bucket.key} className="group relative flex min-w-5 flex-1 items-end justify-center">
+                    <div key={bucket.key} className="group relative flex min-w-5 flex-1 items-end justify-center hover:z-40">
                       <div className="relative h-44 w-full rounded-t bg-stone-100">
                         {features.filter(([feature]) => enabledFeatures.has(feature)).map(([feature]) => {
                           const value = bucket.byFeature.get(feature) || 0
@@ -268,7 +268,7 @@ export function AiUsageBreakdown({ events, timezone, now }: { events: AiUsageBre
                           return <span key={feature} className="absolute left-0 w-full" style={{ bottom: segmentBottom, height, backgroundColor: featureColor.get(feature) }} />
                         })}
                       </div>
-                      <div className="pointer-events-none absolute bottom-full z-10 mb-2 hidden w-56 rounded-md border border-stone-200 bg-white p-2 text-xs shadow-lg group-hover:block">
+                      <div className="pointer-events-none absolute bottom-full z-50 mb-2 hidden w-56 rounded-md border border-stone-200 bg-white p-2 text-xs shadow-lg group-hover:block">
                         <p className="font-semibold text-stone-900">{formatBucketLabel(bucket.key, bucketWidth, timezone)}</p>
                         <p className="text-stone-600">Total: {metricLabel(bucket.total, metric)}</p>
                         {[...bucket.byFeature.entries()].sort((a, b) => b[1] - a[1]).map(([feature, value]) => (
