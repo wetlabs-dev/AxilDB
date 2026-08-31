@@ -366,17 +366,17 @@ export default async function Plants({
         </Card>
       )}
 
-      <div className="grid auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
+      <div className="grid items-start gap-4 [grid-template-columns:repeat(auto-fit,minmax(18rem,1fr))]">
         {sortedPlants.map((plant) => {
           const typePhoto = typePhotoByDefinition[plant.id] || plant.instances.map((instance) => typePhotoByInstance[instance.id]).find(Boolean)
           const completeness = completenessByDefinition.get(plant.id)!
           return (
-            <Card key={plant.id} className="flex h-full flex-col overflow-hidden p-0">
+            <Card key={plant.id} className="flex flex-col overflow-hidden p-0">
               <div className="aspect-[4/3] overflow-hidden">
                 <PlantImage src={typePhoto} alt={plantName(plant)} />
               </div>
               <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-3">
-                <div className="flex flex-1 items-start justify-between gap-4">
+                <div className="flex flex-1 items-start justify-between gap-3">
                   <div className="min-w-0">
                     <span className="line-clamp-2 text-sm font-bold leading-tight">{plantName(plant)}</span>
                     <p className="truncate text-sm">
@@ -404,7 +404,7 @@ export default async function Plants({
                       </div>
                     )}
                     <p className="line-clamp-2 text-sm text-stone-600">{plant.description}</p>
-                    <div className="mt-2"><PlantTagRow tags={plant.tags.map((item) => item.plantTag)} limit={4} /></div>
+                    <div className="mt-2"><PlantTagRow tags={plant.tags.map((item) => item.plantTag)} limit={3} /></div>
                     <HusbandryBadges
                       values={(plant.husbandryGuide?.sourcePlantDefinitionId
                         ? husbandryGuideByDefinitionId.get(plant.husbandryGuide.sourcePlantDefinitionId)
