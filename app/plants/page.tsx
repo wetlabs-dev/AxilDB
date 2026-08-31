@@ -366,7 +366,7 @@ export default async function Plants({
         </Card>
       )}
 
-      <div className="grid auto-rows-fr gap-4 [grid-template-columns:repeat(auto-fit,minmax(18rem,1fr))]">
+      <div className="grid auto-rows-fr gap-4 [grid-template-columns:repeat(auto-fill,minmax(18rem,1fr))]">
         {sortedPlants.map((plant) => {
           const typePhoto = typePhotoByDefinition[plant.id] || plant.instances.map((instance) => typePhotoByInstance[instance.id]).find(Boolean)
           const completeness = completenessByDefinition.get(plant.id)!
