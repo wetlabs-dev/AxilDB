@@ -1,6 +1,7 @@
 import type { PrismaClient } from '@prisma/client'
 import { collectionPath } from '@/lib/collections'
 import { locationPathWithCodes } from '@/lib/locations'
+import { plantInstanceTypeLabel } from '@/lib/plant-instance-types'
 import { acceptedPlantName, plantName } from '@/lib/utils'
 
 export type PlantInstancePreview = {
@@ -53,6 +54,7 @@ function acquisitionLabel(instance: {
   const source = [instance.source, instance.distributor].filter(Boolean).join(' via ')
   if (source) return source
   if (instance.instanceType === 'ACQUIRED_PROPAGATION') return 'Acquired propagation'
+  if (['SEED', 'CORM', 'TISSUE_CULTURE'].includes(instance.instanceType)) return plantInstanceTypeLabel(instance.instanceType)
   if (instance.propagationDate) return 'Propagation'
   if (instance.acquisitionDate) return 'Acquired plant'
   return null

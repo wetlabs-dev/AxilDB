@@ -20,6 +20,7 @@ import {
   deleteReminder,
   followEntity,
   regeneratePlantInstanceId,
+  markPlantInstanceEstablished,
   savePlantHusbandryOverrideField,
   startPlantQuarantine,
   updatePlantQuarantine,
@@ -49,6 +50,7 @@ import { canCreateInCollection, canEditInCollection, canManageCollection, collec
 import { isQuarantineLocation, quarantineChecklistItems } from '@/lib/locations'
 import { evaluatePlantLocationCompatibility, getEffectiveLocationEnvironment, getEffectivePlantEnvironmentRequirements } from '@/lib/location-compatibility'
 import { expectedPlantIdForInstance } from '@/lib/plant-id'
+import { establishedPlantInstanceTypes, isTransitionalPlantInstanceType, plantInstanceTypeLabel } from '@/lib/plant-instance-types'
 import { prisma } from '@/lib/prisma'
 import { resolveUnitPreferences } from '@/lib/units'
 import { recurrenceLabel, reminderCategories, reminderCategoryLabel, reminderRecurrences } from '@/lib/reminders'
@@ -1004,9 +1006,15 @@ export default async function InstanceDetail({
             </div>
           )}
           <p>Status: {i.status}</p>
-          <p>Type: {i.instanceType}</p>
+          <p>Type: {plantInstanceTypeLabel(i.instanceType)}</p>
           <p>Location: {i.currentLocation ? `${i.currentLocation.code} · ${i.currentLocation.name}` : '—'}</p>
+          <p>Acquired: {fmtDate(i.acquisitionDate, timezone)}</p>
           <p>Propagated: {fmtDate(i.propagationDate, timezone)}</p>
+          {i.sownAt && <p>Sown: {fmtDate(i.sownAt, timezone)}</p>}
+          {i.germinatedAt && <p>Germinated: {fmtDate(i.germinatedAt, timezone)}</p>}
+          {i.cormStartedAt && <p>Corm started: {fmtDate(i.cormStartedAt, timezone)}</p>}
+          {i.deflaskedAt && <p>Deflasked / acclimation: {fmtDate(i.deflaskedAt, timezone)}</p>}
+          {i.establishedAt && <p>Established: {fmtDate(i.establishedAt, timezone)}</p>}
           <p>Stock: {i.stockNumber || '—'}</p>
           <Link className="mt-3 inline-block underline" href={collectionPath(collection.slug, `/graphs?root=${i.id}`)}>
             View lineage graph
@@ -1022,6 +1030,24 @@ export default async function InstanceDetail({
             </div>
           )}
         </Card>
+
+        {canManageRecords && isTransitionalPlantInstanceType(i.instanceType) && (
+          <Card>
+            <h3 className="font-bold">Mark established</h3>
+            <p className="mt-1 text-sm text-stone-600">Move this {plantInstanceTypeLabel(i.instanceType).toLowerCase()} into its established lifecycle state while keeping the origin in the timeline.</p>
+            <form action={markPlantInstanceEstablished} className="mt-3 grid gap-3 sm:grid-cols-2">
+              <input type="hidden" name="collectionSlug" value={collection.slug} />
+              <input type="hidden" name="plantInstanceId" value={i.id} />
+              <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${i.id}`)} />
+              <Field label="Established date" name="establishedAt" type="date" defaultValue={dateInput(new Date(), timezone)} required />
+              <Select label="New instance type" name="newInstanceType" defaultValue="MOTHER">
+                {establishedPlantInstanceTypes.map((type) => <option key={type} value={type}>{plantInstanceTypeLabel(type)}</option>)}
+              </Select>
+              <TextArea label="Notes" name="notes" wrapperClassName="sm:col-span-2" />
+              <Button className="w-fit sm:col-span-2">Mark established</Button>
+            </form>
+          </Card>
+        )}
 
         <Card id="substrate">
           <div className="flex flex-wrap items-start justify-between gap-3">

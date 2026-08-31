@@ -2,6 +2,7 @@ import { logout } from '@/app/auth-actions'
 import { getCurrentUser } from '@/lib/auth'
 import { getCollectionContext, publicCollectionsForUser } from '@/lib/collections'
 import { careQueueSummary, getCareQueue } from '@/lib/care-queue'
+import { transitionalPlantInstanceTypes } from '@/lib/plant-instance-types'
 import { prisma } from '@/lib/prisma'
 import { isServerAdminRole } from '@/lib/roles'
 import { SidebarClient, type SidebarBadges, type SidebarCollection } from './SidebarClient'
@@ -45,7 +46,7 @@ async function buildSidebarBadges(collection: { id: string; slug: string }, user
     }),
     prisma.plantInstance.count({ where: { collectionId, status: { not: 'ARCHIVED' } } }),
     prisma.location.count({ where: { collectionId, status: 'ACTIVE' } }),
-    prisma.plantInstance.count({ where: { collectionId, status: { not: 'ARCHIVED' }, instanceType: 'ACQUIRED_PROPAGATION' } }),
+    prisma.plantInstance.count({ where: { collectionId, status: { not: 'ARCHIVED' }, instanceType: { in: ['ACQUIRED_PROPAGATION', ...transitionalPlantInstanceTypes] } } }),
     prisma.propagationEvent.count({ where: { collectionId } }),
     prisma.bloomEvent.count({ where: { collectionId } }),
     prisma.photo.count({ where: { collectionId } }),

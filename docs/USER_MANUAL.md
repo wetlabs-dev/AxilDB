@@ -180,7 +180,7 @@ App route: `/acquisitions`
 - Use Seen at... to record the seller, sales channel, observed price, size, condition, availability, and notes.
 - Open Provenance to create reusable upstream sources, sellers, sales channels, and manager-defined sales-channel types.
 - On an observation, select who the plant came from and how it was sold or transferred. Use Acquire from this observation to prefill known provenance, price, and specimen size.
-- Use Acquire to create a permanent acquisition record, add an ordered source chain with roles, and optionally create one or more Plant Instances with generated IDs.
+- Use Acquire to create a permanent acquisition record, add an ordered source chain with roles, choose the resulting instance type, and optionally create one or more Plant Instances with generated IDs.
 - Enter the supplied acquisition label during acquisition when the nursery, seller, or source label should be preserved on each created specimen.
 - Choose whether an acquisition fulfills the intent, keeps it active, or marks it as a repeat-purchase target.
 
@@ -213,11 +213,12 @@ App route: `/instances`
 ### How It Is Used
 
 - Open Plant Instances and choose Add plant instance.
-- Select a plant definition and enter specimen details such as type, acquisition label, acquisition date, Location, source, distributor, stock number, and notes.
+- Select a plant definition with the cascading Genus, Species, Hybrid, and Cultivar picker, then enter specimen details such as lifecycle type, dates, acquisition label, Location, source, distributor, stock number, and notes.
 - Open a specimen detail page to review identity, photos, Plant Health Timeline, husbandry summary, sport status, follows, children, notes, reminders, bloom tracker, and archive actions.
 - Use the Plant Health Timeline to scan accession, propagation, care, condition, bloom, photo, note, reminder, archive, and sport activity in a compact strip, then open the Life Story list for grouped deterministic history.
 - Use the generated QR label to open the specimen record quickly from a printed label.
 - Give sunshine to plant instances as a quiet appreciation/bookmark marker, then use Most sunshine or Least sunshine sorting when reviewing instance lists.
+- Use Mark established on Seed, Corm, or Tissue culture specimens once they reach normal growth, choosing Mother or Propagation as the new current lifecycle type.
 - Use the plant ID refresh action when the current ID no longer matches the generated ID format after type or date changes.
 - Use Green Thumb assist for one focused care question per specimen per day when AI is enabled for the collection.
 - Filter the instance list by Location, with optional inclusion of child locations.
@@ -228,10 +229,13 @@ App route: `/instances`
 ### Notes
 
 - Plant IDs are generated from the plant definition and relevant date context, then made unique inside the collection.
+- Seed, Corm, and Tissue culture are transitional Plant Instance types. They describe the current physical state of one accession; parentage and origin method still belong in Propagation records.
+- Seed IDs use SD, corm IDs use CO, and tissue culture IDs use TC. Blank-species cultivar names use genus+cultivar segments without inventing sp.; explicit sp. remains a separate unknown-species token.
+- The Plant Definition picker only selects existing definitions. The Species step shows No species / genus-level cultivar for an intentionally blank Species and sp. - species unknown when the definition explicitly records sp.
 - Plant ID links in briefings, care lists, location views, recent activity, and related-specimen sections show compact hover/focus previews with a thumbnail and key status. On touch screens, tap once to preview and use Open plant inside the card to navigate.
 - Locations show stable codes and breadcrumb paths. A plant has one canonical current Location relationship.
 - Active quarantine records show on specimen pages and plant cards, and their target release dates create care queue review items.
-- Acquired propagation is for purchased or received cuttings, leaf props, starter plugs, and similar plants without an internal parent record.
+- Acquired propagation is for purchased or received cuttings, leaf props, starter plugs, and similar plants without an internal parent record. Seed, Corm, and Tissue culture specimens get type-aware lifecycle dates and establishment checks.
 - Timeline v1 uses existing records and includes plant location moves plus quarantine start, update, release, and cancellation events. Dedicated label-change, restore, and sport-transition events are future data-source candidates.
 - A Pot Together survivor keeps its Plant ID, QR code, URLs, and future care lifecycle. Constituent IDs remain searchable and their old QR codes open read-only historical records linked to the survivor.
 - The survivor timeline combines constituent notes, photos, care, bloom, lineage, and other records in chronological order with the original Plant ID shown. Open conditions, active treatment plans, active blooms, and active quarantine records move to the survivor with origin notes; old reminders are paused.
@@ -559,7 +563,7 @@ App route: `/exhibits`
 
 ## Propagations and Lineage Graphs
 
-Propagation records connect parent specimens to child specimens and preserve the context for divisions, cuttings, leaves, rhizomes, sport lines, and other propagation methods.
+Propagation records connect parent specimens to child specimens and preserve the context for divisions, cuttings, leaves, rhizomes, seed, corm, tissue culture, sport lines, and other propagation methods.
 
 App route: `/propagations`
 
@@ -568,7 +572,7 @@ App route: `/propagations`
 ### How It Is Used
 
 - Open Propagations and use Add propagation to record a propagation event.
-- Select parent and child specimens, propagation method, date, status, and notes.
+- Select parent specimens, propagation method, date, resulting child instance type, status, and notes.
 - Use Lineage Graphs to search for a specimen and view its connected tree.
 - Select nodes in the graph to change focus and follow ancestry and descendants.
 - Use Acquired propagation for starter plants or leaf props obtained from outside the collection.
@@ -576,6 +580,7 @@ App route: `/propagations`
 ### Notes
 
 - Lineage graph connectors use different styles for propagation methods where possible.
+- Seed, corm, and tissue-culture child instances still use the same parent/child propagation graph; AxilDB does not add duplicate parentage fields to Plant Instances.
 - Transferred specimens preserve relevant transfer notes, but cross-collection lineage links are not created.
 
 ## Bloom Tracker

@@ -7,6 +7,7 @@ import { audit } from '@/lib/auth'
 import { collectionPath, requireCollectionLogger, requireCollectionManager } from '@/lib/collections'
 import { emitDomainEvent } from '@/lib/events/emit'
 import { generatePlantId } from '@/lib/plant-id'
+import { defaultLifecycleDateForType, plantInstanceTypeValue } from '@/lib/plant-instance-types'
 import { plantName } from '@/lib/utils'
 import { normalizePlantDefinitionIdentity } from '@/lib/plant-identity'
 import { acquisitionProvenanceDisplay, sourceRowsFromForm, validateCommerceSelection, validateSourceRows } from '@/lib/provenance'
@@ -312,7 +313,11 @@ export async function createPlantAcquisitionRecord(fd: FormData) {
   const acquiredAt = date(val(fd, 'acquiredAt')) || new Date()
   const quantity = boundedInt(val(fd, 'quantity'), 1, 1, 50)
   const createInstances = val(fd, 'createInstances') !== '0'
-  const instanceType = val(fd, 'instanceType') || 'MOTHER'
+  const instanceType = plantInstanceTypeValue(val(fd, 'instanceType'))
+  const sownAt = date(val(fd, 'sownAt'))
+  const germinatedAt = date(val(fd, 'germinatedAt'))
+  const cormStartedAt = date(val(fd, 'cormStartedAt'))
+  const deflaskedAt = date(val(fd, 'deflaskedAt'))
   const initialLocationId = clearableVal(fd, 'initialLocationId') || definition.desiredLocationId || null
   const location = initialLocationId
     ? await prisma.location.findFirstOrThrow({ where: { id: initialLocationId, collectionId: collection.id, status: 'ACTIVE' } })
@@ -378,7 +383,7 @@ export async function createPlantAcquisitionRecord(fd: FormData) {
           collectionId: collection.id,
           plantDefinitionId,
           instanceType,
-          date: acquiredAt,
+          date: defaultLifecycleDateForType({ instanceType, acquisitionDate: acquiredAt, sownAt, cormStartedAt, deflaskedAt }),
         })
         const instance = await tx.plantInstance.create({
           data: {
@@ -388,6 +393,10 @@ export async function createPlantAcquisitionRecord(fd: FormData) {
             instanceType,
             currentLocationId: location?.id || null,
             acquisitionDate: acquiredAt,
+            sownAt,
+            germinatedAt,
+            cormStartedAt,
+            deflaskedAt,
             acquisitionLabel: clearableVal(fd, 'acquisitionLabel'),
             source: primarySource ? sourceNames.get(primarySource.sourceId) : seller?.name || distributor?.name || val(fd, 'source') || val(fd, 'vendor'),
             distributor: seller?.name || distributor?.name || val(fd, 'vendor'),
@@ -625,9 +634,10 @@ export async function createAcquisitionBatch(fd: FormData) {
       await tx.acquisitionBatchItem.update({ where: { id: item.id }, data: { createdAcquisitionRecordId: record.id } })
       if (createInstances) {
         for (let index = 0; index < quantity; index += 1) {
-          const plantId = await generatePlantId(tx as any, { collectionId: collection.id, plantDefinitionId: definition.id, instanceType: 'MOTHER', date: acquiredAt })
+          const instanceType = plantInstanceTypeValue(val(fd, `instanceType:${definition.id}`))
+          const plantId = await generatePlantId(tx as any, { collectionId: collection.id, plantDefinitionId: definition.id, instanceType, date: acquiredAt })
           const instance = await tx.plantInstance.create({ data: {
-            collectionId: collection.id, plantDefinitionId: definition.id, plantId, instanceType: 'MOTHER',
+            collectionId: collection.id, plantDefinitionId: definition.id, plantId, instanceType,
             currentLocationId: location?.id || null,
             acquisitionDate: acquiredAt, distributor: seller?.name || distributor?.name || null, purchasePrice: dec(val(fd, `unitPrice:${definition.id}`)) as any,
             acquisitionLabel: clearableVal(fd, `acquisitionLabel:${definition.id}`),

@@ -23,7 +23,7 @@ export default async function EditPropagation({ params }: { params: Promise<{ id
           <label className="grid gap-1 text-sm font-medium">
             Method
             <select className="rounded-lg border px-3 py-2 font-normal" name="method" defaultValue={event.method}>
-              <option>LEAF</option><option>CUTTING</option><option>RHIZOME_SPLIT</option><option>DIVISION</option><option>SEED</option><option>TISSUE_CULTURE</option><option>RUNNER</option><option>OTHER</option>
+              <option>LEAF</option><option>CUTTING</option><option>RHIZOME_SPLIT</option><option>DIVISION</option><option>SEED</option><option>CORM</option><option>TISSUE_CULTURE</option><option>RUNNER</option><option>OTHER</option>
             </select>
           </label>
           <Field label="Date" name="date" type="date" required defaultValue={dateInput(event.date)} />

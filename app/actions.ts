@@ -30,6 +30,7 @@ import { getCareQueue } from '@/lib/care-queue'
 import { createDemoData } from '@/lib/demo-data'
 import { notifyFollowers } from '@/lib/follows'
 import { expectedPlantIdForInstance, generatePlantId } from '@/lib/plant-id'
+import { childTypeForPropagationMethod, defaultLifecycleDateForType, establishedPlantInstanceTypes, plantInstanceTypeLabel, plantInstanceTypeValue } from '@/lib/plant-instance-types'
 import { nextOccurrence } from '@/lib/reminders'
 import { notifySunshineManagers, validateSunshineTarget } from '@/lib/sunshine'
 import { addCalendarDays, calendarDayIndexInTimeZone, formatDate, parseDateLocal, parseDateTimeLocal, timeZoneForPreference } from '@/lib/time'
@@ -2343,9 +2344,13 @@ export async function createPlantInstance(fd: FormData) {
     },
     select: { id: true, genus: true, species: true, cultivarName: true },
   })
-  const instanceType = val(fd, 'instanceType')!
+  const instanceType = plantInstanceTypeValue(val(fd, 'instanceType'))
   const acquisitionDate = date(val(fd, 'acquisitionDate'))
   const propagationDate = date(val(fd, 'propagationDate'))
+  const sownAt = date(val(fd, 'sownAt'))
+  const germinatedAt = date(val(fd, 'germinatedAt'))
+  const cormStartedAt = date(val(fd, 'cormStartedAt'))
+  const deflaskedAt = date(val(fd, 'deflaskedAt'))
   const currentLocationId = clearableVal(fd, 'currentLocationId')
   const currentLocation = currentLocationId
     ? await prisma.location.findFirstOrThrow({ where: { id: currentLocationId, collectionId: collection.id, status: 'ACTIVE' } })
@@ -2363,7 +2368,7 @@ export async function createPlantInstance(fd: FormData) {
     collectionId: collection.id,
     plantDefinitionId,
     instanceType,
-    date: propagationDate || acquisitionDate,
+    date: defaultLifecycleDateForType({ instanceType, acquisitionDate, propagationDate, sownAt, cormStartedAt, deflaskedAt }),
   })
   const substrateMode = substrateModes.includes(val(fd, 'substrateMode') as any) ? val(fd, 'substrateMode')! : acquisitionDate ? 'RECEIVED_SUBSTRATE' : 'UNKNOWN'
 
@@ -2376,6 +2381,10 @@ export async function createPlantInstance(fd: FormData) {
       currentLocationId: currentLocation?.id || null,
       acquisitionDate,
       propagationDate,
+      sownAt,
+      germinatedAt,
+      cormStartedAt,
+      deflaskedAt,
       source: primarySource ? sourceNames.get(primarySource.sourceId) : val(fd, 'source'),
       distributor: seller?.name || distributor?.name || val(fd, 'distributor'),
       stockNumber: val(fd, 'stockNumber'),
@@ -2435,7 +2444,7 @@ export async function createPlantInstance(fd: FormData) {
   await notifyFollowers(prisma, {
     actorUserId: user.id,
     eventType: 'NEW_PLANT',
-    subject: `New ${instance.instanceType.toLowerCase()} plant: ${instance.plantId}`,
+    subject: `New ${plantInstanceTypeLabel(instance.instanceType).toLowerCase()} plant: ${instance.plantId}`,
     body: `${instance.plantId} was added to ${plantName(definition)}.`,
     collectionId: collection.id,
     recordPath: collectionPath(collection.slug, `/instances/${instance.id}`),
@@ -2450,7 +2459,7 @@ export async function updatePlantInstance(fd: FormData) {
   const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const id = val(fd, 'id')!
   await assertPlantInstanceAcceptsChanges(collection.id, id)
-  const before = await prisma.plantInstance.findFirstOrThrow({ where: { id, collectionId: collection.id }, select: { id: true, plantId: true, currentLocationId: true } })
+  const before = await prisma.plantInstance.findFirstOrThrow({ where: { id, collectionId: collection.id }, select: { id: true, plantId: true, currentLocationId: true, instanceType: true } })
   const plantDefinitionId = val(fd, 'plantDefinitionId')!
   await prisma.plantDefinition.findFirstOrThrow({
     where: {
@@ -2467,11 +2476,16 @@ export async function updatePlantInstance(fd: FormData) {
   const instance = await prisma.$transaction(async (tx) => {
     const updated = await tx.plantInstance.update({ where: { id }, data: {
       plantDefinitionId,
-      instanceType: val(fd, 'instanceType')!,
+      instanceType: plantInstanceTypeValue(val(fd, 'instanceType')),
       status: val(fd, 'status') || 'ACTIVE',
       currentLocationId: currentLocation?.id || null,
       acquisitionDate: clearableDate(fd, 'acquisitionDate'),
       propagationDate: clearableDate(fd, 'propagationDate'),
+      sownAt: clearableDate(fd, 'sownAt'),
+      germinatedAt: clearableDate(fd, 'germinatedAt'),
+      cormStartedAt: clearableDate(fd, 'cormStartedAt'),
+      deflaskedAt: clearableDate(fd, 'deflaskedAt'),
+      establishedAt: clearableDate(fd, 'establishedAt'),
       source: clearableVal(fd, 'source'),
       distributor: clearableVal(fd, 'distributor'),
       stockNumber: clearableVal(fd, 'stockNumber'),
@@ -2499,6 +2513,13 @@ export async function updatePlantInstance(fd: FormData) {
       await emitDomainEvent(tx, {
         eventType: 'plant.location_moved', collectionId: collection.id, aggregateId: id, actor: { id: user.id, role: user.role }, idempotencyKey: `location-move:${move.id}`,
         payload: { subjectId: move.id, recordId: move.id, recordType: 'PlantLocationMove', plantInstanceId: id, plantId: updated.plantId, displayName: updated.plantId, fromLocation: from ? { id: from.id, name: from.name, code: from.code } : null, toLocation: currentLocation ? { id: currentLocation.id, name: currentLocation.name, code: currentLocation.code } : null, summary: 'Updated from plant edit form.' },
+      })
+    }
+    if (before.instanceType !== updated.instanceType) {
+      await emitDomainEvent(tx, {
+        eventType: 'plant.lifecycle_type_changed', collectionId: collection.id, aggregateId: id, actor: { id: user.id, role: user.role },
+        idempotencyKey: `plant:${id}:lifecycle-type:${updated.updatedAt.toISOString()}`,
+        payload: { subjectId: id, plantInstanceId: id, plantId: updated.plantId, displayName: updated.plantId, previousType: before.instanceType, newType: updated.instanceType },
       })
     }
     return updated
@@ -3476,6 +3497,57 @@ export async function markPropagationEstablished(fd: FormData) {
   redirect(destination)
 }
 
+export async function markPlantInstanceEstablished(fd: FormData) {
+  const destination = back(fd)
+  const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
+  const plantInstanceId = val(fd, 'plantInstanceId')!
+  const newType = plantInstanceTypeValue(val(fd, 'newInstanceType'), 'MOTHER')
+  if (!establishedPlantInstanceTypes.includes(newType as any)) throw new Error('Established plants can be marked as Mother or Propagation.')
+  const establishedAt = date(val(fd, 'establishedAt')) || new Date()
+  const notes = val(fd, 'notes')
+  const plant = await prisma.plantInstance.findFirstOrThrow({
+    where: {
+      id: plantInstanceId,
+      collectionId: collection.id,
+      status: 'ACTIVE',
+      instanceType: { in: ['SEED', 'CORM', 'TISSUE_CULTURE'] },
+    },
+    select: { id: true, plantId: true, instanceType: true },
+  })
+  const previousType = plant.instanceType
+  const correlationId = randomUUID()
+
+  await prisma.$transaction(async (tx) => {
+    await tx.plantInstance.update({
+      where: { id: plantInstanceId },
+      data: { instanceType: newType, establishedAt, propagationEstablishedAt: establishedAt },
+    })
+    if (notes) {
+      await tx.note.create({ data: { collectionId: collection.id, entityType: 'PLANT_INSTANCE', entityId: plantInstanceId, note: notes } })
+    }
+    await tx.plantCareAdjustment.updateMany({
+      where: { collectionId: collection.id, plantInstanceId, taskType: 'PROPAGATION_CHECK' },
+      data: { snoozedUntil: null, disabled: true },
+    })
+    await emitDomainEvent(tx, {
+      eventType: 'plant.established', collectionId: collection.id, aggregateId: plantInstanceId,
+      actor: { id: user.id, role: user.role }, occurredAt: establishedAt, correlationId,
+      idempotencyKey: `plant:${plantInstanceId}:established:${establishedAt.toISOString()}`,
+      payload: { subjectId: plantInstanceId, plantInstanceId, plantId: plant.plantId, displayName: plant.plantId, previousType, newType, notes },
+    })
+    await emitDomainEvent(tx, {
+      eventType: 'plant.lifecycle_type_changed', collectionId: collection.id, aggregateId: plantInstanceId,
+      actor: { id: user.id, role: user.role }, occurredAt: establishedAt, correlationId,
+      idempotencyKey: `plant:${plantInstanceId}:lifecycle-established:${establishedAt.toISOString()}`,
+      payload: { subjectId: plantInstanceId, plantInstanceId, plantId: plant.plantId, displayName: plant.plantId, previousType, newType, notes },
+    })
+  })
+
+  await audit(user, 'ESTABLISH', 'PLANT_INSTANCE', plantInstanceId, `Marked ${plant.plantId} established as ${plantInstanceTypeLabel(newType)}`, { previousType, newType, establishedAt, notes }, collection.id)
+  revalidateDestination(destination)
+  redirect(destination)
+}
+
 export async function createPlantCondition(fd: FormData) {
   const destination = back(fd)
   const context = await requireCollectionLogger(await collectionSlug(fd))
@@ -4155,6 +4227,7 @@ export async function createPropagationEvent(fd: FormData) {
   const eventDate = date(val(fd, 'date'))!
   const childCount = boundedInt(val(fd, 'childCount'), 1, 1, 50)
   const childLocationId = clearableVal(fd, 'currentLocationId')
+  const childInstanceType = plantInstanceTypeValue(val(fd, 'childInstanceType'), childTypeForPropagationMethod(method))
 
   if (method === 'SEED' && !parent2) {
     throw new Error('Sexual reproduction requires two parent plants.')
@@ -4197,7 +4270,7 @@ export async function createPropagationEvent(fd: FormData) {
       collectionId: collection.id,
       plantDefinitionId: parentPlant.plantDefinitionId,
       date: eventDate,
-      instanceType: 'PROPAGATION',
+      instanceType: childInstanceType,
       method,
     })
       childCodes.push(plantId)
@@ -4207,8 +4280,11 @@ export async function createPropagationEvent(fd: FormData) {
         collectionId: collection.id,
         plantDefinitionId: parentPlant.plantDefinitionId,
         plantId,
-        instanceType: 'PROPAGATION',
+        instanceType: childInstanceType,
         propagationDate: eventDate,
+        sownAt: childInstanceType === 'SEED' ? eventDate : null,
+        cormStartedAt: childInstanceType === 'CORM' ? eventDate : null,
+        deflaskedAt: childInstanceType === 'TISSUE_CULTURE' ? eventDate : null,
         currentLocationId: childLocationId,
         isSportCandidate: isSportLine(parentPlant.sportStatus),
         sportStatus: childSportStatus,

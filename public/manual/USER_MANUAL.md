@@ -132,6 +132,8 @@ App route: `/plants`
 - Use Plant Tags to maintain reusable collection traits, then select multiple active tags in a Plant Definition form. Search can match any or all selected tags.
 - Review Magic Fill tag suggestions separately from taxonomy fields. Existing tags and proposed private tags require explicit selection, and proposed tags require a second creation confirmation.
 - Use the readiness filters to review complete, mostly complete, sparse, provisional, or category-specific incomplete definitions. Sort by completeness to work through the highest-value gaps first.
+- When AI Curator is enabled for the collection, use Research Now on a plant definition card to queue high-priority background research for that definition.
+- Filter by AI Suggested or Waiting for Human to find definitions with prepared Curator suggestions or blocked Curator jobs.
 - Open a definition to expand Definition Readiness. Its grouped checklist links directly to taxonomy, images, husbandry, substrate, tags, and validation sections.
 - Use Export CSV to include overall readiness, category scores, and missing critical or recommended items in an offline cleanup worksheet.
 
@@ -152,6 +154,7 @@ App route: `/plants`
 - Tag icons use AxilDB’s curated botanical icon set so they render consistently across devices.
 - Definition completeness is a weighted metadata-readiness measure, not a statement that the taxonomy is scientifically correct. Provisional identification and validation remain separate statuses.
 - Linked husbandry and approved specimen fallback images contribute appropriately. Magic Fill drafts contribute only after they are reviewed and saved.
+- AI Curator suggestions also do not count toward readiness until a human reviews and applies the accepted change.
 
 ### Warnings
 
@@ -177,7 +180,7 @@ App route: `/acquisitions`
 - Use Seen at... to record the seller, sales channel, observed price, size, condition, availability, and notes.
 - Open Provenance to create reusable upstream sources, sellers, sales channels, and manager-defined sales-channel types.
 - On an observation, select who the plant came from and how it was sold or transferred. Use Acquire from this observation to prefill known provenance, price, and specimen size.
-- Use Acquire to create a permanent acquisition record, add an ordered source chain with roles, and optionally create one or more Plant Instances with generated IDs.
+- Use Acquire to create a permanent acquisition record, add an ordered source chain with roles, choose the resulting instance type, and optionally create one or more Plant Instances with generated IDs.
 - Enter the supplied acquisition label during acquisition when the nursery, seller, or source label should be preserved on each created specimen.
 - Choose whether an acquisition fulfills the intent, keeps it active, or marks it as a repeat-purchase target.
 
@@ -210,11 +213,12 @@ App route: `/instances`
 ### How It Is Used
 
 - Open Plant Instances and choose Add plant instance.
-- Select a plant definition and enter specimen details such as type, acquisition label, acquisition date, Location, source, distributor, stock number, and notes.
+- Select a plant definition with the cascading Genus, Species, Hybrid, and Cultivar picker, then enter specimen details such as lifecycle type, dates, acquisition label, Location, source, distributor, stock number, and notes.
 - Open a specimen detail page to review identity, photos, Plant Health Timeline, husbandry summary, sport status, follows, children, notes, reminders, bloom tracker, and archive actions.
 - Use the Plant Health Timeline to scan accession, propagation, care, condition, bloom, photo, note, reminder, archive, and sport activity in a compact strip, then open the Life Story list for grouped deterministic history.
 - Use the generated QR label to open the specimen record quickly from a printed label.
 - Give sunshine to plant instances as a quiet appreciation/bookmark marker, then use Most sunshine or Least sunshine sorting when reviewing instance lists.
+- Use Mark established on Seed, Corm, or Tissue culture specimens once they reach normal growth, choosing Mother or Propagation as the new current lifecycle type.
 - Use the plant ID refresh action when the current ID no longer matches the generated ID format after type or date changes.
 - Use Green Thumb assist for one focused care question per specimen per day when AI is enabled for the collection.
 - Filter the instance list by Location, with optional inclusion of child locations.
@@ -225,10 +229,13 @@ App route: `/instances`
 ### Notes
 
 - Plant IDs are generated from the plant definition and relevant date context, then made unique inside the collection.
+- Seed, Corm, and Tissue culture are transitional Plant Instance types. They describe the current physical state of one accession; parentage and origin method still belong in Propagation records.
+- Seed IDs use SD, corm IDs use CO, and tissue culture IDs use TC. Blank-species cultivar names use genus+cultivar segments without inventing sp.; explicit sp. remains a separate unknown-species token.
+- The Plant Definition picker only selects existing definitions. The Species step shows No species / genus-level cultivar for an intentionally blank Species and sp. - species unknown when the definition explicitly records sp.
 - Plant ID links in briefings, care lists, location views, recent activity, and related-specimen sections show compact hover/focus previews with a thumbnail and key status. On touch screens, tap once to preview and use Open plant inside the card to navigate.
 - Locations show stable codes and breadcrumb paths. A plant has one canonical current Location relationship.
 - Active quarantine records show on specimen pages and plant cards, and their target release dates create care queue review items.
-- Acquired propagation is for purchased or received cuttings, leaf props, starter plugs, and similar plants without an internal parent record.
+- Acquired propagation is for purchased or received cuttings, leaf props, starter plugs, and similar plants without an internal parent record. Seed, Corm, and Tissue culture specimens get type-aware lifecycle dates and establishment checks.
 - Timeline v1 uses existing records and includes plant location moves plus quarantine start, update, release, and cancellation events. Dedicated label-change, restore, and sport-transition events are future data-source candidates.
 - A Pot Together survivor keeps its Plant ID, QR code, URLs, and future care lifecycle. Constituent IDs remain searchable and their old QR codes open read-only historical records linked to the survivor.
 - The survivor timeline combines constituent notes, photos, care, bloom, lineage, and other records in chronological order with the original Plant ID shown. Open conditions, active treatment plans, active blooms, and active quarantine records move to the survivor with origin notes; old reminders are paused.
@@ -556,7 +563,7 @@ App route: `/exhibits`
 
 ## Propagations and Lineage Graphs
 
-Propagation records connect parent specimens to child specimens and preserve the context for divisions, cuttings, leaves, rhizomes, sport lines, and other propagation methods.
+Propagation records connect parent specimens to child specimens and preserve the context for divisions, cuttings, leaves, rhizomes, seed, corm, tissue culture, sport lines, and other propagation methods.
 
 App route: `/propagations`
 
@@ -565,7 +572,7 @@ App route: `/propagations`
 ### How It Is Used
 
 - Open Propagations and use Add propagation to record a propagation event.
-- Select parent and child specimens, propagation method, date, status, and notes.
+- Select parent specimens, propagation method, date, resulting child instance type, status, and notes.
 - Use Lineage Graphs to search for a specimen and view its connected tree.
 - Select nodes in the graph to change focus and follow ancestry and descendants.
 - Use Acquired propagation for starter plants or leaf props obtained from outside the collection.
@@ -573,6 +580,7 @@ App route: `/propagations`
 ### Notes
 
 - Lineage graph connectors use different styles for propagation methods where possible.
+- Seed, corm, and tissue-culture child instances still use the same parent/child propagation graph; AxilDB does not add duplicate parentage fields to Plant Instances.
 - Transferred specimens preserve relevant transfer notes, but cross-collection lineage links are not created.
 
 ## Bloom Tracker
@@ -754,6 +762,7 @@ App route: `/server`
 - Use Server Collections to create, archive, restore, or permanently delete collections.
 - Use Validated Definitions to review nominations and disputes, edit approved site-level reference definitions, and preserve reusable taxonomy outside any one collection.
 - Use Image Moderation to review censored uploads, override false alarms, remove images, or remove an image and block the uploader.
+- Use AI Curator to configure the autonomous botanical research worker, monitor daily/monthly spend, inspect queue health, resolve Waiting for Human jobs, and review suggestions grouped by plant definition.
 - Use Incident History to search/filter open or resolved incidents, inspect clustered memory/disk graph markers, create manual incidents, and attach notes or postmortem details.
 - Use Event Processing to review pending, processing, failed, and dead-letter counts; inspect processing attempts and safe payload details; retry failures; or mark an event ignored with a required reason.
 - Use Maintenance Mode before planned downtime so public visitors and normal users see a maintenance screen while server admins retain access.
@@ -768,6 +777,7 @@ App route: `/server`
 - Validated definitions are site-level records; they can be linked by collection specimens without making them collection-owned.
 - Image moderation is two-layered when enabled: unsafe-content moderation runs before plant-content vision analysis.
 - AI availability can be toggled per collection by server admins, and collection managers can request AI access.
+- AI Curator has separate global model, budget, cadence, retry, and expiry settings from Magic Fill. Collections also need their own Curator participation switch enabled before they produce jobs.
 - Incidents are durable operational records. Memory incidents open after three consecutive samples above warning or critical thresholds; disk incidents open on threshold crossing; metric incidents resolve automatically after three clear samples. Worker, SMTP, email backlog, AI, and moderation incidents are detected from durable worker/delivery records. Manual incidents remain until a server admin resolves them.
 - Domain events are immutable domain history, while Audit Log remains the security and administrative accountability record. Server-admin redaction records a new redaction event and hides the original payload without silently rewriting it.
 - Orphaned Image Cleanup only scans the upload image directory and re-checks database references immediately before deleting selected files.
@@ -777,4 +787,5 @@ App route: `/server`
 
 - Permanent collection deletion cascades collection-owned records. Archive first and verify backups before deleting.
 - Do not treat image moderation as a substitute for human review when a censored upload is disputed or unclear.
+- AI Curator never silently modifies plant data. Even accepted complex suggestions may require manual follow-up when no structured apply flow exists yet.
 - Back up before bulk orphaned-image deletion. Cleanup does not delete database records and does not touch labels, manuals, backups, or generated PDFs.

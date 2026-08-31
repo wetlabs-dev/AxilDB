@@ -6,6 +6,7 @@ import { effectiveFertilizerAssignment, fertilizerRecipeSummary } from '@/lib/fe
 import { nextOccurrence, reminderCategoryLabel } from '@/lib/reminders'
 import { addCalendarDays, calendarDayIndexInTimeZone, endOfDayInTimeZone, startOfDayInTimeZone } from '@/lib/time'
 import { plantName } from '@/lib/utils'
+import { defaultLifecycleDateForType, isTransitionalPlantInstanceType, plantInstanceTypeLabel } from '@/lib/plant-instance-types'
 import { locationPathWithCodes, type LocationNode } from '@/lib/locations'
 
 export const careTaskTypes = [
@@ -517,18 +518,26 @@ export async function getCareQueue(
       })
     }
 
-    if (['PROPAGATION', 'ACQUIRED_PROPAGATION'].includes(instance.instanceType) && !instance.propagationEstablishedAt) {
-      const start = instance.propagationDate || instance.acquisitionDate || instance.createdAt
+    if ((['PROPAGATION', 'ACQUIRED_PROPAGATION'].includes(instance.instanceType) || isTransitionalPlantInstanceType(instance.instanceType)) && !instance.propagationEstablishedAt && !instance.establishedAt) {
+      const start = defaultLifecycleDateForType(instance) as Date
       const ageDays = Math.max(0, daysBetween(now, start))
       const cadence = ageDays <= 30 ? 3 : ageDays <= 90 ? 7 : null
       if (cadence) {
         const lastCheck = latestPropagationCheck.get(instance.id)?.performedAt || start
         const dueAt = addDays(lastCheck, cadence, timezone)
+        const label = plantInstanceTypeLabel(instance.instanceType)
+        const titlePrefix = instance.instanceType === 'SEED'
+          ? 'Germination check'
+          : instance.instanceType === 'CORM'
+            ? 'Corm condition check'
+            : instance.instanceType === 'TISSUE_CULTURE'
+              ? 'TC acclimation check'
+              : 'Check propagation'
         pushDerived({
           key: `PROPAGATION_CHECK:${instance.id}`,
           taskType: 'PROPAGATION_CHECK',
-          title: `Check propagation ${instance.plantId}`,
-          reason: `${instance.instanceType === 'ACQUIRED_PROPAGATION' ? 'Acquired propagation' : 'Propagation'} day ${ageDays}; check every ${cadence} days while establishing.`,
+          title: `${titlePrefix} ${instance.plantId}`,
+          reason: `${label} day ${ageDays}; check every ${cadence} days while establishing.`,
           dueAt,
           basePriority: ageDays <= 30 ? 105 : 75,
           plantInstanceId: instance.id,

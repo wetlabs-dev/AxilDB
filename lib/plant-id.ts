@@ -1,4 +1,5 @@
 import type { PlantDefinition, PrismaClient } from '@prisma/client'
+import { defaultLifecycleDateForType, lifecycleTypeCodes } from '@/lib/plant-instance-types'
 
 type PlantIdClient = Pick<PrismaClient, 'plantDefinition' | 'plantInstance'>
 
@@ -8,6 +9,7 @@ const methodCodes: Record<string, string> = {
   RHIZOME_SPLIT: 'RS',
   DIVISION: 'DV',
   SEED: 'SD',
+  CORM: 'CO',
   TISSUE_CULTURE: 'TC',
   RUNNER: 'RN',
   OTHER: 'OT',
@@ -40,10 +42,7 @@ export function plantDefinitionCode(definition: Pick<PlantDefinition, 'genus' | 
 
 export function plantIdContextCode(instanceType?: string | null, method?: string | null) {
   if (method) return methodCodes[method] || segment(method, 'OT').slice(0, 2)
-  if (instanceType === 'ACQUIRED_PROPAGATION') return 'AP'
-  if (instanceType === 'PROPAGATION') return 'PR'
-  if (instanceType === 'MOTHER') return 'AC'
-  return 'AC'
+  return lifecycleTypeCodes[instanceType as keyof typeof lifecycleTypeCodes] || 'AC'
 }
 
 export async function plantIdPrefix(
@@ -114,6 +113,11 @@ export async function expectedPlantIdForInstance(
       instanceType: true,
       acquisitionDate: true,
       propagationDate: true,
+      sownAt: true,
+      germinatedAt: true,
+      cormStartedAt: true,
+      deflaskedAt: true,
+      establishedAt: true,
       createdAt: true,
       parentLinks: {
         select: {
@@ -131,7 +135,7 @@ export async function expectedPlantIdForInstance(
   const prefix = await plantIdPrefix(client, {
     collectionId: options.collectionId,
     plantDefinitionId: instance.plantDefinitionId,
-    date: propagationEvent?.date || instance.propagationDate || instance.acquisitionDate || instance.createdAt,
+    date: propagationEvent?.date || defaultLifecycleDateForType(instance),
     instanceType: instance.instanceType,
     method: propagationEvent?.method,
   })
@@ -141,7 +145,7 @@ export async function expectedPlantIdForInstance(
   return generatePlantId(client, {
     collectionId: options.collectionId,
     plantDefinitionId: instance.plantDefinitionId,
-    date: propagationEvent?.date || instance.propagationDate || instance.acquisitionDate || instance.createdAt,
+    date: propagationEvent?.date || defaultLifecycleDateForType(instance),
     instanceType: instance.instanceType,
     method: propagationEvent?.method,
     excludePlantInstanceId: instance.id,

@@ -1,5 +1,6 @@
 import { createPropagationEvent } from '@/app/actions'
 import { PlantImage } from '@/components/PlantImage'
+import { PlantInstanceTypeSelect } from '@/components/PlantInstanceTypeSelect'
 import { SortControl } from '@/components/SortControl'
 import { AddPanel, Button, Card, Field, HelpTooltip, TextArea } from '@/components/ui'
 import { getCurrentUser } from '@/lib/auth'
@@ -8,6 +9,7 @@ import { prisma } from '@/lib/prisma'
 import { compareText, sortPreference, timeValue, type SortOption } from '@/lib/sort-preferences'
 import { locationPathWithCodes } from '@/lib/locations'
 import { fmtDate, plantName } from '@/lib/utils'
+import { plantInstanceTypeLabel, plantInstanceTypes, transitionalPlantInstanceTypes } from '@/lib/plant-instance-types'
 import Link from 'next/link'
 
 const propagationSortOptions: SortOption[] = [
@@ -39,7 +41,7 @@ export default async function Propagations() {
       orderBy: { date: 'desc' },
     }),
     prisma.plantInstance.findMany({
-      where: { ...collectionWhere, status: { not: 'ARCHIVED' }, instanceType: 'ACQUIRED_PROPAGATION' },
+      where: { ...collectionWhere, status: { not: 'ARCHIVED' }, instanceType: { in: ['ACQUIRED_PROPAGATION', ...transitionalPlantInstanceTypes] } },
       include: { plantDefinition: true },
       orderBy: { propagationDate: 'desc' },
     }),
@@ -107,6 +109,7 @@ export default async function Propagations() {
                 <option>RHIZOME_SPLIT</option>
                 <option>DIVISION</option>
                 <option>SEED</option>
+                <option>CORM</option>
                 <option>TISSUE_CULTURE</option>
                 <option>RUNNER</option>
                 <option>OTHER</option>
@@ -135,6 +138,7 @@ export default async function Propagations() {
               </select>
             </label>
             <Field label="Number of child plants to create" name="childCount" type="number" required defaultValue="1" min="1" max="50" />
+            <PlantInstanceTypeSelect name="childInstanceType" defaultValue="PROPAGATION" values={plantInstanceTypes.filter((type) => type !== 'MOTHER' && type !== 'ACQUIRED_PROPAGATION')} />
             <p className="rounded-md border border-[#d6dfc9] bg-[#f5f4e8] px-3 py-2 text-sm text-stone-700 lg:col-span-2">
               Child plant IDs will be generated from the parent definition, propagation date, method, and sequence.
             </p>
@@ -174,7 +178,7 @@ export default async function Propagations() {
                     <h3 className="mt-1 line-clamp-2 text-sm font-bold leading-tight">{instance.plantId}</h3>
                     <p className="mt-1 text-xs text-stone-600">{instance.status}</p>
                     <p className="mt-2 line-clamp-2 text-xs text-stone-700">
-                      Acquired propagation · {plantName(instance.plantDefinition)}
+                      {plantInstanceTypeLabel(instance.instanceType)} · {plantName(instance.plantDefinition)}
                     </p>
                     <p className="mt-1 line-clamp-2 text-xs text-stone-600">
                       Source: {instance.source || instance.distributor || 'External source'}

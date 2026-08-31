@@ -134,6 +134,39 @@ const definitions: DefinitionInput[] = [
     ...taxonomyLinks.begonia,
   },
   {
+    code: 'BGL',
+    genus: 'Begonia',
+    species: '',
+    cultivarName: 'Looking Glass',
+    confidence: 'CONFIRMED',
+    description: 'Blank-species horticultural cultivar used to exercise genus-level cultivar selection.',
+    aliases: [{ name: "Begonia 'Looking Glass'", aliasType: 'TRADE_NAME', confidence: 'CONFIRMED' }],
+  },
+  {
+    code: 'BSP',
+    genus: 'Begonia',
+    species: 'sp.',
+    confidence: 'UNCERTAIN',
+    provisionalTaxon: 'Begonia sp.',
+    description: 'Unknown-species Begonia used to keep sp. distinct from intentionally blank species.',
+  },
+  {
+    code: 'ALO',
+    genus: 'Alocasia',
+    species: 'macrorrhizos',
+    confidence: 'PROBABLE',
+    description: 'Aroid corm example for lifecycle-stage accession tracking.',
+  },
+  {
+    code: 'PTC',
+    genus: 'Philodendron',
+    species: 'sp.',
+    cultivarName: 'Demo TC',
+    confidence: 'UNCERTAIN',
+    provisionalTaxon: 'Philodendron sp. Demo TC',
+    description: 'Individual tissue-culture accession example for deflask and acclimation tracking.',
+  },
+  {
     code: 'HOY',
     genus: 'Hoya',
     species: 'carnosa',
@@ -350,8 +383,35 @@ export async function createDemoData(collectionId: string) {
     source: 'Hypothetical orchid society auction',
     location: 'Greenhouse bench 1',
   })
+  const begSeed = await instance('BGL', 'SD-001', {
+    instanceType: 'SEED',
+    acquisitionDate: d('2026-02-01'),
+    sownAt: d('2026-02-05'),
+    germinatedAt: d('2026-02-18'),
+    source: 'Demo seed exchange',
+    location: 'Demo propagation tray',
+  })
+  const begUnknown = await instance('BSP', '001', {
+    acquisitionDate: d('2025-12-14'),
+    source: 'Unknown demo cutting',
+    location: 'Demo bench',
+  })
+  const alocasiaCorm = await instance('ALO', 'CO-001', {
+    instanceType: 'CORM',
+    acquisitionDate: d('2026-03-10'),
+    cormStartedAt: d('2026-03-12'),
+    source: 'Demo corm division',
+    location: 'Greenhouse bench 1',
+  })
+  const philodendronTc = await instance('PTC', 'TC-001', {
+    instanceType: 'TISSUE_CULTURE',
+    acquisitionDate: d('2026-04-01'),
+    deflaskedAt: d('2026-04-07'),
+    source: 'Demo tissue culture lab',
+    location: 'Light shelf A',
+  })
 
-  const createdInstances = [dtrMother, monMother, phrMother, strMother, begMother, hoyMother, catMother]
+  const createdInstances = [dtrMother, monMother, phrMother, strMother, begMother, hoyMother, catMother, begSeed, begUnknown, alocasiaCorm, philodendronTc]
 
   async function propagation(parent: typeof dtrMother, code: string, method: string, date: string, childSuffixes: string[], notes: string, childData: Record<string, unknown> = {}) {
     const event = await prisma.propagationEvent.create({

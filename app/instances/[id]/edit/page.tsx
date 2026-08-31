@@ -1,6 +1,9 @@
 import { createLocation, deletePlantInstance, restorePlantInstance, updatePlantInstance } from '@/app/actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
+import { LifecycleDateFields } from '@/components/LifecycleDateFields'
 import { LocationCompatibilitySelect } from '@/components/LocationCompatibilitySelect'
+import { PlantDefinitionCascadePicker, type PlantDefinitionCascadeOption } from '@/components/PlantDefinitionCascadePicker'
+import { PlantInstanceTypeSelect } from '@/components/PlantInstanceTypeSelect'
 import { Button, Card, Field, SuggestionDatalist, TextArea } from '@/components/ui'
 import { canManageCollection, collectionPath, requireCollectionAdmin } from '@/lib/collections'
 import { locationPath, locationPathWithCodes } from '@/lib/locations'
@@ -48,6 +51,17 @@ export default async function EditInstance({ params }: { params: Promise<{ id: s
     locationType: location.locationType,
   }))
   const stockNumberSuggestions = rankedSuggestions(instanceSuggestionRows.map((item) => item.stockNumber))
+  const definitionOptions: PlantDefinitionCascadeOption[] = definitions.map((definition) => ({
+    id: definition.id,
+    genus: definition.genus,
+    species: definition.species,
+    hybridNotation: definition.hybridNotation,
+    cultivarName: definition.cultivarName,
+    displayName: plantName(definition),
+    isValidated: definition.isValidated,
+    identificationStatus: definition.identificationStatus,
+    confidence: definition.confidence,
+  }))
 
   return (
     <div className="space-y-6">
@@ -57,28 +71,12 @@ export default async function EditInstance({ params }: { params: Promise<{ id: s
           <SuggestionDatalist id="instance-stock-number-suggestions" suggestions={stockNumberSuggestions} />
           <input type="hidden" name="id" value={id} />
           <input type="hidden" name="collectionSlug" value={collection.slug} />
-          <label className="grid gap-1 text-sm font-medium text-stone-800">
-            Plant definition
-            <select className={selectClass} name="plantDefinitionId" defaultValue={instance.plantDefinitionId}>
-              {definitions.map((definition) => (
-                <option key={definition.id} value={definition.id}>
-                  {definition.isValidated ? 'Validated: ' : ''}{plantName(definition)}
-                </option>
-              ))}
-            </select>
-          </label>
+          <PlantDefinitionCascadePicker definitions={definitionOptions} name="plantDefinitionId" defaultValue={instance.plantDefinitionId} required createHref={collectionPath(collection.slug, '/plants')} />
           <div className="grid gap-1 text-sm font-medium text-stone-800">
             Plant ID
             <div className="rounded-md border border-stone-300 bg-[#f5f4e8] px-3 py-2 font-normal text-stone-700">{instance.plantId}</div>
           </div>
-          <label className="grid gap-1 text-sm font-medium text-stone-800">
-            Type
-            <select className={selectClass} name="instanceType" defaultValue={instance.instanceType}>
-              <option>MOTHER</option>
-              <option>ACQUIRED_PROPAGATION</option>
-              <option>PROPAGATION</option>
-            </select>
-          </label>
+          <PlantInstanceTypeSelect defaultValue={instance.instanceType} />
           <label className="grid gap-1 text-sm font-medium text-stone-800">
             Status
             <select className={selectClass} name="status" defaultValue={instance.status}>
@@ -93,7 +91,14 @@ export default async function EditInstance({ params }: { params: Promise<{ id: s
             plantInstanceId={instance.id}
             locations={locationNodes.map((location) => ({ id: location.id, label: `${location.code} · ${locationPath(location.id, locationNodes)}` }))}
           />
-          <Field label="Propagation date" name="propagationDate" type="date" defaultValue={dateInput(instance.propagationDate)} />
+          <LifecycleDateFields defaultValues={{
+            acquisitionDate: dateInput(instance.acquisitionDate),
+            propagationDate: dateInput(instance.propagationDate),
+            sownAt: dateInput((instance as any).sownAt),
+            germinatedAt: dateInput((instance as any).germinatedAt),
+            cormStartedAt: dateInput((instance as any).cormStartedAt),
+            deflaskedAt: dateInput((instance as any).deflaskedAt),
+          }} />
           <Field label="Stock number" name="stockNumber" defaultValue={instance.stockNumber} list="instance-stock-number-suggestions" />
           <div className="rounded-md border border-stone-200 bg-[#f5f4e8] px-3 py-2 text-sm lg:col-span-2"><span className="font-semibold">Acquisition details are managed separately.</span><a className="ml-2 font-semibold text-[#2f6b45] underline" href={collectionPath(collection.slug, `/instances/${instance.id}/acquisition`)}>Edit acquisition &amp; provenance</a></div>
           <Field label="Archive reason" name="archiveReason" defaultValue={instance.archiveReason} />

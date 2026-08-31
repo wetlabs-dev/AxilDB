@@ -2507,6 +2507,11 @@ model PlantInstance {
   acquisitionDate               DateTime?
   propagationDate               DateTime?
   propagationEstablishedAt      DateTime?
+  sownAt                        DateTime?
+  germinatedAt                  DateTime?
+  cormStartedAt                 DateTime?
+  deflaskedAt                   DateTime?
+  establishedAt                 DateTime?
   source                        String?
   distributor                   String?
   stockNumber                   String?
@@ -2561,6 +2566,10 @@ model PlantInstance {
   @@index([currentLocationId])
   @@index([status])
   @@index([instanceType])
+  @@index([establishedAt])
+  @@index([sownAt])
+  @@index([cormStartedAt])
+  @@index([deflaskedAt])
   @@index([sportStatus])
   @@index([originCollectionSlug, originPlantId])
   @@index([transferredFromCollectionSlug, transferredFromPlantId])

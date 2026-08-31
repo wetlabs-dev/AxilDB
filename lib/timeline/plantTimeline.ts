@@ -1,6 +1,7 @@
 import type { PrismaClient } from '@prisma/client'
 import { collectionPath } from '@/lib/collections'
 import type { EventVisibility } from '@/lib/events/event-types'
+import { plantInstanceTypeLabel } from '@/lib/plant-instance-types'
 
 export type PlantTimelineCategory = 'accession' | 'care' | 'health' | 'growth' | 'documentation' | 'lineage' | 'archive'
 export type PlantTimelineColor = 'green' | 'sage' | 'amber' | 'rust' | 'mauve' | 'gray'
@@ -48,6 +49,12 @@ type PlantTimelineInstance = {
   status: string
   acquisitionDate: Date | null
   propagationDate: Date | null
+  propagationEstablishedAt?: Date | null
+  sownAt?: Date | null
+  germinatedAt?: Date | null
+  cormStartedAt?: Date | null
+  deflaskedAt?: Date | null
+  establishedAt?: Date | null
   source: string | null
   distributor: string | null
   archiveDate: Date | null
@@ -108,6 +115,8 @@ function objectValue(value: unknown): Record<string, unknown> {
 }
 
 function domainEventPresentation(type: string): Pick<PlantTimelineEvent, 'category' | 'icon' | 'colorVariant'> {
+  if (type === 'plant.established') return { category: 'growth', icon: '✅', colorVariant: 'green' }
+  if (type === 'plant.lifecycle_type_changed' || type === 'plant.lifecycle_date_recorded') return { category: 'growth', icon: '🌱', colorVariant: 'green' }
   if (type.startsWith('plant.substrate') || type === 'plant.received_substrate_recorded') return { category: 'care', icon: '🪴', colorVariant: 'sage' }
   if (type.startsWith('care.')) return { category: 'care', icon: '✅', colorVariant: 'sage' }
   if (type.startsWith('condition.') || type.startsWith('quarantine.')) return { category: 'health', icon: type.endsWith('resolved') || type.endsWith('released') ? '✅' : '⚠️', colorVariant: type.endsWith('resolved') || type.endsWith('released') ? 'green' : 'amber' }
@@ -120,6 +129,9 @@ function domainEventPresentation(type: string): Pick<PlantTimelineEvent, 'catego
 }
 
 function domainEventTitle(type: string) {
+  if (type === 'plant.lifecycle_type_changed') return 'Lifecycle type changed'
+  if (type === 'plant.established') return 'Marked established'
+  if (type === 'plant.lifecycle_date_recorded') return 'Lifecycle date recorded'
   if (type === 'plant.substrate_assigned') return 'Substrate assigned'
   if (type === 'plant.substrate_changed') return 'Substrate changed'
   if (type === 'plant.received_substrate_recorded') return 'Received substrate recorded'
@@ -155,6 +167,12 @@ export async function collectPlantTimelineEvents(
       status: true,
       acquisitionDate: true,
       propagationDate: true,
+      propagationEstablishedAt: true,
+      sownAt: true,
+      germinatedAt: true,
+      cormStartedAt: true,
+      deflaskedAt: true,
+      establishedAt: true,
       source: true,
       distributor: true,
       archiveDate: true,
@@ -320,6 +338,31 @@ export async function collectPlantTimelineEvents(
       href: baseHref,
       sourceModel: 'PlantInstance',
       sourceId: instance.id,
+    })
+  }
+
+  const lifecycleDates = [
+    ['SEED_SOWN', instance.sownAt, 'Seed sown', `${instance.plantId} was sown as a seed-stage accession.`],
+    ['SEED_GERMINATED', instance.germinatedAt, 'Germinated', `${instance.plantId} germination was recorded.`],
+    ['CORM_STARTED', instance.cormStartedAt, 'Corm started', `${instance.plantId} was started as a corm-stage accession.`],
+    ['DEFLASKED', instance.deflaskedAt, 'Deflask / acclimation started', `${instance.plantId} tissue-culture acclimation was recorded.`],
+    ['ESTABLISHED', instance.establishedAt || instance.propagationEstablishedAt, 'Marked established', `${instance.plantId} was marked established as ${plantInstanceTypeLabel(instance.instanceType)}.`],
+  ] as const
+  for (const [type, eventDate, title, summary] of lifecycleDates) {
+    if (!eventDate) continue
+    addEvent(events, {
+      id: `lifecycle-${type.toLowerCase()}-${instance.id}`,
+      type,
+      category: 'growth',
+      date: eventDate,
+      title,
+      summary,
+      icon: '🌱',
+      colorVariant: 'green',
+      href: baseHref,
+      sourceModel: 'PlantInstance',
+      sourceId: instance.id,
+      metadata: { plantId: instance.plantId, instanceType: instance.instanceType },
     })
   }
 

@@ -52,7 +52,8 @@
     "check:label-download": "node scripts/check-label-download.mjs",
     "check:memory": "tsx scripts/check-memory-footprint.ts",
     "check:taxonomic-authorities": "tsx scripts/check-taxonomic-authorities.ts",
-    "check:plant-instance-merges": "node scripts/check-plant-instance-merges.mjs"
+    "check:plant-instance-merges": "node scripts/check-plant-instance-merges.mjs",
+    "check:plant-instance-lifecycle": "tsx scripts/check-plant-instance-lifecycle.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

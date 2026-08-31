@@ -10,6 +10,8 @@ import { Button, Card, Field, Select, TextArea, AddPanel, LinkButton } from '@/c
 import { PlantImage } from '@/components/PlantImage'
 import { PlantLocationCompatibilityPanel } from '@/components/PlantLocationCompatibilityPanel'
 import { LocationCompatibilitySelect } from '@/components/LocationCompatibilitySelect'
+import { LifecycleDateFields } from '@/components/LifecycleDateFields'
+import { PlantInstanceTypeSelect } from '@/components/PlantInstanceTypeSelect'
 import { AcquisitionSourceChainFields } from '@/components/AcquisitionSourceChainFields'
 import { DistributorFields } from '@/components/DistributorFields'
 import { collectionPath, requireCollectionViewer, canCreateInCollection } from '@/lib/collections'
@@ -504,11 +506,8 @@ export default async function AcquisitionPipelinePage({
                       <option value="1">Create Plant Instance(s)</option>
                       <option value="0">Record purchase only</option>
                     </Select>
-                    <Select label="Instance type" name="instanceType" defaultValue="MOTHER">
-                      <option value="MOTHER">Mother / established plant</option>
-                      <option value="ACQUIRED_PROPAGATION">Acquired propagation</option>
-                      <option value="PROPAGATION">Propagation</option>
-                    </Select>
+                    <PlantInstanceTypeSelect />
+                    <LifecycleDateFields includeAcquisitionDate={false} />
                     <Select label="After acquisition" name="fulfillmentChoice" defaultValue="FULFILLED">
                       <option value="FULFILLED">Mark intent fulfilled</option>
                       <option value="KEEP_ACTIVE">Keep active</option>

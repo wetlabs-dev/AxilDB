@@ -15,6 +15,7 @@ import { allowedEventVisibilities } from '@/lib/events/visibility'
 import { resolveSunshineTarget, sunshineCountLabel, sunshineCounts, sunshineKey } from '@/lib/sunshine'
 import { ensureStarterWorkflowTemplates, workflowProgress, workflowScopeLabel } from '@/lib/workflows'
 import { cn, fmtDate, plantName } from '@/lib/utils'
+import { plantInstanceTypeLabel, transitionalPlantInstanceTypes } from '@/lib/plant-instance-types'
 import { Archive, ClipboardCheck, ClipboardList, Flower2, GalleryHorizontal, GitBranch, Leaf, ListChecks, MapPin, ShieldCheck, Sparkles, Sprout, Sun } from 'lucide-react'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
@@ -360,7 +361,7 @@ export default async function Dashboard({
   ] = await Promise.all([
     prisma.plantInstance.count({ where: { ...collectionWhere, status: 'ACTIVE' } }),
     prisma.propagationEvent.count({ where: collectionWhere }),
-    prisma.plantInstance.count({ where: { ...collectionWhere, status: { not: 'ARCHIVED' }, instanceType: 'ACQUIRED_PROPAGATION' } }),
+    prisma.plantInstance.count({ where: { ...collectionWhere, status: { not: 'ARCHIVED' }, instanceType: { in: ['ACQUIRED_PROPAGATION', ...transitionalPlantInstanceTypes] } } }),
     prisma.bloomEvent.count({ where: collectionWhere }),
     prisma.plantInstance.count({ where: { ...collectionWhere, OR: [{ isSportCandidate: true }, { sportStatus: { not: 'NONE' } }] } }),
     prisma.propagationEvent.findMany({
@@ -385,7 +386,7 @@ export default async function Dashboard({
       orderBy: { updatedAt: 'desc' },
     }),
     prisma.plantInstance.findMany({
-      where: { ...collectionWhere, instanceType: { in: ['MOTHER', 'ACQUIRED_PROPAGATION'] } },
+      where: { ...collectionWhere, instanceType: { in: ['MOTHER', 'ACQUIRED_PROPAGATION', ...transitionalPlantInstanceTypes] } },
       take: includesActivityKind('acquired') || includesActivityKind('propagation') ? queryTake : 0,
       orderBy: [{ acquisitionDate: 'desc' }, { createdAt: 'desc' }],
       include: { plantDefinition: true, currentLocation: true },
@@ -595,13 +596,14 @@ export default async function Dashboard({
     })),
     ...acquired.filter((item) => !representedRecords.has(`PlantInstance:${item.id}`)).map((item) => {
       const isAcquiredPropagation = item.instanceType === 'ACQUIRED_PROPAGATION'
+      const isTransitional = (transitionalPlantInstanceTypes as readonly string[]).includes(item.instanceType)
       return {
         id: item.id,
-        kind: isAcquiredPropagation ? 'propagation' as const : 'acquired' as const,
+        kind: isAcquiredPropagation || isTransitional ? 'propagation' as const : 'acquired' as const,
         href: collectionPath(collection.slug, `/instances/${item.id}`),
         date: item.acquisitionDate || item.createdAt,
         title: item.plantId,
-        subtitle: isAcquiredPropagation ? `ACQUIRED PROPAGATION · ${plantName(item.plantDefinition)}` : plantName(item.plantDefinition),
+        subtitle: isAcquiredPropagation || isTransitional ? `${plantInstanceTypeLabel(item.instanceType).toUpperCase()} · ${plantName(item.plantDefinition)}` : plantName(item.plantDefinition),
         detail: [item.source, item.distributor, item.currentLocation?.name].filter(Boolean).join(' · '),
         image: coverFor(coverPhotosByInstance, item.id),
       }

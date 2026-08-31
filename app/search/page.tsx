@@ -11,6 +11,7 @@ import { isServerAdminRole } from '@/lib/roles'
 import { substrateAssignmentLabel } from '@/lib/substrates'
 import { SubstrateCompositionBar, SubstrateSwatch } from '@/components/SubstrateCompositionBar'
 import { descendantLocationIds } from '@/lib/locations'
+import { plantInstanceTypeLabel, plantInstanceTypes } from '@/lib/plant-instance-types'
 
 const control = 'rounded-md border border-stone-300 bg-[#fffdf7] px-3 py-2 text-sm shadow-inner shadow-stone-200/30 outline-none focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
 const contains = (value: string) => ({ contains: value, mode: 'insensitive' as const })
@@ -28,7 +29,7 @@ export default async function SearchPage({
   const canSearchTreatments = Boolean(context.user && (context.membership?.status === 'ACTIVE' || isServerAdminRole(context.user.role)))
   const q = (sp.q || '').trim()
   const status = sp.status || ''
-  const type = sp.type || ''
+  const type = plantInstanceTypes.includes(sp.type as any) ? sp.type || '' : ''
   const sport = sp.sport || ''
   const selectedTagIds = (Array.isArray(sp.tag) ? sp.tag : sp.tag ? [sp.tag] : []).filter(Boolean)
   const tagMode = sp.tagMode === 'all' ? 'all' : 'any'
@@ -135,6 +136,7 @@ export default async function SearchPage({
         status: true,
         propagationDate: true,
         acquisitionDate: true,
+        instanceType: true,
         plantDefinition: {
           select: { genus: true, species: true, hybridNotation: true, cultivarName: true, authority: true, provisionalTaxon: true, identificationStatus: true },
         },
@@ -216,8 +218,7 @@ export default async function SearchPage({
           </select>
           <select className={control} name="type" defaultValue={type}>
             <option value="">Any type</option>
-            <option>MOTHER</option>
-            <option>PROPAGATION</option>
+            {plantInstanceTypes.map((item) => <option key={item} value={item}>{plantInstanceTypeLabel(item)}</option>)}
           </select>
           <select className={control} name="sport" defaultValue={sport}>
             <option value="">Any sport status</option>
@@ -244,7 +245,7 @@ export default async function SearchPage({
                 <Link className="font-bold underline" href={collectionPath(collection.slug, `/instances/${instance.id}`)}>
                   {instance.plantId}
                 </Link>{' '}
-                · {plantName(instance.plantDefinition)} · {instance.status} · {fmtDate(instance.propagationDate || instance.acquisitionDate)}
+                · {plantName(instance.plantDefinition)} · {plantInstanceTypeLabel(instance.instanceType)} · {instance.status} · {fmtDate(instance.propagationDate || instance.acquisitionDate)}
                 {instance.mergeConstituent && <> · merged into <Link className="font-semibold underline" href={collectionPath(collection.slug, `/instances/${instance.mergeConstituent.merge.survivingPlantInstanceId}`)}>{instance.mergeConstituent.merge.survivingPlantInstance.plantId}</Link></>}
               </p>
               <p className="w-full text-xs text-stone-600">Substrate: {substrateAssignmentLabel(instance.currentSubstrate)}</p>

@@ -1,12 +1,15 @@
 import { createLocation, createPlantInstance } from '@/app/actions'
 import { startWorkflowRun } from '@/app/workflow-actions'
 import { PlantImage } from '@/components/PlantImage'
+import { LifecycleDateFields } from '@/components/LifecycleDateFields'
 import { LocationCompatibilitySelect } from '@/components/LocationCompatibilitySelect'
+import { PlantDefinitionCascadePicker, type PlantDefinitionCascadeOption } from '@/components/PlantDefinitionCascadePicker'
+import { PlantInstanceTypeSelect } from '@/components/PlantInstanceTypeSelect'
 import { AcquisitionSourceChainFields } from '@/components/AcquisitionSourceChainFields'
 import { DistributorFields } from '@/components/DistributorFields'
 import { SortControl } from '@/components/SortControl'
 import { SunshineButton } from '@/components/SunshineButton'
-import { AddPanel, Button, Card, Field, HelpTooltip, SuggestionDatalist, TextArea } from '@/components/ui'
+import { AddPanel, Button, Card, Field, SuggestionDatalist, TextArea } from '@/components/ui'
 import { getCurrentUser } from '@/lib/auth'
 import { canCreateInCollection, canEditInCollection, canManageCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { descendantLocationIds, locationPath, locationPathWithCodes } from '@/lib/locations'
@@ -15,6 +18,7 @@ import { compareText, sortPreference, timeValue, type SortOption } from '@/lib/s
 import { sunshineCounts, sunshineKey, sunshineStateForUser, WELL_LOVED_THRESHOLD } from '@/lib/sunshine'
 import { rankedSuggestions } from '@/lib/suggestions'
 import { cn, plantName } from '@/lib/utils'
+import { plantInstanceTypeLabel, plantInstanceTypes } from '@/lib/plant-instance-types'
 import { ensureStarterWorkflowTemplates } from '@/lib/workflows'
 import Link from 'next/link'
 import { PlantTagRow } from '@/components/PlantTagChip'
@@ -34,7 +38,7 @@ const instanceSortOptions: SortOption[] = [
 export default async function Instances({
   searchParams,
 }: {
-  searchParams: Promise<{ definition?: string; location?: string; includeNested?: string; tag?: string; substrateMode?: string; substrateVersion?: string; substrateComponent?: string }>
+  searchParams: Promise<{ definition?: string; location?: string; includeNested?: string; tag?: string; type?: string; substrateMode?: string; substrateVersion?: string; substrateComponent?: string }>
 }) {
   const user = await getCurrentUser()
   const sp = await searchParams
@@ -45,6 +49,7 @@ export default async function Instances({
   const locationFilter = sp.location || ''
   const includeNestedLocations = sp.includeNested !== '0'
   const tagFilter = sp.tag || ''
+  const typeFilter = plantInstanceTypes.includes(sp.type as any) ? sp.type || '' : ''
   const substrateModeFilter = sp.substrateMode || ''
   const substrateVersionFilter = sp.substrateVersion || ''
   const substrateComponentFilter = sp.substrateComponent || ''
@@ -100,6 +105,7 @@ export default async function Instances({
       ...(definitionFilter ? { plantDefinitionId: definitionFilter } : {}),
       ...(filteredLocationIds.length ? { currentLocationId: { in: filteredLocationIds } } : {}),
       ...(tagFilter ? { plantDefinition: { tags: { some: { plantTagId: tagFilter } } } } : {}),
+      ...(typeFilter ? { instanceType: typeFilter } : {}),
       ...(substrateModeFilter ? { currentSubstrate: { is: { substrateMode: substrateModeFilter } } } : {}),
       ...(substrateVersionFilter ? { currentSubstrate: { is: { substrateRecipeVersionId: substrateVersionFilter } } } : {}),
       ...(substrateComponentFilter ? { currentSubstrate: { is: { recipeVersion: { components: { some: { substrateComponentId: substrateComponentFilter } } } } } } : {}),
@@ -116,11 +122,23 @@ export default async function Instances({
   if (definitionFilter) filterParams.set('definition', definitionFilter)
   if (locationFilter) filterParams.set('location', locationFilter)
   if (tagFilter) filterParams.set('tag', tagFilter)
+  if (typeFilter) filterParams.set('type', typeFilter)
   if (substrateModeFilter) filterParams.set('substrateMode', substrateModeFilter)
   if (substrateVersionFilter) filterParams.set('substrateVersion', substrateVersionFilter)
   if (substrateComponentFilter) filterParams.set('substrateComponent', substrateComponentFilter)
   filterParams.set('includeNested', includeNestedLocations ? '1' : '0')
   const instancesBackPath = collectionPath(collection.slug, `/instances${filterParams.toString() ? `?${filterParams}` : ''}`)
+  const definitionOptions: PlantDefinitionCascadeOption[] = defs.map((definition) => ({
+    id: definition.id,
+    genus: definition.genus,
+    species: definition.species,
+    hybridNotation: definition.hybridNotation,
+    cultivarName: definition.cultivarName,
+    displayName: plantName(definition),
+    isValidated: definition.isValidated,
+    identificationStatus: definition.identificationStatus,
+    confidence: definition.confidence,
+  }))
   const careSyncParams = new URLSearchParams()
   if (definitionFilter) careSyncParams.set('definitionId', definitionFilter)
   if (locationFilter) {
@@ -202,6 +220,7 @@ export default async function Instances({
             </select>
           </label>
           <label className="grid gap-1 text-sm font-medium text-stone-800">Filter by tag<select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="tag" defaultValue={tagFilter}><option value="">All tags</option>{activeTags.map((tag) => <option key={tag.id} value={tag.id}>{tag.name}</option>)}</select></label>
+          <label className="grid gap-1 text-sm font-medium text-stone-800">Filter by type<select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="type" defaultValue={typeFilter}><option value="">All types</option>{plantInstanceTypes.map((type) => <option key={type} value={type}>{plantInstanceTypeLabel(type)}</option>)}</select></label>
           <label className="grid gap-1 text-sm font-medium text-stone-800">Substrate mode<select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="substrateMode" defaultValue={substrateModeFilter}><option value="">All substrate modes</option>{substrateModes.map((mode) => <option key={mode} value={mode}>{substrateLabel(mode)}</option>)}</select></label>
           <label className="grid gap-1 text-sm font-medium text-stone-800">Substrate recipe<select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="substrateVersion" defaultValue={substrateVersionFilter}><option value="">All recipe versions</option>{substrateVersions.map((version) => <option key={version.id} value={version.id}>{version.recipe.name} v{version.versionNumber}</option>)}</select></label>
           <label className="grid gap-1 text-sm font-medium text-stone-800">Contains component<select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="substrateComponent" defaultValue={substrateComponentFilter}><option value="">Any component</option>{substrateComponents.map((component) => <option key={component.id} value={component.id}>{component.name}</option>)}</select></label>
@@ -212,7 +231,7 @@ export default async function Instances({
           </label>
           <div className="flex gap-2">
             <Button className="px-3 py-2">Apply</Button>
-            {(definitionFilter || locationFilter || tagFilter || substrateModeFilter || substrateVersionFilter || substrateComponentFilter) && <Link className="rounded-md border border-stone-300 bg-white/70 px-3 py-2 text-sm font-semibold" href={collectionPath(collection.slug, '/instances')}>Clear</Link>}
+            {(definitionFilter || locationFilter || tagFilter || typeFilter || substrateModeFilter || substrateVersionFilter || substrateComponentFilter) && <Link className="rounded-md border border-stone-300 bg-white/70 px-3 py-2 text-sm font-semibold" href={collectionPath(collection.slug, '/instances')}>Clear</Link>}
           </div>
         </form>
       </Card>
@@ -223,27 +242,8 @@ export default async function Instances({
           <SuggestionDatalist id="instance-acquisition-label-suggestions" suggestions={acquisitionLabelSuggestions} />
           <form action={createPlantInstance} className="grid max-w-5xl gap-x-3 gap-y-2 lg:grid-cols-4">
             <input type="hidden" name="collectionSlug" value={collection.slug} />
-            <label className="grid gap-1 text-sm font-medium">
-              Plant definition
-              <select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="plantDefinitionId" required>
-                {defs.map((definition) => (
-                  <option key={definition.id} value={definition.id}>
-                    {definition.isValidated ? 'Validated: ' : ''}{plantName(definition)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="grid gap-1 text-sm font-medium">
-              <span className="flex items-center gap-1.5">
-                <span>Type</span>
-                <HelpTooltip>Mother plants are acquired established/source plants. Acquired propagations are starter plants, cuttings, or leaf props from outside this collection. Propagations are plants created from tracked parents inside this collection.</HelpTooltip>
-              </span>
-              <select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="instanceType">
-                <option>MOTHER</option>
-                <option>ACQUIRED_PROPAGATION</option>
-                <option>PROPAGATION</option>
-              </select>
-            </label>
+            <PlantDefinitionCascadePicker definitions={definitionOptions} name="plantDefinitionId" required createHref={collectionPath(collection.slug, '/plants')} />
+            <PlantInstanceTypeSelect />
             <p className="rounded-md border border-[#d6dfc9] bg-[#f5f4e8] px-3 py-2 text-sm text-stone-700 lg:col-span-2">
               Plant ID will be generated automatically from the plant definition, relevant date, and record type.
             </p>
@@ -253,8 +253,7 @@ export default async function Instances({
               locations={locationNodes.map((location) => ({ id: location.id, label: `${location.code} · ${locationPath(location.id, locationNodes)}` }))}
               definitionSelectName="plantDefinitionId"
             />
-            <Field label="Acquisition date" help="When this physical plant entered your collection." name="acquisitionDate" type="date" />
-            <Field label="Propagation date" help="When this plant was propagated, if it was created from another plant." name="propagationDate" type="date" />
+            <LifecycleDateFields />
             <Field label="Acquisition label" help="The name or identification written on this particular specimen when it entered the collection. It does not change the shared plant definition." name="acquisitionLabel" list="instance-acquisition-label-suggestions" wrapperClassName="lg:col-span-2" />
             <div className="lg:col-span-4"><DistributorFields distributors={distributors} sellers={sellers} /></div>
             <div className="lg:col-span-4"><AcquisitionSourceChainFields sources={sources} /></div>
@@ -351,7 +350,7 @@ export default async function Instances({
                     {instance.plantDefinition.isValidated ? 'Validated: ' : ''}{plantName(instance.plantDefinition)}
                   </p>
                   <p className="truncate text-sm text-stone-600">
-                    {instance.instanceType} · {instance.currentLocation ? `${instance.currentLocation.code} · ${locationPath(instance.currentLocation.id, locationNodes)}` : 'No location'}
+                    {plantInstanceTypeLabel(instance.instanceType)} · {instance.currentLocation ? `${instance.currentLocation.code} · ${locationPath(instance.currentLocation.id, locationNodes)}` : 'No location'}
                   </p>
                   <p className="mt-1 truncate text-xs text-stone-600">Substrate: {substrateAssignmentLabel(instance.currentSubstrate)}</p>
                   <div className="mt-2"><PlantTagRow tags={instance.plantDefinition.tags.map((item) => item.plantTag)} limit={3} /></div>
