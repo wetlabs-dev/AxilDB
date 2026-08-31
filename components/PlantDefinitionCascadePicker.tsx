@@ -2,6 +2,7 @@
 
 import { PlantImage } from '@/components/PlantImage'
 import { cn } from '@/lib/utils'
+import { Check } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 
@@ -71,9 +72,9 @@ function FieldInput({
   return (
     <label className="grid min-w-0 gap-1 text-sm font-medium text-stone-800">
       {label}
-      <span className="flex min-w-0 gap-2">
+      <span className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
         <input
-          className={inputClass}
+          className={cn(inputClass, 'w-full')}
           value={value ? optionLabel(value) : ''}
           list={datalistId}
           onChange={(event) => {
@@ -85,7 +86,7 @@ function FieldInput({
           autoComplete="off"
         />
         {value && (
-          <button type="button" className="rounded-md border border-stone-300 bg-white/70 px-2 text-xs font-semibold" onClick={() => onChange('')}>
+          <button type="button" className="h-10 whitespace-nowrap rounded-md border border-stone-300 bg-white/70 px-3 py-2 text-xs font-semibold leading-none text-stone-700" onClick={() => onChange('')}>
             Clear
           </button>
         )}
@@ -123,6 +124,7 @@ export function PlantDefinitionCascadePicker({
   const genusValid = matchesInput(genus, genusOptions)
   const genusMatches = useMemo(() => genusValid ? definitions.filter((definition) => definition.genus === genus) : [], [definitions, genus, genusValid])
   const speciesOptions = useMemo(() => uniq(genusMatches.map((definition) => clean(definition.species) || blankSpeciesToken)), [genusMatches])
+  const showSpecies = genusValid && genusMatches.length > 1 && speciesOptions.length > 1
   const speciesValid = species ? matchesInput(species, speciesOptions) : false
   const speciesMatches = useMemo(() => speciesValid
     ? genusMatches.filter((definition) => (clean(definition.species) || blankSpeciesToken) === species)
@@ -178,10 +180,17 @@ export function PlantDefinitionCascadePicker({
   return (
     <fieldset className="grid min-w-0 gap-3 rounded-lg border border-[#d6dfc9] bg-[#f5f4e8] p-3 lg:col-span-4">
       <legend className="px-1 text-sm font-bold text-stone-800">Plant definition</legend>
+      {createHref && (
+        <div className="flex justify-end">
+          <Link className="text-xs font-semibold text-[#2f6b45] underline underline-offset-2" href={createHref}>
+            Create Plant Definition
+          </Link>
+        </div>
+      )}
       <input type="hidden" name={name} value={selectedId} required={required} />
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <FieldInput label="Genus" value={genus} onChange={(value) => { setGenus(value); setSpecies(''); setHybrid(''); setCultivar(''); setExplicitDefinitionId('') }} options={genusOptions} disabled={disabled} />
-        {genusValid && (
+        {showSpecies && (
           <FieldInput label="Species" value={species} onChange={(value) => { setSpecies(value); setHybrid(''); setCultivar(''); setExplicitDefinitionId('') }} options={speciesOptions} optionLabel={speciesLabel} disabled={disabled || genusMatches.length === 1} />
         )}
         {genusValid && speciesMatches.length > 1 && showHybrid && (
@@ -194,11 +203,14 @@ export function PlantDefinitionCascadePicker({
       {!genusValid && genus && (
         <div className="rounded-md border border-amber-200 bg-white/65 p-3 text-sm">
           <p className="font-semibold text-stone-800">No matching Plant Definitions.</p>
-          {createHref && <Link className="mt-1 inline-flex font-semibold text-[#2f6b45] underline" href={createHref}>Create Plant Definition</Link>}
+          <p className="mt-1 text-xs text-stone-600">Use the Plant Definition link above to add missing taxonomy first.</p>
         </div>
       )}
       {resolved && (
-        <div className="flex min-w-0 items-center gap-3 rounded-md border border-stone-200 bg-white/70 p-3 text-sm">
+        <div className="flex min-w-0 items-center gap-3 rounded-md border border-[#8bbf86] bg-white/80 p-3 text-sm shadow-[0_0_0_1px_rgba(47,107,69,0.12)]">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#2f6b45] text-white" aria-hidden="true">
+            <Check className="h-5 w-5" />
+          </span>
           {resolved.thumbnail && <div className="h-14 w-14 shrink-0 overflow-hidden rounded-md border border-stone-200"><PlantImage src={resolved.thumbnail} alt="" /></div>}
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-wide text-stone-500">Resolved definition</p>
