@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { aiModelPricing, estimateAiCostDollars } from '../lib/ai-pricing'
+import { aiModelPricing, aiUsageCostDollars, estimateAiCostDollars } from '../lib/ai-pricing'
 import { aiCuratorChangedFields, aiCuratorSuggestionFormatIssues, canApplyCuratorSuggestion, curatorJobScope, curatorPriorityScore, effectiveAiCuratorSpend, formatAiCuratorSuggestionValue, hasAiCuratorSuggestionChange, isUsableAiCuratorRepresentativePhoto, suggestedScalarValue } from '../lib/ai-curator'
 
 const baseline = curatorPriorityScore({
@@ -25,8 +25,12 @@ const manuallyRequested = curatorPriorityScore({
 assert.ok(highImpact > baseline, 'Lower-completeness, higher-instance work should rank above lower-value work.')
 assert.ok(manuallyRequested > baseline, 'Research Now jobs should be boosted above ordinary readiness jobs.')
 assert.ok(curatorPriorityScore({ completenessScore: 20, category: 'substrate', estimatedCostDollars: 0.01 }) < curatorPriorityScore({ completenessScore: 20, category: 'references', estimatedCostDollars: 0.01 }), 'Dependency readiness should penalize substrate work when the definition is too sparse.')
-assert.deepEqual(aiModelPricing('gpt-5.4-mini'), { inputPerMillion: 0.25, outputPerMillion: 2.00 })
-assert.equal(Number(estimateAiCostDollars(1_000_000, 1_000_000, 'gpt-5.4-mini').toFixed(2)), 2.25)
+assert.deepEqual(aiModelPricing('gpt-5.4-mini'), { inputPerMillion: 0.75, cachedInputPerMillion: 0.075, outputPerMillion: 4.50 })
+assert.equal(Number(estimateAiCostDollars(1_000_000, 1_000_000, 'gpt-5.4-mini').toFixed(2)), 5.25)
+assert.equal(
+  Number(aiUsageCostDollars({ inputTokens: 1_000_000, cachedInputTokens: 100_000, outputTokens: 1_000_000, webSearchPreviewCalls: 1 }, 'gpt-5.4-mini').toFixed(4)),
+  5.1925,
+)
 assert.equal(effectiveAiCuratorSpend([
   { actualCostDollars: '0.000625', estimatedCostDollars: '0.010000' },
   { actualCostDollars: null, estimatedCostDollars: '0.010000' },

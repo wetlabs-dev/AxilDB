@@ -14,7 +14,7 @@ import { AiUsageBreakdown, type AiUsageBreakdownEvent } from '@/components/AiUsa
 import { MetricChart } from '@/components/MetricChart'
 import { Button, Card, LinkButton, TextArea } from '@/components/ui'
 import { backupCleanupPreview, backupDetail, backupRootRelativePath, listBackupFolders, type BackupFolder, type RestoreValidationResult } from '@/lib/admin/restore-management'
-import { tokenUsageCostDollars } from '@/lib/ai-pricing'
+import { aiUsageCostDollars } from '@/lib/ai-pricing'
 import { requireServerAdmin } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { formatIncidentDuration, incidentSummary } from '@/lib/server-incidents'
@@ -96,6 +96,17 @@ function featureLabel(feature: string) {
   if (feature === 'AI_IMAGE_PLANT_CHECK') return 'Image plant check'
   if (feature === 'AI_CURATOR') return 'AI Curator'
   return feature.replace(/^AI_/, '').toLowerCase().replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
+}
+
+const HISTORICAL_WEB_SEARCH_PREVIEW_FEATURES = new Set(['AI_MAGIC_FILL', 'AI_FERTILIZER_PRODUCT_FILL'])
+
+function decimalNumber(value: unknown) {
+  if (!value) return 0
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0
+  if (typeof value === 'string') return Number(value) || 0
+  if (typeof (value as { toNumber?: () => number }).toNumber === 'function') return (value as { toNumber: () => number }).toNumber()
+  if (typeof (value as { toString?: () => string }).toString === 'function') return Number((value as { toString: () => string }).toString()) || 0
+  return 0
 }
 
 function markerTooltip(incident: {
@@ -214,9 +225,21 @@ export default async function ServerDashboard({
   const availableBackupPaths = new Set(backupFolders.map((folder) => folder.relativePath))
   const aiUsageBreakdownEvents: AiUsageBreakdownEvent[] = aiUsageEvents.map((event) => {
     const inputTokens = event.inputTokens || 0
+    const cachedInputTokens = event.cachedInputTokens || 0
     const outputTokens = event.outputTokens || 0
     const totalTokens = event.totalTokens || inputTokens + outputTokens
     const costInputTokens = inputTokens || (outputTokens ? 0 : totalTokens)
+    const historicalPreviewCalls = HISTORICAL_WEB_SEARCH_PREVIEW_FEATURES.has(event.feature) && event.success ? 1 : 0
+    const webSearchCalls = event.webSearchCalls || 0
+    const webSearchPreviewCalls = event.webSearchPreviewCalls || historicalPreviewCalls
+    const estimatedCostDollars = decimalNumber(event.estimatedCostDollars)
+    const calculatedCostDollars = aiUsageCostDollars({
+      inputTokens: costInputTokens,
+      cachedInputTokens,
+      outputTokens,
+      webSearchCalls,
+      webSearchPreviewCalls,
+    }, event.model)
     return {
       id: event.id,
       collectionId: event.collectionId,
@@ -227,9 +250,12 @@ export default async function ServerDashboard({
       featureLabel: featureLabel(event.feature),
       model: event.model,
       inputTokens,
+      cachedInputTokens,
       outputTokens,
       totalTokens,
-      costDollars: tokenUsageCostDollars({ inputTokens: costInputTokens, outputTokens }, event.model),
+      webSearchCalls,
+      webSearchPreviewCalls,
+      costDollars: estimatedCostDollars > 0 ? estimatedCostDollars : calculatedCostDollars,
       createdAt: event.createdAt.toISOString(),
     }
   })
@@ -427,7 +453,7 @@ export default async function ServerDashboard({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h3 className="font-serif text-xl font-semibold">AI usage by collection</h3>
-            <p className="mt-1 text-sm text-stone-600">Usage is estimated from recorded input/output tokens and current model pricing.</p>
+            <p className="mt-1 text-sm text-stone-600">Usage is estimated from recorded tokens, cached-token discounts, Web Search tool calls, and current model pricing.</p>
           </div>
           <LinkButton href="/server/collections">Toggle AI availability</LinkButton>
         </div>

@@ -1,6 +1,8 @@
 import { Prisma, type PrismaClient } from '@prisma/client'
 import { readFile } from 'fs/promises'
 import path from 'path'
+import { tokenUsage } from '@/lib/ai-usage'
+import { aiUsageCostDollars } from '@/lib/ai-pricing'
 
 const OPENAI_MODERATIONS_URL = 'https://api.openai.com/v1/moderations'
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses'
@@ -92,14 +94,6 @@ function cleanSuggestedCaption(value: unknown) {
   return words.join(' ').slice(0, 80).trim() || null
 }
 
-function tokenUsage(payload: any) {
-  const usage = payload?.usage || {}
-  const inputTokens = Number(usage.input_tokens ?? usage.prompt_tokens ?? 0) || null
-  const outputTokens = Number(usage.output_tokens ?? usage.completion_tokens ?? 0) || null
-  const totalTokens = Number(usage.total_tokens ?? ((inputTokens || 0) + (outputTokens || 0))) || null
-  return { inputTokens, outputTokens, totalTokens }
-}
-
 function flaggedCategorySummary(result: any) {
   const categories = result?.categories || {}
   const flagged = Object.entries(categories)
@@ -142,6 +136,7 @@ async function recordModerationUsage(prisma: PrismaClient, input: {
 }) {
   if (!input.collectionId) return
   const usage = tokenUsage(input.usagePayload)
+  const estimatedCostDollars = aiUsageCostDollars(usage, input.model)
   await prisma.aiUsageEvent.create({
     data: {
       collectionId: input.collectionId,
@@ -149,8 +144,12 @@ async function recordModerationUsage(prisma: PrismaClient, input: {
       feature: input.feature,
       model: input.model || null,
       inputTokens: usage.inputTokens,
+      cachedInputTokens: usage.cachedInputTokens,
       outputTokens: usage.outputTokens,
       totalTokens: usage.totalTokens,
+      webSearchCalls: usage.webSearchCalls,
+      webSearchPreviewCalls: usage.webSearchPreviewCalls,
+      estimatedCostDollars: estimatedCostDollars.toFixed(6),
     },
   })
 }

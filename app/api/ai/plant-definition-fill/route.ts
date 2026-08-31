@@ -253,6 +253,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: message }, { status: response.status })
     }
 
+    await recordAiUsage({ collectionId: collection.id, userId: user.id, feature: 'AI_MAGIC_FILL', model, usage: tokenUsage(payload, { webSearchPreviewRequested: true }) })
     const fields = normalizeFields(extractJson(outputText(payload)), originalName)
     const catalogIds = new Set(plantTags.map((tag) => tag.id))
     fields.suggestedTags = fields.suggestedTags.map((suggestion: any) => ({ tagId: trimmedString(suggestion?.tagId, 100), tagName: trimmedString(suggestion?.tagName, 60), confidence: Math.max(0, Math.min(1, Number(suggestion?.confidence || 0))), reason: trimmedString(suggestion?.reason, 240) })).filter((suggestion: any) => catalogIds.has(suggestion.tagId) && suggestion.confidence >= 0.6)
@@ -269,7 +270,6 @@ export async function POST(req: Request) {
       })
       fields.aliases = fields.aliases.slice(0, 8)
     }
-    await recordAiUsage({ collectionId: collection.id, userId: user.id, feature: 'AI_MAGIC_FILL', model, usage: tokenUsage(payload) })
     await audit(user, 'GENERATE', 'AI_MAGIC_FILL', null, `Generated magic fill for ${originalName}`, { model, applyMode, reviewNote: fields.reviewNote }, collection.id)
     return NextResponse.json({ fields })
   } catch (error) {

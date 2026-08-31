@@ -16,8 +16,11 @@ export type AiUsageBreakdownEvent = {
   featureLabel: string
   model: string | null
   inputTokens: number
+  cachedInputTokens: number
   outputTokens: number
   totalTokens: number
+  webSearchCalls: number
+  webSearchPreviewCalls: number
   costDollars: number
   createdAt: string
 }
@@ -102,15 +105,42 @@ function formatBucketLabel(time: number, width: BucketWidth, timezone?: string |
   return new Intl.DateTimeFormat('en-US', options).format(new Date(time))
 }
 
+function toolSearchCalls(row: { webSearchCalls?: number; webSearchPreviewCalls?: number }) {
+  return (row.webSearchCalls || 0) + (row.webSearchPreviewCalls || 0)
+}
+
 function summarize(events: AiUsageBreakdownEvent[], groupKey: (event: AiUsageBreakdownEvent) => string) {
-  const groups = new Map<string, { calls: number; inputTokens: number; outputTokens: number; totalTokens: number; costDollars: number; sample: AiUsageBreakdownEvent }>()
+  const groups = new Map<string, {
+    calls: number
+    inputTokens: number
+    cachedInputTokens: number
+    outputTokens: number
+    totalTokens: number
+    webSearchCalls: number
+    webSearchPreviewCalls: number
+    costDollars: number
+    sample: AiUsageBreakdownEvent
+  }>()
   for (const event of events) {
     const key = groupKey(event)
-    const existing = groups.get(key) || { calls: 0, inputTokens: 0, outputTokens: 0, totalTokens: 0, costDollars: 0, sample: event }
+    const existing = groups.get(key) || {
+      calls: 0,
+      inputTokens: 0,
+      cachedInputTokens: 0,
+      outputTokens: 0,
+      totalTokens: 0,
+      webSearchCalls: 0,
+      webSearchPreviewCalls: 0,
+      costDollars: 0,
+      sample: event,
+    }
     existing.calls += 1
     existing.inputTokens += event.inputTokens
+    existing.cachedInputTokens += event.cachedInputTokens
     existing.outputTokens += event.outputTokens
     existing.totalTokens += event.totalTokens
+    existing.webSearchCalls += event.webSearchCalls
+    existing.webSearchPreviewCalls += event.webSearchPreviewCalls
     existing.costDollars += event.costDollars
     groups.set(key, existing)
   }
@@ -141,10 +171,22 @@ export function AiUsageBreakdown({ events, timezone, now }: { events: AiUsageBre
   const totals = useMemo(() => filteredEvents.reduce((total, event) => ({
     calls: total.calls + 1,
     inputTokens: total.inputTokens + event.inputTokens,
+    cachedInputTokens: total.cachedInputTokens + event.cachedInputTokens,
     outputTokens: total.outputTokens + event.outputTokens,
     totalTokens: total.totalTokens + event.totalTokens,
+    webSearchCalls: total.webSearchCalls + event.webSearchCalls,
+    webSearchPreviewCalls: total.webSearchPreviewCalls + event.webSearchPreviewCalls,
     costDollars: total.costDollars + event.costDollars,
-  }), { calls: 0, inputTokens: 0, outputTokens: 0, totalTokens: 0, costDollars: 0 }), [filteredEvents])
+  }), {
+    calls: 0,
+    inputTokens: 0,
+    cachedInputTokens: 0,
+    outputTokens: 0,
+    totalTokens: 0,
+    webSearchCalls: 0,
+    webSearchPreviewCalls: 0,
+    costDollars: 0,
+  }), [filteredEvents])
   const buckets = useMemo(() => {
     const widthMs = bucketMs(bucketWidth)
     const start = bucketStart(rangeStart(range, events, nowMs), bucketWidth)
@@ -228,7 +270,7 @@ export function AiUsageBreakdown({ events, timezone, now }: { events: AiUsageBre
             </label>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
             <div className="rounded-lg border border-stone-200 bg-white/55 p-3">
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-stone-500">Estimated spend</p>
               <p className="mt-1 text-2xl font-semibold">{money(totals.costDollars)}</p>
@@ -240,6 +282,10 @@ export function AiUsageBreakdown({ events, timezone, now }: { events: AiUsageBre
             <div className="rounded-lg border border-stone-200 bg-white/55 p-3">
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-stone-500">Tokens</p>
               <p className="mt-1 text-2xl font-semibold">{totals.totalTokens.toLocaleString()}</p>
+            </div>
+            <div className="rounded-lg border border-stone-200 bg-white/55 p-3">
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-stone-500">Web searches</p>
+              <p className="mt-1 text-2xl font-semibold">{toolSearchCalls(totals).toLocaleString()}</p>
             </div>
             <div className="rounded-lg border border-stone-200 bg-white/55 p-3">
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-stone-500">Visible features</p>
@@ -309,7 +355,7 @@ export function AiUsageBreakdown({ events, timezone, now }: { events: AiUsageBre
                         {label}
                       </span>
                       <span className="mt-1 block text-xs text-stone-600">
-                        {money(total?.costDollars || 0)} · {(total?.calls || 0).toLocaleString()} calls · {(total?.totalTokens || 0).toLocaleString()} tokens
+                        {money(total?.costDollars || 0)} · {(total?.calls || 0).toLocaleString()} calls · {(total?.totalTokens || 0).toLocaleString()} tokens{toolSearchCalls(total || {}) ? ` · ${toolSearchCalls(total || {}).toLocaleString()} searches` : ''}
                       </span>
                     </span>
                   </label>
@@ -325,6 +371,7 @@ export function AiUsageBreakdown({ events, timezone, now }: { events: AiUsageBre
                   <th className="px-3 py-2">Collection</th>
                   <th className="px-3 py-2 text-right">Dollars</th>
                   <th className="px-3 py-2 text-right">Calls</th>
+                  <th className="px-3 py-2 text-right">Web searches</th>
                   <th className="px-3 py-2 text-right">Input</th>
                   <th className="px-3 py-2 text-right">Output</th>
                   <th className="px-3 py-2 text-right">Total tokens</th>
@@ -339,6 +386,7 @@ export function AiUsageBreakdown({ events, timezone, now }: { events: AiUsageBre
                     </td>
                     <td className="px-3 py-2 text-right font-semibold">{money(collection.costDollars)}</td>
                     <td className="px-3 py-2 text-right">{collection.calls.toLocaleString()}</td>
+                    <td className="px-3 py-2 text-right">{toolSearchCalls(collection).toLocaleString()}</td>
                     <td className="px-3 py-2 text-right">{collection.inputTokens.toLocaleString()}</td>
                     <td className="px-3 py-2 text-right">{collection.outputTokens.toLocaleString()}</td>
                     <td className="px-3 py-2 text-right">{collection.totalTokens.toLocaleString()}</td>

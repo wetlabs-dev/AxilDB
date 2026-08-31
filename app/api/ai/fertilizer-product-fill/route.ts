@@ -175,8 +175,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: message }, { status: response.status })
     }
 
+    await recordAiUsage({ collectionId: collection.id, userId: user.id, feature: 'AI_FERTILIZER_PRODUCT_FILL', model, usage: tokenUsage(payload, { webSearchPreviewRequested: true }) })
     const draft = normalizeDraft(extractJson(outputText(payload)), model)
-    await recordAiUsage({ collectionId: collection.id, userId: user.id, feature: 'AI_FERTILIZER_PRODUCT_FILL', model, usage: tokenUsage(payload) })
     await audit(user, 'GENERATE', 'AI_FERTILIZER_PRODUCT_FILL', null, `Generated fertilizer product fill for ${[brand, name].filter(Boolean).join(' ') || 'product'}`, { model, applyMode }, collection.id)
     return NextResponse.json({ draft })
   } catch (error) {

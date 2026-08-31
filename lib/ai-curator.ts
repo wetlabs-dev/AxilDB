@@ -2,7 +2,7 @@ import { createHash, randomUUID } from 'crypto'
 import { Prisma, type PrismaClient } from '@prisma/client'
 import { evaluatePlantDefinitionCompletenessBatch, isUsableRepresentativeImagePhoto, UNUSABLE_REPRESENTATIVE_IMAGE_STATUSES, type CompletenessCategoryKey, type PlantDefinitionCompleteness } from '@/lib/plant-definition-completeness'
 import { tokenUsage } from '@/lib/ai-usage'
-import { estimateAiCostDollars, tokenUsageCostDollars } from '@/lib/ai-pricing'
+import { aiUsageCostDollars, estimateAiCostDollars } from '@/lib/ai-pricing'
 import { backgroundServiceHealth } from '@/lib/background-services'
 import { environmentalHusbandryFields, husbandryFieldNames, husbandrySummaryChoices, isHusbandrySummaryChoiceField, type HusbandrySummaryField } from '@/lib/husbandry'
 import { plantName } from '@/lib/utils'
@@ -1318,18 +1318,22 @@ async function processJob(prisma: PrismaClient, settings: any, job: any) {
     const { payload, result } = await callCuratorModel(settings, job, currentValue)
     const usage = tokenUsage(payload)
     const hasUsage = Boolean((usage.inputTokens || 0) + (usage.outputTokens || 0))
-    const actualCost = hasUsage ? tokenUsageCostDollars(usage, settings.model) : null
-    const suggestion = await createSuggestionFromResult(prisma, settings, job, currentValue, result, actualCost)
+    const actualCost = hasUsage ? aiUsageCostDollars(usage, settings.model) : null
     await prisma.aiUsageEvent.create({
       data: {
         collectionId: job.collectionId,
         feature: 'AI_CURATOR',
         model: settings.model,
         inputTokens: usage.inputTokens,
+        cachedInputTokens: usage.cachedInputTokens,
         outputTokens: usage.outputTokens,
         totalTokens: usage.totalTokens,
+        webSearchCalls: usage.webSearchCalls,
+        webSearchPreviewCalls: usage.webSearchPreviewCalls,
+        estimatedCostDollars: (actualCost || 0).toFixed(6),
       },
     })
+    const suggestion = await createSuggestionFromResult(prisma, settings, job, currentValue, result, actualCost)
     return { status: suggestion ? 'COMPLETED' as const : 'SKIPPED' as const, cost: actualCost || dollars(job.estimatedCostDollars) }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)

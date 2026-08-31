@@ -651,8 +651,12 @@ model AiUsageEvent {
   feature      String
   model        String?
   inputTokens  Int?
+  cachedInputTokens Int?
   outputTokens Int?
   totalTokens  Int?
+  webSearchCalls Int @default(0)
+  webSearchPreviewCalls Int @default(0)
+  estimatedCostDollars Decimal @default(0.00)
   success      Boolean  @default(true)
   error        String?
   createdAt    DateTime @default(now())
