@@ -366,12 +366,12 @@ export default async function Plants({
         </Card>
       )}
 
-      <div className="grid items-start gap-4 [grid-template-columns:repeat(auto-fit,minmax(18rem,1fr))]">
+      <div className="grid auto-rows-fr gap-4 [grid-template-columns:repeat(auto-fit,minmax(18rem,1fr))]">
         {sortedPlants.map((plant) => {
           const typePhoto = typePhotoByDefinition[plant.id] || plant.instances.map((instance) => typePhotoByInstance[instance.id]).find(Boolean)
           const completeness = completenessByDefinition.get(plant.id)!
           return (
-            <Card key={plant.id} className="flex flex-col overflow-hidden p-0">
+            <Card key={plant.id} className="flex h-full flex-col overflow-hidden p-0">
               <div className="aspect-[4/3] overflow-hidden">
                 <PlantImage src={typePhoto} alt={plantName(plant)} />
               </div>
