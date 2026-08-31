@@ -92,7 +92,7 @@ export const manualSections: ManualSection[] = [
       'Use Share Definition when you have an active collection connection and want another collection to review and copy the definition.',
       'Use Plant Tags to maintain reusable collection traits, then select multiple active tags in a Plant Definition form. Search can match any or all selected tags.',
       'Review Magic Fill tag suggestions separately from taxonomy fields. Existing tags and proposed private tags require explicit selection, and proposed tags require a second creation confirmation.',
-      'Use the readiness filters to review complete, mostly complete, sparse, provisional, or category-specific incomplete definitions. Sort by completeness to work through the highest-value gaps first.',
+      'Use the search, genus, species, authority, readiness, missing-data, tag, and Curator filters to narrow Plant Definitions in place. Species choices are limited to the selected genus, and a blank Species remains distinct from sp.',
       'When AI Curator is enabled for the collection, use Research Now on a plant definition card to queue high-priority background research for that definition.',
       'Filter by AI Suggested or Waiting for Human to find definitions with prepared Curator suggestions or blocked Curator jobs.',
       'Open a definition to expand Definition Readiness. Its grouped checklist links directly to taxonomy, images, husbandry, substrate, tags, and validation sections.',

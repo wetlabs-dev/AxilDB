@@ -5,6 +5,7 @@ import { createPlantDefinitionShareRequest } from '@/app/transfer-actions'
 import { AddPanel, Button, Card, Field, HelpTooltip, TextArea, LinkButton, SuggestionDatalist } from '@/components/ui'
 import { ConfidenceSelect, PlantAliasFields } from '@/components/PlantAliasFields'
 import { PlantImage } from '@/components/PlantImage'
+import { PlantDefinitionFilters } from '@/components/PlantDefinitionFilters'
 import { SortControl } from '@/components/SortControl'
 import { AIDescriptionField, AIMagicFillButton } from '@/components/AIDescriptionField'
 import { PlantIdentificationAssistant } from '@/components/PlantIdentificationAssistant'
@@ -22,6 +23,8 @@ import { PlantTagFilter } from '@/components/PlantTagFilter'
 import { TAXONOMIC_AUTHORITY_TYPES, taxonomicAuthorityWhere } from '@/lib/taxonomic-authorities'
 import { PlantDefinitionCompletenessBar } from '@/components/PlantDefinitionCompleteness'
 import { completenessMatchesMissing, completenessMatchesReadiness, evaluatePlantDefinitionCompletenessBatch } from '@/lib/plant-definition-completeness'
+import { decodeSpeciesFilter, getAvailableGenera, getSpeciesOptionsByGenus, matchingRawGenera, matchingRawSpecies, noSpeciesFilterToken } from '@/lib/taxonomy'
+import type { Prisma } from '@prisma/client'
 
 const selectClass = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
 
@@ -53,7 +56,7 @@ function referencePrefill(log: { resultJson: unknown }) {
 export default async function Plants({
   searchParams,
 }: {
-  searchParams: Promise<{ fromIdentification?: string; wishlist?: string; tag?: string | string[]; tagMode?: string; taxonomicAuthorityId?: string; authorityType?: string; registrationAuthority?: string; readiness?: string; missing?: string; curatorStatus?: string; curator?: string }>
+  searchParams: Promise<{ fromIdentification?: string; wishlist?: string; tag?: string | string[]; tagMode?: string; q?: string; genus?: string; species?: string; taxonomicAuthorityId?: string; authorityType?: string; registrationAuthority?: string; readiness?: string; missing?: string; curatorStatus?: string; curator?: string }>
 }) {
   const user = await getCurrentUser()
   const sp = await searchParams
@@ -65,6 +68,9 @@ export default async function Plants({
   const collectionWhere = { collectionId: collection.id }
   const selectedTagIds = (Array.isArray(sp.tag) ? sp.tag : sp.tag ? [sp.tag] : []).filter(Boolean)
   const tagMode = sp.tagMode === 'all' ? 'all' : 'any'
+  const q = String(sp.q || '').trim()
+  const genusFilter = String(sp.genus || '').trim()
+  const speciesFilter = genusFilter ? decodeSpeciesFilter(sp.species) : ''
   const authorityFilter = String(sp.taxonomicAuthorityId || '')
   const authorityTypeFilter = String(sp.authorityType || '')
   const registrationAuthorityOnly = sp.registrationAuthority === '1'
@@ -72,13 +78,55 @@ export default async function Plants({
   const missingFilter = String(sp.missing || '')
   const curatorStatusFilter = String(sp.curatorStatus || '')
   const sortKey = await sortPreference(user?.id, 'plants', 'nameAsc', plantSortOptions.map((option) => option.value))
+  const taxonomyRows = await prisma.plantDefinition.findMany({
+    where: collectionWhere,
+    select: { genus: true, species: true },
+    orderBy: [{ genus: 'asc' }, { species: 'asc' }],
+  })
+  const genusOptions = getAvailableGenera(taxonomyRows)
+  const speciesOptionsByGenus = getSpeciesOptionsByGenus(taxonomyRows)
+  const genusValues = genusFilter ? matchingRawGenera(taxonomyRows, genusFilter) : []
+  const speciesValues = genusFilter && speciesFilter ? matchingRawSpecies(taxonomyRows, genusFilter, speciesFilter) : { values: [], includesNull: false }
+  const contains = (value: string) => ({ contains: value, mode: 'insensitive' as const })
+  const speciesWhere = speciesFilter
+    ? speciesFilter === noSpeciesFilterToken
+      ? { OR: [{ species: null }, { species: { in: speciesValues.values.length ? speciesValues.values : [''] } }] }
+      : speciesValues.values.length
+        ? { species: { in: speciesValues.values } }
+        : { species: { equals: speciesFilter, mode: 'insensitive' as const } }
+    : null
+  const definitionWhere: Prisma.PlantDefinitionWhereInput = {
+    ...collectionWhere,
+    AND: [
+      ...(q ? [{
+        OR: [
+          { genus: contains(q) },
+          { species: contains(q) },
+          { hybridNotation: contains(q) },
+          { cultivarName: contains(q) },
+          { authority: contains(q) },
+          { provisionalTaxon: contains(q) },
+          { description: contains(q) },
+          { notes: contains(q) },
+          { taxonomicAuthority: { OR: [{ name: contains(q) }, { abbreviation: contains(q) }] } },
+          { aliases: { some: { OR: [{ name: contains(q) }, { source: contains(q) }, { notes: contains(q) }] } } },
+          { tags: { some: { plantTag: { OR: [{ name: contains(q) }, { description: contains(q) }] } } } },
+        ],
+      }] : []),
+      ...(genusFilter ? [{ genus: genusValues.length ? { in: genusValues } : { equals: genusFilter, mode: 'insensitive' as const } }] : []),
+      ...(speciesWhere ? [speciesWhere] : []),
+      ...(authorityFilter ? [{ taxonomicAuthorityId: authorityFilter }] : []),
+      ...(authorityTypeFilter ? [{ taxonomicAuthority: { authorityType: authorityTypeFilter } }] : []),
+      ...(registrationAuthorityOnly ? [{ taxonomicAuthority: { authorityType: 'ICRA' } }] : []),
+      ...(selectedTagIds.length ? tagMode === 'all'
+        ? selectedTagIds.map((plantTagId) => ({ tags: { some: { plantTagId } } }))
+        : [{ tags: { some: { plantTagId: { in: selectedTagIds } } } }]
+        : []),
+    ],
+  }
   const [plants, bodies, follows, activeTags, outgoingTransferConnections, completenessByDefinition, curatorSuggestionCounts, curatorWaitingCounts] = await Promise.all([
     prisma.plantDefinition.findMany({
-      where: { ...collectionWhere,
-        ...(authorityFilter ? { taxonomicAuthorityId: authorityFilter } : {}),
-        ...(authorityTypeFilter ? { taxonomicAuthority: { authorityType: authorityTypeFilter } } : {}),
-        ...(registrationAuthorityOnly ? { taxonomicAuthority: { authorityType: 'ICRA' } } : {}),
-        ...(selectedTagIds.length ? tagMode === 'all' ? { AND: selectedTagIds.map((plantTagId) => ({ tags: { some: { plantTagId } } })) } : { tags: { some: { plantTagId: { in: selectedTagIds } } } } : {}) },
+      where: definitionWhere,
       include: {
         taxonomicAuthority: true,
         aliases: { orderBy: { name: 'asc' } },
@@ -283,15 +331,24 @@ export default async function Plants({
       {sp.curator === 'queued' && <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900">AI Curator research was queued for that plant definition.</p>}
 
       <Card>
-        <form method="get" className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1fr_1fr_auto] lg:items-end">
-          <label className="grid gap-1 text-sm font-medium">Taxonomic Authority<select className={selectClass} name="taxonomicAuthorityId" defaultValue={authorityFilter}><option value="">All authorities</option>{bodies.map((body) => <option key={body.id} value={body.id}>{body.name}</option>)}</select></label>
-          <label className="grid gap-1 text-sm font-medium">Authority type<select className={selectClass} name="authorityType" defaultValue={authorityTypeFilter}><option value="">All types</option>{TAXONOMIC_AUTHORITY_TYPES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-          <label className="flex items-center gap-2 rounded-md border border-stone-300 px-3 py-2 text-sm"><input type="checkbox" name="registrationAuthority" value="1" defaultChecked={registrationAuthorityOnly} />Registration Authorities only</label>
-          <label className="grid gap-1 text-sm font-medium">Readiness<select className={selectClass} name="readiness" defaultValue={readinessFilter}><option value="">All readiness states</option><option value="COMPLETE">Complete</option><option value="MOSTLY_COMPLETE">Mostly complete</option><option value="NEEDS_WORK">Needs work</option><option value="SPARSE">Sparse</option><option value="MINIMAL">Minimal</option><option value="PROVISIONAL">Provisional</option></select></label>
-          <label className="grid gap-1 text-sm font-medium">Missing data<select className={selectClass} name="missing" defaultValue={missingFilter}><option value="">Any category</option><option value="images">Missing image</option><option value="husbandry">Missing husbandry</option><option value="fertilizer">Missing fertilizer</option><option value="substrate">Missing substrate</option><option value="authority">Missing authority</option><option value="references">Missing references</option><option value="tags">Missing tags</option></select></label>
-          <label className="grid gap-1 text-sm font-medium">AI Curator<select className={selectClass} name="curatorStatus" defaultValue={curatorStatusFilter}><option value="">Any Curator state</option><option value="suggested">AI suggested</option><option value="waiting">Waiting for Human</option><option value="complete">Curator complete</option></select></label>
-          <Button>Apply filters</Button>
-        </form>
+        <PlantDefinitionFilters
+          q={q}
+          genus={genusFilter}
+          species={speciesFilter}
+          taxonomicAuthorityId={authorityFilter}
+          authorityType={authorityTypeFilter}
+          registrationAuthorityOnly={registrationAuthorityOnly}
+          readiness={readinessFilter}
+          missing={missingFilter}
+          curatorStatus={curatorStatusFilter}
+          genusOptions={genusOptions}
+          speciesOptionsByGenus={speciesOptionsByGenus}
+          authorityOptions={bodies.map((body) => ({ value: body.id, label: body.name }))}
+          authorityTypeOptions={TAXONOMIC_AUTHORITY_TYPES.map(([value, label]) => ({ value, label }))}
+          visibleCount={sortedPlants.length}
+          totalCount={taxonomyRows.length}
+          hasActiveFilters={Boolean(q || genusFilter || speciesFilter || authorityFilter || authorityTypeFilter || registrationAuthorityOnly || readinessFilter || missingFilter || curatorStatusFilter || selectedTagIds.length)}
+        />
         <p className="mt-2 text-xs text-stone-600">Definition completeness reflects how much applicable AxilDB metadata is populated. It does not guarantee taxonomic correctness.</p>
         <div className="mt-3 flex flex-wrap gap-2 text-xs">
           <span className="rounded-full border border-stone-300 px-2.5 py-1 font-semibold">{completenessByDefinition.size} total</span>
