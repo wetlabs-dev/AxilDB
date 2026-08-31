@@ -13,6 +13,14 @@ assert(migration.includes('HAVING COUNT(*) = 1'), 'legacy matching must reject a
 assert(migration.includes('unresolved_count > 0'), 'migration must abort before dropping unresolved values')
 assert(migration.includes('DROP COLUMN "location"'), 'legacy text column must be dropped')
 
+const actions = readFileSync('app/actions.ts', 'utf8')
+const locationRefreshHelper = actions.match(/const revalidatePlantLocationSurfaces =[\s\S]*?\n\}/)?.[0] || ''
+assert(locationRefreshHelper.includes("collectionPath(collectionSlug, '/care')"), 'plant location refreshes must include the Care Queue')
+assert(
+  actions.match(/export async function updatePlantInstance\(fd: FormData\) \{[\s\S]*?redirect\(collectionPath\(collection\.slug, `\/instances\/\$\{id\}`\)\)/)?.[0].includes('revalidatePlantLocationSurfaces(collection.slug, [id])'),
+  'editing a plant instance must refresh care queue location labels',
+)
+
 const type = { name: 'Room', abbreviation: 'RM' }
 const locations: LocationNode[] = [
   { id: 'office', parentLocationId: null, name: 'Office', code: 'LOC-RM-01', status: 'ACTIVE', sortOrder: 10, locationType: type },

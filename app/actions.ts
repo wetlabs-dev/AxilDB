@@ -122,6 +122,14 @@ async function assertPlantInstanceAcceptsChanges(collectionId: string, plantInst
   if (isHistoricalConstituent(instance.status)) throw new Error('This specimen is a read-only historical constituent. Add new records to its surviving specimen.')
 }
 const revalidateDestination = (destination: string) => revalidatePath(destination.split('#')[0] || '/')
+const revalidatePlantLocationSurfaces = (collectionSlug: string, plantInstanceIds: string[] = []) => {
+  revalidatePath(collectionPath(collectionSlug, '/care'))
+  revalidatePath(collectionPath(collectionSlug, '/instances'))
+  revalidatePath(collectionPath(collectionSlug, '/locations'))
+  for (const plantInstanceId of plantInstanceIds) {
+    revalidatePath(collectionPath(collectionSlug, `/instances/${plantInstanceId}`))
+  }
+}
 const boundedInt = (value: string | undefined, fallback: number, min: number, max: number) => {
   const parsed = Number(value)
   if (!Number.isFinite(parsed)) return fallback
@@ -863,6 +871,7 @@ export async function updateLocation(fd: FormData) {
     return result
   })
   await audit(user, 'UPDATE', 'LOCATION', id, `Updated location ${updated.code} ${updated.name}`, undefined, collection.id)
+  revalidatePlantLocationSurfaces(collection.slug)
   redirect(back(fd) || collectionPath(collection.slug, `/locations/${id}`))
 }
 
@@ -945,6 +954,7 @@ export async function movePlantInstanceLocation(fd: FormData) {
     })
   })
   await audit(user, 'MOVE', 'PLANT_INSTANCE_LOCATION', plantInstanceId, `Moved ${instance.plantId} to ${target?.code || 'no location'}`, { fromLocationId, toLocationId: target?.id || null, notes }, collection.id)
+  revalidatePlantLocationSurfaces(collection.slug, [plantInstanceId])
   redirect(back(fd) || collectionPath(collection.slug, `/instances/${plantInstanceId}`))
 }
 
@@ -1032,6 +1042,7 @@ export async function batchMovePlantLocations(fd: FormData) {
     { sourceLocationId: source.id, toLocationId: target.id, scope, plantInstanceIds: plants.map((plant) => plant.id), compatibilityWarningsAcknowledged: compatibilityWarnings.length, notes },
     collection.id,
   )
+  revalidatePlantLocationSurfaces(collection.slug, plants.map((plant) => plant.id))
   redirect(back(fd) || collectionPath(collection.slug, '/locations'))
 }
 
@@ -1082,7 +1093,7 @@ export async function moveLocation(input: {
     normalizeLocationSiblingSort(collection.id, parent?.id || null),
   ])
   await audit(user, 'MOVE', 'LOCATION', location.id, `Moved location ${location.code} ${location.name}`, { fromParentLocationId: location.parentLocationId, toParentLocationId: parent?.id || null }, collection.id)
-  revalidatePath(collectionPath(collection.slug, '/locations'))
+  revalidatePlantLocationSurfaces(collection.slug)
   revalidatePath(collectionPath(collection.slug, `/locations/${location.id}`))
   return { ok: true }
 }
@@ -1109,6 +1120,7 @@ export async function reorderLocations(input: {
   })))
   await audit(user, 'UPDATE', 'LOCATION_ORDER', parentLocationId || collection.id, `Reordered ${orderedIds.length} location${orderedIds.length === 1 ? '' : 's'}`, { parentLocationId, orderedLocationIds: orderedIds }, collection.id)
   revalidatePath(collectionPath(collection.slug, '/locations'))
+  revalidatePath(collectionPath(collection.slug, '/care'))
   return { ok: true }
 }
 
@@ -1241,8 +1253,7 @@ export async function batchMovePlantsToLocation(input: {
     { plantInstanceIds: plants.map((plant) => plant.id), toLocationId: target?.id || null, startQuarantine: Boolean(input.startQuarantine), compatibilityWarningsAcknowledged: warningResults.length, compatibilityNote: input.compatibilityNote || null, note: input.note || null },
     collection.id,
   )
-  revalidatePath(collectionPath(collection.slug, '/locations'))
-  for (const plant of plants) revalidatePath(collectionPath(collection.slug, `/instances/${plant.id}`))
+  revalidatePlantLocationSurfaces(collection.slug, plants.map((plant) => plant.id))
   return { ok: true, movedCount: plants.length, quarantineStartedCount: input.startQuarantine ? plants.filter((plant) => !alreadyQuarantined.has(plant.id)).length : 0 }
 }
 
@@ -2525,6 +2536,7 @@ export async function updatePlantInstance(fd: FormData) {
     return updated
   })
   await audit(user, 'UPDATE', 'PLANT_INSTANCE', id, `Updated plant instance ${instance.plantId}`, undefined, collection.id)
+  revalidatePlantLocationSurfaces(collection.slug, [id])
 
   redirect(collectionPath(collection.slug, `/instances/${id}`))
 }

@@ -44,6 +44,12 @@ const integer = (fd: FormData, key: string) => {
 const allowed = <T extends readonly string[]>(raw: string, values: T) => values.includes(raw) ? raw : null
 const selected = (fd: FormData, key: string) => fd.getAll(key).map(String).map((item) => item.trim()).filter(Boolean)
 const json = (value: unknown) => JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue
+const revalidatePlantLocationSurfaces = (collectionSlug: string, plantInstanceId: string) => {
+  revalidatePath(collectionPath(collectionSlug, '/care'))
+  revalidatePath(collectionPath(collectionSlug, '/instances'))
+  revalidatePath(collectionPath(collectionSlug, '/locations'))
+  revalidatePath(collectionPath(collectionSlug, `/instances/${plantInstanceId}`))
+}
 
 export async function saveTreatmentDefinition(fd: FormData) {
   const { user, collection } = await requireCollectionGardener(value(fd, 'collectionSlug'))
@@ -250,6 +256,7 @@ export async function recordTreatmentApplication(fd: FormData) {
     return created
   })
   await audit(user, 'CREATE', 'TREATMENT_APPLICATION', application.id, `Applied ${context.treatment.name} to ${context.plant.plantId}`, { planId, conditionId, warningsAcknowledged: context.warnings.length > 0 }, collection.id)
+  if (moveToQuarantine) revalidatePlantLocationSurfaces(collection.slug, plantInstanceId)
   redirect(collectionPath(collection.slug, planId ? `/treatments/plans/${planId}` : `/instances/${plantInstanceId}#treatments`))
 }
 
