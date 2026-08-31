@@ -6,7 +6,7 @@ import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { normalizeTaxonomyFilter, speciesFilterLabel, type TaxonomyFilterOption } from '@/lib/taxonomy'
 
-const inputClass = 'min-w-0 rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-2 text-base font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30 sm:text-sm'
+const inputClass = 'w-full min-w-0 max-w-full rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-2 text-base font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30 sm:text-sm'
 
 type SelectOption = {
   value: string
@@ -211,7 +211,7 @@ export function PlantDefinitionFilters({
 
   return (
     <div className="space-y-3" aria-busy={isPending}>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(14rem,1.5fr)_minmax(11rem,1fr)_minmax(11rem,1fr)_repeat(4,minmax(10rem,1fr))] xl:items-end">
+      <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:[grid-template-columns:repeat(auto-fit,minmax(min(100%,12rem),1fr))] lg:items-end">
         <label className="grid min-w-0 gap-1 text-sm font-medium text-stone-800">
           Search
           <input
