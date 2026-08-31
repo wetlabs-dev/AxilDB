@@ -1,6 +1,7 @@
 import { createLocation, createPlantInstance } from '@/app/actions'
 import { startWorkflowRun } from '@/app/workflow-actions'
 import { PlantImage } from '@/components/PlantImage'
+import { PlantInstanceFilters } from '@/components/PlantInstanceFilters'
 import { LifecycleDateFields } from '@/components/LifecycleDateFields'
 import { LocationCompatibilitySelect } from '@/components/LocationCompatibilitySelect'
 import { PlantDefinitionCascadePicker, type PlantDefinitionCascadeOption } from '@/components/PlantDefinitionCascadePicker'
@@ -19,10 +20,12 @@ import { sunshineCounts, sunshineKey, sunshineStateForUser, WELL_LOVED_THRESHOLD
 import { rankedSuggestions } from '@/lib/suggestions'
 import { cn, plantName } from '@/lib/utils'
 import { plantInstanceTypeLabel, plantInstanceTypes } from '@/lib/plant-instance-types'
+import { decodeSpeciesFilter, getAvailableGenera, getSpeciesOptionsByGenus, matchingRawGenera, matchingRawSpecies, noSpeciesFilterToken } from '@/lib/taxonomy'
 import { ensureStarterWorkflowTemplates } from '@/lib/workflows'
 import Link from 'next/link'
 import { PlantTagRow } from '@/components/PlantTagChip'
 import { substrateAssignmentLabel, substrateLabel, substrateModes } from '@/lib/substrates'
+import type { Prisma } from '@prisma/client'
 
 const instanceSortOptions: SortOption[] = [
   { value: 'plantIdAsc', label: 'Plant ID A-Z' },
@@ -38,7 +41,7 @@ const instanceSortOptions: SortOption[] = [
 export default async function Instances({
   searchParams,
 }: {
-  searchParams: Promise<{ definition?: string; location?: string; includeNested?: string; tag?: string; type?: string; substrateMode?: string; substrateVersion?: string; substrateComponent?: string }>
+  searchParams: Promise<{ definition?: string; genus?: string; species?: string; location?: string; includeNested?: string; tag?: string; type?: string; substrateMode?: string; substrateVersion?: string; substrateComponent?: string }>
 }) {
   const user = await getCurrentUser()
   const sp = await searchParams
@@ -46,6 +49,8 @@ export default async function Instances({
   const { collection } = context
   const collectionWhere = { collectionId: collection.id }
   const definitionFilter = sp.definition || ''
+  const genusFilter = String(sp.genus || '').trim()
+  const speciesFilter = genusFilter ? decodeSpeciesFilter(sp.species) : ''
   const locationFilter = sp.location || ''
   const includeNestedLocations = sp.includeNested !== '0'
   const tagFilter = sp.tag || ''
@@ -55,7 +60,7 @@ export default async function Instances({
   const substrateComponentFilter = sp.substrateComponent || ''
   const sortKey = await sortPreference(user?.id, 'instances', 'plantIdAsc', instanceSortOptions.map((option) => option.value))
   await ensureStarterWorkflowTemplates(prisma, collection.id)
-  const [defs, instanceSuggestionRows, locations, locationTypes, workflowTemplates, sources, distributors, sellers, activeTags, substrateVersions, substrateComponents] = await Promise.all([
+  const [defs, instanceSuggestionRows, instanceTaxonomyRows, locations, locationTypes, workflowTemplates, sources, distributors, sellers, activeTags, substrateVersions, substrateComponents] = await Promise.all([
     prisma.plantDefinition.findMany({
       where: { OR: [collectionWhere, { collectionId: null, isValidated: true }] },
       orderBy: [{ isValidated: 'desc' }, { genus: 'asc' }, { species: 'asc' }, { cultivarName: 'asc' }],
@@ -63,6 +68,11 @@ export default async function Instances({
     prisma.plantInstance.findMany({
       where: collectionWhere,
       select: { source: true, distributor: true, stockNumber: true, acquisitionLabel: true },
+    }),
+    prisma.plantInstance.findMany({
+      where: { ...collectionWhere, status: 'ACTIVE' },
+      select: { plantDefinition: { select: { genus: true, species: true } } },
+      orderBy: { plantId: 'asc' },
     }),
     prisma.location.findMany({
       where: { collectionId: collection.id, status: 'ACTIVE' },
@@ -98,18 +108,35 @@ export default async function Instances({
   const filteredLocationIds = selectedLocation
     ? [selectedLocation.id, ...(includeNestedLocations ? Array.from(descendantLocationIds(selectedLocation.id, locationNodes)) : [])]
     : []
+  const instanceTaxonomyDefinitions = instanceTaxonomyRows.map((row) => row.plantDefinition)
+  const genusOptions = getAvailableGenera(instanceTaxonomyDefinitions)
+  const speciesOptionsByGenus = getSpeciesOptionsByGenus(instanceTaxonomyDefinitions)
+  const genusValues = genusFilter ? matchingRawGenera(instanceTaxonomyDefinitions, genusFilter) : []
+  const speciesValues = genusFilter && speciesFilter ? matchingRawSpecies(instanceTaxonomyDefinitions, genusFilter, speciesFilter) : { values: [], includesNull: false }
+  const speciesWhere: Prisma.PlantDefinitionWhereInput | null = speciesFilter
+    ? speciesFilter === noSpeciesFilterToken
+      ? { OR: [{ species: null }, { species: { in: speciesValues.values.length ? speciesValues.values : [''] } }] }
+      : speciesValues.values.length
+        ? { species: { in: speciesValues.values } }
+        : { species: { equals: speciesFilter, mode: 'insensitive' } }
+    : null
+  const instanceWhere: Prisma.PlantInstanceWhereInput = {
+    ...collectionWhere,
+    status: 'ACTIVE',
+    AND: [
+      ...(definitionFilter ? [{ plantDefinitionId: definitionFilter }] : []),
+      ...(genusFilter ? [{ plantDefinition: { genus: genusValues.length ? { in: genusValues } : { equals: genusFilter, mode: 'insensitive' as const } } }] : []),
+      ...(speciesWhere ? [{ plantDefinition: speciesWhere }] : []),
+      ...(filteredLocationIds.length ? [{ currentLocationId: { in: filteredLocationIds } }] : []),
+      ...(tagFilter ? [{ plantDefinition: { tags: { some: { plantTagId: tagFilter } } } }] : []),
+      ...(typeFilter ? [{ instanceType: typeFilter }] : []),
+      ...(substrateModeFilter ? [{ currentSubstrate: { is: { substrateMode: substrateModeFilter } } }] : []),
+      ...(substrateVersionFilter ? [{ currentSubstrate: { is: { substrateRecipeVersionId: substrateVersionFilter } } }] : []),
+      ...(substrateComponentFilter ? [{ currentSubstrate: { is: { recipeVersion: { components: { some: { substrateComponentId: substrateComponentFilter } } } } } }] : []),
+    ],
+  }
   const instances = await prisma.plantInstance.findMany({
-    where: {
-      ...collectionWhere,
-      status: 'ACTIVE',
-      ...(definitionFilter ? { plantDefinitionId: definitionFilter } : {}),
-      ...(filteredLocationIds.length ? { currentLocationId: { in: filteredLocationIds } } : {}),
-      ...(tagFilter ? { plantDefinition: { tags: { some: { plantTagId: tagFilter } } } } : {}),
-      ...(typeFilter ? { instanceType: typeFilter } : {}),
-      ...(substrateModeFilter ? { currentSubstrate: { is: { substrateMode: substrateModeFilter } } } : {}),
-      ...(substrateVersionFilter ? { currentSubstrate: { is: { substrateRecipeVersionId: substrateVersionFilter } } } : {}),
-      ...(substrateComponentFilter ? { currentSubstrate: { is: { recipeVersion: { components: { some: { substrateComponentId: substrateComponentFilter } } } } } } : {}),
-    },
+    where: instanceWhere,
     include: { plantDefinition: { include: { tags: { include: { plantTag: true }, orderBy: { plantTag: { name: 'asc' } } } } }, currentLocation: { include: { locationType: true } }, currentSubstrate: { include: { recipeVersion: { include: { recipe: true } } } }, quarantines: { where: { status: 'ACTIVE' }, take: 1 } },
     orderBy: { plantId: 'asc' },
   })
@@ -120,6 +147,8 @@ export default async function Instances({
     : null
   const filterParams = new URLSearchParams()
   if (definitionFilter) filterParams.set('definition', definitionFilter)
+  if (genusFilter) filterParams.set('genus', genusFilter)
+  if (speciesFilter) filterParams.set('species', speciesFilter)
   if (locationFilter) filterParams.set('location', locationFilter)
   if (tagFilter) filterParams.set('tag', tagFilter)
   if (typeFilter) filterParams.set('type', typeFilter)
@@ -208,32 +237,29 @@ export default async function Instances({
       </div>
 
       <Card>
-        <form action={collectionPath(collection.slug, '/instances')} className="grid gap-3 md:grid-cols-2 xl:grid-cols-4 xl:items-end">
-          {definitionFilter && <input type="hidden" name="definition" value={definitionFilter} />}
-          <label className="grid gap-1 text-sm font-medium text-stone-800">
-            Filter by location
-            <select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="location" defaultValue={locationFilter}>
-              <option value="">All locations</option>
-              {locationNodes.map((location) => (
-                <option key={location.id} value={location.id}>{locationPathWithCodes(location.id, locationNodes)}</option>
-              ))}
-            </select>
-          </label>
-          <label className="grid gap-1 text-sm font-medium text-stone-800">Filter by tag<select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="tag" defaultValue={tagFilter}><option value="">All tags</option>{activeTags.map((tag) => <option key={tag.id} value={tag.id}>{tag.name}</option>)}</select></label>
-          <label className="grid gap-1 text-sm font-medium text-stone-800">Filter by type<select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="type" defaultValue={typeFilter}><option value="">All types</option>{plantInstanceTypes.map((type) => <option key={type} value={type}>{plantInstanceTypeLabel(type)}</option>)}</select></label>
-          <label className="grid gap-1 text-sm font-medium text-stone-800">Substrate mode<select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="substrateMode" defaultValue={substrateModeFilter}><option value="">All substrate modes</option>{substrateModes.map((mode) => <option key={mode} value={mode}>{substrateLabel(mode)}</option>)}</select></label>
-          <label className="grid gap-1 text-sm font-medium text-stone-800">Substrate recipe<select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="substrateVersion" defaultValue={substrateVersionFilter}><option value="">All recipe versions</option>{substrateVersions.map((version) => <option key={version.id} value={version.id}>{version.recipe.name} v{version.versionNumber}</option>)}</select></label>
-          <label className="grid gap-1 text-sm font-medium text-stone-800">Contains component<select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="substrateComponent" defaultValue={substrateComponentFilter}><option value="">Any component</option>{substrateComponents.map((component) => <option key={component.id} value={component.id}>{component.name}</option>)}</select></label>
-          <label className="flex items-center gap-2 rounded-md border border-stone-200 bg-white/50 px-3 py-2 text-sm font-medium text-stone-800">
-            <input type="hidden" name="includeNested" value="0" />
-            <input type="checkbox" name="includeNested" value="1" defaultChecked={includeNestedLocations} />
-            Include child locations
-          </label>
-          <div className="flex gap-2">
-            <Button className="px-3 py-2">Apply</Button>
-            {(definitionFilter || locationFilter || tagFilter || typeFilter || substrateModeFilter || substrateVersionFilter || substrateComponentFilter) && <Link className="rounded-md border border-stone-300 bg-white/70 px-3 py-2 text-sm font-semibold" href={collectionPath(collection.slug, '/instances')}>Clear</Link>}
-          </div>
-        </form>
+        <PlantInstanceFilters
+          genus={genusFilter}
+          species={speciesFilter}
+          location={locationFilter}
+          includeNested={includeNestedLocations}
+          tag={tagFilter}
+          type={typeFilter}
+          substrateMode={substrateModeFilter}
+          substrateVersion={substrateVersionFilter}
+          substrateComponent={substrateComponentFilter}
+          genusOptions={genusOptions}
+          speciesOptionsByGenus={speciesOptionsByGenus}
+          locationOptions={locationNodes.map((location) => ({ value: location.id, label: locationPathWithCodes(location.id, locationNodes) }))}
+          tagOptions={activeTags.map((tag) => ({ value: tag.id, label: tag.name }))}
+          typeOptions={plantInstanceTypes.map((type) => ({ value: type, label: plantInstanceTypeLabel(type) }))}
+          substrateModeOptions={substrateModes.map((mode) => ({ value: mode, label: substrateLabel(mode) }))}
+          substrateVersionOptions={substrateVersions.map((version) => ({ value: version.id, label: `${version.recipe.name} v${version.versionNumber}` }))}
+          substrateComponentOptions={substrateComponents.map((component) => ({ value: component.id, label: component.name }))}
+          visibleCount={sortedInstances.length}
+          totalCount={instanceTaxonomyRows.length}
+          hasActiveFilters={Boolean(definitionFilter || genusFilter || speciesFilter || locationFilter || tagFilter || typeFilter || substrateModeFilter || substrateVersionFilter || substrateComponentFilter || !includeNestedLocations)}
+          clearHref={collectionPath(collection.slug, '/instances')}
+        />
       </Card>
 
       {canCreateInCollection(user, context) && (
