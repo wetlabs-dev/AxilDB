@@ -6,6 +6,7 @@ import { AddPanel, Button, Card, Field, HelpTooltip, TextArea, LinkButton, Sugge
 import { ConfidenceSelect, PlantAliasFields } from '@/components/PlantAliasFields'
 import { PlantImage } from '@/components/PlantImage'
 import { PlantDefinitionFilters } from '@/components/PlantDefinitionFilters'
+import { PlantDefinitionIdentityFields } from '@/components/PlantDefinitionIdentityFields'
 import { SortControl } from '@/components/SortControl'
 import { AIDescriptionField, AIMagicFillButton } from '@/components/AIDescriptionField'
 import { PlantIdentificationAssistant } from '@/components/PlantIdentificationAssistant'
@@ -282,10 +283,15 @@ export default async function Plants({
                 )}
               </div>
             )}
-            <Field label="Genus" help="Required for an identified definition. For an unresolved plant, enter a provisional taxon below and AxilDB will retain a working placement for IDs." name="genus" list="definition-genus-suggestions" defaultValue={identificationPrefill?.genus || ''} />
-            <Field label="Species" help="Species epithet. Leave blank when the accepted horticultural name intentionally omits species (for example, Begonia 'Looking Glass'). Use sp. only when the species is genuinely unknown." name="species" list="definition-species-suggestions" autoCapitalize="none" defaultValue={identificationPrefill?.species || ''} />
-            <Field label="Hybrid notation" help="Use for botanical hybrid markers or formula context, such as x, grex, or parentage notation that belongs with the name." name="hybridNotation" list="definition-hybrid-notation-suggestions" defaultValue={identificationPrefill?.hybridNotation || ''} />
-            <Field label="Cultivar name" help="The named cultivated variety, usually written in single quotes, such as 'Morning Glow'. Leave blank for unnamed species or clones." name="cultivarName" list="definition-cultivar-name-suggestions" defaultValue={identificationPrefill?.cultivarName || ''} />
+            <PlantDefinitionIdentityFields
+              collectionSlug={collection.slug}
+              defaultValues={{
+                genus: identificationPrefill?.genus || '',
+                species: identificationPrefill?.species || '',
+                hybridNotation: identificationPrefill?.hybridNotation || '',
+                cultivarName: identificationPrefill?.cultivarName || '',
+              }}
+            />
             <div className="min-w-0 rounded-lg border border-[#d6dfc9] bg-[#f7f4e8]/80 px-3 py-2 text-sm text-stone-700 lg:col-span-4">
               <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
                 <span className="min-w-0">Enter the core name first, then let AxilDB draft taxonomy metadata and suggested aliases.</span>
