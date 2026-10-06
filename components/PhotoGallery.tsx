@@ -33,13 +33,15 @@ export function PhotoGallery({
   totalPhotos = photos.length,
   page = 1,
   pageSize = photos.length || 1,
-  pageHref,
+  previousPageHref,
+  nextPageHref,
 }: {
   photos: GalleryPhoto[]
   totalPhotos?: number
   page?: number
   pageSize?: number
-  pageHref?: (page: number) => string
+  previousPageHref?: string
+  nextPageHref?: string
 }) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
   const activePhoto = activeIndex === null ? null : photos[activeIndex]
@@ -179,12 +181,12 @@ export function PhotoGallery({
         </div>
       )}
 
-      {pageHref && pageCount > 1 && (
+      {(previousPageHref || nextPageHref) && pageCount > 1 && (
         <div className="mt-5 flex items-center justify-between gap-3 text-sm">
           <span className="text-stone-600">Page {page} of {pageCount}</span>
           <div className="flex gap-2">
-            {page > 1 && <Link href={pageHref(page - 1)} className="rounded-md border border-stone-300 bg-white/70 px-3 py-1.5 font-semibold">Previous</Link>}
-            {page < pageCount && <Link href={pageHref(page + 1)} className="rounded-md border border-stone-300 bg-white/70 px-3 py-1.5 font-semibold">Next</Link>}
+            {previousPageHref && <Link href={previousPageHref} className="rounded-md border border-stone-300 bg-white/70 px-3 py-1.5 font-semibold">Previous</Link>}
+            {nextPageHref && <Link href={nextPageHref} className="rounded-md border border-stone-300 bg-white/70 px-3 py-1.5 font-semibold">Next</Link>}
           </div>
         </div>
       )}

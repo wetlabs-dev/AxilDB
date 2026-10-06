@@ -216,7 +216,8 @@ export default async function GalleryPage({
         totalPhotos={totalPhotos}
         page={pagedByDatabase ? page : 1}
         pageSize={pagedByDatabase ? GALLERY_PAGE_SIZE : Math.max(totalPhotos, 1)}
-        pageHref={pagedByDatabase ? pageHref : undefined}
+        previousPageHref={pagedByDatabase && page > 1 ? pageHref(page - 1) : undefined}
+        nextPageHref={pagedByDatabase && page < Math.ceil(totalPhotos / GALLERY_PAGE_SIZE) ? pageHref(page + 1) : undefined}
       />
     </div>
   )
