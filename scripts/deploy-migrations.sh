@@ -1,6 +1,11 @@
 #!/bin/sh
 set -eu
 
+if [ -f "${AXILDB_BACKUP_ROOT:-backups}/.migration/outbound-hold.json" ]; then
+  echo "Migration restore hold is active. Verify and release it before deploying schema changes." >&2
+  exit 1
+fi
+
 SCHEMA_PATH="${PRISMA_SCHEMA_PATH:-prisma/schema.prisma}"
 BASELINE_MIGRATION="20260601000000_initial_baseline"
 DB_SCHEMA="${AXILDB_DATABASE_SCHEMA:-public}"

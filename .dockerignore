@@ -9,3 +9,7 @@ docker-compose.yml
 public/uploads
 public/labels
 tsconfig.tsbuildinfo
+
+backups
+**/.migration
+**/__pycache__

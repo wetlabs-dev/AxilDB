@@ -1,3 +1,4 @@
+import { assertMigrationOutboundReleased } from '@/lib/migration-hold'
 import { createHash, randomUUID } from 'crypto'
 import { Prisma, type PrismaClient } from '@prisma/client'
 import { evaluatePlantDefinitionCompletenessBatch, isUsableRepresentativeImagePhoto, UNUSABLE_REPRESENTATIVE_IMAGE_STATUSES, type CompletenessCategoryKey, type PlantDefinitionCompleteness } from '@/lib/plant-definition-completeness'
@@ -1393,6 +1394,7 @@ async function budgetSnapshot(prisma: PrismaClient, settings: any) {
 }
 
 export async function processAiCuratorWake(prisma: PrismaClient) {
+  await assertMigrationOutboundReleased()
   const settings = await ensureAiCuratorSettings(prisma)
   const startedAt = new Date()
   if (!settings.enabled) return { status: 'STOPPED' as const, processed: 0, created: 0, summary: 'AI Curator is disabled.' }

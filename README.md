@@ -851,3 +851,18 @@ If the Ko-fi handle changes, update `NEXT_PUBLIC_DONATE_URL` in `.env` or `docke
 - Move uploaded images from local disk to durable object storage with lifecycle policies, signed URLs, and backup/restore coverage.
 - Add CSV import tools with dry-run validation, duplicate detection, and collection-scoped rollback notes.
 - Add richer observability for background workers, including moderation, backups, reminders, digests, health alerts, and failed push/email delivery.
+
+### Full instance migration
+
+Server Management → Backup & Restore → Full Instance Migration provides durable
+export requests, manifests, integrity validation, downloads and archive management.
+A host-side worker stops writers for coherent exports; fresh-install restore works
+without the web UI, stages and verifies the database/media, retains rollback state,
+and holds outbound services pending destination review. See the
+[server migration guide](docs/SERVER_MIGRATION.md) and
+[persistent-state inventory](docs/PERSISTENT_STATE.md) before server cutover.
+
+Run `npm run migration -- preflight` or `npm run migration -- worker` from the
+host checkout (Python 3.12+, Node/npm, Docker Compose). Routine backup format and
+`npm run backup` remain supported; rebuild the backup-worker image for the shared
+Python streaming engine introduced with full migrations.

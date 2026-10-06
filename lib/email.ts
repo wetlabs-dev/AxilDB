@@ -1,3 +1,4 @@
+import { assertMigrationOutboundReleased } from '@/lib/migration-hold'
 import nodemailer from 'nodemailer'
 
 type EmailMode = 'log' | 'smtp'
@@ -30,6 +31,7 @@ export function marketingUrl(path = '/') {
 }
 
 export async function sendEmail(message: OutboundEmail) {
+  await assertMigrationOutboundReleased()
   const mode = emailMode()
   const from = process.env.SMTP_FROM || 'AxilDB <no-reply@axildb.com>'
   const replyTo = message.replyTo || process.env.SMTP_REPLY_TO || undefined

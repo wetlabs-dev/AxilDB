@@ -1,3 +1,4 @@
+import { assertMigrationOutboundReleased } from '@/lib/migration-hold'
 import webPush from 'web-push'
 import type { PrismaClient, PushSubscription as DbPushSubscription } from '@prisma/client'
 import { appUrl } from '@/lib/email'
@@ -118,6 +119,7 @@ export async function sendPushToSubscription(
   notification: SafePushNotification,
   prisma: PrismaClient = defaultPrisma,
 ) {
+  await assertMigrationOutboundReleased()
   if (!configureWebPush() || !subscription.enabled || subscription.revokedAt) return { sent: false, skipped: true }
 
   try {

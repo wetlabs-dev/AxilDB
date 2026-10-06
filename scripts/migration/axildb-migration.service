@@ -1,0 +1,17 @@
+[Unit]
+Description=AxilDB host migration worker
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+# Adjust to the deployment checkout. Must be able to control Docker and own backups.
+WorkingDirectory=/opt/axildb
+ExecStart=/usr/bin/python3 scripts/migration/cli.py worker
+Restart=on-failure
+RestartSec=30
+UMask=0077
+# The journal makes interrupted operations fail closed until explicit recovery.
+
+[Install]
+WantedBy=multi-user.target

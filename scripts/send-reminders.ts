@@ -1,3 +1,4 @@
+import { migrationOutboundHeld } from '../lib/migration-hold'
 import { PrismaClient } from '@prisma/client'
 import { appUrl, sendEmail } from '../lib/email'
 import { reminderEmail } from '../lib/email-templates'
@@ -65,6 +66,7 @@ function pushTitle(category: string) {
 }
 
 async function main() {
+  if (await migrationOutboundHeld()) { console.info('Migration hold: worker paused.'); return }
   const now = new Date()
   const reminders = await prisma.reminder.findMany({
     where: {

@@ -1,3 +1,4 @@
+import { migrationOutboundHeld } from '../lib/migration-hold'
 import { spawn } from 'child_process'
 import { readFile } from 'fs/promises'
 import path from 'path'
@@ -16,7 +17,7 @@ function trimLog(log: string) {
 
 async function parseManifest(backupDir: string) {
   try {
-    const text = await readFile(path.join(process.cwd(), backupDir, 'manifest.txt'), 'utf8')
+    const text = await readFile(path.join(path.resolve(process.cwd(), backupDir), 'manifest.txt'), 'utf8')
     return Object.fromEntries(
       text
         .split('\n')
@@ -34,17 +35,17 @@ async function parseManifest(backupDir: string) {
 
 function runBackup(runId: string, backupDir: string) {
   return new Promise<{ code: number | null; output: string }>((resolve) => {
-    const child = spawn('sh', ['scripts/backup.sh', 'backups'], {
+    const child = spawn('sh', ['scripts/backup.sh', process.env.AXILDB_BACKUP_ROOT || 'backups'], {
       cwd: process.cwd(),
       env: { ...process.env, AXILDB_BACKUP_DIR: backupDir, AXILDB_BACKUP_RUN_ID: runId },
     })
     let output = ''
 
     child.stdout.on('data', (chunk) => {
-      output += chunk.toString()
+      output = trimLog(output + chunk.toString())
     })
     child.stderr.on('data', (chunk) => {
-      output += chunk.toString()
+      output = trimLog(output + chunk.toString())
     })
     child.on('error', (error) => {
       output += `\nBackup process error: ${error.message}\n`
@@ -64,11 +65,12 @@ async function processNextBackup() {
     return false
   }
 
-  const backupDir = `backups/axildb-${utcStamp()}-${run.id.slice(0, 8)}`
-  await prisma.backupRun.update({
-    where: { id: run.id },
+  const backupDir = path.join(process.env.AXILDB_BACKUP_ROOT || 'backups', `axildb-${utcStamp()}-${run.id.slice(0, 8)}`)
+  const claimed = await prisma.backupRun.updateMany({
+    where: { id: run.id, status: 'REQUESTED' },
     data: { status: 'RUNNING', startedAt: new Date(), backupPath: backupDir },
   })
+  if (claimed.count !== 1) return false
 
   console.log(`Starting sitewide backup ${run.id} into ${backupDir}`)
   const result = await runBackup(run.id, backupDir)
@@ -106,6 +108,7 @@ async function processNextBackup() {
 }
 
 async function main() {
+  if (await migrationOutboundHeld()) { console.info('Migration hold: worker paused.'); return }
   const once = process.argv.includes('--once')
   do {
     const didWork = await processNextBackup()

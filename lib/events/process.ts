@@ -1,3 +1,4 @@
+import { assertMigrationOutboundReleased } from '@/lib/migration-hold'
 import { Prisma, type DomainEvent, type PrismaClient } from '@prisma/client'
 import { consumersForEvent } from './consumers'
 
@@ -76,6 +77,7 @@ async function processEvent(prisma: PrismaClient, event: DomainEvent, maxAttempt
 }
 
 export async function processDomainEventBatch(prisma: PrismaClient, config = eventWorkerConfig()) {
+  await assertMigrationOutboundReleased()
   const recovered = await recoverStaleEventClaims(prisma, config.staleMinutes)
   const events = await claimEvents(prisma, config.batchSize)
   const counts = { claimed: events.length, processed: 0, failed: 0, deadLettered: 0, staleRecovered: recovered.count }

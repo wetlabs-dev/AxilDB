@@ -1,3 +1,4 @@
+import { migrationOutboundHeld } from '../lib/migration-hold'
 import { prisma } from '../lib/prisma'
 import { eventEngineEnabled } from '../lib/events/emit'
 import { processDomainEventBatch } from '../lib/events/process'
@@ -6,6 +7,7 @@ import { recordServerWorkerRun } from '../lib/server-incidents'
 const startedAt = new Date()
 
 async function main() {
+  if (await migrationOutboundHeld()) { console.info('Migration hold: worker paused.'); return }
   if (!eventEngineEnabled()) return
   try {
     const result = await processDomainEventBatch(prisma)

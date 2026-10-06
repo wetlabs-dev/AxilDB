@@ -191,8 +191,14 @@ export async function listBackupFolders(prisma: PrismaClient): Promise<BackupFol
     },
     orderBy: { requestedAt: 'desc' },
   })
-  const runByPath = new Map(runs.map((run) => [run.backupPath, run]))
-  const folders = await Promise.all(entries.filter((entry) => entry.isDirectory()).map(async (entry) => {
+  const runByPath = new Map<string | null, typeof runs[number]>()
+  const runByName = new Map<string, typeof runs[number]>()
+  for (const run of runs) {
+    if (!runByPath.has(run.backupPath)) runByPath.set(run.backupPath, run)
+    // Historical paths belong to the source host; folder names are portable.
+    if (run.backupPath && !runByName.has(path.basename(run.backupPath))) runByName.set(path.basename(run.backupPath), run)
+  }
+  const folders = await Promise.all(entries.filter((entry) => entry.isDirectory() && entry.name !== '.migration').map(async (entry) => {
     const backup = resolveBackupFolder(entry.name)
     const manifestResult = await readManifest(backup.absolutePath)
     const artifacts = await Promise.all(requiredFiles.map((file) => fileArtifact(backup.absolutePath, file)))
@@ -203,7 +209,7 @@ export async function listBackupFolders(prisma: PrismaClient): Promise<BackupFol
       if (!artifact.present) warnings.push(`${artifact.name} is missing.`)
       if (artifact.present && artifact.sizeBytes === 0) warnings.push(`${artifact.name} is empty.`)
     }
-    const linkedRun = runByPath.get(backup.relativePath) || null
+    const linkedRun = runByPath.get(backup.relativePath) || runByName.get(backup.name) || null
     return {
       name: entry.name,
       relativePath: backup.relativePath,
@@ -253,8 +259,8 @@ export async function backupCleanupPreview(prisma: PrismaClient, monthsInput: nu
   }
 }
 
-async function markBackupRunDeleted(prisma: PrismaClient, backupPath: string, userId: string, deletedAt: Date) {
-  const run = await prisma.backupRun.findFirst({ where: { backupPath }, orderBy: { requestedAt: 'desc' } })
+async function markBackupRunDeleted(prisma: PrismaClient, backupPath: string, userId: string, deletedAt: Date, linkedRunId?: string) {
+  const run = await prisma.backupRun.findFirst({ where: linkedRunId ? { id: linkedRunId } : { backupPath }, orderBy: { requestedAt: 'desc' } })
   if (!run) return null
   await prisma.backupRun.update({
     where: { id: run.id },
@@ -275,7 +281,7 @@ export async function deleteBackupFolder(prisma: PrismaClient, nameOrPath: strin
 
   const deletedAt = new Date()
   await rm(resolved.absolutePath, { recursive: true, force: false })
-  await markBackupRunDeleted(prisma, detail.relativePath, userId, deletedAt)
+  await markBackupRunDeleted(prisma, detail.relativePath, userId, deletedAt, detail.linkedRun?.id)
   return { name: detail.name, relativePath: detail.relativePath, sizeBytes: detail.sizeBytes }
 }
 
@@ -322,7 +328,7 @@ async function currentGitCommit() {
     const { stdout } = await execFileAsync('git', ['rev-parse', '--short', 'HEAD'], { cwd: process.cwd(), timeout: 3000 })
     return stdout.trim()
   } catch {
-    return 'unknown'
+    try { return (await readFile(path.join(process.cwd(), 'REVISION'), 'utf8')).trim() || 'unknown' } catch { return 'unknown' }
   }
 }
 

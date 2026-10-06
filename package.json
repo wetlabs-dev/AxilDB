@@ -55,7 +55,9 @@
     "check:memory": "tsx scripts/check-memory-footprint.ts",
     "check:taxonomic-authorities": "tsx scripts/check-taxonomic-authorities.ts",
     "check:plant-instance-merges": "node scripts/check-plant-instance-merges.mjs",
-    "check:plant-instance-lifecycle": "tsx scripts/check-plant-instance-lifecycle.ts"
+    "check:plant-instance-lifecycle": "tsx scripts/check-plant-instance-lifecycle.ts",
+    "migration": "python3 scripts/migration/cli.py",
+    "check:migration": "python3 -m unittest discover -s scripts/migration -p \"test_*.py\" && tsx scripts/check-migration.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

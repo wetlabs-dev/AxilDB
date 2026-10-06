@@ -1,3 +1,4 @@
+import { assertMigrationOutboundReleased } from '@/lib/migration-hold'
 import { Prisma, type PrismaClient } from '@prisma/client'
 import { readFile } from 'fs/promises'
 import path from 'path'
@@ -283,6 +284,7 @@ async function upsertReview(prisma: PrismaClient, input: {
 }
 
 export async function processPendingImageModeration(prisma: PrismaClient, limit = 10) {
+  await assertMigrationOutboundReleased()
   if (!imageModerationEnabled()) return { considered: 0, processed: 0, skipped: true }
   const photos = await prisma.photo.findMany({
     where: {

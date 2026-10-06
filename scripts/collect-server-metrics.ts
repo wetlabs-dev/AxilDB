@@ -1,3 +1,4 @@
+import { migrationOutboundHeld } from '../lib/migration-hold'
 import { ensureRecentServerMetricSnapshot, formatBytes } from '@/lib/server-metrics'
 import { sendServerHealthAlertEmails } from '@/lib/email-alerts'
 import { prisma } from '@/lib/prisma'
@@ -7,6 +8,7 @@ import { checkStaleTaxonomicAuthorityUrls } from '@/lib/taxonomic-authority-heal
 const startedAt = new Date()
 
 async function main() {
+  if (await migrationOutboundHeld()) { console.info('Migration hold: worker paused.'); return }
   const snapshot = await ensureRecentServerMetricSnapshot()
   const metrics = snapshot.metrics
   const diskPercent = metrics.disk.totalBytes ? ((metrics.disk.usedBytes / metrics.disk.totalBytes) * 100).toFixed(1) : '0.0'

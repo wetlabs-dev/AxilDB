@@ -655,7 +655,9 @@ export default async function ServerDashboard({
       </Card>
 
       <Card>
-        <h3 className="font-serif text-xl font-semibold">Backups</h3>
+        <h3 className="font-serif text-xl font-semibold">Backup &amp; Restore</h3>
+        <p className="mt-2 text-sm"><a className="font-semibold underline" href="/server/migrations">Full Instance Migration →</a> · Portable exports, verification, and fresh-install restore</p>
+        <h4 className="mt-4 font-semibold">Routine backups</h4>
         <p className="mt-2 text-sm text-stone-700">
           Sitewide backups include the Postgres database, uploaded images, generated labels, and a manifest. Collection-specific import/export is intentionally separate future work.
         </p>

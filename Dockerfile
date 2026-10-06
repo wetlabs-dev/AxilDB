@@ -7,11 +7,13 @@ RUN npm ci
 FROM node:22-alpine AS builder
 WORKDIR /app
 ARG NODE_BUILD_MEMORY_MB=2048
+ARG GIT_COMMIT=unknown
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_OPTIONS="--max-old-space-size=${NODE_BUILD_MEMORY_MB}"
-RUN apk add --no-cache openssl postgresql-client
+RUN apk add --no-cache openssl postgresql-client python3
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+RUN if [ "$GIT_COMMIT" != "unknown" ]; then printf '%s\n' "$GIT_COMMIT" > REVISION; elif [ ! -f REVISION ]; then printf 'unknown\n' > REVISION; fi
 RUN npx prisma generate
 RUN npm run build
 
@@ -22,6 +24,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 RUN apk add --no-cache openssl
+COPY --from=builder /app/REVISION ./REVISION
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./

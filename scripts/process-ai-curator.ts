@@ -1,3 +1,4 @@
+import { migrationOutboundHeld } from '../lib/migration-hold'
 import { PrismaClient } from '@prisma/client'
 import { processAiCuratorWake } from '../lib/ai-curator'
 import { recordServerWorkerRun } from '../lib/server-incidents'
@@ -6,6 +7,7 @@ const prisma = new PrismaClient()
 const startedAt = new Date()
 
 async function main() {
+  if (await migrationOutboundHeld()) { console.info('Migration hold: worker paused.'); return }
   const result = await processAiCuratorWake(prisma)
   await recordServerWorkerRun(prisma, {
     workerName: 'ai-curator',

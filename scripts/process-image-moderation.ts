@@ -1,3 +1,4 @@
+import { migrationOutboundHeld } from '../lib/migration-hold'
 import { PrismaClient } from '@prisma/client'
 import { processPendingImageModeration } from '../lib/image-moderation'
 import { recordServerWorkerRun } from '../lib/server-incidents'
@@ -6,6 +7,7 @@ const prisma = new PrismaClient()
 const startedAt = new Date()
 
 async function main() {
+  if (await migrationOutboundHeld()) { console.info('Migration hold: worker paused.'); return }
   const limit = Math.max(1, Math.min(50, Number(process.env.IMAGE_MODERATION_BATCH_SIZE || 10) || 10))
   const result = await processPendingImageModeration(prisma, limit)
   await recordServerWorkerRun(prisma, {
