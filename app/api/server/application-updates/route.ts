@@ -1,3 +1,4 @@
+import { validRequestOrigin } from '@/lib/request-origin'
 import { NextRequest, NextResponse } from 'next/server'
 import { setTimeout as delay } from 'node:timers/promises'
 import { getCurrentUser, requireServerAdmin, audit } from '@/lib/auth'
@@ -149,11 +150,7 @@ export async function GET(req: NextRequest) {
 }
 export async function POST(req: NextRequest) {
   try {
-    const expectedOrigin = new URL(req.url)
-    if (!req.headers.get('host'))
-      return json({ error: 'Invalid request origin.' }, 403)
-    expectedOrigin.host = req.headers.get('host')!
-    if (req.headers.get('origin') !== expectedOrigin.origin)
+    if (!validRequestOrigin(req))
       return json({ error: 'Invalid request origin.' }, 403)
     const user = await authorize()
     if (!req.headers.get('content-type')?.includes('application/json'))

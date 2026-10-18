@@ -35,6 +35,7 @@ try {
     env: {
       ...process.env,
       PORT: String(port),
+      NEXT_PUBLIC_APP_URL: 'https://updates.axildb.test',
       AXILDB_DEPLOY_AGENT_SOCKET: path.join(fixtureDirectory, 'agent.sock'),
       AXILDB_DEPLOY_AGENT_KEY_FILE: path.join(fixtureDirectory, 'agent.key'),
     },
@@ -115,6 +116,50 @@ try {
     data: { operation: 'CHECK_UPDATES' },
   })
   assert.equal(badOrigin.status(), 403)
+  // Proxy request is HTTPS externally, HTTP on Next's internal listener.
+  const proxied = await context.request.post(endpoint, {
+    headers: { origin: 'https://updates.axildb.test' },
+    data: { operation: 'CHECK_UPDATES', command: 'rejected' },
+  })
+  assert.equal(
+    proxied.status(),
+    400,
+    'trusted public origin passes CSRF and reaches payload validation'
+  )
+  const localTls = await context.request.post(endpoint, {
+    headers: {
+      origin: `https://localhost:${port}`,
+      'x-forwarded-proto': 'https',
+    },
+    data: { operation: 'CHECK_UPDATES', command: 'rejected' },
+  })
+  assert.equal(localTls.status(), 400, 'local TLS proxy origin passes CSRF')
+  const forgedHost = await context.request.post(endpoint, {
+    headers: {
+      origin: 'https://attacker.invalid',
+      'x-forwarded-host': 'attacker.invalid',
+      'x-forwarded-proto': 'https',
+    },
+    data: { operation: 'CHECK_UPDATES' },
+  })
+  assert.equal(forgedHost.status(), 403)
+  const careProxy = await context.request.post(`${base}/api/care-queue`, {
+    headers: { origin: 'https://updates.axildb.test' },
+    data: { action: 'invalid', fields: [] },
+  })
+  assert.equal(
+    careProxy.status(),
+    400,
+    'Care Queue shares the proxy-safe origin check'
+  )
+  const careForgery = await context.request.post(`${base}/api/care-queue`, {
+    headers: {
+      origin: 'https://attacker.invalid',
+      'x-forwarded-host': 'attacker.invalid',
+    },
+    data: { action: 'invalid', fields: [] },
+  })
+  assert.equal(careForgery.status(), 403)
   const injection = await context.request.post(endpoint, {
     headers: { origin: base },
     data: {

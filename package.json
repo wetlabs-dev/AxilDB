@@ -71,7 +71,8 @@
     "check:application-updates:ui": "node scripts/check-application-updates-ui.mjs",
     "check:care-cadences:redesign": "node scripts/check-care-cadences-redesign.mjs",
     "check:memory:resources": "tsx scripts/check-memory-resources.ts",
-    "check:memory:browser": "node scripts/check-memory-browser.mjs"
+    "check:memory:browser": "node scripts/check-memory-browser.mjs",
+    "check:request-origin": "tsx scripts/check-request-origin.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

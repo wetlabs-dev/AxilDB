@@ -1,3 +1,4 @@
+import { validRequestOrigin } from '@/lib/request-origin'
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { isRedirectError } from 'next/dist/client/components/redirect-error'
@@ -45,13 +46,8 @@ export async function POST(request: NextRequest) {
   let operationId: unknown
   let action: unknown
   try {
-    // Next may use its listening address (0.0.0.0) in request.url. Validate the
-    // exact scheme, host and port the browser requested, without forwarded hosts.
-    const expectedOrigin = new URL(request.url)
-    const requestHost = request.headers.get('host')
-    if (!requestHost) return json({ error: 'Invalid request origin.' }, 403)
-    expectedOrigin.host = requestHost
-    if (request.headers.get('origin') !== expectedOrigin.origin) return json({ error: 'Invalid request origin.' }, 403)
+    // Share the deployment API's proxy-aware, exact-origin CSRF validation.
+    if (!validRequestOrigin(request)) return json({ error: 'Invalid request origin.' }, 403)
     if (!(await getCurrentUser())) return json({ error: 'Sign in before recording care.', category: 'authorization' }, 401)
     if (!request.headers.get('content-type')?.includes('application/json')) return json({ error: 'Expected care action details.' }, 400)
     const input = await request.json()
