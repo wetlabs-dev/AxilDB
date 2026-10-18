@@ -1,3 +1,4 @@
+import { CareActionForm, CareQueueProvider } from '@/components/CareQueueOptimistic'
 import { randomUUID } from 'crypto'
 import Link from 'next/link'
 import { completeBulkCare } from '@/app/actions'
@@ -93,6 +94,7 @@ export default async function BulkCarePage({
     locationType: item.locationType,
   }))
 
+  const snapshotAt = Date.now()
   const [plants, queueItems] = locationIds.length
     ? await Promise.all([
         prisma.plantInstance.findMany({
@@ -157,6 +159,7 @@ export default async function BulkCarePage({
   const formId = 'bulk-care-form'
 
   return (
+    <CareQueueProvider collectionSlug={context.collection.slug} userId={context.user.id} initialItems={queueItems} snapshotAt={snapshotAt}>
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
@@ -206,7 +209,7 @@ export default async function BulkCarePage({
         </form>
       </Card>
 
-      <form id={formId} method={review ? 'post' : 'get'} action={review ? completeBulkCare : collectionPath(context.collection.slug, '/care/bulk')} className="space-y-4">
+      <CareActionForm actionName="bulk" optimistic={review} id={formId} method={review ? undefined : 'get'} action={review ? completeBulkCare : collectionPath(context.collection.slug, '/care/bulk')} className="space-y-4">
         <input type="hidden" name="collectionSlug" value={context.collection.slug} />
         <input type="hidden" name="locationId" value={locationId} />
         <input type="hidden" name="careType" value={careType} />
@@ -353,7 +356,8 @@ export default async function BulkCarePage({
             <Button className="w-full sm:w-auto">Review bulk care</Button>
           </>
         )}
-      </form>
+      </CareActionForm>
     </div>
+    </CareQueueProvider>
   )
 }

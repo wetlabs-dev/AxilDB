@@ -6,10 +6,12 @@ import { ChevronDown, ChevronRight } from 'lucide-react'
 import { startWorkflowRun } from '@/app/workflow-actions'
 import { CareQueueItemCard } from '@/components/CareQueueItemCard'
 import { Button } from '@/components/ui'
+import type { CareQueueItem } from '@/lib/care-queue'
 import type { CareQueueLocationSection } from '@/lib/care-queue-locations'
 
 export function CareQueueLocationBoard({
   sections,
+  visibleItems,
   collectionSlug,
   back,
   canAct,
@@ -19,6 +21,7 @@ export function CareQueueLocationBoard({
   bulkCarePath,
 }: {
   sections: CareQueueLocationSection[]
+  visibleItems: CareQueueItem[]
   collectionSlug: string
   back: string
   canAct: boolean
@@ -27,6 +30,7 @@ export function CareQueueLocationBoard({
   workflowTemplates: Array<{ id: string; name: string }>
   bulkCarePath: string
 }) {
+  const visibleByKey = new Map(visibleItems.map(item => [item.key, item]))
   const storageKey = `axildb:care-location-sections:${collectionSlug}`
   const initial = useMemo(() => Object.fromEntries(sections.map((section) => [section.id, true])), [sections])
   const [expanded, setExpanded] = useState<Record<string, boolean>>(initial)
@@ -58,13 +62,17 @@ export function CareQueueLocationBoard({
         <button type="button" className="rounded-md border border-stone-300 bg-white/70 px-2.5 py-1.5 font-semibold" onClick={() => setAll(true)}>Expand all</button>
         <button type="button" className="rounded-md border border-stone-300 bg-white/70 px-2.5 py-1.5 font-semibold" onClick={() => setAll(false)}>Collapse all</button>
       </div>
-      {sections.map((section) => {
+      {sections.map((originalSection) => {
+        const visible = originalSection.items.flatMap(item => visibleByKey.has(item.key) ? [visibleByKey.get(item.key)!] : [])
+        const counts = new Map<string, number>()
+        for (const item of visible) counts.set(item.taskType, (counts.get(item.taskType) || 0) + 1)
+        const section = { ...originalSection, items: visible, overdue: visible.filter(item => item.overdueDays > 0).length, typeCounts: [...counts].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([type, count]) => ({ type, count })) }
         const isExpanded = expanded[section.id] ?? true
         const bulkHref = section.locationId
           ? `${bulkCarePath}?locationId=${encodeURIComponent(section.locationId)}&includeNested=1`
           : bulkCarePath
         return (
-          <section key={section.id} className="rounded-lg border border-stone-200 bg-white/35 shadow-sm" style={{ marginLeft: section.depth ? `${Math.min(section.depth, 3) * 0.75}rem` : undefined }}>
+          <section data-care-section key={section.id} className="rounded-lg border border-stone-200 bg-white/35 shadow-sm" style={{ display: visible.length ? undefined : 'none', marginLeft: section.depth ? `${Math.min(section.depth, 3) * 0.75}rem` : undefined }}>
             <div className="flex flex-wrap items-center gap-2 border-b border-stone-200 px-3 py-2.5">
               <button
                 type="button"
@@ -109,8 +117,10 @@ export function CareQueueLocationBoard({
             </div>
             {isExpanded && (
               <div id={`care-location-${section.id}`} className="grid gap-3 p-3 xl:grid-cols-2">
-                {section.items.map((item) => (
-                  <CareQueueItemCard key={item.key} item={item} collectionSlug={collectionSlug} back={back} canAct={canAct} timezone={timezone} substrateVersions={substrateVersions} />
+                {originalSection.items.map((item) => (
+                  <div key={item.key} data-care-key={item.key} tabIndex={-1} aria-label={item.title} style={{ display: visibleByKey.has(item.key) ? undefined : 'none' }}>
+                  <CareQueueItemCard item={visibleByKey.get(item.key) || item} collectionSlug={collectionSlug} back={back} canAct={canAct} timezone={timezone} substrateVersions={substrateVersions} />
+                  </div>
                 ))}
               </div>
             )}

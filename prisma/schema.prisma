@@ -152,6 +152,7 @@ model TaxonomicAuthorityPublication {
 }
 
 model User {
+  careQueueOperations CareQueueOperation[]
   id                                           String                               @id @default(cuid())
   email                                        String                               @unique
   emailVerifiedAt                              DateTime?
@@ -247,6 +248,7 @@ model User {
 }
 
 model Collection {
+  careQueueOperations CareQueueOperation[]
   id                         String    @id @default(cuid())
   name                       String
   slug                       String    @unique
@@ -3958,4 +3960,20 @@ model PlantInstanceCareCadenceOverride {
   unit String?
   plantInstance PlantInstance @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
   @@unique([plantInstanceId, activity])
+}
+
+// Receipts commit atomically with care mutations and expire after seven days.
+model CareQueueOperation {
+  collectionId String
+  userId String
+  operationId String
+  action String
+  payloadHash String
+  result Json
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@id([collectionId, userId, operationId])
+  @@index([expiresAt])
 }

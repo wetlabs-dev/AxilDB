@@ -1,5 +1,6 @@
+import { conditionPriority, conditionFollowUpDays } from '@/lib/care-queue-view'
 import { cadenceActivities, cadenceDueAt, cadenceLabel, resolveCadence } from '@/lib/care-cadences'
-import type { PrismaClient } from '@prisma/client'
+import type { Prisma, PrismaClient } from '@prisma/client'
 import type { PlantImageFrame } from '@/components/PlantImage'
 import { resolveQuietDayShift } from '@/lib/care-scheduling'
 import { collectionPath } from '@/lib/collections'
@@ -109,26 +110,6 @@ function clampPriority(value: number) {
   return Math.max(0, Math.min(999, Math.round(value)))
 }
 
-function conditionPriority(severity?: string | null) {
-  if (severity === 'CRITICAL') return 220
-  if (severity === 'HIGH') return 180
-  if (severity === 'MODERATE') return 130
-  return 90
-}
-
-export function careTaskLabel(type: CareTaskType) {
-  if (type === 'PRUNE') return 'Prune'
-  if (type === 'WATER') return 'Water'
-  if (type === 'FERTILIZE') return 'Fertilize'
-  if (type === 'REPOT') return 'Repot'
-  if (type === 'PROPAGATION_CHECK') return 'Propagation check'
-  if (type === 'PEST_CHECK') return 'Pest check'
-  if (type === 'HEALTH_CHECK') return 'Health check'
-  if (type === 'BLOOM_CHECK') return 'Bloom check'
-  if (type === 'QUARANTINE_REVIEW') return 'Quarantine review'
-  if (type === 'TREATMENT') return 'Treatment'
-  return 'Reminder'
-}
 
 function taskPath(slug: string, instanceId?: string, bloomId?: string) {
   if (!instanceId) return collectionPath(slug, '/reminders')
@@ -145,7 +126,7 @@ function latestBy<T extends { plantInstanceId: string; eventType?: string; perfo
   return map
 }
 
-async function latestCareEvents(prisma: PrismaClient, collectionId: string, plantInstanceIds: string[]) {
+async function latestCareEvents(prisma: PrismaClient | Prisma.TransactionClient, collectionId: string, plantInstanceIds: string[]) {
   if (plantInstanceIds.length === 0) return []
 
   const latest = await prisma.plantCareEvent.groupBy({
@@ -177,7 +158,7 @@ async function latestCareEvents(prisma: PrismaClient, collectionId: string, plan
   })
 }
 
-async function latestInstancePhotos(prisma: PrismaClient, collectionId: string, plantInstanceIds: string[]) {
+async function latestInstancePhotos(prisma: PrismaClient | Prisma.TransactionClient, collectionId: string, plantInstanceIds: string[]) {
   if (plantInstanceIds.length === 0) return []
 
   const [latestCoverPhotos, latestPhotos] = await Promise.all([
@@ -245,7 +226,7 @@ function isSuppressed(adjustment: any, now: Date) {
 }
 
 export async function getCareQueue(
-  prisma: PrismaClient,
+  prisma: PrismaClient | Prisma.TransactionClient,
   {
     collectionId,
     collectionSlug,
@@ -477,7 +458,7 @@ export async function getCareQueue(
 
     const instanceConditions = conditions.filter((condition) => condition.plantInstanceId === instance.id)
     for (const condition of instanceConditions) {
-      const severityDays = condition.severity === 'CRITICAL' ? 1 : condition.severity === 'HIGH' ? 2 : condition.severity === 'MODERATE' ? 4 : 7
+      const severityDays = conditionFollowUpDays(condition.severity)
       const conditionTaskType = condition.category === 'PESTS' ? 'PEST_CHECK' : 'HEALTH_CHECK'
       const lastConditionCheck = conditionTaskType === 'PEST_CHECK'
         ? latestPestCheck.get(instance.id)?.performedAt
@@ -640,33 +621,7 @@ export async function getCareQueue(
   })
 }
 
-export function filterCareQueue(items: CareQueueItem[], filter?: string | null, now = new Date(), timezone?: string) {
-  const end = endOfDayInTimeZone(now, timezone)
-  if (!filter || filter === 'all') return items.filter((item) => !item.completedAt)
-  if (filter === 'today') return items.filter((item) => !item.completedAt && item.dueAt <= end)
-  if (filter === 'overdue') return items.filter((item) => !item.completedAt && item.dueAt < startOfDayInTimeZone(now, timezone))
-  if (filter === 'completed') return items.filter((item) => item.completedAt)
-  if (filter === 'water') return items.filter((item) => !item.completedAt && item.taskType === 'WATER')
-  if (filter === 'fertilize') return items.filter((item) => !item.completedAt && item.taskType === 'FERTILIZE')
-  if (filter === 'repot') return items.filter((item) => !item.completedAt && item.taskType === 'REPOT')
-  if (filter === 'treatment') return items.filter((item) => !item.completedAt && item.taskType === 'TREATMENT')
-  if (filter === 'propagation') return items.filter((item) => !item.completedAt && item.taskType === 'PROPAGATION_CHECK')
-  if (filter === 'health') return items.filter((item) => !item.completedAt && ['HEALTH_CHECK', 'QUARANTINE_REVIEW'].includes(item.taskType))
-  if (filter === 'pest') return items.filter((item) => !item.completedAt && item.taskType === 'PEST_CHECK')
-  if (filter === 'bloom') return items.filter((item) => !item.completedAt && item.taskType === 'BLOOM_CHECK')
-  if (filter === 'custom') return items.filter((item) => !item.completedAt && item.taskType === 'REMINDER')
-  return items.filter((item) => !item.completedAt)
-}
-
-export function careQueueSummary(items: CareQueueItem[], now = new Date(), timezone?: string) {
-  const active = items.filter((item) => !item.completedAt)
-  return {
-    today: active.filter((item) => item.dueAt <= endOfDayInTimeZone(now, timezone)).length,
-    overdue: active.filter((item) => item.dueAt < startOfDayInTimeZone(now, timezone)).length,
-    health: active.filter((item) => ['HEALTH_CHECK', 'QUARANTINE_REVIEW'].includes(item.taskType)).length,
-    propagation: active.filter((item) => item.taskType === 'PROPAGATION_CHECK').length,
-  }
-}
+export { filterCareQueue, careQueueSummary, careTaskLabel } from '@/lib/care-queue-view'
 
 export function nextReminderDate(reminder: { dueAt: Date; nextSendAt: Date | null; rrule: string | null }, timezone?: string) {
   const next = nextOccurrence(reminder.nextSendAt || reminder.dueAt, reminder.rrule, timezone)

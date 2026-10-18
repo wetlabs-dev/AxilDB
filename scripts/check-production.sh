@@ -10,6 +10,7 @@ npm run check:workflows
 echo "==> Checking care scheduling invariants"
 npm run check:care-scheduling
 npm run check:care-cadences
+npm run check:care-queue-optimistic
 
 echo "==> Checking measurement unit conversions"
 npm run check:units

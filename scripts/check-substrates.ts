@@ -43,7 +43,7 @@ assert(rankedPeperomiaStyleMixes[0]?.recipeVersionId === 'hoya-mix', 'Physical s
 const root = process.cwd()
 const actions = fs.readFileSync(path.join(root, 'app/substrate-actions.ts'), 'utf8')
 const substrateHelper = fs.readFileSync(path.join(root, 'lib/substrates.ts'), 'utf8')
-const careActions = fs.readFileSync(path.join(root, 'app/actions.ts'), 'utf8')
+const careActions = fs.readFileSync(path.join(root, 'lib/care-queue-mutations.ts'), 'utf8')
 const careQueue = fs.readFileSync(path.join(root, 'lib/care-queue.ts'), 'utf8')
 const schema = fs.readFileSync(path.join(root, 'prisma/schema.prisma'), 'utf8')
 const migration = fs.readFileSync(path.join(root, 'prisma/migrations/20260810190000_substrate_system/migration.sql'), 'utf8')

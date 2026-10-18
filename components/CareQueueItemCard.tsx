@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
+import { CareActionForm } from '@/components/CareQueueOptimistic'
 import { Bell, Bug, ChevronDown, Droplets, FlaskConical, Flower2, HeartPulse, Layers3, Sprout } from 'lucide-react'
 import {
   completeCareTask,
@@ -165,13 +166,13 @@ function ConditionActionsPanel({
         <h4 className="text-sm font-semibold text-stone-800">Condition actions</h4>
         {item.plantInstanceId && item.conditionId && <div className="mt-2 flex flex-wrap gap-2"><Link href={`/c/${encodeURIComponent(collectionSlug)}/treatments?plant=${encodeURIComponent(item.plantInstanceId)}&condition=${encodeURIComponent(item.conditionId)}`} className="rounded-md bg-[#2f6b45] px-3 py-2 text-sm font-semibold text-white">Start treatment plan</Link><Link href={`/c/${encodeURIComponent(collectionSlug)}/treatments/apply?plant=${encodeURIComponent(item.plantInstanceId)}&condition=${encodeURIComponent(item.conditionId)}`} className="rounded-md border border-[#8fa58f] bg-white px-3 py-2 text-sm font-semibold text-[#2f6b45]">Apply one-off treatment</Link></div>}
         <div className="mt-3 grid gap-3">
-          <form action={resolveConditionFromCareQueue} className="grid gap-2">
+          <CareActionForm actionName="resolve" item={item} action={resolveConditionFromCareQueue} className="grid gap-2">
             <ConditionHiddenFields item={item} collectionSlug={collectionSlug} back={back} />
             <TextArea label="Resolution note" name="resolutionNote" className="min-h-14" />
             <Button className="w-full bg-[#2f6b45] hover:bg-[#28593b]">Resolve condition</Button>
-          </form>
+          </CareActionForm>
 
-          <form action={updateConditionFromCareQueue} className="grid gap-2 border-t border-stone-200 pt-3">
+          <CareActionForm actionName="update" item={item} action={updateConditionFromCareQueue} className="grid gap-2 border-t border-stone-200 pt-3">
             <ConditionHiddenFields item={item} collectionSlug={collectionSlug} back={back} />
             <div className="grid gap-2 sm:grid-cols-3">
               <Select label="Severity" name="severity" defaultValue={item.condition.severity}>
@@ -193,9 +194,9 @@ function ConditionActionsPanel({
             </div>
             <TextArea label="Update note" name="updateNote" className="min-h-14" />
             <button className="rounded-md border border-[#c7d8bd] bg-white px-3 py-2 text-sm font-semibold text-[#2f6b45] shadow-sm hover:bg-[#f5fbf0]">Update condition</button>
-          </form>
+          </CareActionForm>
 
-          <form action={conditionStillNeedsAttentionFromCareQueue} className="grid gap-2 border-t border-stone-200 pt-3">
+          <CareActionForm actionName="attention" item={item} action={conditionStillNeedsAttentionFromCareQueue} className="grid gap-2 border-t border-stone-200 pt-3">
             <ConditionHiddenFields item={item} collectionSlug={collectionSlug} back={back} />
             <Field
               label="Next follow-up"
@@ -206,7 +207,7 @@ function ConditionActionsPanel({
             />
             <TextArea label="Attention note" name="attentionNote" className="min-h-14" />
             <button className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900 shadow-sm hover:bg-amber-100">Still needs attention</button>
-          </form>
+          </CareActionForm>
         </div>
       </div>
     </div>
@@ -235,7 +236,7 @@ function NormalCareDetails({
   )
   return (
     <>
-      <form action={completeCareTask} className="grid gap-2">
+      <CareActionForm actionName="complete" item={item} action={completeCareTask} className="grid gap-2">
         <CompleteCareHiddenFields item={item} collectionSlug={collectionSlug} back={back} />
         {item.taskType === 'FERTILIZE' && (
           <div className="rounded-md border border-[#d6dfc9] bg-[#f7f4e8]/80 p-3 text-sm text-stone-700">
@@ -273,18 +274,18 @@ function NormalCareDetails({
         )}
         {item.source === 'derived' && <TextArea label="Quick note" name="notes" className="min-h-14" />}
         <Button className="w-full">Complete</Button>
-      </form>
+      </CareActionForm>
       {item.plantInstanceId && item.source === 'derived' && (
         <div className="flex flex-wrap gap-2">
           {[1, 3, 7].map((days) => (
-            <form key={days} action={snoozeCareTask}>
+            <CareActionForm actionName="snooze" item={item} key={days} action={snoozeCareTask}>
               <input type="hidden" name="collectionSlug" value={collectionSlug} />
               <input type="hidden" name="back" value={back} />
               <input type="hidden" name="plantInstanceId" value={item.plantInstanceId} />
               <input type="hidden" name="taskType" value={item.taskType} />
               <input type="hidden" name="days" value={days} />
               <button className="rounded-md border border-stone-200 bg-white/70 px-2.5 py-1 text-xs font-medium text-stone-700">Snooze {days}d</button>
-            </form>
+            </CareActionForm>
           ))}
         </div>
       )}
@@ -303,12 +304,12 @@ function PropagationEstablishedAction({
 }) {
   if (item.taskType !== 'PROPAGATION_CHECK' || !item.plantInstanceId || (item.propagationAgeDays || 0) < 14) return null
   return (
-    <form action={markPropagationEstablished}>
+    <CareActionForm actionName="establish" item={item} action={markPropagationEstablished}>
       <input type="hidden" name="collectionSlug" value={collectionSlug} />
       <input type="hidden" name="back" value={back} />
       <input type="hidden" name="plantInstanceId" value={item.plantInstanceId} />
       <Button className="w-full bg-[#4f7f55] hover:bg-[#426d48]">Mark established</Button>
-    </form>
+    </CareActionForm>
   )
 }
 
@@ -354,12 +355,12 @@ function DesktopPrimaryAction({
   if (!canAct || item.completedAt || item.condition || item.taskType === 'REPOT') return null
   if (item.source === 'treatment-plan') return <Link href={item.href} className="rounded-md bg-[#2f6b45] px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#28593b]">Continue plan</Link>
   return (
-    <form action={completeCareTask}>
+    <CareActionForm actionName="complete" item={item} action={completeCareTask}>
       <CompleteCareHiddenFields item={item} collectionSlug={collectionSlug} back={back} />
       <button className="rounded-md bg-[#2f6b45] px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#28593b]">
         Complete
       </button>
-    </form>
+    </CareActionForm>
   )
 }
 

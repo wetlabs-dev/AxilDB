@@ -39,11 +39,8 @@ export type CollectionContext = {
   } | null
 }
 
-export function collectionPath(slug: string, path = '/') {
-  const normalized = path.startsWith('/') ? path : `/${path}`
-  if (normalized === '/') return `/c/${slug}`
-  return `/c/${slug}${normalized}`
-}
+export { collectionPath } from '@/lib/collection-path'
+import { collectionPath } from '@/lib/collection-path'
 
 export function legacyPathFromCollectionPath(pathname: string) {
   const match = pathname.match(/^\/c\/([^/]+)(\/.*)?$/)
