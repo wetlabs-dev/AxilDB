@@ -1,3 +1,5 @@
+import { imageProcessingSlots } from '@/lib/image-processing'
+import { RequestLimiter } from '@/lib/request-limiter'
 import { NextResponse } from 'next/server'
 import { mkdir, writeFile } from 'fs/promises'
 import path from 'path'
@@ -12,7 +14,7 @@ const DEFAULT_MODEL = 'gpt-5.4-mini'
 const MAX_IMAGE_BYTES = 6 * 1024 * 1024
 const MAX_STORED_IMAGE_DIMENSION = 2000
 const SUPPORTED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
-const requestLog = new Map<string, number[]>()
+const requestLimiter = new RequestLimiter()
 
 function trimmedString(value: unknown, maxLength = 500) {
   return String(value || '').trim().slice(0, maxLength)
@@ -52,14 +54,7 @@ function url(value: unknown) {
 }
 
 function rateLimit(userId: string) {
-  const now = Date.now()
-  const hour = 60 * 60 * 1000
-  const limit = Number(process.env.OPENAI_PLANT_ID_HOURLY_LIMIT || process.env.OPENAI_MAGIC_FILL_HOURLY_LIMIT || 10)
-  const recent = (requestLog.get(userId) || []).filter((timestamp) => now - timestamp < hour)
-  if (recent.length >= limit) return false
-  recent.push(now)
-  requestLog.set(userId, recent)
-  return true
+  return requestLimiter.allow(userId, Number(process.env.OPENAI_PLANT_ID_HOURLY_LIMIT || process.env.OPENAI_MAGIC_FILL_HOURLY_LIMIT || 10))
 }
 
 function normalizeAliases(value: unknown) {
@@ -131,7 +126,7 @@ async function saveIdentificationImage(input: {
   })
 }
 
-export async function POST(req: Request) {
+async function handlePost(req: Request) {
   let form: FormData
   try {
     form = await req.formData()
@@ -204,6 +199,7 @@ export async function POST(req: Request) {
     }
 
     const response = await fetch(OPENAI_RESPONSES_URL, {
+      signal: AbortSignal.timeout(120_000),
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -290,4 +286,10 @@ export async function POST(req: Request) {
     await audit(user, 'ERROR', 'AI_PLANT_IDENTIFICATION', null, 'Failed ID My Plant request', { model, error: message, hasImage }, collection.id)
     return NextResponse.json({ error: message }, { status: 500 })
   }
+}
+
+export async function POST(req: Request) {
+  const release = imageProcessingSlots.acquire()
+  if (!release) return NextResponse.json({ error: 'Image processing is busy. Please try again shortly.' }, { status: 429, headers: { 'Retry-After': '5' } })
+  try { return await handlePost(req) } finally { release() }
 }

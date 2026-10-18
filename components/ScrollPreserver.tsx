@@ -36,10 +36,12 @@ function restoreScroll(path: string, pathname: string) {
   const y = Number(saved)
   if (!Number.isFinite(y)) return
 
-  requestAnimationFrame(() => {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const frame = requestAnimationFrame(() => {
     window.scrollTo({ top: y, behavior: 'instant' })
-    window.setTimeout(() => window.scrollTo({ top: y, behavior: 'instant' }), 80)
+    timer = setTimeout(() => window.scrollTo({ top: y, behavior: 'instant' }), 80)
   })
+  return () => { cancelAnimationFrame(frame); clearTimeout(timer) }
 }
 
 export function ScrollPreserver() {
@@ -55,7 +57,7 @@ export function ScrollPreserver() {
   }, [])
 
   useEffect(() => {
-    restoreScroll(path, pathname)
+    return restoreScroll(path, pathname)
   }, [path, pathname])
 
   useEffect(() => {

@@ -1,3 +1,4 @@
+import { availableMemory } from '@/lib/process-memory'
 import type { PrismaClient } from '@prisma/client'
 import { appUrl, sendEmail } from '@/lib/email'
 import { renderBrandedEmail } from '@/lib/email-templates'
@@ -11,6 +12,7 @@ type ServerMetricSnapshot = {
   metrics: {
     memory: {
       systemTotalBytes: number
+      systemAvailableBytes?: number
       systemFreeBytes: number
     }
     disk: {
@@ -217,11 +219,11 @@ export function serverHealthAlertFromSnapshot(snapshot: ServerMetricSnapshot): S
     issues.push(`Disk free space is below 1 GB (${formatBytes(metrics.disk.freeBytes)} free).`)
   }
 
-  const memoryUsed = Math.max(0, metrics.memory.systemTotalBytes - metrics.memory.systemFreeBytes)
+  const memoryUsed = Math.max(0, metrics.memory.systemTotalBytes - availableMemory(metrics.memory))
   const memoryPercent = metrics.memory.systemTotalBytes ? (memoryUsed / metrics.memory.systemTotalBytes) * 100 : 0
   if (memoryPercent >= 95) poor = true
   if (memoryPercent >= 90) {
-    issues.push(`System memory usage is ${memoryPercent.toFixed(1)}% (${formatBytes(metrics.memory.systemFreeBytes)} free).`)
+    issues.push(`System memory usage is ${memoryPercent.toFixed(1)}% (${formatBytes(availableMemory(metrics.memory))} available).`)
   }
 
   if (!issues.length) return null

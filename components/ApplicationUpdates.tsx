@@ -51,10 +51,11 @@ export function ApplicationUpdates({ configured }: { configured: boolean }) {
   const job =
     status?.history.find((j) => j.id === jobId) ||
     (status?.activeJob?.id === jobId ? status.activeJob : null)
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (signal?: AbortSignal) => {
     const next: DeploymentStatus = await responseJson(
-      await fetch(endpoint, { cache: 'no-store' })
+      await fetch(endpoint, { cache: 'no-store', signal })
     )
+    if (signal?.aborted) return next
     setStatus(next)
     setReconnecting(false)
     if (next.checked) setUpdate(next.checked)
@@ -75,10 +76,11 @@ export function ApplicationUpdates({ configured }: { configured: boolean }) {
     if (!configured) return
     let stopped = false
     let timer: ReturnType<typeof setTimeout>
+    const controller = new AbortController()
     let delay = 3000
     async function poll() {
       try {
-        await refresh()
+        await refresh(controller.signal)
         delay = 3000
       } catch {
         if (!stopped) setReconnecting(true)
@@ -89,6 +91,7 @@ export function ApplicationUpdates({ configured }: { configured: boolean }) {
     void poll()
     return () => {
       stopped = true
+      controller.abort()
       clearTimeout(timer)
     }
   }, [configured, refresh])
@@ -105,6 +108,7 @@ export function ApplicationUpdates({ configured }: { configured: boolean }) {
     let stopped = false
     let stream: EventSource | undefined
     let timer: ReturnType<typeof setTimeout>
+    const controller = new AbortController()
     let delay = 1500
     function receive(batch: DeploymentEvent[]) {
       const fresh = batch.filter((e) => e.id > cursor.current)
@@ -131,7 +135,7 @@ export function ApplicationUpdates({ configured }: { configured: boolean }) {
           const result = await responseJson(
             await fetch(
               `${endpoint}?mode=events&jobId=${jobId}&after=${cursor.current}`,
-              { cache: 'no-store' }
+              { cache: 'no-store', signal: controller.signal }
             )
           )
           if (!stopped) receive(result.events)
@@ -148,6 +152,7 @@ export function ApplicationUpdates({ configured }: { configured: boolean }) {
     return () => {
       stopped = true
       stream?.close()
+      controller.abort()
       clearTimeout(timer)
     }
   }, [jobId])
@@ -157,8 +162,12 @@ export function ApplicationUpdates({ configured }: { configured: boolean }) {
   }, [events, autoScroll])
   useEffect(() => {
     if (job?.status !== 'RECOVERY_REQUIRED') return
+    const controller = new AbortController()
     let alive = true
-    fetch(`${endpoint}?mode=recovery&jobId=${job.id}`, { cache: 'no-store' })
+    fetch(`${endpoint}?mode=recovery&jobId=${job.id}`, {
+      cache: 'no-store',
+      signal: controller.signal,
+    })
       .then(responseJson)
       .then((value) => {
         if (alive) setRecovery(value)
@@ -166,6 +175,7 @@ export function ApplicationUpdates({ configured }: { configured: boolean }) {
       .catch(() => {})
     return () => {
       alive = false
+      controller.abort()
     }
   }, [job?.id, job?.status])
   async function operate(

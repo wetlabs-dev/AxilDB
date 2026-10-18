@@ -1,0 +1,622 @@
+[
+  {
+    "cycle": 0,
+    "browser": {
+      "Documents": 2,
+      "JSEventListeners": 2299,
+      "Nodes": 13486,
+      "JSHeapUsedSize": 14125088,
+      "JSHeapTotalSize": 16089088
+    },
+    "dom": {
+      "documents": 2,
+      "nodes": 13486,
+      "jsEventListeners": 2299
+    },
+    "liveElements": 8619,
+    "server": {
+      "rss": 281280512,
+      "heapTotal": 125419520,
+      "heapUsed": 121959568,
+      "external": 4440300,
+      "arrayBuffers": 491154,
+      "uptime": 784.888068958,
+      "resources": [
+        "PipeWrap",
+        "PipeWrap",
+        "TCPServerWrap",
+        "TCPSocketWrap",
+        "TCPSocketWrap"
+      ]
+    }
+  },
+  {
+    "cycle": 1,
+    "browser": {
+      "Documents": 2,
+      "JSEventListeners": 2299,
+      "Nodes": 13486,
+      "JSHeapUsedSize": 14421424,
+      "JSHeapTotalSize": 16351232
+    },
+    "dom": {
+      "documents": 2,
+      "nodes": 13486,
+      "jsEventListeners": 2299
+    },
+    "liveElements": 8619,
+    "server": {
+      "rss": 284966912,
+      "heapTotal": 125419520,
+      "heapUsed": 121965632,
+      "external": 4440300,
+      "arrayBuffers": 491154,
+      "uptime": 787.335224042,
+      "resources": [
+        "PipeWrap",
+        "PipeWrap",
+        "TCPServerWrap",
+        "TCPSocketWrap",
+        "TCPSocketWrap"
+      ]
+    }
+  },
+  {
+    "cycle": 2,
+    "browser": {
+      "Documents": 2,
+      "JSEventListeners": 2299,
+      "Nodes": 13486,
+      "JSHeapUsedSize": 14737100,
+      "JSHeapTotalSize": 16351232
+    },
+    "dom": {
+      "documents": 2,
+      "nodes": 13486,
+      "jsEventListeners": 2299
+    },
+    "liveElements": 8619,
+    "server": {
+      "rss": 285507584,
+      "heapTotal": 125419520,
+      "heapUsed": 121728008,
+      "external": 4440300,
+      "arrayBuffers": 491154,
+      "uptime": 789.754342125,
+      "resources": [
+        "PipeWrap",
+        "PipeWrap",
+        "TCPServerWrap",
+        "TCPSocketWrap",
+        "TCPSocketWrap"
+      ]
+    }
+  },
+  {
+    "cycle": 3,
+    "browser": {
+      "Documents": 2,
+      "JSEventListeners": 2299,
+      "Nodes": 13486,
+      "JSHeapUsedSize": 14836012,
+      "JSHeapTotalSize": 16089088
+    },
+    "dom": {
+      "documents": 2,
+      "nodes": 13486,
+      "jsEventListeners": 2299
+    },
+    "liveElements": 8619,
+    "server": {
+      "rss": 285048832,
+      "heapTotal": 125419520,
+      "heapUsed": 121761248,
+      "external": 4440300,
+      "arrayBuffers": 491154,
+      "uptime": 792.138833792,
+      "resources": [
+        "PipeWrap",
+        "PipeWrap",
+        "TCPServerWrap",
+        "TCPSocketWrap",
+        "TCPSocketWrap"
+      ]
+    }
+  },
+  {
+    "cycle": 4,
+    "browser": {
+      "Documents": 2,
+      "JSEventListeners": 2299,
+      "Nodes": 13486,
+      "JSHeapUsedSize": 15161336,
+      "JSHeapTotalSize": 16613376
+    },
+    "dom": {
+      "documents": 2,
+      "nodes": 13486,
+      "jsEventListeners": 2299
+    },
+    "liveElements": 8619,
+    "server": {
+      "rss": 285065216,
+      "heapTotal": 125681664,
+      "heapUsed": 121779104,
+      "external": 4440300,
+      "arrayBuffers": 491154,
+      "uptime": 794.452269125,
+      "resources": [
+        "PipeWrap",
+        "PipeWrap",
+        "TCPServerWrap",
+        "TCPSocketWrap",
+        "TCPSocketWrap"
+      ]
+    }
+  },
+  {
+    "cycle": 5,
+    "browser": {
+      "Documents": 2,
+      "JSEventListeners": 2299,
+      "Nodes": 13486,
+      "JSHeapUsedSize": 15246036,
+      "JSHeapTotalSize": 16613376
+    },
+    "dom": {
+      "documents": 2,
+      "nodes": 13486,
+      "jsEventListeners": 2299
+    },
+    "liveElements": 8619,
+    "server": {
+      "rss": 285556736,
+      "heapTotal": 125419520,
+      "heapUsed": 121743496,
+      "external": 4440300,
+      "arrayBuffers": 491154,
+      "uptime": 796.838075083,
+      "resources": [
+        "PipeWrap",
+        "PipeWrap",
+        "TCPServerWrap",
+        "TCPSocketWrap",
+        "TCPSocketWrap"
+      ]
+    }
+  },
+  {
+    "cycle": 6,
+    "browser": {
+      "Documents": 2,
+      "JSEventListeners": 2299,
+      "Nodes": 13486,
+      "JSHeapUsedSize": 15277116,
+      "JSHeapTotalSize": 16351232
+    },
+    "dom": {
+      "documents": 2,
+      "nodes": 13486,
+      "jsEventListeners": 2299
+    },
+    "liveElements": 8619,
+    "server": {
+      "rss": 285736960,
+      "heapTotal": 125419520,
+      "heapUsed": 121883688,
+      "external": 4440300,
+      "arrayBuffers": 491154,
+      "uptime": 799.236324292,
+      "resources": [
+        "PipeWrap",
+        "PipeWrap",
+        "TCPServerWrap",
+        "TCPSocketWrap",
+        "TCPSocketWrap"
+      ]
+    }
+  },
+  {
+    "cycle": 7,
+    "browser": {
+      "Documents": 2,
+      "JSEventListeners": 2299,
+      "Nodes": 13486,
+      "JSHeapUsedSize": 15425472,
+      "JSHeapTotalSize": 16613376
+    },
+    "dom": {
+      "documents": 2,
+      "nodes": 13486,
+      "jsEventListeners": 2299
+    },
+    "liveElements": 8619,
+    "server": {
+      "rss": 285769728,
+      "heapTotal": 125681664,
+      "heapUsed": 121926288,
+      "external": 4440300,
+      "arrayBuffers": 491154,
+      "uptime": 801.6171925,
+      "resources": [
+        "PipeWrap",
+        "PipeWrap",
+        "TCPServerWrap",
+        "TCPSocketWrap",
+        "TCPSocketWrap"
+      ]
+    }
+  },
+  {
+    "cycle": 8,
+    "browser": {
+      "Documents": 2,
+      "JSEventListeners": 2299,
+      "Nodes": 13486,
+      "JSHeapUsedSize": 15775456,
+      "JSHeapTotalSize": 17137664
+    },
+    "dom": {
+      "documents": 2,
+      "nodes": 13486,
+      "jsEventListeners": 2299
+    },
+    "liveElements": 8619,
+    "server": {
+      "rss": 286048256,
+      "heapTotal": 125419520,
+      "heapUsed": 121924848,
+      "external": 4440300,
+      "arrayBuffers": 491154,
+      "uptime": 803.9499795,
+      "resources": [
+        "PipeWrap",
+        "PipeWrap",
+        "TCPServerWrap",
+        "TCPSocketWrap",
+        "TCPSocketWrap"
+      ]
+    }
+  },
+  {
+    "cycle": 9,
+    "browser": {
+      "Documents": 2,
+      "JSEventListeners": 2299,
+      "Nodes": 13486,
+      "JSHeapUsedSize": 15815584,
+      "JSHeapTotalSize": 17399808
+    },
+    "dom": {
+      "documents": 2,
+      "nodes": 13486,
+      "jsEventListeners": 2299
+    },
+    "liveElements": 8619,
+    "server": {
+      "rss": 285868032,
+      "heapTotal": 125419520,
+      "heapUsed": 121956136,
+      "external": 4440300,
+      "arrayBuffers": 491154,
+      "uptime": 806.309551125,
+      "resources": [
+        "PipeWrap",
+        "PipeWrap",
+        "TCPServerWrap",
+        "TCPSocketWrap",
+        "TCPSocketWrap"
+      ]
+    }
+  },
+  {
+    "cycle": 10,
+    "browser": {
+      "Documents": 2,
+      "JSEventListeners": 2299,
+      "Nodes": 13486,
+      "JSHeapUsedSize": 15860104,
+      "JSHeapTotalSize": 16875520
+    },
+    "dom": {
+      "documents": 2,
+      "nodes": 13486,
+      "jsEventListeners": 2299
+    },
+    "liveElements": 8619,
+    "server": {
+      "rss": 286326784,
+      "heapTotal": 125419520,
+      "heapUsed": 121976848,
+      "external": 4440300,
+      "arrayBuffers": 491154,
+      "uptime": 808.649485375,
+      "resources": [
+        "PipeWrap",
+        "PipeWrap",
+        "TCPServerWrap",
+        "TCPSocketWrap",
+        "TCPSocketWrap"
+      ]
+    }
+  },
+  {
+    "cycle": 11,
+    "browser": {
+      "Documents": 2,
+      "JSEventListeners": 2299,
+      "Nodes": 13486,
+      "JSHeapUsedSize": 15892920,
+      "JSHeapTotalSize": 17137664
+    },
+    "dom": {
+      "documents": 2,
+      "nodes": 13486,
+      "jsEventListeners": 2299
+    },
+    "liveElements": 8619,
+    "server": {
+      "rss": 286670848,
+      "heapTotal": 125943808,
+      "heapUsed": 122005384,
+      "external": 4440300,
+      "arrayBuffers": 491154,
+      "uptime": 811.01901125,
+      "resources": [
+        "PipeWrap",
+        "PipeWrap",
+        "TCPServerWrap",
+        "TCPSocketWrap",
+        "TCPSocketWrap"
+      ]
+    }
+  },
+  {
+    "cycle": 12,
+    "browser": {
+      "Documents": 2,
+      "JSEventListeners": 2299,
+      "Nodes": 13486,
+      "JSHeapUsedSize": 15926036,
+      "JSHeapTotalSize": 17137664
+    },
+    "dom": {
+      "documents": 2,
+      "nodes": 13486,
+      "jsEventListeners": 2299
+    },
+    "liveElements": 8619,
+    "server": {
+      "rss": 286883840,
+      "heapTotal": 125681664,
+      "heapUsed": 122025984,
+      "external": 4440300,
+      "arrayBuffers": 491154,
+      "uptime": 813.355954,
+      "resources": [
+        "PipeWrap",
+        "PipeWrap",
+        "TCPServerWrap",
+        "TCPSocketWrap",
+        "TCPSocketWrap"
+      ]
+    }
+  },
+  {
+    "cycle": 13,
+    "browser": {
+      "Documents": 2,
+      "JSEventListeners": 2299,
+      "Nodes": 13486,
+      "JSHeapUsedSize": 15949756,
+      "JSHeapTotalSize": 17137664
+    },
+    "dom": {
+      "documents": 2,
+      "nodes": 13486,
+      "jsEventListeners": 2299
+    },
+    "liveElements": 8619,
+    "server": {
+      "rss": 286769152,
+      "heapTotal": 125943808,
+      "heapUsed": 122043352,
+      "external": 4440300,
+      "arrayBuffers": 491154,
+      "uptime": 815.690522292,
+      "resources": [
+        "PipeWrap",
+        "PipeWrap",
+        "TCPServerWrap",
+        "TCPSocketWrap",
+        "TCPSocketWrap"
+      ]
+    }
+  },
+  {
+    "cycle": 14,
+    "browser": {
+      "Documents": 2,
+      "JSEventListeners": 2299,
+      "Nodes": 13486,
+      "JSHeapUsedSize": 15965252,
+      "JSHeapTotalSize": 17137664
+    },
+    "dom": {
+      "documents": 2,
+      "nodes": 13486,
+      "jsEventListeners": 2299
+    },
+    "liveElements": 8619,
+    "server": {
+      "rss": 286867456,
+      "heapTotal": 125681664,
+      "heapUsed": 122060920,
+      "external": 4440300,
+      "arrayBuffers": 491154,
+      "uptime": 817.994508417,
+      "resources": [
+        "PipeWrap",
+        "PipeWrap",
+        "TCPServerWrap",
+        "TCPSocketWrap",
+        "TCPSocketWrap"
+      ]
+    }
+  },
+  {
+    "cycle": 15,
+    "browser": {
+      "Documents": 2,
+      "JSEventListeners": 2299,
+      "Nodes": 13486,
+      "JSHeapUsedSize": 15991364,
+      "JSHeapTotalSize": 17137664
+    },
+    "dom": {
+      "documents": 2,
+      "nodes": 13486,
+      "jsEventListeners": 2299
+    },
+    "liveElements": 8619,
+    "server": {
+      "rss": 287047680,
+      "heapTotal": 125681664,
+      "heapUsed": 122063328,
+      "external": 4440300,
+      "arrayBuffers": 491154,
+      "uptime": 820.318785417,
+      "resources": [
+        "PipeWrap",
+        "PipeWrap",
+        "TCPServerWrap",
+        "TCPSocketWrap",
+        "TCPSocketWrap"
+      ]
+    }
+  },
+  {
+    "cycle": 16,
+    "browser": {
+      "Documents": 2,
+      "JSEventListeners": 2299,
+      "Nodes": 13486,
+      "JSHeapUsedSize": 16024260,
+      "JSHeapTotalSize": 17399808
+    },
+    "dom": {
+      "documents": 2,
+      "nodes": 13486,
+      "jsEventListeners": 2299
+    },
+    "liveElements": 8619,
+    "server": {
+      "rss": 286932992,
+      "heapTotal": 126205952,
+      "heapUsed": 122108768,
+      "external": 4440300,
+      "arrayBuffers": 491154,
+      "uptime": 822.680332833,
+      "resources": [
+        "PipeWrap",
+        "PipeWrap",
+        "TCPServerWrap",
+        "TCPSocketWrap",
+        "TCPSocketWrap"
+      ]
+    }
+  },
+  {
+    "cycle": 17,
+    "browser": {
+      "Documents": 2,
+      "JSEventListeners": 2299,
+      "Nodes": 13486,
+      "JSHeapUsedSize": 16031724,
+      "JSHeapTotalSize": 17137664
+    },
+    "dom": {
+      "documents": 2,
+      "nodes": 13486,
+      "jsEventListeners": 2299
+    },
+    "liveElements": 8619,
+    "server": {
+      "rss": 287031296,
+      "heapTotal": 125681664,
+      "heapUsed": 122090672,
+      "external": 4440300,
+      "arrayBuffers": 491154,
+      "uptime": 825.056443875,
+      "resources": [
+        "PipeWrap",
+        "PipeWrap",
+        "TCPServerWrap",
+        "TCPSocketWrap",
+        "TCPSocketWrap"
+      ]
+    }
+  },
+  {
+    "cycle": 18,
+    "browser": {
+      "Documents": 2,
+      "JSEventListeners": 2299,
+      "Nodes": 13486,
+      "JSHeapUsedSize": 16040724,
+      "JSHeapTotalSize": 17399808
+    },
+    "dom": {
+      "documents": 2,
+      "nodes": 13486,
+      "jsEventListeners": 2299
+    },
+    "liveElements": 8619,
+    "server": {
+      "rss": 287047680,
+      "heapTotal": 125681664,
+      "heapUsed": 122101664,
+      "external": 4440300,
+      "arrayBuffers": 491154,
+      "uptime": 827.485565875,
+      "resources": [
+        "PipeWrap",
+        "PipeWrap",
+        "TCPServerWrap",
+        "TCPSocketWrap",
+        "TCPSocketWrap"
+      ]
+    }
+  },
+  {
+    "cycle": 19,
+    "browser": {
+      "Documents": 2,
+      "JSEventListeners": 2299,
+      "Nodes": 13486,
+      "JSHeapUsedSize": 16058304,
+      "JSHeapTotalSize": 17137664
+    },
+    "dom": {
+      "documents": 2,
+      "nodes": 13486,
+      "jsEventListeners": 2299
+    },
+    "liveElements": 8619,
+    "server": {
+      "rss": 287260672,
+      "heapTotal": 125943808,
+      "heapUsed": 122130528,
+      "external": 4440300,
+      "arrayBuffers": 491154,
+      "uptime": 829.906493667,
+      "resources": [
+        "PipeWrap",
+        "PipeWrap",
+        "TCPServerWrap",
+        "TCPSocketWrap",
+        "TCPSocketWrap"
+      ]
+    }
+  }
+]

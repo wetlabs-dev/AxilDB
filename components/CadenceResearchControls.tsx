@@ -11,11 +11,14 @@ import {
 
 export function CadenceResearchRefresh({ active }: { active: boolean }) {
   const router = useRouter()
+  const [pending, refresh] = useTransition()
   useEffect(() => {
     if (!active) return
-    const timer = setInterval(() => router.refresh(), 15000)
+    const timer = setInterval(() => {
+      if (!pending && !document.hidden) refresh(() => router.refresh())
+    }, 15000)
     return () => clearInterval(timer)
-  }, [active, router])
+  }, [active, pending, router])
   return null
 }
 export function CadenceResearchControls() {

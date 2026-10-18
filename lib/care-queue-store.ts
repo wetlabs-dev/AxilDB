@@ -13,6 +13,7 @@ export class CareQueueStore {
   private state: { items?: CareQueueItem[]; operations: CareOperation[]; notice: string; reconciliation: number } = { operations: [], reconciliation: 0, notice: '' }
   constructor(private transport: Transport) {}
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener) } }
+  get idle() { return this.listeners.size === 0 && this.state.operations.length === 0 && !this.reconciling }
   getSnapshot = () => this.state
   private publish() { this.state = { ...this.state, operations: [...this.state.operations] }; this.listeners.forEach(listener => listener()) }
   seed(items: CareQueueItem[], snapshotAt: number) {
@@ -86,7 +87,15 @@ export class CareQueueStore {
 const stores = new Map<string, CareQueueStore>()
 export function getCareQueueStore(collectionSlug: string, userId: string) {
   const key = `${userId}:${collectionSlug}`
-  let store = stores.get(key)
+  // SSR requests must not populate a browser-lifetime registry. Protect all pending
+  // and uncertain operations from eviction; inactive, clean snapshots can be rebuilt.
+  if (typeof window !== 'undefined') {
+    for (const [id, candidate] of stores) {
+      if (stores.size < 8) break
+      if (id !== key && candidate.idle) stores.delete(id)
+    }
+  }
+  let store = typeof window === 'undefined' ? undefined : stores.get(key)
   if (!store) {
     const query = new URLSearchParams({ collectionSlug })
     const read = async (url: string) => {
@@ -104,7 +113,7 @@ export function getCareQueueStore(collectionSlug: string, userId: string) {
       snapshot: () => read(`/api/care-queue?${query}`),
       committed: async operation => (await read(`/api/care-queue?${query}&operationId=${encodeURIComponent(operation.operationId)}`)).committed,
     })
-    stores.set(key, store)
+    if (typeof window !== 'undefined') stores.set(key, store)
   }
   return store
 }

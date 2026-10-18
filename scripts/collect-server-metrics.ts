@@ -1,3 +1,4 @@
+import { availableMemory } from '@/lib/process-memory'
 import { migrationOutboundHeld } from '../lib/migration-hold'
 import { ensureRecentServerMetricSnapshot, formatBytes } from '@/lib/server-metrics'
 import { sendServerHealthAlertEmails } from '@/lib/email-alerts'
@@ -12,7 +13,7 @@ async function main() {
   const snapshot = await ensureRecentServerMetricSnapshot()
   const metrics = snapshot.metrics
   const diskPercent = metrics.disk.totalBytes ? ((metrics.disk.usedBytes / metrics.disk.totalBytes) * 100).toFixed(1) : '0.0'
-  const memoryUsed = Math.max(0, metrics.memory.systemTotalBytes - metrics.memory.systemFreeBytes)
+  const memoryUsed = Math.max(0, metrics.memory.systemTotalBytes - availableMemory(metrics.memory))
   const memoryPercent = metrics.memory.systemTotalBytes ? ((memoryUsed / metrics.memory.systemTotalBytes) * 100).toFixed(1) : '0.0'
 
   console.log(
@@ -40,5 +41,5 @@ main().catch(async (error) => {
   }).catch((recordError) => {
     console.error('Failed to record metrics worker failure', recordError)
   })
-  process.exit(1)
-})
+  process.exitCode = 1
+}).finally(async () => { await prisma.$disconnect() })

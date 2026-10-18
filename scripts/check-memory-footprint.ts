@@ -108,7 +108,7 @@ async function main() {
   console.log('\nCurrent process memory')
   console.log(`  RSS: ${formatBytes(metrics.memory.rssBytes)} (peak ${formatBytes(metrics.memory.peakRssBytes)})`)
   console.log(`  Heap: ${formatBytes(metrics.memory.heapUsedBytes)} used of ${formatBytes(metrics.memory.heapTotalBytes)}`)
-  console.log(`  External + ArrayBuffers: ${formatBytes(metrics.memory.externalBytes + metrics.memory.arrayBuffersBytes)}`)
+  console.log(`  External (includes ArrayBuffers): ${formatBytes(metrics.memory.externalBytes)}`)
   if (metrics.memory.containerLimitBytes) {
     console.log(`  Container: ${formatBytes(metrics.memory.containerUsedBytes)} used of ${formatBytes(metrics.memory.containerLimitBytes)}`)
   }

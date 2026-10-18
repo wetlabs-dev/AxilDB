@@ -1,3 +1,4 @@
+import { availableMemory } from '@/lib/process-memory'
 import type { PrismaClient } from '@prisma/client'
 import type { ServerMetricSnapshot } from '@/lib/server-metrics'
 
@@ -24,7 +25,7 @@ function pct(value: number) {
 function memoryPercent(snapshot: ServerMetricSnapshot) {
   const total = snapshot.metrics.memory.systemTotalBytes
   if (!total) return 0
-  return pct(((total - snapshot.metrics.memory.systemFreeBytes) / total) * 100)
+  return pct(((total - availableMemory(snapshot.metrics.memory)) / total) * 100)
 }
 
 function diskPercent(snapshot: ServerMetricSnapshot) {

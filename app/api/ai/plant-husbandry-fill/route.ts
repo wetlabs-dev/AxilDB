@@ -1,3 +1,4 @@
+import { RequestLimiter } from '@/lib/request-limiter'
 import { cadenceResearchInstructions, cadenceRecommendationShape } from '@/lib/cadence-recommendations'
 import { cadenceResearchContext, persistCadenceRecommendations } from '@/lib/cadence-research'
 import { isServerAdminRole } from '@/lib/roles'
@@ -12,7 +13,7 @@ import { acceptedPlantName } from '@/lib/utils'
 
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses'
 const DEFAULT_MODEL = 'gpt-5.4-mini'
-const requestLog = new Map<string, number[]>()
+const requestLimiter = new RequestLimiter()
 
 function trimmedString(value: unknown, maxLength = 500) {
   return String(value || '').trim().slice(0, maxLength)
@@ -36,14 +37,7 @@ function extractJson(text: string) {
 }
 
 function rateLimit(userId: string) {
-  const now = Date.now()
-  const hour = 60 * 60 * 1000
-  const limit = Number(process.env.OPENAI_HUSBANDRY_FILL_HOURLY_LIMIT || process.env.OPENAI_MAGIC_FILL_HOURLY_LIMIT || 10)
-  const recent = (requestLog.get(userId) || []).filter((timestamp) => now - timestamp < hour)
-  if (recent.length >= limit) return false
-  recent.push(now)
-  requestLog.set(userId, recent)
-  return true
+  return requestLimiter.allow(userId, Number(process.env.OPENAI_HUSBANDRY_FILL_HOURLY_LIMIT || process.env.OPENAI_MAGIC_FILL_HOURLY_LIMIT || 10))
 }
 
 function normalizeFields(raw: any, model: string) {

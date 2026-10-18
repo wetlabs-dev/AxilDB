@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { setTimeout as delay } from 'node:timers/promises'
 import { getCurrentUser, requireServerAdmin, audit } from '@/lib/auth'
 import {
   callDeploymentAgent,
@@ -37,10 +38,15 @@ export async function GET(req: NextRequest) {
     if (mode !== 'status' && !/^[a-f0-9]{32}$/.test(id))
       return json({ error: 'Invalid deployment job.' }, 400)
     if (mode === 'status')
-      return json(await callDeploymentAgent('STATUS', user.id))
+      return json(await callDeploymentAgent('STATUS', user.id, {}, req.signal))
     if (mode === 'recovery')
       return json(
-        await callDeploymentAgent('RECOVERY_OPTIONS', user.id, { jobId: id })
+        await callDeploymentAgent(
+          'RECOVERY_OPTIONS',
+          user.id,
+          { jobId: id },
+          req.signal
+        )
       )
     const rawCursor =
       req.headers.get('last-event-id') ||
@@ -53,48 +59,83 @@ export async function GET(req: NextRequest) {
       return json({ error: 'Invalid event cursor.' }, 400)
     if (req.nextUrl.searchParams.get('stream') !== '1')
       return json(
-        await callDeploymentAgent('EVENTS', user.id, {
-          jobId: id,
-          after: cursor,
-        })
+        await callDeploymentAgent(
+          'EVENTS',
+          user.id,
+          {
+            jobId: id,
+            after: cursor,
+          },
+          req.signal
+        )
       )
     const encoder = new TextEncoder()
-    let stopped = false
-    const stream = new ReadableStream({
-      async start(controller) {
-        const deadline = Date.now() + 25_000
-        try {
-          while (!stopped && !req.signal.aborted && Date.now() < deadline) {
-            const result = await callDeploymentAgent<{
-              events: DeploymentEvent[]
-            }>('EVENTS', user.id, { jobId: id, after: cursor })
-            for (const event of result.events) {
-              if (stopped || req.signal.aborted) break
+    const cancellation = new AbortController()
+    const signal = AbortSignal.any([
+      req.signal,
+      cancellation.signal,
+      AbortSignal.timeout(25_000),
+    ])
+    let pending: DeploymentEvent[] = []
+    let polled = false
+    // Read only on demand: at most one bounded agent page plus one queued event.
+    // Durable events are replayed by cursor, so a slow reader loses no history.
+    const stream = new ReadableStream<Uint8Array>(
+      {
+        start(controller) {
+          signal.addEventListener(
+            'abort',
+            () => {
+              pending = []
+              try {
+                controller.close()
+              } catch {}
+            },
+            { once: true }
+          )
+        },
+        async pull(controller) {
+          try {
+            if (signal.aborted) {
+              controller.close()
+              return
+            }
+            if (!pending.length) {
+              if (polled) await delay(1500, undefined, { signal })
+              const result = await callDeploymentAgent<{
+                events: DeploymentEvent[]
+              }>('EVENTS', user.id, { jobId: id, after: cursor }, signal)
+              pending = result.events
+              polled = true
+            }
+            if (signal.aborted) {
+              pending = []
+              controller.close()
+              return
+            }
+            const event = pending.shift()
+            if (event) {
+              cursor = event.id
               controller.enqueue(
                 encoder.encode(
                   `id: ${event.id}\ndata: ${JSON.stringify(event)}\n\n`
                 )
               )
-              cursor = event.id
-            }
-            if (!stopped && !req.signal.aborted)
-              controller.enqueue(encoder.encode(': connected\n\n'))
-            await new Promise((resolve) => setTimeout(resolve, 1500))
-          }
-        } catch {
-          /* Restart is expected. Client reconnects and replays durable events. */
-        } finally {
-          if (!stopped) {
+            } else controller.enqueue(encoder.encode(': connected\n\n'))
+          } catch {
+            pending = []
             try {
               controller.close()
             } catch {}
           }
-        }
+        },
+        cancel() {
+          cancellation.abort()
+          pending = []
+        },
       },
-      cancel() {
-        stopped = true
-      },
-    })
+      { highWaterMark: 1 }
+    )
     return new Response(stream, {
       headers: {
         'Content-Type': 'text/event-stream',

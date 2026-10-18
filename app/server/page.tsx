@@ -1,3 +1,4 @@
+import { availableMemory, processMemory } from '@/lib/process-memory'
 import Link from 'next/link'
 import { approveAiAccessRequest, approveCollectionRequest, rejectAiAccessRequest, rejectCollectionRequest } from '@/app/collection-actions'
 import {
@@ -268,11 +269,12 @@ export default async function ServerDashboard({
     orderBy: { detectedAt: 'asc' },
     take: 50,
   })
+  const liveMemory = processMemory()
   const latest = latestSnapshot.metrics
   const diskUsedPercent = latest.disk.totalBytes ? (latest.disk.usedBytes / latest.disk.totalBytes) * 100 : 0
-  const memoryUsedBytes = Math.max(0, latest.memory.systemTotalBytes - latest.memory.systemFreeBytes)
+  const memoryUsedBytes = Math.max(0, latest.memory.systemTotalBytes - availableMemory(latest.memory))
   const memoryUsedPercent = latest.memory.systemTotalBytes ? (memoryUsedBytes / latest.memory.systemTotalBytes) * 100 : 0
-  const heapUsedPercent = latest.memory.heapTotalBytes ? (latest.memory.heapUsedBytes / latest.memory.heapTotalBytes) * 100 : 0
+  const heapUsedPercent = liveMemory.heapTotalBytes ? (liveMemory.heapUsedBytes / liveMemory.heapTotalBytes) * 100 : 0
   const containerMemoryPercent = latest.memory.containerLimitBytes ? (latest.memory.containerUsedBytes / latest.memory.containerLimitBytes) * 100 : 0
   const previous = metricHistory.length > 1 ? metricHistory[metricHistory.length - 2] : null
   const elapsedSeconds = previous ? Math.max(1, (latestSnapshot.capturedAt.getTime() - previous.capturedAt.getTime()) / 1000) : 1
@@ -493,7 +495,7 @@ export default async function ServerDashboard({
             subtitle={`${formatBytes(memoryUsedBytes)} used of ${formatBytes(latest.memory.systemTotalBytes)}`}
             points={metricHistory.map((snapshot) => ({
               at: snapshot.capturedAt,
-              value: snapshot.metrics.memory.systemTotalBytes ? ((snapshot.metrics.memory.systemTotalBytes - snapshot.metrics.memory.systemFreeBytes) / snapshot.metrics.memory.systemTotalBytes) * 100 : 0,
+              value: snapshot.metrics.memory.systemTotalBytes ? ((snapshot.metrics.memory.systemTotalBytes - availableMemory(snapshot.metrics.memory)) / snapshot.metrics.memory.systemTotalBytes) * 100 : 0,
             }))}
             markers={markersFor('memory')}
           />
@@ -526,27 +528,27 @@ export default async function ServerDashboard({
 
       <Card>
         <h3 className="font-serif text-xl font-semibold">Memory Diagnostics</h3>
-        <p className="mt-1 text-sm text-stone-600">Current Node process memory, peak RSS, external buffers, and container memory when available.</p>
+        <p className="mt-1 text-sm text-stone-600">Live web server process memory (PID {liveMemory.processId}). ArrayBuffers are included in external memory. Container figures below belong to the saved sample ({latest.memory.processSource || 'source unknown'}), not necessarily the web server.</p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-md border border-stone-200 bg-white/50 p-3">
             <p className="text-sm text-stone-600">Node RSS</p>
-            <p className="mt-1 font-mono text-lg font-semibold">{formatBytes(latest.memory.rssBytes)}</p>
-            <p className="text-xs text-stone-500">Peak {formatBytes(latest.memory.peakRssBytes || 0)}</p>
+            <p className="mt-1 font-mono text-lg font-semibold">{formatBytes(liveMemory.rssBytes)}</p>
+            <p className="text-xs text-stone-500">Peak {formatBytes(liveMemory.peakRssBytes || 0)}</p>
           </div>
           <div className="rounded-md border border-stone-200 bg-white/50 p-3">
             <p className="text-sm text-stone-600">V8 heap</p>
             <p className="mt-1 font-mono text-lg font-semibold">{heapUsedPercent.toFixed(1)}%</p>
-            <p className="text-xs text-stone-500">{formatBytes(latest.memory.heapUsedBytes)} of {formatBytes(latest.memory.heapTotalBytes)}</p>
+            <p className="text-xs text-stone-500">{formatBytes(liveMemory.heapUsedBytes)} of {formatBytes(liveMemory.heapTotalBytes)}</p>
           </div>
           <div className="rounded-md border border-stone-200 bg-white/50 p-3">
             <p className="text-sm text-stone-600">External memory</p>
-            <p className="mt-1 font-mono text-lg font-semibold">{formatBytes((latest.memory.externalBytes || 0) + (latest.memory.arrayBuffersBytes || 0))}</p>
+            <p className="mt-1 font-mono text-lg font-semibold">{formatBytes(liveMemory.externalBytes || 0)}</p>
             <p className="text-xs text-stone-500">Includes native buffers and ArrayBuffers</p>
           </div>
           <div className="rounded-md border border-stone-200 bg-white/50 p-3">
             <p className="text-sm text-stone-600">Container memory</p>
             <p className="mt-1 font-mono text-lg font-semibold">{latest.memory.containerLimitBytes ? `${containerMemoryPercent.toFixed(1)}%` : 'Unavailable'}</p>
-            <p className="text-xs text-stone-500">{latest.memory.containerLimitBytes ? `${formatBytes(latest.memory.containerUsedBytes)} of ${formatBytes(latest.memory.containerLimitBytes)}` : `Process uptime ${latest.memory.processUptimeSeconds || 0}s`}</p>
+            <p className="text-xs text-stone-500">{latest.memory.containerLimitBytes ? `${formatBytes(latest.memory.containerUsedBytes)} of ${formatBytes(latest.memory.containerLimitBytes)}` : `Process uptime ${liveMemory.processUptimeSeconds || 0}s`}</p>
           </div>
         </div>
       </Card>

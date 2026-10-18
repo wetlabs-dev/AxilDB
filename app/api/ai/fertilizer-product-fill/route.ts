@@ -1,10 +1,11 @@
+import { RequestLimiter } from '@/lib/request-limiter'
 import { NextResponse } from 'next/server'
 import { audit } from '@/lib/auth'
 import { recordAiUsage, requireAiFeatureAccess, tokenUsage } from '@/lib/ai-usage'
 
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses'
 const DEFAULT_MODEL = 'gpt-5.4-mini'
-const requestLog = new Map<string, number[]>()
+const requestLimiter = new RequestLimiter()
 
 const nutrientFields = [
   'nitrogen',
@@ -53,14 +54,7 @@ function extractJson(text: string) {
 }
 
 function rateLimit(userId: string) {
-  const now = Date.now()
-  const hour = 60 * 60 * 1000
-  const limit = Number(process.env.OPENAI_FERTILIZER_FILL_HOURLY_LIMIT || process.env.OPENAI_MAGIC_FILL_HOURLY_LIMIT || 10)
-  const recent = (requestLog.get(userId) || []).filter((timestamp) => now - timestamp < hour)
-  if (recent.length >= limit) return false
-  recent.push(now)
-  requestLog.set(userId, recent)
-  return true
+  return requestLimiter.allow(userId, Number(process.env.OPENAI_FERTILIZER_FILL_HOURLY_LIMIT || process.env.OPENAI_MAGIC_FILL_HOURLY_LIMIT || 10))
 }
 
 function normalizeDraft(raw: any, model: string) {
@@ -152,6 +146,7 @@ export async function POST(req: Request) {
 
   try {
     const response = await fetch(OPENAI_RESPONSES_URL, {
+      signal: AbortSignal.timeout(120_000),
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,

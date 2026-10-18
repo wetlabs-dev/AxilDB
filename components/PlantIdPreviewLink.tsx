@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { BoundedCache } from '@/lib/bounded-cache'
 import { createPortal } from 'react-dom'
 import { Leaf } from 'lucide-react'
 import { type ReactNode, useEffect, useId, useRef, useState } from 'react'
@@ -18,18 +19,21 @@ type Position = {
   left: number
 }
 
-const previewCache = new Map<string, Promise<PlantInstancePreview | null>>()
+const previewCache = new BoundedCache<Promise<PlantInstancePreview | null>>(128, 60_000)
 
 function fetchPreview(collectionSlug: string, plant: string) {
   const key = `${collectionSlug}:${plant}`
   const existing = previewCache.get(key)
   if (existing) return existing
-  const request = fetch(`/api/plant-preview?collection=${encodeURIComponent(collectionSlug)}&plant=${encodeURIComponent(plant)}`)
+  const request = fetch(`/api/plant-preview?collection=${encodeURIComponent(collectionSlug)}&plant=${encodeURIComponent(plant)}`, { signal: AbortSignal.timeout(15_000) })
     .then(async (response) => {
       if (response.status === 404) return null
       if (!response.ok) throw new Error('Unable to load plant preview.')
       return await response.json() as PlantInstancePreview
     })
+  void request.catch(() => {
+    if (previewCache.get(key) === request) previewCache.delete(key)
+  })
   previewCache.set(key, request)
   return request
 }
@@ -222,6 +226,8 @@ export function PlantIdPreviewLink({
       })
       .catch(() => setState('error'))
   }
+
+  useEffect(() => () => clearCloseTimer(), [])
 
   useEffect(() => {
     if (!open) return

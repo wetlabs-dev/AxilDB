@@ -205,10 +205,15 @@ CREATE TABLE IF NOT EXISTS limits(actor TEXT, operation TEXT, timestamp REAL);
             )
         os.chmod(self.path, 0o600)
 
+    @contextlib.contextmanager
     def connect(self):
         db = sqlite3.connect(self.path, timeout=30)
         db.row_factory = sqlite3.Row
-        return db
+        try:
+            with db:
+                yield db
+        finally:
+            db.close()
 
     def meta(self, key, value=None):
         with self.connect() as db:

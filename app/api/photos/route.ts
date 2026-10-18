@@ -1,3 +1,4 @@
+import { imageProcessingSlots } from '@/lib/image-processing'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { audit } from '@/lib/auth'
@@ -40,7 +41,7 @@ function framingFromForm(form: FormData) {
   }
 }
 
-export async function POST(req: Request) {
+async function handlePost(req: Request) {
   let form: FormData
   try {
     form = await req.formData()
@@ -203,4 +204,10 @@ export async function POST(req: Request) {
     if (workflowRunStepId) await prisma.workflowRunStep.updateMany({ where: { id: workflowRunStepId, collectionId: collection.id, status: 'COMPLETING' }, data: { status: 'PENDING' } })
     return redirectBack(req, back, 'upload_failed')
   }
+}
+
+export async function POST(req: Request) {
+  const release = imageProcessingSlots.acquire()
+  if (!release) return NextResponse.json({ error: 'Image processing is busy. Please try again shortly.' }, { status: 429, headers: { 'Retry-After': '5' } })
+  try { return await handlePost(req) } finally { release() }
 }

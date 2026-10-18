@@ -2,7 +2,7 @@ import { cadenceRecommendationShape, cadenceResearchInstructions } from '@/lib/c
 import { cadenceResearchContext, missingActivities, persistCadenceRecommendations, researchDefinitionInclude } from '@/lib/cadence-research'
 import { assertMigrationOutboundReleased } from '@/lib/migration-hold'
 import { createHash, randomUUID } from 'crypto'
-import { Prisma, type PrismaClient } from '@prisma/client'
+import { Prisma, PrismaClient } from '@prisma/client'
 import { evaluatePlantDefinitionCompletenessBatch, isUsableRepresentativeImagePhoto, UNUSABLE_REPRESENTATIVE_IMAGE_STATUSES, type CompletenessCategoryKey, type PlantDefinitionCompleteness } from '@/lib/plant-definition-completeness'
 import { tokenUsage } from '@/lib/ai-usage'
 import { aiUsageCostDollars, estimateAiCostDollars } from '@/lib/ai-pricing'
@@ -1415,11 +1415,19 @@ async function budgetSnapshot(prisma: PrismaClient, settings: any) {
 
 export async function processAiCuratorWake(prisma: PrismaClient) {
   await assertMigrationOutboundReleased()
-  return prisma.$transaction(async lock => {
-    const [held] = await lock.$queryRaw<Array<{ acquired: boolean }>>`SELECT pg_try_advisory_xact_lock(186104, 2) AS acquired`
+  // Session locks need an owned, single-connection client. Never hold a transaction
+  // (or borrow a pooled session lock) across provider HTTP calls.
+  const url = new URL(process.env.DATABASE_URL!)
+  url.searchParams.set('connection_limit', '1')
+  const lock = new PrismaClient({ datasources: { db: { url: url.toString() } } })
+  try {
+    const [held] = await lock.$queryRaw<Array<{ acquired: boolean }>>`SELECT pg_try_advisory_lock(186104, 2) AS acquired`
     if (!held.acquired) return { status: 'WAITING' as const, processed: 0, created: 0, summary: 'Another AI Curator worker is active.' }
-    return processAiCuratorWakeLocked(prisma)
-  }, { timeout: 900_000 })
+    return await processAiCuratorWakeLocked(prisma)
+  } finally {
+    // Disconnect releases the session lock even when provider calls or DB queries fail.
+    await lock.$disconnect()
+  }
 }
 
 async function processAiCuratorWakeLocked(prisma: PrismaClient) {

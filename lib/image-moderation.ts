@@ -164,6 +164,7 @@ async function runOpenAiModeration(photoPath: string): Promise<{ result: ImageSa
   const model = process.env.OPENAI_IMAGE_MODERATION_MODEL || DEFAULT_IMAGE_MODERATION_MODEL
   const dataUrl = await imageDataUrl(photoPath)
   const response = await fetch(OPENAI_MODERATIONS_URL, {
+    signal: AbortSignal.timeout(120_000),
     method: 'POST',
     headers: {
       Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
@@ -212,6 +213,7 @@ async function runPlantImageCheck(photoPath: string, options: { requestCaption: 
       ].join(' ')
     : 'Do not include suggestedCaption because the uploader already provided a caption.'
   const response = await fetch(OPENAI_RESPONSES_URL, {
+    signal: AbortSignal.timeout(120_000),
     method: 'POST',
     headers: {
       Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,

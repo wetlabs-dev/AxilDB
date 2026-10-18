@@ -312,6 +312,13 @@ async function main() {
     let providerCalls = 0
     globalThis.fetch = async (_url, init) => {
       providerCalls++
+      const locks = await db.$queryRaw<Array<{ xact_start: Date | null }>>`
+        SELECT activity.xact_start FROM pg_locks locks
+        JOIN pg_stat_activity activity ON activity.pid = locks.pid
+        WHERE locks.locktype = 'advisory' AND locks.classid = 186104
+          AND locks.objid = 2 AND locks.granted`
+      assert.equal(locks.length, 1, 'worker owns its serialization lock')
+      assert.equal(locks[0].xact_start, null, 'no transaction held across provider HTTP')
       const payload = JSON.parse(String(init?.body))
       assert.ok(payload.instructions.includes('Never fabricate citations'))
       assert.ok(JSON.stringify(payload).includes('GENERAL_INSPECTION'))
@@ -347,6 +354,10 @@ async function main() {
     })
     await processAiCuratorWake(db)
     assert.equal(providerCalls, 1)
+    const [remainingLock] = await db.$queryRaw<Array<{ count: bigint }>>`
+      SELECT count(*) FROM pg_locks WHERE locktype = 'advisory'
+        AND classid = 186104 AND objid = 2 AND granted`
+    assert.equal(Number(remainingLock.count), 0, 'owned session closes after worker wake')
     const completedJob = await db.aiCuratorJob.findUniqueOrThrow({
       where: { id: job.id },
     })

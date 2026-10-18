@@ -1,5 +1,5 @@
 import fs from 'fs/promises'
-import os from 'os'
+import { processMemory, systemMemory } from '@/lib/process-memory'
 import path from 'path'
 import { prisma } from '@/lib/prisma'
 import { evaluateServerIncidents } from '@/lib/server-incidents'
@@ -31,6 +31,9 @@ export type ServerMetricData = {
     externalBytes: number
     arrayBuffersBytes: number
     systemTotalBytes: number
+    systemAvailableBytes?: number
+    processId?: number
+    processSource?: string
     systemFreeBytes: number
     containerUsedBytes: number
     containerLimitBytes: number
@@ -261,23 +264,16 @@ export async function collectServerMetricData(): Promise<ServerMetricData> {
     collectionUsages(),
     cgroupMemoryBytes(),
   ])
-  const memory = process.memoryUsage()
-  const resourceUsage = process.resourceUsage()
+  const hostMemory = await systemMemory()
   const categorizedBytes = uploadBytes + dbBytes + appBytes
 
   return {
     memory: {
-      rssBytes: memory.rss,
-      peakRssBytes: resourceUsage.maxRSS > 0 ? resourceUsage.maxRSS * 1024 : 0,
-      heapUsedBytes: memory.heapUsed,
-      heapTotalBytes: memory.heapTotal,
-      externalBytes: memory.external,
-      arrayBuffersBytes: memory.arrayBuffers,
-      systemTotalBytes: os.totalmem(),
-      systemFreeBytes: os.freemem(),
+      ...processMemory(),
+      ...hostMemory,
+      processSource: process.argv.some(arg => arg.includes('collect-server-metrics')) ? 'metrics worker' : 'web server',
       containerUsedBytes: cgroupMemory.containerUsedBytes,
       containerLimitBytes: cgroupMemory.containerLimitBytes,
-      processUptimeSeconds: Math.round(process.uptime()),
     },
     disk: {
       ...disk,
@@ -313,7 +309,8 @@ export async function serverMetricHistory() {
   const cutoff = new Date(Date.now() - HISTORY_HOURS * 60 * 60 * 1000)
   const rows = await prisma.serverMetricSnapshot.findMany({
     where: { capturedAt: { gte: cutoff } },
-    orderBy: { capturedAt: 'asc' },
+    orderBy: { capturedAt: 'desc' },
+    take: 1000,
   })
-  return rows.filter((row) => isMetricData(row.metrics)) as ServerMetricSnapshot[]
+  return rows.reverse().filter((row) => isMetricData(row.metrics)) as ServerMetricSnapshot[]
 }

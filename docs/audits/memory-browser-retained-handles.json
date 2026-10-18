@@ -1,0 +1,188 @@
+[
+  {
+    "cycle": 0,
+    "browser": {
+      "Documents": 2,
+      "JSEventListeners": 2435,
+      "Nodes": 14814,
+      "JSHeapUsedSize": 14130780,
+      "JSHeapTotalSize": 15302656
+    },
+    "dom": {
+      "documents": 2,
+      "nodes": 14814,
+      "jsEventListeners": 2435
+    },
+    "liveElements": 8619,
+    "server": {
+      "rss": 344588288,
+      "heapTotal": 125157376,
+      "heapUsed": 121240592,
+      "external": 4440300,
+      "arrayBuffers": 491154,
+      "uptime": 181.853968125,
+      "resources": [
+        "PipeWrap",
+        "PipeWrap",
+        "TCPServerWrap",
+        "TCPSocketWrap",
+        "TCPSocketWrap"
+      ]
+    }
+  },
+  {
+    "cycle": 1,
+    "browser": {
+      "Documents": 2,
+      "JSEventListeners": 2616,
+      "Nodes": 16324,
+      "JSHeapUsedSize": 14695336,
+      "JSHeapTotalSize": 16089088
+    },
+    "dom": {
+      "documents": 2,
+      "nodes": 16324,
+      "jsEventListeners": 2616
+    },
+    "liveElements": 8619,
+    "server": {
+      "rss": 344637440,
+      "heapTotal": 125157376,
+      "heapUsed": 121243288,
+      "external": 4440300,
+      "arrayBuffers": 491154,
+      "uptime": 184.337298125,
+      "resources": [
+        "PipeWrap",
+        "PipeWrap",
+        "TCPServerWrap",
+        "TCPSocketWrap",
+        "TCPSocketWrap"
+      ]
+    }
+  },
+  {
+    "cycle": 2,
+    "browser": {
+      "Documents": 2,
+      "JSEventListeners": 2841,
+      "Nodes": 17998,
+      "JSHeapUsedSize": 15180844,
+      "JSHeapTotalSize": 16875520
+    },
+    "dom": {
+      "documents": 2,
+      "nodes": 17998,
+      "jsEventListeners": 2841
+    },
+    "liveElements": 8619,
+    "server": {
+      "rss": 355909632,
+      "heapTotal": 124895232,
+      "heapUsed": 121142520,
+      "external": 4440300,
+      "arrayBuffers": 491154,
+      "uptime": 186.74558175,
+      "resources": [
+        "PipeWrap",
+        "PipeWrap",
+        "TCPServerWrap",
+        "TCPSocketWrap",
+        "TCPSocketWrap"
+      ]
+    }
+  },
+  {
+    "cycle": 3,
+    "browser": {
+      "Documents": 2,
+      "JSEventListeners": 3110,
+      "Nodes": 19836,
+      "JSHeapUsedSize": 15448384,
+      "JSHeapTotalSize": 16351232
+    },
+    "dom": {
+      "documents": 2,
+      "nodes": 19836,
+      "jsEventListeners": 3110
+    },
+    "liveElements": 8619,
+    "server": {
+      "rss": 356024320,
+      "heapTotal": 125157376,
+      "heapUsed": 121253560,
+      "external": 4440300,
+      "arrayBuffers": 491154,
+      "uptime": 189.200659958,
+      "resources": [
+        "PipeWrap",
+        "PipeWrap",
+        "TCPServerWrap",
+        "TCPSocketWrap",
+        "TCPSocketWrap"
+      ]
+    }
+  },
+  {
+    "cycle": 4,
+    "browser": {
+      "Documents": 2,
+      "JSEventListeners": 3379,
+      "Nodes": 21674,
+      "JSHeapUsedSize": 15992276,
+      "JSHeapTotalSize": 17399808
+    },
+    "dom": {
+      "documents": 2,
+      "nodes": 21674,
+      "jsEventListeners": 3379
+    },
+    "liveElements": 8619,
+    "server": {
+      "rss": 356089856,
+      "heapTotal": 125157376,
+      "heapUsed": 121290592,
+      "external": 4440300,
+      "arrayBuffers": 491154,
+      "uptime": 191.648976833,
+      "resources": [
+        "PipeWrap",
+        "PipeWrap",
+        "TCPServerWrap",
+        "TCPSocketWrap",
+        "TCPSocketWrap"
+      ]
+    }
+  },
+  {
+    "cycle": 5,
+    "browser": {
+      "Documents": 2,
+      "JSEventListeners": 3648,
+      "Nodes": 23512,
+      "JSHeapUsedSize": 16273216,
+      "JSHeapTotalSize": 17399808
+    },
+    "dom": {
+      "documents": 2,
+      "nodes": 23512,
+      "jsEventListeners": 3648
+    },
+    "liveElements": 8619,
+    "server": {
+      "rss": 356171776,
+      "heapTotal": 125157376,
+      "heapUsed": 121272304,
+      "external": 4440300,
+      "arrayBuffers": 491154,
+      "uptime": 194.04925575,
+      "resources": [
+        "PipeWrap",
+        "PipeWrap",
+        "TCPServerWrap",
+        "TCPSocketWrap",
+        "TCPSocketWrap"
+      ]
+    }
+  }
+]

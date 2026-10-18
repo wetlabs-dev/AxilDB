@@ -870,3 +870,5 @@ Run `npm run migration -- preflight` or `npm run migration -- worker` from the
 host checkout (Python 3.12+, Node/npm, Docker Compose). Routine backup format and
 `npm run backup` remain supported; rebuild the backup-worker image for the shared
 Python streaming engine introduced with full migrations.
+
+Memory ownership and safe staging profiling are documented in [Memory management](docs/MEMORY_MANAGEMENT.md), with measured findings in the [October 2026 audit](docs/audits/MEMORY_AUDIT_2026-10-18.md).

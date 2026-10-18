@@ -1,0 +1,212 @@
+[
+  {
+    "cycle": 0,
+    "before": {
+      "rss": 119537664,
+      "heapTotal": 10108928,
+      "heapUsed": 5564656,
+      "external": 2018632,
+      "arrayBuffers": 16619
+    },
+    "after": {
+      "rss": 250380288,
+      "heapTotal": 9584640,
+      "heapUsed": 4846824,
+      "external": 2037562,
+      "arrayBuffers": 16619
+    },
+    "uptime": 0.24825825,
+    "resources": [],
+    "cache": {
+      "memory": {
+        "current": 0,
+        "high": 91,
+        "max": 50
+      },
+      "files": {
+        "current": 0,
+        "max": 20
+      },
+      "items": {
+        "current": 78,
+        "max": 100
+      }
+    },
+    "concurrency": 14
+  },
+  {
+    "cycle": 1,
+    "before": {
+      "rss": 250380288,
+      "heapTotal": 9584640,
+      "heapUsed": 4850752,
+      "external": 2037562,
+      "arrayBuffers": 16619
+    },
+    "after": {
+      "rss": 251412480,
+      "heapTotal": 9584640,
+      "heapUsed": 4939056,
+      "external": 2037562,
+      "arrayBuffers": 16619
+    },
+    "uptime": 0.433486292,
+    "resources": [],
+    "cache": {
+      "memory": {
+        "current": 0,
+        "high": 91,
+        "max": 50
+      },
+      "files": {
+        "current": 0,
+        "max": 20
+      },
+      "items": {
+        "current": 100,
+        "max": 100
+      }
+    },
+    "concurrency": 14
+  },
+  {
+    "cycle": 2,
+    "before": {
+      "rss": 251412480,
+      "heapTotal": 9584640,
+      "heapUsed": 4939552,
+      "external": 2037562,
+      "arrayBuffers": 16619
+    },
+    "after": {
+      "rss": 251625472,
+      "heapTotal": 9584640,
+      "heapUsed": 4940376,
+      "external": 2037562,
+      "arrayBuffers": 16619
+    },
+    "uptime": 0.618359667,
+    "resources": [],
+    "cache": {
+      "memory": {
+        "current": 0,
+        "high": 91,
+        "max": 50
+      },
+      "files": {
+        "current": 0,
+        "max": 20
+      },
+      "items": {
+        "current": 100,
+        "max": 100
+      }
+    },
+    "concurrency": 14
+  },
+  {
+    "cycle": 3,
+    "before": {
+      "rss": 251625472,
+      "heapTotal": 9584640,
+      "heapUsed": 4940872,
+      "external": 2037562,
+      "arrayBuffers": 16619
+    },
+    "after": {
+      "rss": 252231680,
+      "heapTotal": 9584640,
+      "heapUsed": 4947912,
+      "external": 2037562,
+      "arrayBuffers": 16619
+    },
+    "uptime": 0.807520375,
+    "resources": [],
+    "cache": {
+      "memory": {
+        "current": 0,
+        "high": 91,
+        "max": 50
+      },
+      "files": {
+        "current": 0,
+        "max": 20
+      },
+      "items": {
+        "current": 100,
+        "max": 100
+      }
+    },
+    "concurrency": 14
+  },
+  {
+    "cycle": 4,
+    "before": {
+      "rss": 252231680,
+      "heapTotal": 9584640,
+      "heapUsed": 4948408,
+      "external": 2037562,
+      "arrayBuffers": 16619
+    },
+    "after": {
+      "rss": 252444672,
+      "heapTotal": 7225344,
+      "heapUsed": 4948944,
+      "external": 2037562,
+      "arrayBuffers": 16619
+    },
+    "uptime": 0.99092125,
+    "resources": [],
+    "cache": {
+      "memory": {
+        "current": 0,
+        "high": 91,
+        "max": 50
+      },
+      "files": {
+        "current": 0,
+        "max": 20
+      },
+      "items": {
+        "current": 100,
+        "max": 100
+      }
+    },
+    "concurrency": 14
+  },
+  {
+    "cycle": 5,
+    "before": {
+      "rss": 252444672,
+      "heapTotal": 7225344,
+      "heapUsed": 4949360,
+      "external": 2037562,
+      "arrayBuffers": 16619
+    },
+    "after": {
+      "rss": 254328832,
+      "heapTotal": 6438912,
+      "heapUsed": 4949776,
+      "external": 2037562,
+      "arrayBuffers": 16619
+    },
+    "uptime": 1.1785905,
+    "resources": [],
+    "cache": {
+      "memory": {
+        "current": 0,
+        "high": 91,
+        "max": 50
+      },
+      "files": {
+        "current": 0,
+        "max": 20
+      },
+      "items": {
+        "current": 100,
+        "max": 100
+      }
+    },
+    "concurrency": 14
+  }
+]

@@ -86,7 +86,8 @@ export function deploymentAgentConfigured() {
 export async function callDeploymentAgent<T>(
   operation: DeploymentOperation,
   actor: string,
-  fields: Record<string, unknown> = {}
+  fields: Record<string, unknown> = {},
+  signal?: AbortSignal
 ): Promise<T> {
   if (!deploymentAgentConfigured())
     throw new Error(
@@ -109,6 +110,7 @@ export async function callDeploymentAgent<T>(
   return new Promise((resolve, reject) => {
     const req = request(
       {
+        signal,
         socketPath: process.env.AXILDB_DEPLOY_AGENT_SOCKET!,
         path: '/v1/operations',
         method: 'POST',
@@ -122,6 +124,7 @@ export async function callDeploymentAgent<T>(
       },
       (res) => {
         let data = ''
+        res.on('error', reject)
         res.setEncoding('utf8')
         res.on('data', (chunk) => {
           data += chunk

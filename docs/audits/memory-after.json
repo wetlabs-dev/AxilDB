@@ -1,0 +1,57 @@
+[
+  {
+    "cycle": 1,
+    "entries": 128,
+    "rss": 132448256,
+    "heapTotal": 37863424,
+    "heapUsed": 23405416,
+    "external": 1828878,
+    "arrayBuffers": 16619,
+    "uptime": 0.141620625,
+    "resources": []
+  },
+  {
+    "cycle": 2,
+    "entries": 128,
+    "rss": 136822784,
+    "heapTotal": 42057728,
+    "heapUsed": 23400736,
+    "external": 1828918,
+    "arrayBuffers": 16619,
+    "uptime": 0.148647625,
+    "resources": []
+  },
+  {
+    "cycle": 3,
+    "entries": 128,
+    "rss": 136888320,
+    "heapTotal": 41533440,
+    "heapUsed": 23408648,
+    "external": 1828918,
+    "arrayBuffers": 16619,
+    "uptime": 0.155159458,
+    "resources": []
+  },
+  {
+    "cycle": 4,
+    "entries": 128,
+    "rss": 136888320,
+    "heapTotal": 41533440,
+    "heapUsed": 23407992,
+    "external": 1828918,
+    "arrayBuffers": 16619,
+    "uptime": 0.161926833,
+    "resources": []
+  },
+  {
+    "cycle": 5,
+    "entries": 128,
+    "rss": 137592832,
+    "heapTotal": 42844160,
+    "heapUsed": 23408312,
+    "external": 1828918,
+    "arrayBuffers": 16619,
+    "uptime": 0.168259458,
+    "resources": []
+  }
+]
