@@ -269,6 +269,13 @@ export const manualSections: ManualSection[] = [
     purpose: 'Husbandry guides capture care guidance for plant definitions and allow specimen-specific local overrides where one plant needs special treatment.',
     howTo: [
       'Open a plant definition and use the Husbandry panel to create, link, fork, edit, or delete a guide.',
+      'Use Care Cadences on the definition husbandry or edit page to schedule watering, fertilizing, repotting, pest inspection, general inspection, and optional pruning. Choose days, weeks, months, or years; each activity may be left unscheduled.',
+      'Instances inherit current definition cadences automatically. On an instance, choose Custom cadence or Disabled for this instance, or Reset to definition to remove that override and restore live inheritance.',
+      'Scheduled fertilizing requires an active recipe assigned directly to the plant definition, including for instance overrides. Disable all dependent fertilizing cadences before removing or archiving its final recipe.',
+      'Next due dates use the latest completed matching care activity plus the effective cadence. Early completion starts a fresh interval; cadence edits never rewrite history. Calendar months and years clamp to the last valid day of the target month in your timezone.',
+      'Without completed care, Next due is Not established. Set an initial next due in the cadence editor or use Care Schedule Sync without inventing a care event. Existing quiet-day and snooze rules still apply to the Care Queue.',
+      'Use Edit Instance and View Plant Definition in the specimen header to reach the existing editor and the definition husbandry page.',
+
       'Use Magic Fill husbandry to draft the structured care guide with one AI call when AI is enabled. Existing guide data triggers the shared Fill Missing Only / Replace All Fields choice, and generated husbandry is previewed before you explicitly save it.',
       'Edit individual husbandry fields inline with the edit controls next to each field instead of working through one large form.',
       'Use Fertilizers from the Admin sidebar to define collection-scoped fertilizer products and recipes, then assign a recipe and cadence from the plant definition husbandry panel.',

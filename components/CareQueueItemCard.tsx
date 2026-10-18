@@ -36,6 +36,7 @@ function taskIcon(task: CareQueueItem) {
 }
 
 function careTaskLabel(type: CareQueueItem['taskType']) {
+  if (type === 'PRUNE') return 'Prune'
   if (type === 'WATER') return 'Water'
   if (type === 'FERTILIZE') return 'Fertilize'
   if (type === 'REPOT') return 'Repot'

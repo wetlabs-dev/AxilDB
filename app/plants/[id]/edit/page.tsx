@@ -1,3 +1,4 @@
+import { CareCadences } from '@/components/CareCadences'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { deletePhoto, deletePlantDefinition, deletePlantHusbandryGuide, forkPlantHusbandryGuide, linkPlantHusbandryGuide, mergePlantDefinition, nominatePlantDefinitionForValidation, savePlantHusbandryGuide, savePlantHusbandryGuideField, setPlantDefinitionTypeImageFromInstancePhoto, updatePhotoCaption, updatePhotoFraming, updatePlantDefinition } from '@/app/actions'
@@ -67,6 +68,7 @@ export default async function EditPlant({
     prisma.plantDefinition.findFirstOrThrow({
       where: { id, collectionId: collection.id },
       include: {
+        careCadences: true,
         taxonomicAuthority: { include: { publications: true } },
         automaticTaxonomicAuthority: true,
         taxonomicAuthorityMatches: { include: { taxonomicAuthority: true }, orderBy: { priority: 'desc' } },
@@ -172,6 +174,7 @@ export default async function EditPlant({
   return (
     <div className="space-y-6">
       <h2 className="text-3xl font-bold">Edit Plant Definition</h2>
+      <CareCadences collectionSlug={collection.slug} definitionId={plant.id} defaults={plant.careCadences} canEdit={true} hasRecipe={Boolean(plant.husbandryGuide?.fertilizerRecipe?.active)} recipeHref={collectionPath(collection.slug, `/plants/${plant.id}/edit#husbandry`)} />
       <PlantDefinitionReadinessPanel result={completeness} baseHref={collectionPath(collection.slug, `/plants/${plant.id}/edit`)} />
       <Card id="definition-fields">
         <form action={updatePlantDefinition} className="grid max-w-6xl gap-x-3 gap-y-2 lg:grid-cols-4">

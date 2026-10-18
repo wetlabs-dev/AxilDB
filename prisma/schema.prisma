@@ -1395,6 +1395,7 @@ model FollowNotification {
 }
 
 model PlantDefinition {
+  careCadences PlantDefinitionCareCadence[]
   id                          String             @id @default(cuid())
   collectionId                String?
   genus                       String
@@ -2497,6 +2498,7 @@ model PlantAlias {
 }
 
 model PlantInstance {
+  careCadenceOverrides PlantInstanceCareCadenceOverride[]
   id                            String    @id @default(cuid())
   collectionId                  String?
   plantDefinitionId             String
@@ -3935,4 +3937,25 @@ model ReminderDelivery {
   @@index([userId])
   @@index([status])
   @@index([sentAt])
+}
+
+model PlantDefinitionCareCadence {
+  id String @id @default(cuid())
+  plantDefinitionId String
+  activity String
+  interval Int
+  unit String
+  plantDefinition PlantDefinition @relation(fields: [plantDefinitionId], references: [id], onDelete: Cascade)
+  @@unique([plantDefinitionId, activity])
+}
+
+model PlantInstanceCareCadenceOverride {
+  id String @id @default(cuid())
+  plantInstanceId String
+  activity String
+  mode String
+  interval Int?
+  unit String?
+  plantInstance PlantInstance @relation(fields: [plantInstanceId], references: [id], onDelete: Cascade)
+  @@unique([plantInstanceId, activity])
 }

@@ -131,7 +131,7 @@ App route: `/plants`
 - Use Share Definition when you have an active collection connection and want another collection to review and copy the definition.
 - Use Plant Tags to maintain reusable collection traits, then select multiple active tags in a Plant Definition form. Search can match any or all selected tags.
 - Review Magic Fill tag suggestions separately from taxonomy fields. Existing tags and proposed private tags require explicit selection, and proposed tags require a second creation confirmation.
-- Use the readiness filters to review complete, mostly complete, sparse, provisional, or category-specific incomplete definitions. Sort by completeness to work through the highest-value gaps first.
+- Use the search, genus, species, authority, readiness, missing-data, tag, and Curator filters to narrow Plant Definitions in place. Species choices are limited to the selected genus, and a blank Species remains distinct from sp.
 - When AI Curator is enabled for the collection, use Research Now on a plant definition card to queue high-priority background research for that definition.
 - Filter by AI Suggested or Waiting for Human to find definitions with prepared Curator suggestions or blocked Curator jobs.
 - Open a definition to expand Definition Readiness. Its grouped checklist links directly to taxonomy, images, husbandry, substrate, tags, and validation sections.
@@ -221,8 +221,8 @@ App route: `/instances`
 - Use Mark established on Seed, Corm, or Tissue culture specimens once they reach normal growth, choosing Mother or Propagation as the new current lifecycle type.
 - Use the plant ID refresh action when the current ID no longer matches the generated ID format after type or date changes.
 - Use Green Thumb assist for one focused care question per specimen per day when AI is enabled for the collection.
-- Filter the instance list by Location, with optional inclusion of child locations.
-- Filter instances by a Plant Tag inherited from their linked definition; specimen cards and plant ID previews show a compact inherited tag row.
+- Filter the instance list by Genus and Species from the linked plant definition, Location with optional child locations, Plant Tag, lifecycle type, and substrate details.
+- Plant Tag filters are inherited from linked definitions; specimen cards and plant ID previews show a compact inherited tag row.
 - Review quarantine status from the specimen page. Gardeners can start, update, release, or cancel quarantine records manually.
 - Managers can check two or more active specimens with the same definition and choose Pot together, or start from an individual specimen. Review the survivor, current metadata sources, merge date, reason, and irreversible confirmation before completing the merge.
 
@@ -327,6 +327,12 @@ App route: `/plants`
 ### How It Is Used
 
 - Open a plant definition and use the Husbandry panel to create, link, fork, edit, or delete a guide.
+- Use Care Cadences on the definition husbandry or edit page to schedule watering, fertilizing, repotting, pest inspection, general inspection, and optional pruning. Choose days, weeks, months, or years; each activity may be left unscheduled.
+- Instances inherit current definition cadences automatically. On an instance, choose Custom cadence or Disabled for this instance, or Reset to definition to remove that override and restore live inheritance.
+- Scheduled fertilizing requires an active recipe assigned directly to the plant definition, including for instance overrides. Disable all dependent fertilizing cadences before removing or archiving its final recipe.
+- Next due dates use the latest completed matching care activity plus the effective cadence. Early completion starts a fresh interval; cadence edits never rewrite history. Calendar months and years clamp to the last valid day of the target month in your timezone.
+- Without completed care, Next due is Not established. Set an initial next due in the cadence editor or use Care Schedule Sync without inventing a care event. Existing quiet-day and snooze rules still apply to the Care Queue.
+- Use Edit Instance and View Plant Definition in the specimen header to reach the existing editor and the definition husbandry page.
 - Use Magic Fill husbandry to draft the structured care guide with one AI call when AI is enabled. Existing guide data triggers the shared Fill Missing Only / Replace All Fields choice, and generated husbandry is previewed before you explicitly save it.
 - Edit individual husbandry fields inline with the edit controls next to each field instead of working through one large form.
 - Use Fertilizers from the Admin sidebar to define collection-scoped fertilizer products and recipes, then assign a recipe and cadence from the plant definition husbandry panel.
@@ -766,6 +772,7 @@ App route: `/server`
 - Use Incident History to search/filter open or resolved incidents, inspect clustered memory/disk graph markers, create manual incidents, and attach notes or postmortem details.
 - Use Event Processing to review pending, processing, failed, and dead-letter counts; inspect processing attempts and safe payload details; retry failures; or mark an event ignored with a required reason.
 - Use Maintenance Mode before planned downtime so public visitors and normal users see a maintenance screen while server admins retain access.
+- Open Full Instance Migration under Backup & Restore for portable server exports, checksums, migration history, and host-side staged restore. Full exports stop all writers; normal maintenance mode alone is not a consistent snapshot. See docs/SERVER_MIGRATION.md.
 - Use Backup Management to initiate sitewide backups, review recent runs and readable backup folders in one list, inspect manifests/artifact sizes/git commits, validate restore readiness, and generate the SSH-only restore command.
 - Use backup deletion tools only when intentionally pruning server storage: individual deletion requires the exact folder name, and older-than cleanup starts with a dry-run preview before confirmation. Active and incomplete backups are skipped by default, and restore request history is retained.
 - Use Restore History to document restore requests, validation results, generated commands, notes, and externally completed or cancelled restores. The web UI never executes a database or file restore.

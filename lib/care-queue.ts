@@ -1,3 +1,4 @@
+import { cadenceActivities, cadenceDueAt, cadenceLabel, resolveCadence } from '@/lib/care-cadences'
 import type { PrismaClient } from '@prisma/client'
 import type { PlantImageFrame } from '@/components/PlantImage'
 import { resolveQuietDayShift } from '@/lib/care-scheduling'
@@ -11,6 +12,7 @@ import { locationPathWithCodes, type LocationNode } from '@/lib/locations'
 
 export const careTaskTypes = [
   'WATER',
+  'PRUNE',
   'FERTILIZE',
   'REPOT',
   'PROPAGATION_CHECK',
@@ -24,6 +26,7 @@ export const careTaskTypes = [
 
 const latestCareEventTypes = [
   'WATERED',
+  'PRUNED',
   'FERTILIZED',
   'REPOTTED',
   'PEST_CHECK',
@@ -106,42 +109,6 @@ function clampPriority(value: number) {
   return Math.max(0, Math.min(999, Math.round(value)))
 }
 
-function normalized(value?: string | null) {
-  return (value || '').toLowerCase()
-}
-
-export function waterCadenceDays(summaryWater?: string | null, cadenceOverride?: number | null) {
-  if (cadenceOverride && cadenceOverride > 0) return cadenceOverride
-  const value = normalized(summaryWater)
-  if (value.includes('frequent') || value.includes('heavy')) return 3
-  if (value.includes('evenly') || value.includes('moist')) return 5
-  if (value.includes('moderate')) return 7
-  if (value.includes('dry before') || value.includes('partly')) return 10
-  if (value.includes('sparingly') || value.includes('drought')) return 18
-  return 7
-}
-
-export function repotCadenceDays(interval?: string | null) {
-  const value = normalized(interval)
-  if (!value) return null
-  const number = Number(value.match(/\d+(?:\.\d+)?/)?.[0])
-  if (value.includes('week') && number > 0) return Math.round(number * 7)
-  if (value.includes('month') && number > 0) return Math.round(number * 30.4375)
-  if (value.includes('year') && number > 0) return Math.round(number * 365.25)
-  if (value.includes('biennial') || value.includes('every other year')) return 730
-  if (value.includes('annual') || value.includes('yearly')) return 365
-  return null
-}
-
-function pestCadenceDays(guide: any, adjustment?: any) {
-  if (adjustment?.cadenceOverrideDays && adjustment.cadenceOverrideDays > 0) return adjustment.cadenceOverrideDays
-  const susceptibility = normalized(guide?.susceptibilityLevel)
-  const pests = normalized(`${guide?.pestsCommon || ''} ${guide?.diseasesCommon || ''} ${guide?.preventativePractices || ''}`)
-  if (susceptibility.includes('high') || susceptibility.includes('severe') || susceptibility.includes('susceptible')) return 14
-  if (pests.includes('mite') || pests.includes('mealy') || pests.includes('thrip') || pests.includes('scale')) return 21
-  return 30
-}
-
 function conditionPriority(severity?: string | null) {
   if (severity === 'CRITICAL') return 220
   if (severity === 'HIGH') return 180
@@ -150,6 +117,7 @@ function conditionPriority(severity?: string | null) {
 }
 
 export function careTaskLabel(type: CareTaskType) {
+  if (type === 'PRUNE') return 'Prune'
   if (type === 'WATER') return 'Water'
   if (type === 'FERTILIZE') return 'Fertilize'
   if (type === 'REPOT') return 'Repot'
@@ -297,8 +265,10 @@ export async function getCareQueue(
   const instances = await prisma.plantInstance.findMany({
     where: { collectionId, status: 'ACTIVE' },
     include: {
+      careCadenceOverrides: true,
       plantDefinition: {
         include: {
+          careCadences: true,
           husbandryGuide: { include: { fertilizerRecipe: { include: { products: { include: { product: true }, orderBy: { sortOrder: 'asc' } } } } } },
           substrateRecommendations: {
             where: { collectionId },
@@ -367,12 +337,15 @@ export async function getCareQueue(
     locationPath: instance?.currentLocationId ? locationPathWithCodes(instance.currentLocationId, locationNodes) : null,
   })
 
+  const latestCadenceEventByKey = new Map<string, Date>()
+  for (const event of careEvents) {
+    const key = `${event.plantInstanceId}:${event.eventType}`
+    const previous = latestCadenceEventByKey.get(key)
+    if (!previous || event.performedAt > previous) latestCadenceEventByKey.set(key, event.performedAt)
+  }
   const photosByInstance = imageLookup(photos)
   const instanceById = new Map(instances.map((instance) => [instance.id, instance]))
   const openBloomById = new Map(openBlooms.map((bloom) => [bloom.id, bloom]))
-  const latestWater = latestBy(careEvents as any, 'WATERED')
-  const latestFertilized = latestBy(careEvents as any, 'FERTILIZED')
-  const latestRepotted = latestBy(careEvents as any, 'REPOTTED')
   const latestPestCheck = latestBy(careEvents as any, 'PEST_CHECK')
   const latestHealthCheck = latestBy(careEvents as any, 'HEALTH_CHECK')
   const latestPropagationCheck = latestBy(careEvents as any, 'PROPAGATION_CHECK')
@@ -437,84 +410,36 @@ export async function getCareQueue(
     const baseDate = instance.propagationDate || instance.acquisitionDate || instance.createdAt
     const image = photosByInstance[instance.id]
 
-    const waterAdjustment = adjustmentMap.get(`${instance.id}:WATER`)
-    const waterDays = waterCadenceDays(guide.summaryWater || guide.wateringCadence, waterAdjustment?.cadenceOverrideDays)
-    const lastWatered = latestWater.get(instance.id)?.performedAt || baseDate
-    const waterDue = addDays(lastWatered, waterDays, timezone)
-    pushDerived({
-      key: `WATER:${instance.id}`,
-      taskType: 'WATER',
-      title: `Water ${instance.plantId}`,
-      reason: latestWater.has(instance.id)
-        ? `Last watered ${daysBetween(now, lastWatered)} day${daysBetween(now, lastWatered) === 1 ? '' : 's'} ago; cadence is about ${waterDays} days.`
-        : `No watering logged yet; inferred cadence is about ${waterDays} days.`,
-      dueAt: waterDue,
-      basePriority: 55,
-      plantInstanceId: instance.id,
-      plantId: instance.plantId,
-      plantName: plantDisplayName,
-      ...itemLocation(instance),
-      image,
-    })
-
-    const fertilizerAdjustment = adjustmentMap.get(`${instance.id}:FERTILIZE`)
     const fertilizer = effectiveFertilizerAssignment(instance.plantDefinition.husbandryGuide, instance.husbandryOverride)
-    if (!fertilizer.paused && fertilizer.cadenceDays && (fertilizer.recipe || guide.fertilizationType || guide.fertilizationFrequency)) {
-      const lastFertilized = latestFertilized.get(instance.id)?.performedAt || baseDate
-      const recipeName = fertilizer.recipe?.name || 'fertilizer'
-      const cadence = fertilizerAdjustment?.cadenceOverrideDays && fertilizerAdjustment.cadenceOverrideDays > 0
-        ? fertilizerAdjustment.cadenceOverrideDays
-        : fertilizer.cadenceDays
-      pushDerived({
-        key: `FERTILIZE:${instance.id}`,
-        taskType: 'FERTILIZE',
-        title: `Fertilize ${instance.plantId}`,
-        reason: latestFertilized.has(instance.id)
-          ? `Last fertilized ${daysBetween(now, lastFertilized, timezone)} day${daysBetween(now, lastFertilized, timezone) === 1 ? '' : 's'} ago; cadence is about ${cadence} days.`
-          : `No fertilizing logged yet; planned cadence is about ${cadence} days.`,
-        dueAt: addDays(lastFertilized, cadence, timezone),
-        basePriority: 42,
-        plantInstanceId: instance.id,
-        plantId: instance.plantId,
-        plantName: plantDisplayName,
-        ...itemLocation(instance),
-        image,
-        fertilizerRecipeId: fertilizer.recipe?.id || null,
-        fertilizerRecipeName: recipeName,
-        fertilizerRecipeSummary: fertilizer.recipe ? fertilizerRecipeSummary(fertilizer.recipe) : guide.fertilizationType || null,
-        fertilizerStrength: guide.fertilizationStrength || fertilizer.recipe?.strengthLabel || null,
-        fertilizerSource: fertilizer.source,
-      })
-    }
-
-    const repotDays = repotCadenceDays(guide.repottingInterval)
-    if (repotDays) {
-      const lastRepotted = latestRepotted.get(instance.id)?.performedAt || instance.currentSubstrate?.startedAt || baseDate
+    for (const { activity, label, task, event } of cadenceActivities) {
+      const { cadence } = resolveCadence(activity, instance.plantDefinition.careCadences, instance.careCadenceOverrides)
+      if (!cadence) continue
+      if (activity === 'FERTILIZING' && (!instance.plantDefinition.husbandryGuide?.fertilizerRecipe)) continue
+      if (activity === 'PEST_INSPECTION' && openPestConditionPlantIds.has(instance.id)) continue
+      if (activity === 'GENERAL_INSPECTION' && conditions.some(row => row.plantInstanceId === instance.id && row.category !== 'PESTS')) continue
+      const latest = latestCadenceEventByKey.get(`${instance.id}:${event}`)
+      const adjustment = adjustmentMap.get(`${instance.id}:${task}`)
+      const dueAt = adjustment?.nextDueAt || cadenceDueAt(latest, cadence, timezone)
+      if (!dueAt) continue
       const recommendation = instance.plantDefinition.substrateRecommendations[0]
       pushDerived({
-        key: `REPOT:${instance.id}`,
-        taskType: 'REPOT',
-        title: `Repot ${instance.plantId}`,
-        reason: latestRepotted.has(instance.id) || instance.currentSubstrate
-          ? `Substrate was last recorded ${daysBetween(now, lastRepotted, timezone)} day${daysBetween(now, lastRepotted, timezone) === 1 ? '' : 's'} ago; repotting interval is ${guide.repottingInterval}.`
-          : `No substrate has been recorded; repotting interval is ${guide.repottingInterval}.`,
-        dueAt: addDays(lastRepotted, repotDays, timezone),
-        basePriority: 48,
-        plantInstanceId: instance.id,
-        plantId: instance.plantId,
-        plantName: plantDisplayName,
-        ...itemLocation(instance),
-        image,
-        currentSubstrate: instance.currentSubstrate?.substrateMode === 'RECIPE'
-          ? `${instance.currentSubstrate.recipeVersion?.recipe.name || 'Substrate recipe'} v${instance.currentSubstrate.recipeVersion?.versionNumber || '?'}`
-          : instance.currentSubstrate?.substrateMode === 'RECEIVED_SUBSTRATE'
-            ? 'Received Substrate'
-            : instance.currentSubstrate?.substrateMode?.toLowerCase().replaceAll('_', ' ') || 'Unknown substrate',
-        recommendedSubstrateRecipeVersionId: recommendation?.substrateRecipeVersionId || null,
-        recommendedSubstrate: recommendation
-          ? `${recommendation.recipeVersion.recipe.name} v${recommendation.recipeVersion.versionNumber}`
-          : null,
-        recommendedSubstrateComposition: recommendation?.recipeVersion.components.map((row) => ({ id: row.id, percentByVolume: Number(row.percentByVolume), component: row.component })) || [],
+        key: `${task}:${instance.id}`, taskType: task, title: `${label}: ${instance.plantId}`,
+        reason: `${cadenceLabel(cadence)}${latest ? '; based on last completed care.' : '; initial due date set manually.'}`,
+        dueAt, basePriority: 55, plantInstanceId: instance.id, plantId: instance.plantId,
+        plantName: plantDisplayName, ...itemLocation(instance), image,
+        ...(task === 'FERTILIZE' ? {
+          fertilizerRecipeId: fertilizer.recipe?.id || null,
+          fertilizerRecipeName: fertilizer.recipe?.name || null,
+          fertilizerRecipeSummary: fertilizer.recipe ? fertilizerRecipeSummary(fertilizer.recipe) : null,
+          fertilizerStrength: guide.fertilizationStrength || fertilizer.recipe?.strengthLabel || null,
+          fertilizerSource: fertilizer.source,
+        } : {}),
+        ...(task === 'REPOT' ? {
+          currentSubstrate: instance.currentSubstrate?.recipeVersion?.recipe.name || instance.currentSubstrate?.substrateMode || null,
+          recommendedSubstrateRecipeVersionId: recommendation?.substrateRecipeVersionId || null,
+          recommendedSubstrate: recommendation ? `${recommendation.recipeVersion.recipe.name} v${recommendation.recipeVersion.versionNumber}` : null,
+          recommendedSubstrateComposition: recommendation?.recipeVersion.components.map(row => ({ id: row.id, percentByVolume: Number(row.percentByVolume), component: row.component })) || [],
+        } : {}),
       })
     }
 
@@ -548,25 +473,6 @@ export async function getCareQueue(
           propagationAgeDays: ageDays,
         })
       }
-    }
-
-    if (!openPestConditionPlantIds.has(instance.id)) {
-      const pestAdjustment = adjustmentMap.get(`${instance.id}:PEST_CHECK`)
-      const pestDays = pestCadenceDays(guide, pestAdjustment)
-      const pestBaseline = latestPestCheck.get(instance.id)?.performedAt || baseDate
-      pushDerived({
-        key: `PEST_CHECK:${instance.id}`,
-        taskType: 'PEST_CHECK',
-        title: `Pest check ${instance.plantId}`,
-        reason: `Pest check cadence is about ${pestDays} days${guide.susceptibilityLevel ? ` based on ${guide.susceptibilityLevel.toLowerCase()} susceptibility` : ''}.`,
-        dueAt: addDays(pestBaseline, pestDays, timezone),
-        basePriority: pestDays <= 14 ? 80 : 45,
-        plantInstanceId: instance.id,
-        plantId: instance.plantId,
-        plantName: plantDisplayName,
-        ...itemLocation(instance),
-        image,
-      })
     }
 
     const instanceConditions = conditions.filter((condition) => condition.plantInstanceId === instance.id)

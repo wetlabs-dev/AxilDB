@@ -152,6 +152,7 @@ const photoFramingData = (fd: FormData) => ({
 const isSportLine = (status?: string | null) =>
   !!status && !['NONE', 'UNSTABLE', 'REVERTED'].includes(status)
 const careEventForTask = (taskType?: string | null) => {
+  if (taskType === 'PRUNE') return 'PRUNED'
   if (taskType === 'WATER') return 'WATERED'
   if (taskType === 'FERTILIZE') return 'FERTILIZED'
   if (taskType === 'REPOT') return 'REPOTTED'

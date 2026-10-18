@@ -1,3 +1,4 @@
+import { CareCadences } from '@/components/CareCadences'
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { Button, Card } from '@/components/ui'
@@ -12,8 +13,9 @@ export default async function PlantHusbandryPage({ params }: { params: Promise<{
   const plant = await prisma.plantDefinition.findFirstOrThrow({
     where: { id, collectionId: collection.id },
     include: {
+        careCadences: true,
       aliases: { orderBy: { name: 'asc' } },
-      husbandryGuide: true,
+      husbandryGuide: { include: { fertilizerRecipe: true } },
     },
   })
 
@@ -28,6 +30,7 @@ export default async function PlantHusbandryPage({ params }: { params: Promise<{
 
   return (
     <div className="space-y-6">
+      <CareCadences collectionSlug={collection.slug} definitionId={plant.id} defaults={plant.careCadences} canEdit={canEdit} hasRecipe={Boolean(plant.husbandryGuide?.fertilizerRecipe?.active)} recipeHref={collectionPath(collection.slug, `/plants/${plant.id}/edit#husbandry`)} />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-sm text-stone-600">

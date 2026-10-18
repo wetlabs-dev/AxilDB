@@ -1,3 +1,5 @@
+import { CareCadences } from '@/components/CareCadences'
+import { cadenceActivities, cadenceDueAt, resolveCadence } from '@/lib/care-cadences'
 import {
   archivePlantInstance,
   addNote,
@@ -44,7 +46,6 @@ import { HusbandryBadges, HusbandryGuideView } from '@/components/Husbandry'
 import { PlantEnvironmentRequirementsForm } from '@/components/PlantEnvironmentRequirementsForm'
 import { PlantLocationCompatibilityPanel } from '@/components/PlantLocationCompatibilityPanel'
 import { savePlantInstanceEnvironmentRequirements } from '@/app/location-environment-actions'
-import { waterCadenceDays } from '@/lib/care-queue'
 import { getCurrentUser } from '@/lib/auth'
 import { canCreateInCollection, canEditInCollection, canManageCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { isQuarantineLocation, quarantineChecklistItems } from '@/lib/locations'
@@ -127,7 +128,9 @@ export default async function InstanceDetail({
         include: { acquisitionRecord: { include: { seller: true, sellerStorefront: true, distributor: true, distributorOutlet: true, sources: { include: { source: true }, orderBy: { sortOrder: 'asc' } } } } },
         orderBy: { createdAt: 'desc' },
       },
-      plantDefinition: { include: { aliases: { orderBy: { name: 'asc' } }, husbandryGuide: { include: { fertilizerRecipe: true } } } },
+      careCadenceOverrides: true,
+      careAdjustments: true,
+      plantDefinition: { include: { careCadences: true, aliases: { orderBy: { name: 'asc' } }, husbandryGuide: { include: { fertilizerRecipe: true } } } },
       blooms: {
         orderBy: { bloomStartDate: 'desc' },
       },
@@ -315,10 +318,20 @@ export default async function InstanceDetail({
       take: 12,
     }) : Promise.resolve([]),
   ])
-  const lastWatered = careEvents.find((event) => event.eventType === 'WATERED')?.performedAt
   const openConditions = careConditions.filter((condition) => condition.status !== 'RESOLVED')
-  const waterCadence = waterCadenceDays(effectiveHusbandry.summaryWater || effectiveHusbandry.wateringCadence)
-  const nextWatering = addCalendarDays(lastWatered || i.acquisitionDate || i.propagationDate || i.createdAt, waterCadence, timezone || undefined)
+  const latestCadenceEvents = await prisma.plantCareEvent.groupBy({ by: ['eventType'], where: { collectionId: collection.id, plantInstanceId: id }, _max: { performedAt: true } })
+  const lastWatered = latestCadenceEvents.find(row => row.eventType === 'WATERED')?._max.performedAt
+  const dueLabels: Record<string, string> = {}
+  const cadenceDates = new Map<string, Date | null>()
+  for (const { activity, event, task } of cadenceActivities) {
+    const { cadence } = resolveCadence(activity, i.plantDefinition.careCadences, i.careCadenceOverrides)
+    const last = latestCadenceEvents.find(row => row.eventType === event)?._max.performedAt
+    const adjustment = i.careAdjustments.find(row => row.taskType === task)
+    const due = cadence ? adjustment?.nextDueAt || cadenceDueAt(last, cadence, timezone || undefined) : null
+    cadenceDates.set(activity, due)
+    dueLabels[activity] = due ? `${due < today ? 'Overdue · ' : 'Next due: '}${fmtDate(due, timezone)}` : 'Next due: Not established'
+  }
+  const nextWatering = cadenceDates.get('WATERING')
   const greenThumbUsedToday = !!greenThumbToday
   const canUseGreenThumb = canCreateRecords && !!user && (collection.aiFeaturesEnabled || isServerAdminRole(user.role))
   const timelineEvents = await collectPlantTimelineEvents(prisma, {
@@ -580,7 +593,7 @@ export default async function InstanceDetail({
         </div>
         <div className="rounded-lg border border-stone-200 bg-white/60 p-3">
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-stone-500">Next estimate</p>
-          <p className="mt-1 font-medium">{fmtDate(nextWatering, timezone)}</p>
+          <p className="mt-1 font-medium">{nextWatering ? fmtDate(nextWatering, timezone) : 'Not established'}</p>
         </div>
         <div className="rounded-lg border border-stone-200 bg-white/60 p-3">
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-stone-500">Open conditions</p>
@@ -920,6 +933,10 @@ export default async function InstanceDetail({
             )}
           </div>
           <p>{plantName(i.plantDefinition)}</p>
+          <div className="mt-3 flex flex-wrap gap-3 text-sm font-semibold">
+            {canEditRecords && <Link className="min-h-11 rounded-md border border-stone-300 px-3 py-2" href={collectionPath(collection.slug, `/instances/${i.id}/edit`)}>Edit Instance</Link>}
+            <Link className="min-h-11 rounded-md border border-stone-300 px-3 py-2" href={collectionPath(collection.slug, `/plants/${i.plantDefinitionId}/husbandry`)}>View Plant Definition</Link>
+          </div>
           <div className="mt-3">
             <SunshineButton
               collectionSlug={collection.slug}
@@ -942,6 +959,8 @@ export default async function InstanceDetail({
           )}
         </div>
       </div>
+
+      <CareCadences collectionSlug={collection.slug} definitionId={i.plantDefinitionId} instanceId={i.id} defaults={i.plantDefinition.careCadences} overrides={i.careCadenceOverrides} canEdit={canEditRecords} hasRecipe={Boolean(i.plantDefinition.husbandryGuide?.fertilizerRecipe?.active)} recipeHref={collectionPath(collection.slug, `/plants/${i.plantDefinitionId}/edit#husbandry`)} dueLabels={dueLabels} />
 
       {i.mergeConstituent && (
         <Card className="border-amber-300 bg-amber-50">

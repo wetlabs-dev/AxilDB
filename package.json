@@ -57,7 +57,10 @@
     "check:plant-instance-merges": "node scripts/check-plant-instance-merges.mjs",
     "check:plant-instance-lifecycle": "tsx scripts/check-plant-instance-lifecycle.ts",
     "migration": "python3 scripts/migration/cli.py",
-    "check:migration": "python3 -m unittest discover -s scripts/migration -p \"test_*.py\" && tsx scripts/check-migration.ts"
+    "check:migration": "python3 -m unittest discover -s scripts/migration -p \"test_*.py\" && tsx scripts/check-migration.ts",
+    "check:care-cadences": "tsx scripts/check-care-cadences.ts",
+    "check:care-cadences:db": "tsx scripts/check-care-cadences-db.ts",
+    "check:care-cadences:ui": "node scripts/check-care-cadences-ui.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
