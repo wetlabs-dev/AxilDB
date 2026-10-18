@@ -1414,6 +1414,7 @@ async function budgetSnapshot(prisma: PrismaClient, settings: any) {
 }
 
 export async function processAiCuratorWake(prisma: PrismaClient) {
+  await assertMigrationOutboundReleased()
   return prisma.$transaction(async lock => {
     const [held] = await lock.$queryRaw<Array<{ acquired: boolean }>>`SELECT pg_try_advisory_xact_lock(186104, 2) AS acquired`
     if (!held.acquired) return { status: 'WAITING' as const, processed: 0, created: 0, summary: 'Another AI Curator worker is active.' }

@@ -430,6 +430,10 @@ And a sitewide backup can be requested from the server dashboard or processed ma
 docker compose run --rm backups npm run backup:worker -- --once
 ```
 
+### Remote application upgrades
+
+Server Management → Application Updates provides reviewed, exact-revision upgrades through an independently installed host systemd agent. The app never mounts the Docker socket. Initial bootstrap and the first revision-stamped deployment require local host administration; see [Application Updates](docs/APPLICATION_UPDATES.md) for topology, installation, permissions, configuration, backup/migration safeguards and recovery.
+
 ## Reset Local Docker Data
 
 This deletes local Docker database data, so use it only for local testing or a disposable server.

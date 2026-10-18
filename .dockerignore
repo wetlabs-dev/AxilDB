@@ -13,3 +13,6 @@ tsconfig.tsbuildinfo
 backups
 **/.migration
 **/__pycache__
+
+.env*
+**/agent.key

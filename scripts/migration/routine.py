@@ -5,16 +5,27 @@ from pathlib import Path
 import shutil
 import sys
 import tarfile
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, unquote, urlsplit
 from engine import Database, add_file, revision, walk
 
 
 class LocalDatabase(Database):
     def __init__(self, url):
         parsed = urlsplit(url)
-        query = urlencode([(k,v) for k,v in parse_qsl(parsed.query) if k != 'schema'])
-        # libpq connection string is inherited through environment, never argv/logs.
-        os.environ['PGDATABASE'] = urlunsplit(parsed._replace(query=query))
+        # libpq does not expand a URI supplied via the PGDATABASE fallback.
+        # Keep credentials out of argv while passing the individual connection fields.
+        if parsed.scheme not in ('postgres','postgresql') or not parsed.hostname:
+            raise ValueError('A PostgreSQL connection URI is required')
+        os.environ['PGHOST'] = parsed.hostname
+        os.environ['PGPORT'] = str(parsed.port or 5432)
+        os.environ['PGDATABASE'] = unquote(parsed.path.lstrip('/'))
+        if parsed.username is not None: os.environ['PGUSER'] = unquote(parsed.username)
+        if parsed.password is not None: os.environ['PGPASSWORD'] = unquote(parsed.password)
+        parameters = {'sslmode':'PGSSLMODE','sslrootcert':'PGSSLROOTCERT','sslcert':'PGSSLCERT','sslkey':'PGSSLKEY','sslpassword':'PGSSLPASSWORD','sslcrl':'PGSSLCRL','sslcrldir':'PGSSLCRLDIR','connect_timeout':'PGCONNECT_TIMEOUT','options':'PGOPTIONS','application_name':'PGAPPNAME','target_session_attrs':'PGTARGETSESSIONATTRS','channel_binding':'PGCHANNELBINDING','host':'PGHOST','port':'PGPORT'}
+        for key,value in parse_qsl(parsed.query):
+            if key == 'schema': continue
+            if key not in parameters: raise ValueError('Unsupported PostgreSQL connection option: '+key)
+            os.environ[parameters[key]] = value
     def command(self, program, args=(), database=None):
         return [program, *args]
 

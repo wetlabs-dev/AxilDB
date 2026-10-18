@@ -307,6 +307,7 @@ export default async function ServerDashboard({
         </div>
         <div className="flex flex-wrap gap-2">
           <LinkButton href="/server/validated-definitions">Validated Definitions</LinkButton>
+          <LinkButton href="/server/application-updates">Application Updates</LinkButton>
           <LinkButton href="/server/incidents">Incident History</LinkButton>
           <LinkButton href="/server/events">Event Processing</LinkButton>
           <LinkButton href="/server/image-moderation">Image Moderation</LinkButton>
@@ -339,6 +340,7 @@ export default async function ServerDashboard({
             <h3 className="font-serif text-xl font-semibold">Server Health</h3>
             <p className="mt-1 text-sm text-stone-600 dark:text-[color:var(--ax-muted)]">Open incidents, recent resolutions, and operational notes stay here after metric snapshots expire.</p>
           </div>
+          <LinkButton href="/server/application-updates">Application Updates</LinkButton>
           <LinkButton href="/server/incidents">Open Incident History</LinkButton>
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-4">

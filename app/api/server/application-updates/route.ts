@@ -1,0 +1,180 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { getCurrentUser, requireServerAdmin, audit } from '@/lib/auth'
+import {
+  callDeploymentAgent,
+  type DeploymentEvent,
+  type DeploymentOperation,
+} from '@/lib/deployment-agent'
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+const json = (value: unknown, status = 200) =>
+  NextResponse.json(value, {
+    status,
+    headers: { 'Cache-Control': 'private, no-store' },
+  })
+async function authorize() {
+  if (!(await getCurrentUser()))
+    throw new Error('Sign in with a verified server administrator account.')
+  return requireServerAdmin()
+}
+function failure(error: unknown) {
+  const message =
+    error instanceof Error ? error.message : 'Deployment operation failed.'
+  if (/NEXT_REDIRECT|permission|admin|Sign in/i.test(message))
+    return json(
+      { error: 'Verified server administrator access is required.' },
+      403
+    )
+  return json({ error: message }, 409)
+}
+export async function GET(req: NextRequest) {
+  try {
+    const user = await authorize()
+    const mode = req.nextUrl.searchParams.get('mode') || 'status'
+    const id = req.nextUrl.searchParams.get('jobId') || ''
+    if (!['status', 'events', 'recovery'].includes(mode))
+      return json({ error: 'Invalid deployment operation.' }, 400)
+    if (mode !== 'status' && !/^[a-f0-9]{32}$/.test(id))
+      return json({ error: 'Invalid deployment job.' }, 400)
+    if (mode === 'status')
+      return json(await callDeploymentAgent('STATUS', user.id))
+    if (mode === 'recovery')
+      return json(
+        await callDeploymentAgent('RECOVERY_OPTIONS', user.id, { jobId: id })
+      )
+    const rawCursor =
+      req.headers.get('last-event-id') ||
+      req.nextUrl.searchParams.get('after') ||
+      '0'
+    if (!/^\d{1,16}$/.test(rawCursor))
+      return json({ error: 'Invalid event cursor.' }, 400)
+    let cursor = Number(rawCursor)
+    if (!Number.isSafeInteger(cursor))
+      return json({ error: 'Invalid event cursor.' }, 400)
+    if (req.nextUrl.searchParams.get('stream') !== '1')
+      return json(
+        await callDeploymentAgent('EVENTS', user.id, {
+          jobId: id,
+          after: cursor,
+        })
+      )
+    const encoder = new TextEncoder()
+    let stopped = false
+    const stream = new ReadableStream({
+      async start(controller) {
+        const deadline = Date.now() + 25_000
+        try {
+          while (!stopped && !req.signal.aborted && Date.now() < deadline) {
+            const result = await callDeploymentAgent<{
+              events: DeploymentEvent[]
+            }>('EVENTS', user.id, { jobId: id, after: cursor })
+            for (const event of result.events) {
+              if (stopped || req.signal.aborted) break
+              controller.enqueue(
+                encoder.encode(
+                  `id: ${event.id}\ndata: ${JSON.stringify(event)}\n\n`
+                )
+              )
+              cursor = event.id
+            }
+            if (!stopped && !req.signal.aborted)
+              controller.enqueue(encoder.encode(': connected\n\n'))
+            await new Promise((resolve) => setTimeout(resolve, 1500))
+          }
+        } catch {
+          /* Restart is expected. Client reconnects and replays durable events. */
+        } finally {
+          if (!stopped) {
+            try {
+              controller.close()
+            } catch {}
+          }
+        }
+      },
+      cancel() {
+        stopped = true
+      },
+    })
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'private, no-store',
+        'X-Accel-Buffering': 'no',
+      },
+    })
+  } catch (error) {
+    return failure(error)
+  }
+}
+export async function POST(req: NextRequest) {
+  try {
+    const expectedOrigin = new URL(req.url)
+    if (!req.headers.get('host'))
+      return json({ error: 'Invalid request origin.' }, 403)
+    expectedOrigin.host = req.headers.get('host')!
+    if (req.headers.get('origin') !== expectedOrigin.origin)
+      return json({ error: 'Invalid request origin.' }, 403)
+    const user = await authorize()
+    if (!req.headers.get('content-type')?.includes('application/json'))
+      return json({ error: 'Expected JSON.' }, 400)
+    const raw = await req.text()
+    if (raw.length > 4096) return json({ error: 'Payload too large.' }, 400)
+    const input = JSON.parse(raw)
+    const allowed: Record<string, string[]> = {
+      CHECK_UPDATES: [],
+      PREFLIGHT: ['revision'],
+      START_UPGRADE: ['revision', 'requestId', 'confirmed'],
+      ROLLBACK: ['jobId', 'confirmed'],
+      RECONCILE: ['jobId', 'confirmed'],
+    }
+    if (
+      !input ||
+      typeof input !== 'object' ||
+      Array.isArray(input) ||
+      typeof input.operation !== 'string' ||
+      !Object.prototype.hasOwnProperty.call(allowed, input.operation) ||
+      Object.keys(input).some(
+        (key) => key !== 'operation' && !allowed[input.operation].includes(key)
+      )
+    )
+      return json({ error: 'Invalid deployment operation payload.' }, 400)
+    if (
+      ['PREFLIGHT', 'START_UPGRADE'].includes(input.operation) &&
+      !/^[a-f0-9]{40}$/.test(input.revision || '')
+    )
+      return json({ error: 'Choose an exact approved revision.' }, 400)
+    if (
+      ['ROLLBACK', 'RECONCILE'].includes(input.operation) &&
+      !/^[a-f0-9]{32}$/.test(input.jobId || '')
+    )
+      return json({ error: 'Invalid deployment job.' }, 400)
+    if (
+      ['START_UPGRADE', 'ROLLBACK', 'RECONCILE'].includes(input.operation) &&
+      input.confirmed !== true
+    )
+      return json({ error: 'Explicit confirmation is required.' }, 400)
+    if (
+      input.operation === 'START_UPGRADE' &&
+      !/^[a-f0-9-]{32,36}$/.test(input.requestId || '')
+    )
+      return json({ error: 'Invalid request identifier.' }, 400)
+    const { operation, ...fields } = input
+    if (operation === 'START_UPGRADE') delete fields.confirmed
+    await audit(
+      user,
+      'UPDATE',
+      'APPLICATION_DEPLOYMENT',
+      fields.jobId || null,
+      `Requested ${operation}`,
+      { revision: fields.revision, requestId: fields.requestId }
+    )
+    const result = await callDeploymentAgent(
+      operation as DeploymentOperation,
+      user.id,
+      fields
+    )
+    return json(result)
+  } catch (error) {
+    return failure(error)
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "repository": "/REPLACE/actual/production/checkout",
+  "trusted_remote": "https://github.com/wetlabs-dev/AxilDB.git",
+  "remote": "origin",
+  "branch": "main",
+  "project": "REPLACE_WITH_EXISTING_COMPOSE_PROJECT",
+  "compose_files": [
+    "/REPLACE/actual/production/checkout/docker-compose.yml",
+    "/etc/axildb/deployment-connection.json"
+  ],
+  "env_file": "/etc/axildb/axildb.env",
+  "state_dir": "/var/lib/axildb-deploy",
+  "socket": "/run/axildb-deploy/agent.sock",
+  "secret_file": "/etc/axildb-deploy/agent.key",
+  "backup_dir": "/REPLACE/actual/production/checkout/backups",
+  "app_service": "app",
+  "worker_services": [
+    "reminders",
+    "image-moderation",
+    "ai-curator",
+    "events",
+    "metrics",
+    "backups"
+  ],
+  "migration_service": "migrate",
+  "database_service": "db",
+  "backup_service": "backups",
+  "health_path": "/api/health/ready",
+  "proxy_health_url": "https://app.axildb.com/api/health/ready",
+  "minimum_free_bytes": 10737418240,
+  "command_timeout_seconds": 1800,
+  "health_timeout_seconds": 180,
+  "stabilization_seconds": 30,
+  "log_retention_days": 90,
+  "history_retention_days": 365,
+  "known_good_image_retention": 3,
+  "proxy_resolve_address": "127.0.0.1"
+}

@@ -1,0 +1,38 @@
+[Unit]
+Description=AxilDB independent deployment agent
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=axildb-deploy
+Group=axildb-deploy
+SupplementaryGroups=docker
+ExecStart=/usr/bin/python3 /opt/axildb-deploy/agent.py --config /etc/axildb-deploy/config.json
+Restart=on-failure
+RestartSec=5
+UMask=0077
+RuntimeDirectory=axildb-deploy
+RuntimeDirectoryMode=0750
+RuntimeDirectoryPreserve=yes
+StateDirectory=axildb-deploy
+StateDirectoryMode=0700
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+KillMode=control-group
+TimeoutStopSec=15
+# Installation generates a narrow ReadWritePaths drop-in for the configured checkout,
+# release store and backup directory. Docker access is effectively host administrative.
+
+[Install]
+WantedBy=multi-user.target
