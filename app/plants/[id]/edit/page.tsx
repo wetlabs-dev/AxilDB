@@ -69,6 +69,7 @@ export default async function EditPlant({
       where: { id, collectionId: collection.id },
       include: {
         careCadences: true,
+        cadenceProposals: { where: { status: 'PENDING', applicability: 'RECOMMENDED' } },
         taxonomicAuthority: { include: { publications: true } },
         automaticTaxonomicAuthority: true,
         taxonomicAuthorityMatches: { include: { taxonomicAuthority: true }, orderBy: { priority: 'desc' } },
@@ -175,6 +176,7 @@ export default async function EditPlant({
     <div className="space-y-6">
       <h2 className="text-3xl font-bold">Edit Plant Definition</h2>
       <CareCadences collectionSlug={collection.slug} definitionId={plant.id} defaults={plant.careCadences} canEdit={true} hasRecipe={Boolean(plant.husbandryGuide?.fertilizerRecipe?.active)} recipeHref={collectionPath(collection.slug, `/plants/${plant.id}/edit#husbandry`)} />
+      {plant.cadenceProposals.length > 0 && <p className="text-sm text-stone-600">{plant.cadenceProposals.length} care cadence recommendation(s) awaiting review: {plant.cadenceProposals.map(p => p.activity.toLowerCase().replaceAll('_',' ')).join(', ')}. {user?.role === 'SERVER_ADMIN' && <Link className="underline" href={`/server/care-cadence-research?tab=review&definition=${plant.id}`}>Review recommendations</Link>}</p>}
       <PlantDefinitionReadinessPanel result={completeness} baseHref={collectionPath(collection.slug, `/plants/${plant.id}/edit`)} />
       <Card id="definition-fields">
         <form action={updatePlantDefinition} className="grid max-w-6xl gap-x-3 gap-y-2 lg:grid-cols-4">

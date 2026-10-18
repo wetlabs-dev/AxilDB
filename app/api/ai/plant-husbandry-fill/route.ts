@@ -1,3 +1,6 @@
+import { cadenceResearchInstructions, cadenceRecommendationShape } from '@/lib/cadence-recommendations'
+import { cadenceResearchContext, persistCadenceRecommendations } from '@/lib/cadence-research'
+import { isServerAdminRole } from '@/lib/roles'
 import { NextResponse } from 'next/server'
 import { audit } from '@/lib/auth'
 import { recordAiUsage, requireAiFeatureAccess, tokenUsage } from '@/lib/ai-usage'
@@ -124,6 +127,8 @@ export async function POST(req: Request) {
     }),
     prisma.substrateComponent.findMany({ where: { collectionId: collection.id, active: true }, orderBy: { name: 'asc' }, take: 50 }),
   ])
+  const cadenceContext = typeof plant.id === 'string' && await prisma.plantDefinition.findFirst({ where: { id: plant.id, collectionId: collection.id }, select: { id: true } })
+    ? await cadenceResearchContext(prisma, collection.id, plant.id) : null
   const fertilizerRecipeIds = new Set(fertilizerRecipes.map((recipe) => recipe.id))
   const substrateProfiles = new Map(substrateVersions.map((version) => [version.id, substrateRecipePhysicalProfile(version.components.map((row) => ({ percentByVolume: Number(row.percentByVolume), component: row.component })))]))
   const substrateComponentIds = new Set(substrateComponents.map((component) => component.id))
@@ -145,6 +150,7 @@ export async function POST(req: Request) {
       gbifUrl: trimmedString(plant.gbifUrl, 500) || null,
       aliases: Array.isArray(plant.aliases) ? plant.aliases.slice(0, 8).map((alias: any) => trimmedString(alias.name, 160)).filter(Boolean) : [],
     },
+    cadenceContext,
     activeFertilizerRecipes: fertilizerRecipes.map(recipeAiContext),
     activeSubstrateRecipes: substrateVersions.map((version) => ({
       recipeVersionId: version.id,
@@ -159,6 +165,8 @@ export async function POST(req: Request) {
     })),
     activeSubstrateComponents: substrateComponents.map((component) => ({ id: component.id, name: component.name, category: component.category, particleSize: component.particleSize, waterRetention: component.waterRetention, aeration: component.aeration, drainage: component.drainage, phTendency: component.phTendency })),
     rules: [
+      cadenceResearchInstructions,
+      'Do not generate cadence recommendations if cadenceContext is null. Return only activities in cadenceContext.missingEligibleActivities.',
       'Return only valid JSON, with no markdown.',
       'Attempt to fill every field with concise practical husbandry guidance.',
       'Use short phrases or one short sentence per field; avoid long paragraphs.',
@@ -176,6 +184,7 @@ export async function POST(req: Request) {
       'summaryWater, summaryLight, and summaryToxicity must be short badge-friendly phrases.',
     ],
     jsonShape: {
+      careCadenceRecommendations: cadenceRecommendationShape,
       ...Object.fromEntries([...husbandryFieldNames, 'reviewNotes'].map((field) => [field, 'string|null'])),
       fertilizerRecommendationType: 'USE_EXISTING_RECIPE|CREATE_NEW_RECIPE|NO_FERTILIZER_RECOMMENDED|UNCERTAIN',
       recommendedRecipeId: 'string|null',
@@ -201,6 +210,7 @@ export async function POST(req: Request) {
 
   try {
     const response = await fetch(OPENAI_RESPONSES_URL, {
+      signal: AbortSignal.timeout(120_000),
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -210,7 +220,8 @@ export async function POST(req: Request) {
         model,
         instructions: 'You are a careful horticultural husbandry assistant. Return only machine-parseable JSON. Prefer concise, practical care guidance.',
         input: JSON.stringify(prompt),
-        max_output_tokens: 2800,
+        max_output_tokens: 4500,
+
         store: false,
       }),
     })
@@ -224,6 +235,8 @@ export async function POST(req: Request) {
     }
 
     const raw = extractJson(outputText(payload))
+    const cadenceProposals = cadenceContext && Array.isArray(raw.careCadenceRecommendations)
+      ? await persistCadenceRecommendations(prisma, { definitionId: plant.id, collectionId: collection.id, source: 'MAGIC_FILL', model, recommendations: raw.careCadenceRecommendations }) : []
     const fields = normalizeFields(raw, model)
     const fertilizerRecommendation = normalizeFertilizerRecommendation(raw, fertilizerRecipeIds)
     const substrateRecommendation = normalizeSubstrateRecommendation(raw, substrateProfiles, substrateComponentIds)
@@ -238,7 +251,7 @@ export async function POST(req: Request) {
     }
     await recordAiUsage({ collectionId: collection.id, userId: user.id, feature: 'AI_HUSBANDRY_FILL', model, usage: tokenUsage(payload) })
     await audit(user, 'GENERATE', 'AI_HUSBANDRY_FILL', null, `Generated husbandry fill for ${name}`, { model, applyMode }, collection.id)
-    return NextResponse.json({ fields, fertilizerRecommendation, substrateRecommendation: displaySubstrateRecommendation })
+    return NextResponse.json({ fields, fertilizerRecommendation, substrateRecommendation: displaySubstrateRecommendation, cadenceProposals, canApproveCadences: isServerAdminRole(user.role) })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'OpenAI husbandry fill request failed.'
     await recordAiUsage({ collectionId: collection.id, userId: user.id, feature: 'AI_HUSBANDRY_FILL', model, success: false, error: message })

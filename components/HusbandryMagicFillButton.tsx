@@ -1,5 +1,6 @@
 'use client'
 
+import { approveAllCadences } from '@/app/cadence-research-actions'
 import { useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Sparkles } from 'lucide-react'
@@ -35,18 +36,6 @@ function setControlValue(form: HTMLFormElement, name: string, value?: string | n
   field.dispatchEvent(new Event('change', { bubbles: true }))
 }
 
-function cadenceFromText(value?: string | null) {
-  const text = String(value || '').toLowerCase()
-  const day = text.match(/(?:every|each|q)\s*(\d{1,3})\s*(?:day|d)\b/)
-  if (day) return day[1]
-  const week = text.match(/(?:every|each|q)\s*(\d{1,2})\s*(?:week|wk|w)\b/)
-  if (week) return String(Number(week[1]) * 7)
-  if (text.includes('weekly')) return '7'
-  if (text.includes('biweekly') || text.includes('every other week')) return '14'
-  if (text.includes('monthly')) return '30'
-  return ''
-}
-
 export function HusbandryMagicFillButton({
   plant,
   className = '',
@@ -67,6 +56,9 @@ export function HusbandryMagicFillButton({
   const [loading, setLoading] = useState(false)
   const [fertilizerRecommendation, setFertilizerRecommendation] = useState<any>(null)
   const [substrateRecommendation, setSubstrateRecommendation] = useState<any>(null)
+  const [cadenceProposals, setCadenceProposals] = useState<any[]>([])
+  const [selectedCadences, setSelectedCadences] = useState<string[]>([])
+  const [canApproveCadences, setCanApproveCadences] = useState(false)
   const [draft, setDraft] = useState<any>(null)
   const [readyToSave, setReadyToSave] = useState(false)
   const [savingSubstrates, startSubstrateTransition] = useTransition()
@@ -123,6 +115,9 @@ export function HusbandryMagicFillButton({
       setControlValue(form, 'reviewStatus', 'DRAFT')
       setDraft(fillDraft)
       setFertilizerRecommendation(result.fertilizerRecommendation || null)
+      setCadenceProposals(result.cadenceProposals || [])
+      setSelectedCadences([])
+      setCanApproveCadences(Boolean(result.canApproveCadences))
       setSubstrateRecommendation(result.substrateRecommendation || null)
       if (autoSubmit) {
         setReadyToSave(true)
@@ -151,7 +146,6 @@ export function HusbandryMagicFillButton({
       fertilizationFrequency: fertilizerRecommendation.suggestedFrequency,
       fertilizationStrength: fertilizerRecommendation.suggestedStrength,
       fertilizationSeasonalSchedule: fertilizerRecommendation.seasonalNotes,
-      fertilizationCadenceDays: cadenceFromText(fertilizerRecommendation.suggestedFrequency),
     }, fertilizerAssignmentFields, mode)
     setStatus('Fertilizer recipe selected. Review and save to apply.')
   }
@@ -205,7 +199,6 @@ export function HusbandryMagicFillButton({
       fertilizationFrequency: fertilizerRecommendation.suggestedFrequency || draft.suggestedFrequency,
       fertilizationStrength: fertilizerRecommendation.suggestedStrength || draft.dilutionOrStrength,
       fertilizationSeasonalSchedule: fertilizerRecommendation.seasonalNotes,
-      fertilizationCadenceDays: cadenceFromText(fertilizerRecommendation.suggestedFrequency || draft.suggestedFrequency),
     }, fertilizerDraftFields, mode)
     setStatus('Fertilizer recipe draft queued. Save to create and link it.')
   }
@@ -225,6 +218,7 @@ export function HusbandryMagicFillButton({
           {loading ? 'Filling...' : label}
         </button>
       </div>
+      {cadenceProposals.length > 0 && <div className="w-full max-w-xl space-y-2 rounded-lg border p-3 text-left text-sm"><p className="font-semibold">Review care cadence recommendations</p><p>Saved as proposals. Select recommendations explicitly to activate them; saving husbandry does not activate these cadences.</p>{cadenceProposals.map(p => <label key={p.id} className="block rounded border p-2">{canApproveCadences && p.applicability === 'RECOMMENDED' && <input type="checkbox" checked={selectedCadences.includes(p.id)} onChange={e => setSelectedCadences(ids => e.target.checked ? [...ids,p.id] : ids.filter(id => id !== p.id))} />} {p.activity.replaceAll('_',' ')} · {p.interval ? `Every ${p.interval} ${p.unit.toLowerCase()}` : p.applicability.replaceAll('_',' ')} · {p.confidence.toLowerCase()} confidence<p>{p.rationale}</p></label>)}{canApproveCadences ? <button type="button" disabled={loading || !selectedCadences.length} onClick={async () => { setLoading(true); try { const result = await approveAllCadences(selectedCadences); setStatus(Object.entries(result).map(([reason,count]) => `${count} ${reason}`).join('; ')); setCadenceProposals(rows => rows.filter(p => !selectedCadences.includes(p.id))); setSelectedCadences([]); router.refresh() } catch(e) { setStatus(e instanceof Error ? e.message : 'Approval failed.') } finally { setLoading(false) } }}>Approve selected recommendations</button> : <p>A server administrator can review these in Care Cadence Research.</p>}</div>}
       {autoSubmit && draft && (
         <details className="w-full max-w-xl rounded-lg border border-[#d6dfc9] bg-[#f7f4e8] p-3 text-left text-sm text-stone-700">
           <summary className="cursor-pointer font-semibold text-[#2f6b45]">Review Magic Fill draft</summary>

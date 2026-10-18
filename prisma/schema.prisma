@@ -152,6 +152,7 @@ model TaxonomicAuthorityPublication {
 }
 
 model User {
+  reviewedCadenceProposals CareCadenceProposal[]
   careQueueOperations CareQueueOperation[]
   id                                           String                               @id @default(cuid())
   email                                        String                               @unique
@@ -696,6 +697,7 @@ model AiCuratorSettings {
 }
 
 model AiCuratorJob {
+  cadenceProposals CareCadenceProposal[]
   id                  String    @id @default(cuid())
   jobType             String
   priority            Float     @default(0)
@@ -742,7 +744,8 @@ model AiCuratorJob {
   @@index([claimedAt])
   @@index([createdAt])
   @@index([errorClearedAt])
-  @@unique([collectionId, jobType, phase, plantDefinitionId, targetEntityType, targetEntityId, targetField, status], map: "AiCuratorJob_active_scope_key")
+  // Active scope uniqueness is a partial index in the cadence research migration.
+  @@index([collectionId, jobType, phase, plantDefinitionId, targetField])
 }
 
 model AiCuratorSuggestion {
@@ -1397,6 +1400,7 @@ model FollowNotification {
 }
 
 model PlantDefinition {
+  cadenceProposals CareCadenceProposal[]
   careCadences PlantDefinitionCareCadence[]
   id                          String             @id @default(cuid())
   collectionId                String?
@@ -3976,4 +3980,36 @@ model CareQueueOperation {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@id([collectionId, userId, operationId])
   @@index([expiresAt])
+}
+
+model CareCadenceProposal {
+  id String @id @default(cuid())
+  plantDefinitionId String
+  activity String
+  interval Int?
+  unit String?
+  confidence String
+  rationale String
+  applicability String
+  sourceReferences Json
+  status String @default("PENDING")
+  source String
+  provider String?
+  model String?
+  jobId String?
+  recoveryKey String? @unique
+  researchedAt DateTime @default(now())
+  reviewedAt DateTime?
+  reviewedByUserId String?
+  approvedInterval Int?
+  approvedUnit String?
+  reviewNote String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  plantDefinition PlantDefinition @relation(fields: [plantDefinitionId], references: [id], onDelete: Cascade)
+  job AiCuratorJob? @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  reviewedBy User? @relation(fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  @@index([plantDefinitionId, activity, status])
+  @@index([status, researchedAt])
+  @@index([jobId])
 }

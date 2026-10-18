@@ -14,6 +14,7 @@ export default async function PlantHusbandryPage({ params }: { params: Promise<{
     where: { id, collectionId: collection.id },
     include: {
         careCadences: true,
+        cadenceProposals: { where: { status: 'PENDING', applicability: 'RECOMMENDED' } },
       aliases: { orderBy: { name: 'asc' } },
       husbandryGuide: { include: { fertilizerRecipe: true } },
     },
@@ -31,6 +32,7 @@ export default async function PlantHusbandryPage({ params }: { params: Promise<{
   return (
     <div className="space-y-6">
       <CareCadences collectionSlug={collection.slug} definitionId={plant.id} defaults={plant.careCadences} canEdit={canEdit} hasRecipe={Boolean(plant.husbandryGuide?.fertilizerRecipe?.active)} recipeHref={collectionPath(collection.slug, `/plants/${plant.id}/edit#husbandry`)} />
+      {plant.cadenceProposals.length > 0 && <p className="text-sm text-stone-600">{plant.cadenceProposals.length} AI care cadence recommendation(s) awaiting review: {plant.cadenceProposals.map(p => p.activity.toLowerCase().replaceAll('_',' ')).join(', ')}. {user?.role === 'SERVER_ADMIN' && <Link className="underline" href={`/server/care-cadence-research?tab=review&definition=${plant.id}`}>Review recommendations</Link>}</p>}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-sm text-stone-600">

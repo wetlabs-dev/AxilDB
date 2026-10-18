@@ -1,5 +1,6 @@
 'use server'
 
+import { configureDefinitionCadence } from '@/lib/care-cadence-service'
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { parseDateLocal, timeZoneForPreference } from '@/lib/time'
@@ -47,8 +48,7 @@ export async function saveCareCadences(fd: FormData) {
           // The structured editor supersedes old sync cadence/disabled settings; retain initial dates and snoozes.
           await tx.plantCareAdjustment.updateMany({ where: { collectionId: context.collection.id, plantInstanceId: instanceId, taskType: task }, data: { cadenceOverrideDays: null, disabled: false } })
         } else {
-          await tx.plantDefinitionCareCadence.deleteMany({ where: { plantDefinitionId: definitionId, activity } })
-          if (mode === 'OVERRIDE') await tx.plantDefinitionCareCadence.create({ data: { plantDefinitionId: definitionId, activity, interval: interval!, unit: unit! } })
+          await configureDefinitionCadence(tx, { definitionId, activity, interval, unit })
         }
       }
     })

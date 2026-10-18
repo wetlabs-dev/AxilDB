@@ -26,6 +26,12 @@ const collectionModels = [
 const readOps = ['findMany', 'findFirst', 'findUnique', 'findUniqueOrThrow', 'count']
 
 const reviewedAllowlist = [
+  {
+    file: 'app/server/care-cadence-research/page.tsx',
+    model: 'plantDefinition',
+    op: 'findMany',
+    reason: 'Care cadence research is a sitewide server management page guarded by requireServerAdmin with verified two-factor authentication before any reads.',
+  },
   ...[
     'app/api/taxonomic-authorities/route.ts',
     'app/plants/[id]/edit/page.tsx',

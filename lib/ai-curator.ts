@@ -1,3 +1,5 @@
+import { cadenceRecommendationShape, cadenceResearchInstructions } from '@/lib/cadence-recommendations'
+import { cadenceResearchContext, missingActivities, persistCadenceRecommendations, researchDefinitionInclude } from '@/lib/cadence-research'
 import { assertMigrationOutboundReleased } from '@/lib/migration-hold'
 import { createHash, randomUUID } from 'crypto'
 import { Prisma, type PrismaClient } from '@prisma/client'
@@ -365,7 +367,7 @@ export function curatorJobScope(input: Pick<CuratorJobInput, 'collectionId' | 'p
 export async function ensureAiCuratorSettings(prisma: PrismaClient) {
   return prisma.aiCuratorSettings.upsert({
     where: { id: SETTINGS_ID },
-    update: {},
+    update: { id: SETTINGS_ID },
     create: { id: SETTINGS_ID },
   })
 }
@@ -710,6 +712,7 @@ export async function enqueueDefinitionResearchNow(prisma: PrismaClient, collect
   for (const job of jobsForCompleteness(collectionId, definition, completeness, settings, true)) {
     if (await enqueueAiCuratorJob(prisma, job)) created += 1
   }
+  created += await enqueueCadenceResearch(prisma, { collectionId, definitionId: plantDefinitionId, source: 'AI_RESEARCH' })
   return { created, completeness }
 }
 
@@ -720,7 +723,7 @@ export async function expireAiCuratorWork(prisma: PrismaClient, now = new Date()
       data: { status: 'EXPIRED', reviewNote: 'Expired before human review.' },
     }),
     prisma.aiCuratorJob.updateMany({
-      where: { status: { in: ['QUEUED', 'DEFERRED'] }, expiresAt: { lte: now } },
+      where: { status: { in: ['QUEUED', 'DEFERRED'] }, OR: [{ targetField: { not: 'careCadences' } }, { targetField: null }], expiresAt: { lte: now } },
       data: { status: 'EXPIRED', completedAt: now, resultSummary: 'Expired before processing.' },
     }),
   ])
@@ -728,6 +731,7 @@ export async function expireAiCuratorWork(prisma: PrismaClient, now = new Date()
 }
 
 async function currentValueForJob(prisma: PrismaClient, job: any) {
+  if (job.targetField === 'careCadences') return cadenceResearchContext(prisma, job.collectionId, job.plantDefinitionId, job.reason === 'Explicit re-research')
   if (!job.plantDefinitionId) {
     const collection = await prisma.collection.findUnique({
       where: { id: job.collectionId },
@@ -1134,6 +1138,8 @@ async function resolveSatisfiedImageHumanBlocks(prisma: PrismaClient) {
 
 function curatorTargetInstructions(targetField?: string | null) {
   switch (targetField) {
+    case 'careCadences':
+      return cadenceResearchInstructions + ' suggestedValue must be { careCadenceRecommendations: ' + JSON.stringify(cadenceRecommendationShape) + ' }.'
     case 'references':
       return 'For references, suggestedValue must be an object containing only missing or corrected fields from wikipediaUrl, inaturalistUrl, powoUrl, gbifUrl, description. Use stable canonical URLs and leave uncertain URLs out.'
     case 'tags':
@@ -1143,7 +1149,7 @@ function curatorTargetInstructions(targetField?: string | null) {
     case 'substrate':
       return 'For substrate, suggest existing active substrate recipe versions only. suggestedValue must be { "recommendations": [{ "recipeVersionId": "existing-version-id", "rank": 1, "suitability": "PREFERRED|RECOMMENDED|ACCEPTABLE|SPECIAL_PURPOSE", "reason": "short reason", "confidence": 0.0 }] }. Never invent recipeVersionId values.'
     case 'fertilizer':
-      return 'For fertilizer, you may suggest an existing fertilizer recipe assignment, a new draft recipe using existing fertilizer products, and/or purchase ideas for a specific nutrient/care gap. suggestedValue may include "fertilizerRecipeId": "existing-recipe-id", "fertilizationCadenceDays": number, "fertilizationType": "plain English text such as balanced liquid feeding", "fertilizationStrength": "plain English text such as light or quarter strength", "fertilizationFrequency": "plain English text such as every 2 weeks during active growth", "newRecipe": { "name": "draft name in plain English", "description": "why this recipe fills the gap", "declaredNpk": "optional", "applicationMethod": "ROOT_DRENCH|FOLIAR|TOP_DRESS|OTHER", "dilutionInstructions": "plain English string|null", "strengthLabel": "plain English string|null", "frequencyDays": number|null, "frequencyNotes": "plain English string|null", "seasonalNotes": "plain English string|null", "safetyNotes": "plain English string|null", "products": [{ "productId": "existing-product-id", "amount": "string|null", "unit": "string|null", "notes": "plain English string|null" }] }, and "purchaseSuggestions": [{ "name": "product or product class in plain English", "gap": "specific gap filled in plain English", "reason": "short plain English reason" }]. Never invent existing recipe/product IDs.'
+      return 'Cadence intervals are reviewed separately through careCadences research; do not include fertilizationCadenceDays. For fertilizer, you may suggest an existing fertilizer recipe assignment, a new draft recipe using existing fertilizer products, and/or purchase ideas for a specific nutrient/care gap. suggestedValue may include "fertilizerRecipeId": "existing-recipe-id", "fertilizationType": "plain English text such as balanced liquid feeding", "fertilizationStrength": "plain English text such as light or quarter strength", "fertilizationFrequency": "plain English text such as every 2 weeks during active growth", "newRecipe": { "name": "draft name in plain English", "description": "why this recipe fills the gap", "declaredNpk": "optional", "applicationMethod": "ROOT_DRENCH|FOLIAR|TOP_DRESS|OTHER", "dilutionInstructions": "plain English string|null", "strengthLabel": "plain English string|null", "frequencyDays": number|null, "frequencyNotes": "plain English string|null", "seasonalNotes": "plain English string|null", "safetyNotes": "plain English string|null", "products": [{ "productId": "existing-product-id", "amount": "string|null", "unit": "string|null", "notes": "plain English string|null" }] }, and "purchaseSuggestions": [{ "name": "product or product class in plain English", "gap": "specific gap filled in plain English", "reason": "short plain English reason" }]. Never invent existing recipe/product IDs.'
     case 'authority':
       return 'For taxonomic authority coverage, suggest only authorities from context.resources.existingTaxonomicAuthorities. suggestedValue must be { "taxonomicAuthorityId": "existing-authority-id", "matchReason": "why its scope covers this definition" }. Never use this field for botanical authorship text.'
     case 'husbandry':
@@ -1155,6 +1161,7 @@ function curatorTargetInstructions(targetField?: string | null) {
 
 async function callCuratorModel(settings: any, job: any, currentValue: unknown) {
   const response = await fetch(OPENAI_RESPONSES_URL, {
+    signal: AbortSignal.timeout(120_000),
     method: 'POST',
     headers: {
       Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
@@ -1201,6 +1208,15 @@ async function callCuratorModel(settings: any, job: any, currentValue: unknown) 
 }
 
 async function createSuggestionFromResult(prisma: PrismaClient, settings: any, job: any, currentValue: unknown, modelResult: any, actualCost: number | null) {
+  if (job.targetField === 'careCadences') {
+    const recommendations = modelResult.suggestedValue?.careCadenceRecommendations
+    if (!Array.isArray(recommendations) || !recommendations.length) throw new Error('No structured cadence recommendations returned.')
+    const context = currentValue as { missingEligibleActivities: string[] }
+    if (context.missingEligibleActivities.some(activity => !recommendations.some((r: any) => r.activity === activity))) throw new Error('Cadence result omitted requested activities.')
+    const proposals = await persistCadenceRecommendations(prisma, { definitionId: job.plantDefinitionId, collectionId: job.collectionId, recommendations, source: job.jobType === 'CADENCE_BULK_RESEARCH' ? 'BULK_RESEARCH' : 'AI_RESEARCH', model: settings.model, jobId: job.id, explicit: job.reason === 'Explicit re-research' })
+    await prisma.aiCuratorJob.updateMany({ where: { id: job.id, status: 'RUNNING', claimedBy: job.claimedBy }, data: { status: 'COMPLETED', blockingReason: null, nextRetryAt: null, completedAt: new Date(), actualCostDollars: actualCost == null ? undefined : actualCost.toFixed(6), resultSummary: `Created ${proposals.length} cadence proposals for review.` } })
+    return proposals.length ? proposals[0] : null
+  }
   const suggestedValue = formatAiCuratorSuggestionValue(modelResult.suggestedValue, job.targetField)
   const formatIssues = aiCuratorSuggestionFormatIssues(suggestedValue, job.targetField)
   if (formatIssues.length) {
@@ -1316,6 +1332,10 @@ async function processJob(prisma: PrismaClient, settings: any, job: any) {
 
   try {
     const currentValue = await currentValueForJob(prisma, job)
+    if (job.targetField === 'careCadences' && !(currentValue as any).missingEligibleActivities.length) {
+      await prisma.aiCuratorJob.updateMany({ where: { id: job.id, status: 'RUNNING' }, data: { status: 'SKIPPED', completedAt: new Date(), resultSummary: 'No eligible missing activities remain.' } })
+      return { status: 'SKIPPED' as const, cost: 0 }
+    }
     const { payload, result } = await callCuratorModel(settings, job, currentValue)
     const usage = tokenUsage(payload)
     const hasUsage = Boolean((usage.inputTokens || 0) + (usage.outputTokens || 0))
@@ -1339,8 +1359,8 @@ async function processJob(prisma: PrismaClient, settings: any, job: any) {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     const exhausted = job.attempts >= job.maxAttempts
-    await prisma.aiCuratorJob.update({
-      where: { id: job.id },
+    await prisma.aiCuratorJob.updateMany({
+      where: { id: job.id, status: 'RUNNING', claimedBy: job.claimedBy },
       data: exhausted
         ? {
             status: 'WAITING_FOR_HUMAN',
@@ -1394,11 +1414,21 @@ async function budgetSnapshot(prisma: PrismaClient, settings: any) {
 }
 
 export async function processAiCuratorWake(prisma: PrismaClient) {
+  return prisma.$transaction(async lock => {
+    const [held] = await lock.$queryRaw<Array<{ acquired: boolean }>>`SELECT pg_try_advisory_xact_lock(186104, 2) AS acquired`
+    if (!held.acquired) return { status: 'WAITING' as const, processed: 0, created: 0, summary: 'Another AI Curator worker is active.' }
+    return processAiCuratorWakeLocked(prisma)
+  }, { timeout: 900_000 })
+}
+
+async function processAiCuratorWakeLocked(prisma: PrismaClient) {
   await assertMigrationOutboundReleased()
   const settings = await ensureAiCuratorSettings(prisma)
   const startedAt = new Date()
+  // The advisory lock serializes wakes; stale leases restore interrupted work.
   if (!settings.enabled) return { status: 'STOPPED' as const, processed: 0, created: 0, summary: 'AI Curator is disabled.' }
 
+  await recoverCadenceResearchLeases(prisma)
   const expired = await expireAiCuratorWork(prisma)
   const releasedTaxonomyBlocks = await releaseLegacyTaxonomyHumanBlocks(prisma)
   const resolvedImageBlocks = await resolveSatisfiedImageHumanBlocks(prisma)
@@ -1577,4 +1607,30 @@ export function suggestedScalarValue(value: unknown) {
   }
   if (typeof value === 'string') return value.trim() || null
   return null
+}
+
+export async function enqueueCadenceResearch(prisma: PrismaClient, options: { collectionId?: string; definitionId?: string; source?: 'AI_RESEARCH' | 'BULK_RESEARCH'; explicit?: boolean } = {}) {
+  const settings = await ensureAiCuratorSettings(prisma)
+  const definitions = await prisma.plantDefinition.findMany({ where: { ...(options.collectionId ? { collectionId: options.collectionId } : {}), ...(options.definitionId ? { id: options.definitionId } : {}), collection: { status: 'ACTIVE', aiFeaturesEnabled: true, aiCuratorEnabled: true } }, include: researchDefinitionInclude })
+  let created = 0
+  for (const d of definitions) {
+    if (!missingActivities(d, options.explicit).length) continue
+    const result = await prisma.$transaction(async tx => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(186104, 1)`
+      if (await tx.aiCuratorJob.findFirst({ where: { plantDefinitionId: d.id, targetField: 'careCadences', status: { in: ACTIVE_JOB_STATUSES } } })) return 0
+      // Re-read after lock to avoid duplicate work from a simultaneous completed request.
+      const latest = await tx.plantDefinition.findUniqueOrThrow({ where: { id: d.id }, include: researchDefinitionInclude })
+      if (!missingActivities(latest, options.explicit).length) return 0
+      await tx.aiCuratorJob.create({ data: { collectionId: d.collectionId!, plantDefinitionId: d.id, phase: 'ENRICHMENT', jobType: options.source === 'AI_RESEARCH' ? 'CADENCE_RESEARCH' : 'CADENCE_BULK_RESEARCH', targetEntityType: 'PLANT_DEFINITION', targetEntityId: d.id, targetField: 'careCadences', priority: 1000, reason: options.explicit ? 'Explicit re-research' : 'Research missing care cadences', estimatedCostDollars: estimatedJobCost(settings.model).toFixed(6), maxAttempts: settings.maxAttempts, model: settings.model, promptVersion: settings.promptVersion } })
+      return 1
+    })
+    created += result
+  }
+  return created
+}
+
+export async function recoverCadenceResearchLeases(prisma: PrismaClient, now = new Date()) {
+  const stale = await prisma.aiCuratorJob.findMany({ where: { targetField: 'careCadences', status: 'RUNNING', claimedAt: { lt: new Date(now.getTime() - 10 * 60_000) } } })
+  for (const job of stale) await prisma.aiCuratorJob.updateMany({ where: { id: job.id, status: 'RUNNING', claimedAt: job.claimedAt }, data: { status: job.attempts >= job.maxAttempts ? 'WAITING_FOR_HUMAN' : 'DEFERRED', claimedBy: null, claimedAt: null, nextRetryAt: new Date(now.getTime() + 60_000), blockingReason: 'Worker lease expired; bounded retry after restart.' } })
+  return stale.length
 }

@@ -63,7 +63,9 @@
     "check:care-cadences:ui": "node scripts/check-care-cadences-ui.mjs",
     "check:care-queue-optimistic": "tsx scripts/check-care-queue-optimistic.ts",
     "check:care-queue-operations": "tsx scripts/check-care-queue-operations.ts",
-    "check:care-queue-ui": "node scripts/check-care-queue-responsiveness.mjs"
+    "check:care-queue-ui": "node scripts/check-care-queue-responsiveness.mjs",
+    "check:cadence-research": "tsx scripts/check-cadence-research.ts",
+    "check:cadence-research:ui": "node scripts/check-cadence-research-ui.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

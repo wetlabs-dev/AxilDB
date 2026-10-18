@@ -219,7 +219,6 @@ async function applyFertilizerSuggestion(suggestion: any, overrideValue: unknown
     update: {
       sourcePlantDefinitionId: null,
       fertilizerRecipeId: recipe.id,
-      fertilizationCadenceDays: Number.isFinite(Number(input.fertilizationCadenceDays)) ? Math.max(1, Math.floor(Number(input.fertilizationCadenceDays))) : undefined,
       aiModel: suggestion.model,
       aiGeneratedAt: new Date(),
     },
@@ -227,7 +226,6 @@ async function applyFertilizerSuggestion(suggestion: any, overrideValue: unknown
       collectionId: suggestion.collectionId,
       plantDefinitionId: suggestion.plantDefinitionId,
       fertilizerRecipeId: recipe.id,
-      fertilizationCadenceDays: Number.isFinite(Number(input.fertilizationCadenceDays)) ? Math.max(1, Math.floor(Number(input.fertilizationCadenceDays))) : undefined,
       aiModel: suggestion.model,
       aiGeneratedAt: new Date(),
     },
