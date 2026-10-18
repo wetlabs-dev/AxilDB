@@ -12,6 +12,8 @@ import { isHistoricalConstituent } from '@/lib/plant-instance-merges'
 export async function saveCareCadences(fd: FormData) {
   const get = (key: string) => String(fd.get(key) || '')
   const instanceId = get('plantInstanceId')
+  const onlyActivity = get('activity')
+  if (onlyActivity && !cadenceActivities.some(row => row.activity === onlyActivity)) throw new Error('Invalid care activity.')
   const context = instanceId ? await requireCollectionLogger(get('collectionSlug')) : await requireCollectionAdmin(get('collectionSlug'))
   const preference = await prisma.emailPreference.findUnique({ where: { userId: context.user.id } })
   const timezone = timeZoneForPreference(preference)
@@ -21,12 +23,12 @@ export async function saveCareCadences(fd: FormData) {
       if (instance && isHistoricalConstituent(instance.status)) throw new Error('This historical specimen is read-only.')
       const definitionId = instance?.plantDefinitionId || get('plantDefinitionId')
       await tx.plantDefinition.findFirstOrThrow({ where: { id: definitionId, collectionId: context.collection.id } })
-      if (instanceId) {
+      if ((!onlyActivity || onlyActivity === 'FERTILIZING') && instanceId) {
         await tx.plantHusbandryOverride.updateMany({ where: { plantInstanceId: instanceId, collectionId: context.collection.id }, data: { fertilizationCadenceDays: null, fertilizationPaused: false } })
-      } else {
+      } else if (!onlyActivity || onlyActivity === 'FERTILIZING') {
         await tx.plantHusbandryGuide.updateMany({ where: { plantDefinitionId: definitionId, collectionId: context.collection.id }, data: { fertilizationCadenceDays: null, fertilizationPaused: false } })
       }
-      for (const { activity, task } of cadenceActivities) {
+      for (const { activity, task } of cadenceActivities.filter(row => !onlyActivity || row.activity === onlyActivity)) {
         const mode = get(`${activity}.mode`)
         if (!(instanceId ? ['INHERIT', 'OVERRIDE', 'DISABLED'] : ['OVERRIDE', 'DISABLED']).includes(mode)) throw new Error('Invalid cadence mode.')
         const interval = mode === 'OVERRIDE' ? Number(get(`${activity}.interval`)) : null

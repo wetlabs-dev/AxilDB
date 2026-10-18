@@ -1114,3 +1114,33 @@ section {
     -webkit-print-color-adjust: exact;
   }
 }
+
+/* Care cadence surfaces share the botanical theme and adapt to their container. */
+.care-cadences-module {
+  container-type: inline-size;
+  min-width: 0;
+  border: 1px solid var(--ax-border);
+  border-radius: .75rem;
+  background: var(--ax-surface);
+  padding: 1rem;
+}
+.care-cadences-description { margin-top: .25rem; font-size: .8125rem; line-height: 1.4; color: var(--ax-muted); }
+.care-cadences-edit-all { flex-shrink: 0; min-height: 44px; padding: .5rem .75rem; border: 1px solid var(--ax-border); border-radius: .5rem; font-size: .8125rem; color: var(--ax-text); }
+.care-cadences-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: .625rem; margin-top: 1rem; }
+.care-cadence-tile { display: flex; flex-direction: column; align-items: stretch; justify-content: center; min-width: 0; min-height: 88px; padding: .75rem; border: 0; border-radius: .5rem; background: var(--ax-surface-muted); text-align: left; color: var(--ax-text); }
+.care-cadence-tile-heading { display: flex; align-items: center; gap: .375rem; color: var(--ax-muted-strong); font-size: .6875rem; font-weight: 600; line-height: 1.4; letter-spacing: .035em; text-transform: uppercase; }
+.care-cadence-tile-heading > svg:first-child { flex-shrink: 0; color: var(--ax-primary); }
+.care-cadence-pencil { margin-left: auto; flex-shrink: 0; color: var(--ax-muted); }
+.care-cadence-value { display: block; margin-top: .375rem; font-size: 1rem; line-height: 1.35; font-weight: 600; overflow-wrap: anywhere; }
+.care-cadence-value-muted { color: var(--ax-muted-strong); font-weight: 500; }
+.care-cadence-context { display: block; margin-top: .25rem; font-size: .75rem; line-height: 1.4; color: var(--ax-muted); }
+.care-cadence-recipe-link { display: inline-flex; align-items: center; gap: .25rem; align-self: flex-start; min-height: 28px; margin-top: .125rem; font-size: .75rem; font-weight: 600; color: var(--ax-primary); text-decoration: underline; text-underline-offset: 3px; }
+.care-cadence-tile-editable:hover, .care-cadences-edit-all:hover { background: var(--ax-primary-wash); }
+.care-cadence-tile-editable:hover .care-cadence-pencil { color: var(--ax-primary); }
+.care-cadence-tile:focus-visible, .care-cadences-edit-all:focus-visible, .care-cadence-recipe-link:focus-visible { outline: 2px solid var(--ax-primary); outline-offset: 3px; }
+.care-cadence-dialog { width: min(44rem, calc(100% - 2rem)); max-height: calc(100dvh - 2rem); overflow-y: auto; border: 1px solid var(--ax-border); border-radius: .75rem; padding: 1.25rem; background: var(--ax-surface-solid); color: var(--ax-text); }
+.care-cadence-dialog::backdrop { background: rgb(0 0 0 / .4); }
+.care-cadence-dialog-actions { position: sticky; bottom: -1.25rem; display: flex; flex-wrap: wrap; gap: .75rem; margin: 0 -1.25rem -1.25rem; padding: 1rem 1.25rem; background: var(--ax-surface-solid); border-top: 1px solid var(--ax-border); }
+@container (min-width: 320px) { .care-cadences-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@container (min-width: 720px) { .care-cadences-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+:root[data-theme='dark'] .care-cadence-tile-editable:hover { background: var(--ax-primary-wash); }
