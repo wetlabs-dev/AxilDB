@@ -1,3 +1,4 @@
+import { linkedCareFields } from '@/lib/ai-curator-inheritance'
 import { isCuratorResponseFailure } from '@/lib/ai-curator-response'
 import { curatorFailureDescription, isCuratorHistoryConflict } from '@/lib/ai-curator-job-recovery'
 import { retryResponseErrorJobs, retryDatabaseBlockedJobs, clearAiCuratorRecentErrors, updateAiCuratorSettings, reviewAiCuratorSuggestion, resolveAiCuratorJob } from '@/app/ai-curator-actions'
@@ -371,7 +372,8 @@ function ReviewSuggestionCard({ suggestion }: { suggestion: any }) {
   const changedCount = prettyChangedCount(suggestion.targetField, suggestion.suggestedValue, changedFields)
   const highlights = contextHighlights(suggestion.currentValue)
   const references = referenceList(suggestion.supportingReferences)
-  const appliesDirectly = canApplyCuratorSuggestion(suggestion.targetField)
+  const linkedOverride = linkedCareFields.includes(suggestion.targetField || '') && Boolean(suggestion.plantDefinition?.husbandryGuide?.sourcePlantDefinitionId)
+  const appliesDirectly = !linkedOverride && canApplyCuratorSuggestion(suggestion.targetField)
   return (
     <details className="rounded-lg border border-stone-200 bg-[#fffdf7] p-3">
       <summary className="cursor-pointer list-none">
@@ -386,6 +388,7 @@ function ReviewSuggestionCard({ suggestion }: { suggestion: any }) {
         </div>
       </summary>
       <div className="mt-3 grid gap-4">
+        {linkedOverride && <p className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm">Proposed local override of linked care. Accept records manual follow-up and preserves the live link. Review the evidence below. To apply locally, open the definition and deliberately choose Make local copy first. Reason: {(suggestion.suggestedValue as any)?.localOverride?.reason} Evidence: {(suggestion.suggestedValue as any)?.localOverride?.evidence}</p>}
         <p className="rounded-md border border-stone-200 bg-white/50 p-3 text-sm leading-6 text-stone-800">{suggestion.reasoning}</p>
         {references.length > 0 && (
           <div className="flex flex-wrap gap-2">

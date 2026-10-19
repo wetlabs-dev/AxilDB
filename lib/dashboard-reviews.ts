@@ -1,3 +1,4 @@
+import { visibleLinkedCareSuggestion } from '@/lib/ai-curator-inheritance'
 import type { PrismaClient } from '@prisma/client'
 import { hasAiCuratorSuggestionChange } from '@/lib/ai-curator'
 import { actionableCadenceWhere } from '@/lib/cadence-review'
@@ -23,12 +24,12 @@ export async function researchReviewQueues(
           status: 'PENDING',
           OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
         },
-        select: { currentValue: true, suggestedValue: true, targetField: true },
+        select: { currentValue: true, suggestedValue: true, targetField: true, confidence: true, plantDefinition: { select: { husbandryGuide: { select: { sourcePlantDefinitionId: true } } } } },
       })
       .then(
         (rows) =>
           rows.filter((p) =>
-            hasAiCuratorSuggestionChange(
+            visibleLinkedCareSuggestion(p) && hasAiCuratorSuggestionChange(
               p.currentValue,
               p.suggestedValue,
               p.targetField

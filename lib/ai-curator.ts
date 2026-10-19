@@ -1,3 +1,4 @@
+import { curatorInheritance, linkedCarePolicy, linkedCareFields, visibleLinkedCareSuggestion } from '@/lib/ai-curator-inheritance'
 import { curatorResponseFormat, parseCuratorResponse, CuratorResponseError } from '@/lib/ai-curator-response'
 import { isCuratorHistoryConflict } from '@/lib/ai-curator-job-recovery'
 import { cadenceRecommendationShape, cadenceResearchInstructions } from '@/lib/cadence-recommendations'
@@ -315,8 +316,11 @@ export function aiCuratorCurrentFocusValue(currentValue: unknown, targetField?: 
 export function aiCuratorChangedFields(currentValue: unknown, suggestedValue: unknown, targetField?: string | null) {
   if (normalizedSuggestionValue(suggestedValue) === null) return []
   const currentFocus = aiCuratorCurrentFocusValue(currentValue, targetField)
+  if (targetField === 'husbandry' && isRecord(suggestedValue) && isRecord(suggestedValue.fields) && isRecord(currentFocus)) {
+    return Object.entries(suggestedValue.fields).some(([key, value]) => comparableSuggestionValue(currentFocus[key]) !== comparableSuggestionValue(value)) ? ['fields'] : []
+  }
   if (isRecord(currentFocus) && isRecord(suggestedValue)) {
-    return Object.keys(suggestedValue).filter((key) => comparableSuggestionValue(currentFocus[key]) !== comparableSuggestionValue(suggestedValue[key]))
+    return Object.keys(suggestedValue).filter((key) => key !== 'localOverride' && comparableSuggestionValue(currentFocus[key]) !== comparableSuggestionValue(suggestedValue[key]))
   }
   if (isRecord(suggestedValue) && Object.prototype.hasOwnProperty.call(suggestedValue, 'value')) {
     return comparableSuggestionValue(currentFocus) !== comparableSuggestionValue(suggestedValue.value) ? ['value'] : []
@@ -700,6 +704,15 @@ export async function enqueueDefinitionResearchNow(prisma: PrismaClient, collect
 }
 
 export async function expireAiCuratorWork(prisma: PrismaClient, now = new Date()) {
+  const linkedPending = await prisma.aiCuratorSuggestion.findMany({
+    where: { status: 'PENDING', targetField: { in: linkedCareFields }, plantDefinition: { is: { husbandryGuide: { is: { sourcePlantDefinitionId: { not: null } } } } } },
+    include: { plantDefinition: { include: { husbandryGuide: { select: { sourcePlantDefinitionId: true } } } } },
+  })
+  const obsolete = linkedPending.filter(suggestion => !visibleLinkedCareSuggestion(suggestion)).map(suggestion => suggestion.id)
+  const suppressed = obsolete.length ? await prisma.aiCuratorSuggestion.updateMany({
+    where: { id: { in: obsolete }, status: 'PENDING' },
+    data: { status: 'EXPIRED', reviewNote: 'Superseded: linked care requires an explicit evidence-backed local override at 90% confidence.' },
+  }) : { count: 0 }
   const [suggestions, jobs] = await Promise.all([
     prisma.aiCuratorSuggestion.updateMany({
       where: { status: 'PENDING', expiresAt: { lte: now } },
@@ -710,7 +723,7 @@ export async function expireAiCuratorWork(prisma: PrismaClient, now = new Date()
       data: { status: 'EXPIRED', completedAt: now, resultSummary: 'Expired before processing.' },
     }),
   ])
-  return { suggestions: suggestions.count, jobs: jobs.count }
+  return { suggestions: suggestions.count + suppressed.count, jobs: jobs.count }
 }
 
 async function currentValueForJob(prisma: PrismaClient, job: any) {
@@ -854,6 +867,8 @@ async function currentValueForJob(prisma: PrismaClient, job: any) {
   })
   if (!definition) return null
   const resources = await collectionResourceContext(prisma, job.collectionId)
+  const inheritance = linkedCareFields.includes(job.targetField) ? await curatorInheritance(prisma, definition.id, job.collectionId) : null
+  const effectiveGuide = inheritance?.effectiveGuide || definition.husbandryGuide
   const references = {
     wikipediaUrl: definition.wikipediaUrl,
     inaturalistUrl: definition.inaturalistUrl,
@@ -876,13 +891,13 @@ async function currentValueForJob(prisma: PrismaClient, job: any) {
     : job.targetField === 'aliases' ? definition.aliases
     : job.targetField === 'substrate' ? definition.substrateRecommendations
     : job.targetField === 'fertilizer' ? {
-      fertilizerRecipeId: definition.husbandryGuide?.fertilizerRecipeId || null,
-      fertilizationType: definition.husbandryGuide?.fertilizationType || null,
-      fertilizationStrength: definition.husbandryGuide?.fertilizationStrength || null,
-      fertilizationFrequency: definition.husbandryGuide?.fertilizationFrequency || null,
-      fertilizationCadenceDays: definition.husbandryGuide?.fertilizationCadenceDays || null,
+      fertilizerRecipeId: effectiveGuide?.fertilizerRecipeId || null,
+      fertilizationType: effectiveGuide?.fertilizationType || null,
+      fertilizationStrength: effectiveGuide?.fertilizationStrength || null,
+      fertilizationFrequency: effectiveGuide?.fertilizationFrequency || null,
+      fertilizationCadenceDays: effectiveGuide?.fertilizationCadenceDays || null,
     }
-    : job.targetField === 'husbandry' ? definition.husbandryGuide
+    : job.targetField === 'husbandry' ? effectiveGuide
     : job.targetField ? (definition as any)[job.targetField] ?? null
     : null
   const {
@@ -957,6 +972,7 @@ async function currentValueForJob(prisma: PrismaClient, job: any) {
     aliases,
     tags,
     husbandryGuide,
+    inheritance,
     substrateRecommendations,
     acquisitionResearchEntries,
     instances,
@@ -1167,6 +1183,7 @@ async function callCuratorModel(settings: any, job: any, currentValue: unknown) 
         'When suggesting existing AxilDB records such as tags, recipes, products, or taxonomic authorities, use only IDs that appear in the supplied context.resources lists.',
         'Every suggested value must match the expected storage format for that field. Use ALL_CAPS or SNAKE_CASE only where the target instructions explicitly list fixed enum options. For ordinary text fields, return human-readable plain English without underscores, for example "every other watering during active growth" instead of "EVERY_OTHER_WATERING_DURING_GROWING_SEASON".',
         curatorTargetInstructions(job.targetField),
+        'If context.inheritance is present, linked care is intentional, not missing local data. Compare with effectiveGuide and source substrates. Default suggestedValue to null for husbandry, fertilizer and substrate. Only recommend a plant-specific local override with confidence >= 0.90 and concrete evidence that inherited care is unsuitable for this definition. In that exception include suggestedValue.localOverride = { intent: "LOCAL_OVERRIDE", sourcePlantDefinitionId: context.inheritance.sourcePlantDefinitionId, reason: "specific difference from inherited care", evidence: "supporting botanical evidence specific to this definition" }. Never repeat generic species care or fill blank local fields already covered by inheritance. If the source cannot be resolved, return null. Local overrides require manual follow-up and must not unlink the guide.',
         'Return one complete compact JSON object with keys: title, suggestedValue, reasoning, confidence, supportingReferences. Keep reasoning to one or two short sentences, avoid repeating current context, and prefer a small focused suggestion over a long answer. Return suggestedValue null when no defensible change is available.',
         'supportingReferences must be an array of short objects with label and url when reliable public references are known; otherwise use an empty array.',
         'confidence must be from 0 to 1. Keep reasoning concise and explain uncertainty.',
@@ -1200,6 +1217,11 @@ async function createSuggestionFromResult(prisma: PrismaClient, settings: any, j
     const proposals = await persistCadenceRecommendations(prisma, { definitionId: job.plantDefinitionId, collectionId: job.collectionId, recommendations, source: job.jobType === 'CADENCE_BULK_RESEARCH' ? 'BULK_RESEARCH' : 'AI_RESEARCH', model: settings.model, jobId: job.id, explicit: job.reason === 'Explicit re-research' })
     await prisma.aiCuratorJob.updateMany({ where: { id: job.id, status: 'RUNNING', claimedBy: job.claimedBy }, data: { status: 'COMPLETED', blockingReason: null, nextRetryAt: null, completedAt: new Date(), actualCostDollars: actualCost == null ? undefined : actualCost.toFixed(6), resultSummary: `Created ${proposals.length} cadence proposals for review.` } })
     return proposals.length ? proposals[0] : null
+  }
+  const liveInheritance = job.plantDefinitionId && linkedCareFields.includes(job.targetField) ? await curatorInheritance(prisma, job.plantDefinitionId, job.collectionId) : null
+  if (!linkedCarePolicy(job.targetField, modelResult.suggestedValue, modelResult.confidence, liveInheritance)) {
+    await prisma.aiCuratorJob.updateMany({ where: { id: job.id, status: 'RUNNING', claimedBy: job.claimedBy }, data: { status: 'SKIPPED', completedAt: new Date(), actualCostDollars: actualCost == null ? undefined : actualCost.toFixed(6), resultSummary: 'Linked care preserved: no evidence-backed local override at 90% confidence.' } })
+    return null
   }
   const suggestedValue = formatAiCuratorSuggestionValue(modelResult.suggestedValue, job.targetField)
   const formatIssues = aiCuratorSuggestionFormatIssues(suggestedValue, job.targetField)
@@ -1504,12 +1526,12 @@ export async function aiCuratorDashboard(prisma: PrismaClient) {
       where: { status: 'WAITING_FOR_HUMAN' },
       orderBy: [{ priority: 'desc' }, { updatedAt: 'desc' }],
       take: 8,
-      include: { collection: { select: { name: true, slug: true } }, plantDefinition: true },
+      include: { collection: { select: { name: true, slug: true } }, plantDefinition: { include: { husbandryGuide: { select: { sourcePlantDefinitionId: true } } } } },
     }),
     prisma.aiCuratorJob.findFirst({
       where: { status: 'RUNNING' },
       orderBy: { claimedAt: 'desc' },
-      include: { collection: { select: { name: true, slug: true } }, plantDefinition: true },
+      include: { collection: { select: { name: true, slug: true } }, plantDefinition: { include: { husbandryGuide: { select: { sourcePlantDefinitionId: true } } } } },
     }),
     prisma.aiCuratorJob.findMany({
       where: { status: 'DEFERRED', blockingReason: { not: null }, errorClearedAt: null },
@@ -1588,8 +1610,8 @@ export async function aiCuratorReviewQueue(prisma: PrismaClient) {
   const suggestions = (await prisma.aiCuratorSuggestion.findMany({
     where: { status: 'PENDING', OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
     orderBy: [{ plantDefinitionId: 'asc' }, { createdAt: 'asc' }],
-    include: { collection: { select: { name: true, slug: true } }, plantDefinition: true },
-  })).filter((suggestion) => hasAiCuratorSuggestionChange(suggestion.currentValue, suggestion.suggestedValue, suggestion.targetField))
+    include: { collection: { select: { name: true, slug: true } }, plantDefinition: { include: { husbandryGuide: { select: { sourcePlantDefinitionId: true } } } } },
+  })).filter((suggestion) => visibleLinkedCareSuggestion(suggestion) && hasAiCuratorSuggestionChange(suggestion.currentValue, suggestion.suggestedValue, suggestion.targetField))
   const groups = new Map<string, { key: string; collectionName: string; collectionSlug: string; plantName: string; plantDefinitionId: string | null; suggestions: typeof suggestions }>()
   for (const suggestion of suggestions) {
     const key = suggestion.plantDefinitionId || `collection:${suggestion.collectionId}`

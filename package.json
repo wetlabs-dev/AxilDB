@@ -49,6 +49,7 @@
     "check:plant-instance-filters": "tsx scripts/check-plant-instance-filters.ts",
     "check:definition-completeness": "tsx scripts/check-definition-completeness.ts",
     "check:ai-curator:history:ui": "node scripts/check-ai-curator-history-ui.mjs",
+    "check:ai-curator:inheritance": "tsx scripts/check-ai-curator-inheritance.ts",
     "check:ai-curator:responses": "tsx scripts/check-ai-curator-responses.ts",
     "check:ai-curator:history": "tsx scripts/check-ai-curator-job-history.ts",
     "check:ai-curator": "tsx scripts/check-ai-curator.ts",

@@ -237,6 +237,104 @@ try {
     1
   )
   await unauthenticated.close()
+  const source = await db.plantDefinition.create({
+    data: {
+      collectionId: collection.id,
+      genus: 'Streptocarpus',
+      species: 'ionanthus',
+    },
+  })
+  await db.plantHusbandryGuide.create({
+    data: {
+      collectionId: collection.id,
+      plantDefinitionId: source.id,
+      summaryCare: 'Authoritative inherited care',
+    },
+  })
+  const child = await db.plantDefinition.create({
+    data: {
+      collectionId: collection.id,
+      genus: 'Streptocarpus',
+      cultivarName: 'Linked browser fixture',
+    },
+  })
+  await db.plantHusbandryGuide.create({
+    data: {
+      collectionId: collection.id,
+      plantDefinitionId: child.id,
+      sourcePlantDefinitionId: source.id,
+    },
+  })
+  const metadata = {
+    intent: 'LOCAL_OVERRIDE',
+    sourcePlantDefinitionId: source.id,
+    reason:
+      'This cultivar needs less feeding than the inherited species guide.',
+    evidence:
+      'Cultivar-specific grower observations document salt sensitivity under the source regimen.',
+  }
+  for (const [title, explicit] of [
+    ['Hidden generic linked care', false],
+    ['Review specific local override', true],
+  ]) {
+    await db.aiCuratorSuggestion.create({
+      data: {
+        collectionId: collection.id,
+        plantDefinitionId: child.id,
+        phase: 'ENRICHMENT',
+        suggestionType: 'HUSBANDRY_RESEARCH',
+        targetField: 'husbandry',
+        title,
+        confidence: 0.95,
+        reasoning: metadata.reason,
+        suggestedValue: {
+          fields: { summaryCare: 'Distinct cultivar care' },
+          ...(explicit ? { localOverride: metadata } : {}),
+        },
+      },
+    })
+  }
+  await page.reload()
+  await expect(page.locator('main')).not.toContainText(
+    'Hidden generic linked care'
+  )
+  const overrideCard = page
+    .locator('details')
+    .filter({
+      has: page.getByText('Review specific local override', { exact: true }),
+    })
+    .first()
+  await overrideCard.locator('summary').first().click()
+  await expect(overrideCard).toContainText('Manual follow-up')
+  await expect(overrideCard).toContainText('preserves the live link')
+  await overrideCard
+    .getByRole('button', { name: 'Accept', exact: true })
+    .click()
+  await expect(page).toHaveURL(/review=accepted/)
+  const preserved = await db.plantHusbandryGuide.findUniqueOrThrow({
+    where: { plantDefinitionId: child.id },
+  })
+  assert.equal(preserved.sourcePlantDefinitionId, source.id)
+  assert.equal(preserved.summaryCare, null)
+  assert.equal(
+    (
+      await db.plantHusbandryGuide.findUniqueOrThrow({
+        where: { plantDefinitionId: source.id },
+      })
+    ).summaryCare,
+    'Authoritative inherited care'
+  )
+  assert.equal(
+    (
+      await db.aiCuratorSuggestion.findFirstOrThrow({
+        where: {
+          plantDefinitionId: child.id,
+          title: 'Review specific local override',
+        },
+      })
+    ).status,
+    'ACCEPTED'
+  )
   await page.setViewportSize({ width: 390, height: 844 })
   await page.reload()
   assert.ok(
@@ -245,7 +343,7 @@ try {
     )
   )
   console.log(
-    'Curator recovery browser passed: readable errors, hidden jobs beyond eight recovered, existing output retained, attempts reset, unrelated blockers untouched, administrator-only history/response recovery actions, selective JSON-error retry, audit and mobile layout.'
+    'Curator recovery browser passed: readable errors, hidden jobs beyond eight recovered, existing output retained, attempts reset, unrelated blockers untouched, administrator-only history/response recovery actions, selective JSON-error retry, audit, linked-care suppression/manual acceptance without unlinking, and mobile layout.'
   )
 } finally {
   if (collection) await db.collection.delete({ where: { id: collection.id } })

@@ -1,5 +1,7 @@
 'use server'
 
+import { linkedCareFields } from '@/lib/ai-curator-inheritance'
+
 import { retryCuratorJob, retryDatabaseBlockedCuratorJobs, retryResponseBlockedCuratorJobs } from '@/lib/ai-curator-job-recovery'
 
 import { redirect } from 'next/navigation'
@@ -219,7 +221,6 @@ async function applyFertilizerSuggestion(suggestion: any, overrideValue: unknown
   await prisma.plantHusbandryGuide.upsert({
     where: { plantDefinitionId: suggestion.plantDefinitionId },
     update: {
-      sourcePlantDefinitionId: null,
       fertilizerRecipeId: recipe.id,
       aiModel: suggestion.model,
       aiGeneratedAt: new Date(),
@@ -257,7 +258,6 @@ async function applyHusbandrySuggestion(suggestion: any, overrideValue: unknown)
   const input = suggestionRecord(overrideValue)
   const fields = isRecord(input.fields) ? input.fields : input
   const data: Record<string, string | number | boolean | null | Date> = {
-    sourcePlantDefinitionId: null,
     reviewStatus: 'DRAFT',
     reviewNotes: 'Accepted AI Curator husbandry suggestion.',
     aiModel: suggestion.model || null,
@@ -275,7 +275,7 @@ async function applyHusbandrySuggestion(suggestion: any, overrideValue: unknown)
       data[field] = nullableString(value)
     }
   }
-  if (Object.keys(data).length <= 5) return false
+  if (Object.keys(data).length <= 4) return false
   await prisma.plantHusbandryGuide.upsert({
     where: { plantDefinitionId: suggestion.plantDefinitionId },
     update: data as any,
@@ -286,6 +286,11 @@ async function applyHusbandrySuggestion(suggestion: any, overrideValue: unknown)
 
 async function applyCuratorSuggestionValue(suggestion: any, overrideValue: unknown, user: { id: string }) {
   if (!suggestion.plantDefinitionId || !canApplyCuratorSuggestion(suggestion.targetField)) return false
+  if (linkedCareFields.includes(suggestion.targetField)) {
+    const guide = await prisma.plantHusbandryGuide.findUnique({ where: { plantDefinitionId: suggestion.plantDefinitionId }, select: { sourcePlantDefinitionId: true } })
+    // Linked overrides are reviewed manually using the existing Make local copy workflow.
+    if (guide?.sourcePlantDefinitionId) return false
+  }
   if (suggestion.targetField === 'references') {
     const data = referenceUpdateData(overrideValue)
     if (!Object.keys(data).length) return false
