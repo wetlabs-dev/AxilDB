@@ -1,4 +1,7 @@
 'use client'
+import { DeploymentProgress } from '@/components/DeploymentProgress'
+import { terminalDeployment } from '@/lib/deployment-progress'
+import { Terminal } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type {
   DeploymentEvent,
@@ -10,17 +13,6 @@ import type {
 } from '@/lib/deployment-agent'
 
 const endpoint = '/api/server/application-updates'
-const stages = [
-  'PREFLIGHT',
-  'BACKUP',
-  'FETCHING',
-  'PREPARING',
-  'BUILDING',
-  'MIGRATING',
-  'DEPLOYING',
-  'VERIFYING',
-  'COMPLETED',
-]
 const short = (value?: string | null) =>
   value ? value.slice(0, 12) : 'Unknown'
 async function responseJson(response: Response) {
@@ -41,6 +33,8 @@ export function ApplicationUpdates({ configured }: { configured: boolean }) {
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [reconnecting, setReconnecting] = useState(false)
+  const [connectionLost, setConnectionLost] = useState(false)
+  const disconnectedAt = useRef<number | null>(null)
   const [recovery, setRecovery] = useState<RecoveryOptions | null>(null)
   const [autoScroll, setAutoScroll] = useState(true)
   const [confirmation, setConfirmation] = useState<{
@@ -60,6 +54,8 @@ export function ApplicationUpdates({ configured }: { configured: boolean }) {
     if (signal?.aborted) return next
     setStatus(next)
     setReconnecting(false)
+    setConnectionLost(false)
+    disconnectedAt.current = null
     if (next.checked) setUpdate(next.checked)
     setJobId((old) => {
       const remembered = old || localStorage.getItem('axildb-deployment-job')
@@ -82,10 +78,15 @@ export function ApplicationUpdates({ configured }: { configured: boolean }) {
     let delay = 3000
     async function poll() {
       try {
-        await refresh(controller.signal)
+        const next = await refresh(controller.signal)
         delay = 3000
+        if (!next.activeJob && next.history.length && next.history.every(item => terminalDeployment(item.status))) return
       } catch {
-        if (!stopped) setReconnecting(true)
+        if (!stopped) {
+          setReconnecting(true)
+          disconnectedAt.current ??= Date.now()
+          setConnectionLost(Date.now() - disconnectedAt.current >= 300000)
+        }
         delay = Math.min(30_000, delay * 2)
       }
       if (!stopped) timer = setTimeout(poll, delay)
@@ -96,7 +97,12 @@ export function ApplicationUpdates({ configured }: { configured: boolean }) {
       controller.abort()
       clearTimeout(timer)
     }
-  }, [configured, refresh])
+  }, [configured, refresh, jobId, job?.status, status?.activeJob?.id])
+  useEffect(() => {
+    const onFocus = () => { if (configured && terminalDeployment(job?.status) && !status?.activeJob) void refresh().catch(() => setReconnecting(true)) }
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
+  }, [configured, job?.status, status?.activeJob?.id, refresh])
   useEffect(() => {
     if (confirmation) {
       setMigrationConsent(false)
@@ -153,14 +159,26 @@ export function ApplicationUpdates({ configured }: { configured: boolean }) {
         }
       }
     }
-    connect()
+    if (terminalDeployment(job?.status)) {
+      void (async () => {
+        try {
+          while (!stopped) {
+            const result = await responseJson(await fetch(`${endpoint}?mode=events&jobId=${jobId}&after=${cursor.current}`, { cache: 'no-store', signal: controller.signal }))
+            if (stopped) break
+            const before = cursor.current
+            receive(result.events)
+            if (result.events.length < 500 || cursor.current === before) break
+          }
+        } catch { if (!stopped) setMessage('Retained logs are temporarily unavailable. Download them after connectivity returns.') }
+      })()
+    } else connect()
     return () => {
       stopped = true
       stream?.close()
       controller.abort()
       clearTimeout(timer)
     }
-  }, [jobId])
+  }, [jobId, job?.status])
   useEffect(() => {
     if (autoScroll && logs.current)
       logs.current.scrollTop = logs.current.scrollHeight
@@ -313,8 +331,8 @@ export function ApplicationUpdates({ configured }: { configured: boolean }) {
           See docs/APPLICATION_UPDATES.md.
         </p>
       )}
-      {reconnecting && (
-        <p role="status" className="rounded-lg bg-amber-50 p-3">
+      {reconnecting && !job && (
+        <p role="status" className="deployment-connection rounded-lg p-3">
           AxilDB may be restarting with the updated application. Connection will
           resume automatically. A lost connection does not mean the deployment
           failed.
@@ -327,7 +345,7 @@ export function ApplicationUpdates({ configured }: { configured: boolean }) {
           <div>
             <dt>Current revision</dt>
             <dd className="break-all font-mono">
-              {status?.revision || 'Waiting for agent'}
+              {status?.revision ? short(status.revision) : 'Waiting for agent'}
             </dd>
           </div>
           <div>
@@ -487,43 +505,7 @@ export function ApplicationUpdates({ configured }: { configured: boolean }) {
       )}
       {job && (
         <section className="space-y-3 rounded-lg border p-4">
-          <h2 className="text-xl font-bold">
-            Upgrade progress · {job.status.replaceAll('_', ' ')}
-          </h2>
-          <p className="break-all">
-            Job {job.id} · Target {job.revision} · Previous{' '}
-            {job.previous || 'Not captured'}
-          </p>
-          <p>
-            Requested by administrator {job.actor} ·{' '}
-            {new Date(job.created).toLocaleString()}
-            {job.finished &&
-              job.started &&
-              ` · ${Math.round((Date.parse(job.finished) - Date.parse(job.started)) / 1000)} seconds`}
-          </p>
-          <ol className="grid gap-2 sm:grid-cols-3">
-            {stages.map((stage, i) => (
-              <li key={stage}>
-                {job.status === 'COMPLETED' || stages.indexOf(job.stage) > i
-                  ? '✓'
-                  : job.stage === stage
-                    ? '●'
-                    : '○'}{' '}
-                {stage.toLowerCase()}
-              </li>
-            ))}
-          </ol>
-          <p>
-            Current stage: {job.stage}.{' '}
-            {job.data.migrationStatus &&
-              `Migrations: ${job.data.migrationStatus}.`}{' '}
-            Backup: {job.data.backup || 'Not completed'}
-          </p>
-          {job.data.error && (
-            <p role="alert" className="rounded bg-red-50 p-3">
-              {job.data.failedStage}: {job.data.error}
-            </p>
-          )}
+          <DeploymentProgress key={job.id} job={job} events={events} reconnecting={reconnecting} connectionLost={connectionLost} />
           {job.data.recoveryResult && <p>{job.data.recoveryResult}</p>}
           {job.status === 'RECOVERY_REQUIRED' && (
             <div className="space-y-2 rounded bg-amber-50 p-3">
@@ -566,10 +548,9 @@ export function ApplicationUpdates({ configured }: { configured: boolean }) {
               </p>
             </div>
           )}
-          <details>
-            <summary className="cursor-pointer font-semibold">
-              Detailed deployment logs
-            </summary>
+          <details id="deployment-logs" open={Boolean(job.data.error)} className="deployment-log-section">
+            <summary className="cursor-pointer font-semibold"><Terminal className="mr-2 inline-block" size={16} aria-hidden="true" />Detailed deployment logs</summary>
+            <p className="mt-1 text-xs text-stone-600">Full output remains available for troubleshooting.</p>
             <div className="my-2 flex flex-wrap gap-3">
               <label>
                 <input

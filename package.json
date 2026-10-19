@@ -90,7 +90,8 @@
     "check:bulk-care-ui": "node scripts/check-bulk-care-ui.mjs",
     "check:care-calendar": "tsx scripts/check-care-calendar.ts",
     "check:care-calendar:db": "tsx scripts/check-care-calendar-db.ts",
-    "check:care-calendar:ui": "node scripts/check-care-calendar-ui.mjs"
+    "check:care-calendar:ui": "node scripts/check-care-calendar-ui.mjs",
+    "check:deployment-progress": "tsx scripts/check-deployment-progress.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

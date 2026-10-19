@@ -6,6 +6,7 @@ import { ApplicationUpdates } from '@/components/ApplicationUpdates'
 import packageInfo from '@/package.json'
 export default async function ApplicationUpdatesPage() {
   await requireServerAdmin()
+  const revision = await applicationRevision()
   return (
     <div className="space-y-5">
       <Link className="underline" href="/server">
@@ -14,7 +15,7 @@ export default async function ApplicationUpdatesPage() {
       <h1 className="text-3xl font-bold">Application Updates</h1>
       <p>
         AxilDB deployment management · Package {packageInfo.version} · Running
-        image revision: {await applicationRevision()}
+        image revision: <span className="font-mono" title={revision}>{revision.slice(0, 7)}</span>
       </p>
       <ApplicationUpdates configured={deploymentAgentConfigured()} />
     </div>

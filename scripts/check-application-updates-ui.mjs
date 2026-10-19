@@ -280,7 +280,7 @@ try {
     page.getByText(/Connection will resume automatically/)
   ).toBeVisible()
   await expect(
-    page.getByRole('heading', { name: /Upgrade progress · COMPLETED/ })
+    page.getByText('Upgrade completed successfully.', { exact: false })
   ).toBeVisible({ timeout: 45000 })
   const state = await (await context.request.get(endpoint)).json()
   assert.equal(state.history.length, 1)
@@ -294,7 +294,7 @@ try {
   assert.equal((await repeated.json()).id, state.history[0].id)
   await page.reload()
   await expect(
-    page.getByRole('heading', { name: /Upgrade progress · COMPLETED/ })
+    page.getByText('Upgrade completed successfully.', { exact: false })
   ).toBeVisible()
   await page.getByText('Detailed deployment logs', { exact: true }).click()
   await expect(page.locator('pre')).toContainText('Completed')
@@ -325,6 +325,71 @@ try {
       () => document.documentElement.scrollWidth <= window.innerWidth + 1
     )
   )
+  // Presentation fixtures exercise every timeline state without changing agent execution.
+  let renderJob = { ...state.history[0], stage: 'PREFLIGHT', status: 'QUEUED', data: {}, finished: null }
+  let statusReads = 0
+  await page.route('**/api/server/application-updates*', async route => {
+    if (route.request().method() !== 'GET') return route.continue()
+    const url = new URL(route.request().url())
+    if (url.searchParams.get('mode') === 'events') {
+      const event = { id: 1, job_id: renderJob.id, timestamp: new Date(Date.now() - 18000).toISOString(), stage: renderJob.stage, level: 'INFO', message: renderJob.stage.charAt(0) + renderJob.stage.slice(1).toLowerCase() }
+      if (url.searchParams.get('stream') === '1') return route.fulfill({ contentType: 'text/event-stream', body: `data: ${JSON.stringify(event)}\n\n` })
+      return route.fulfill({ json: { events: url.searchParams.get('after') === '1' ? [] : [event] } })
+    }
+    statusReads++
+    return route.fulfill({ json: { ...state, history: [renderJob], activeJob: ['RUNNING', 'QUEUED'].includes(renderJob.status) ? renderJob : null } })
+  })
+  await page.reload()
+  const timeline = page.locator('[data-deployment-progress]')
+  await expect(timeline.locator('[data-stage-status="pending"]')).toHaveCount(8)
+  await expect(timeline.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0')
+  renderJob = { ...renderJob, status: 'RUNNING', stage: 'BACKUP' }
+  await expect(timeline.locator('[data-stage="BACKUP"]')).toHaveAttribute('data-stage-status', 'active', { timeout: 10000 })
+  await expect(timeline.locator('[data-stage="PREFLIGHT"]')).toHaveAttribute('data-stage-status', 'completed')
+  assert.equal(await timeline.locator('.deployment-spinner').evaluate(node => getComputedStyle(node).animationDuration), '1s')
+  await expect(timeline.locator('[data-stage="BACKUP"]')).toContainText(/In progress · \d+s/)
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  assert.equal(await timeline.locator('.deployment-spinner').evaluate(node => getComputedStyle(node).animationName), 'none')
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'))
+  await timeline.screenshot({ path: '/tmp/axildb-upgrade-timeline-dark.png' })
+  await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'light'))
+  renderJob = { ...renderJob, stage: 'BUILDING' }
+  await expect(timeline.locator('[data-stage="BUILDING"]')).toHaveAttribute('data-stage-status', 'active', { timeout: 10000 })
+  await expect(timeline.locator('[data-stage="BACKUP"]')).toHaveAttribute('data-stage-status', 'completed')
+  renderJob = { ...renderJob, stage: 'UNKNOWN_STAGE' }
+  await page.reload()
+  await expect(timeline.getByText('Waiting for stage information…')).toBeVisible()
+  assert.equal(await timeline.getByRole('progressbar').getAttribute('aria-valuenow'), null)
+  await expect(timeline.locator('.deployment-spinner')).toHaveCount(0)
+  renderJob = { ...renderJob, stage: 'BUILDING', status: 'FAILED', actor: 'administrator-'.repeat(12), data: { failedStage: 'BUILDING', error: 'Build failed while retrieving application dependencies. ' + 'diagnostic-'.repeat(40) } }
+  await page.reload()
+  await expect(timeline.locator('[data-stage="BUILDING"]')).toHaveAttribute('data-stage-status', 'failed')
+  await expect(timeline.locator('[data-stage="MIGRATING"]')).toHaveAttribute('data-stage-status', 'pending')
+  await expect(page.locator('#deployment-logs')).toHaveAttribute('open', '')
+  const details = timeline.locator('.deployment-details')
+  assert.equal(await details.getAttribute('open'), null)
+  await details.locator('summary').focus()
+  await page.keyboard.press('Enter')
+  await expect(details).toHaveAttribute('open', '')
+  await expect(details.getByText(renderJob.revision, { exact: true })).toBeVisible()
+  for (const width of [320, 375, 390, 430, 768, 1280]) {
+    await page.setViewportSize({ width, height: 900 })
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `No page overflow at ${width}px`)
+  }
+  renderJob = { ...renderJob, stage: 'COMPLETED', status: 'COMPLETED', data: { hasMigrations: false, migrationStatus: 'NOT_REQUIRED' } }
+  await page.reload()
+  await expect(timeline.locator('[data-stage="MIGRATING"]')).toHaveAttribute('data-stage-status', 'skipped')
+  await expect(timeline.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '8')
+  await expect(timeline.getByText(/7 completed · 1 skipped/)).toBeVisible()
+  await expect(timeline.locator('.deployment-spinner')).toHaveCount(0)
+  assert.equal(await page.locator('#deployment-logs').getAttribute('open'), null)
+  await page.setViewportSize({ width: 390, height: 844 })
+  await timeline.screenshot({ path: '/tmp/axildb-upgrade-timeline-mobile.png' })
+  await page.waitForTimeout(300)
+  const terminalReads = statusReads
+  await page.waitForTimeout(3500)
+  assert.equal(statusReads, terminalReads, 'Terminal jobs stop routine status polling.')
   assert.deepEqual(errors, [])
   console.log(
     'Application Updates browser checks passed: verified admin access, unauthorized/CSRF/injection rejection, real authenticated Unix transport, update review, preflight, confirmation/cancel, duplicate requests, restart reconnect, durable event replay/history, secret boundary and mobile layout. Docker operations in this browser fixture are simulated; the separate Docker test exercises actual orchestration.'

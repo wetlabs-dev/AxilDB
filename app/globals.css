@@ -1182,3 +1182,52 @@ section {
 :root[data-theme='dark'] .care-cadence-tile-editable:hover { background: var(--ax-primary-wash); }
 
 .care-cadence-value-resolved { color: var(--ax-primary); font-weight: 500; }
+
+/* Deployment progress shares the application theme; motion never represents unconfirmed work. */
+.deployment-progress { min-width: 0; color: var(--ax-text); }
+.deployment-progress-header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: .75rem; margin-bottom: .85rem; }
+.deployment-eyebrow { color: var(--ax-primary); font-size: .65rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; margin-bottom: .2rem; }
+.deployment-caption { color: var(--ax-muted); font-size: .75rem; line-height: 1.5; overflow-wrap: anywhere; }
+.deployment-status { border: 1px solid var(--ax-border); border-radius: 999px; background: var(--ax-bg-soft); padding: .3rem .65rem; font-size: .75rem; font-weight: 600; }
+.deployment-status-success { color: var(--ax-primary); background: var(--ax-primary-wash); }
+.deployment-status-failure { color: var(--ax-danger); background: var(--ax-danger-soft); }
+.deployment-meter { height: .3rem; overflow: hidden; border-radius: 999px; background: var(--ax-border); margin-bottom: .45rem; }
+.deployment-meter > div { height: 100%; background: var(--ax-primary); transition: width 220ms ease-out; }
+.deployment-timeline { list-style: none; padding: 0; margin: 1rem 0 .5rem; }
+.deployment-stage { position: relative; display: flex; gap: .65rem; min-height: 3rem; padding: .25rem 0 .5rem; }
+.deployment-stage-indicator { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; flex: 0 0 1.875rem; width: 1.875rem; height: 1.875rem; border-radius: 50%; border: 1px solid var(--ax-border-strong); color: var(--ax-muted); background: var(--ax-surface-solid); transition: color 200ms ease, background-color 200ms ease, border-color 200ms ease; }
+.deployment-stage-pending .deployment-stage-indicator svg { width: .4rem; height: .4rem; fill: currentColor; }
+.deployment-stage-content { min-width: 0; flex: 1; padding: .3rem .6rem .5rem; border-radius: .5rem; }
+.deployment-stage-pending .deployment-stage-content, .deployment-stage-skipped .deployment-stage-content { color: var(--ax-muted); }
+.deployment-stage-label { font-size: .65rem; color: var(--ax-muted); }
+.deployment-stage-active .deployment-stage-label { color: var(--ax-primary); font-weight: 600; }
+.deployment-stage-active .deployment-stage-indicator, .deployment-stage-completed .deployment-stage-indicator { color: var(--ax-primary); background: var(--ax-primary-wash); border-color: var(--ax-primary); }
+.deployment-stage-active .deployment-stage-content { background: var(--ax-primary-wash); }
+.deployment-stage-failed .deployment-stage-indicator { color: var(--ax-danger); border-color: var(--ax-danger); background: var(--ax-danger-soft); }
+.deployment-stage-failed .deployment-stage-label { color: var(--ax-danger); }
+.deployment-connector { position: absolute; left: calc(.9375rem - .5px); top: 2.125rem; bottom: -.25rem; width: 1px; background: var(--ax-border); transition: background-color 220ms ease; }
+.deployment-connector-done { background: var(--ax-primary-soft); }
+.deployment-spinner { animation: deployment-spin 1s linear infinite; }
+.deployment-check-enter { animation: deployment-check 220ms ease-out; }
+.deployment-success, .deployment-connection, .deployment-failure { border: 1px solid var(--ax-border); border-radius: .5rem; padding: .65rem .75rem; font-size: .8rem; }
+.deployment-success { display: flex; align-items: center; gap: .5rem; color: var(--ax-primary); background: var(--ax-primary-wash); margin: .5rem 0; }
+.deployment-success svg { flex-shrink: 0; }
+.deployment-connection { color: var(--ax-muted-strong); background: var(--ax-bg-soft); margin: .6rem 0; }
+.deployment-failure { color: var(--ax-danger); background: var(--ax-danger-soft); overflow-wrap: anywhere; margin: .65rem 0; }
+.deployment-details { border-top: 1px solid var(--ax-border); margin-top: .75rem; padding-top: .75rem; }
+.deployment-details summary, .deployment-log-section summary { cursor: pointer; font-size: .8rem; font-weight: 600; min-height: 2.75rem; display: list-item; align-content: center; }
+.deployment-details dt { color: var(--ax-muted); font-size: .75rem; margin-bottom: .15rem; }
+.deployment-copy { flex-shrink: 0; min-width: 2.75rem; min-height: 2.75rem; display: inline-flex; align-items: center; justify-content: center; }
+.deployment-log-section { border-top: 1px solid var(--ax-border); padding-top: .5rem; }
+.deployment-progress :is(button, summary, a):focus-visible, .deployment-log-section summary:focus-visible { outline: 2px solid var(--ax-primary); outline-offset: 3px; border-radius: .25rem; }
+@keyframes deployment-spin { to { transform: rotate(360deg); } }
+@keyframes deployment-check { from { opacity: .3; transform: scale(.85); } to { opacity: 1; transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .deployment-spinner, .deployment-check-enter { animation: none; }
+  .deployment-stage-indicator, .deployment-connector, .deployment-meter > div { transition: none; }
+}
+.deployment-meter-indeterminate > div { animation: deployment-indeterminate 1.6s ease-in-out infinite alternate; }
+@keyframes deployment-indeterminate { from { transform: translateX(0); } to { transform: translateX(230%); } }
+@media (prefers-reduced-motion: reduce) {
+  .deployment-meter-indeterminate > div { animation: none; }
+}
