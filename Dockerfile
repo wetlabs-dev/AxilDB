@@ -2,7 +2,12 @@ FROM node:22-alpine AS deps
 WORKDIR /app
 RUN apk add --no-cache openssl
 COPY package*.json ./
-RUN npm ci
+# Preserve verified downloads across failed builds; limit parallel registry traffic.
+# npm ci still installs exactly package-lock.json and runs normal lifecycle scripts.
+RUN --mount=type=cache,id=axildb-npm,target=/root/.npm,sharing=locked \
+    npm ci --prefer-offline --maxsockets=5 \
+      --fetch-retries=5 --fetch-retry-mintimeout=10000 \
+      --fetch-retry-maxtimeout=60000 --fetch-timeout=120000
 
 FROM node:22-alpine AS builder
 WORKDIR /app
