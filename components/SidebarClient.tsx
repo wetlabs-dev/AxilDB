@@ -64,6 +64,7 @@ const navSections = [
       ['/', 'Dashboard', Home],
       ['/search', 'Search', Search],
       ['/care', 'Care Queue', ClipboardCheck],
+      ['/care/repotting', 'Repotting Planner', ClipboardCheck],
       ['/workflows', 'Workflows', ClipboardList],
       ['/care-sheets', 'Care Sheets', BookOpen],
     ],

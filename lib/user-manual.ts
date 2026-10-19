@@ -282,6 +282,8 @@ export const manualSections: ManualSection[] = [
       'A complete care schedule has scheduled Watering, Pest inspection and General inspection, plus Scheduled or Not applicable decisions for Fertilizing, Repotting and Pruning. Missing decisions and disabled overrides remain unresolved. Completeness is informational and does not block saving a plant.',
       'Scheduled fertilizing requires an active recipe assigned directly to the plant definition, including for instance overrides. Disable all dependent fertilizing cadences before removing or archiving its final recipe.',
       'Next due dates use the latest completed matching care activity plus the effective cadence. Early completion starts a fresh interval; cadence edits never rewrite history. Calendar months and years clamp to the last valid day of the target month in your timezone.',
+      'Seasonal Repotting: server admins manage named month/day windows from Server Management. Assign a primary and optional alternate on a Plant Definition. Care → Repotting Planner schedules individual instances for an annual window; the primary wins when it begins within three calendar months of the earlier alternate. Queueing handles an assessment without recording completed repotting. Use Mark Repotted only after the work is done; select substrate and actual completion details. Existing bookings retain their year when definitions change. N/A cadence still permits manual planning.',
+      'Husbandry Repotting Interval reflects the effective care cadence, with legacy interval text preserved as guidance. Edit the cadence instead of maintaining a second interval. Curator and Magic Fill window recommendations require explicit approval, with independent primary/alternate evidence and confidence; stale assignments or window dates require new research. Partial approval is available through Advanced edit by clearing alternateWindowId.',
       'Without completed care, Next due is Not established. Set an initial next due in the cadence editor or use Care Schedule Sync without inventing a care event. Existing quiet-day and snooze rules still apply to the Care Queue.',
       'Use Edit Instance and View Plant Definition in the specimen header to reach the existing editor and the definition husbandry page.',
 
@@ -317,7 +319,7 @@ export const manualSections: ManualSection[] = [
       'Create a new version when a formulation changes. Activated and historical versions remain read-only so existing plant and care records keep their exact formulation.',
       'On a Plant Definition, rank one or more recipe versions as Preferred, Recommended, Acceptable, or Special purpose.',
       'On a Plant Instance, record the current recipe version or choose Received Substrate, Custom / Unknown Mix, No Substrate, or Unknown. Each change adds a history entry.',
-      'Use Bulk care by location for a reviewed multi-plant repot. Plants with a parseable husbandry repotting interval also receive derived Repot tasks in the Care Queue.',
+      'Use Bulk care by location for a reviewed multi-plant repot. Repotting assessments use the configured effective care cadence; seasonal scheduling does not itself record repotting.',
       'Use the recipe and plant-history CSV exports for formulation and Received Substrate review.',
     ],
     notes: [

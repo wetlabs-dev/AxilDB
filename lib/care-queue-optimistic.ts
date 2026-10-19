@@ -1,6 +1,6 @@
 import type { CareQueueItem } from '@/lib/care-queue'
 
-export const careQueueActions = ['complete', 'snooze', 'resolve', 'update', 'attention', 'establish', 'bulk'] as const
+export const careQueueActions = ['planRepotting', 'complete', 'snooze', 'resolve', 'update', 'attention', 'establish', 'bulk'] as const
 export type CareQueueAction = typeof careQueueActions[number]
 export type CareOperation = {
   operationId: string

@@ -341,7 +341,7 @@ export const husbandrySections: Array<{
 
 export function husbandryFormValues(formData: FormData) {
   return Object.fromEntries(
-    husbandryFieldNames.map((field) => {
+    husbandryFieldNames.filter(field => field !== 'repottingInterval').map((field) => {
       const value = String(formData.get(field) || '').trim()
       return [field, value || null]
     }),

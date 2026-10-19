@@ -1,7 +1,7 @@
  'use client'
 import Link from 'next/link'
 import { CalendarDays, CheckCircle2, MapPin } from 'lucide-react'
-import { createCareSheet, completeCareTask, markPropagationEstablished, snoozeCareTask } from '@/app/actions'
+import { createCareSheet, completeCareTask, planRepottingTask, markPropagationEstablished, snoozeCareTask } from '@/app/actions'
 import { CareActionForm, useCareQueue } from '@/components/CareQueueOptimistic'
 import { PlantIdPreviewLink } from '@/components/PlantIdPreviewLink'
 import { PlantImage } from '@/components/PlantImage'
@@ -105,15 +105,16 @@ export function CareQueueChecklist({ collectionSlug, canAct, timezone, rangeEnd 
                       <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
                         <Link href={item.href} className="inline-flex items-center whitespace-nowrap font-medium leading-5 text-[#2f6b45] underline">View</Link>
                         {canAct && (
-                          <CareActionForm actionName="complete" item={item} action={completeCareTask} className="inline-flex">
+                          <CareActionForm actionName={item.taskType === 'REPOT' && item.repottingPlanAvailable ? 'planRepotting' : 'complete'} item={item} action={item.taskType === 'REPOT' && item.repottingPlanAvailable ? planRepottingTask : completeCareTask} className="inline-flex">
                             <input type="hidden" name="collectionSlug" value={context.collection.slug} />
                             <input type="hidden" name="back" value={back} />
                             <input type="hidden" name="taskType" value={item.taskType} />
+                            <input type="hidden" name="dueAt" value={new Date(item.dueAt).toISOString()} />
                             {item.plantInstanceId && <input type="hidden" name="plantInstanceId" value={item.plantInstanceId} />}
                             {item.reminderId && <input type="hidden" name="reminderId" value={item.reminderId} />}
                             {item.conditionId && <input type="hidden" name="conditionId" value={item.conditionId} />}
                             {item.bloomEventId && <input type="hidden" name="bloomEventId" value={item.bloomEventId} />}
-                            <button className="inline-flex items-center whitespace-nowrap font-medium leading-5 text-[#2f6b45] underline">Complete</button>
+                            <button className="inline-flex items-center whitespace-nowrap font-medium leading-5 text-[#2f6b45] underline">{item.taskType === 'REPOT' && item.repottingPlanAvailable ? 'Add to Next Repotting Window' : 'Complete'}</button>
                           </CareActionForm>
                         )}
                         {canAct && item.plantInstanceId && item.source === 'derived' && (

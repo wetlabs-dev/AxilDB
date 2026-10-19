@@ -6,6 +6,7 @@ import { CareActionForm } from '@/components/CareQueueOptimistic'
 import { Bell, Bug, ChevronDown, Droplets, FlaskConical, Flower2, HeartPulse, Layers3, Sprout } from 'lucide-react'
 import {
   completeCareTask,
+  planRepottingTask,
   conditionStillNeedsAttentionFromCareQueue,
   markPropagationEstablished,
   resolveConditionFromCareQueue,
@@ -83,6 +84,7 @@ function ConditionHiddenFields({ item, collectionSlug, back }: { item: CareQueue
       <input type="hidden" name="collectionSlug" value={collectionSlug} />
       <input type="hidden" name="back" value={back} />
       <input type="hidden" name="taskType" value={item.taskType} />
+      <input type="hidden" name="dueAt" value={new Date(item.dueAt).toISOString()} />
       {item.conditionId && <input type="hidden" name="conditionId" value={item.conditionId} />}
     </>
   )
@@ -236,6 +238,11 @@ function NormalCareDetails({
   )
   return (
     <>
+      {item.taskType === 'REPOT' && item.repottingPlanAvailable && <CareActionForm actionName="planRepotting" action={planRepottingTask} item={item}>
+        <CompleteCareHiddenFields item={item} collectionSlug={collectionSlug} back={back} />
+        <p className="text-xs">Schedule the assessment for seasonal work; this does not record repotting.</p>
+        <Button>Add to Next Repotting Window</Button>
+      </CareActionForm>}
       <CareActionForm actionName="complete" item={item} action={completeCareTask} className="grid gap-2">
         <CompleteCareHiddenFields item={item} collectionSlug={collectionSlug} back={back} />
         {item.taskType === 'FERTILIZE' && (
@@ -352,6 +359,7 @@ function DesktopPrimaryAction({
   back: string
   canAct: boolean
 }) {
+  if (canAct && !item.completedAt && item.taskType === 'REPOT' && item.repottingPlanAvailable) return <CareActionForm actionName="planRepotting" action={planRepottingTask} item={item}><CompleteCareHiddenFields item={item} collectionSlug={collectionSlug} back={back}/><Button>Add to Next Repotting Window</Button></CareActionForm>
   if (!canAct || item.completedAt || item.condition || item.taskType === 'REPOT') return null
   if (item.source === 'treatment-plan') return <Link href={item.href} className="rounded-md bg-[#2f6b45] px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#28593b]">Continue plan</Link>
   return (

@@ -2044,6 +2044,7 @@ export async function savePlantHusbandryGuideField(fd: FormData) {
   const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const plantDefinitionId = val(fd, 'plantDefinitionId')!
   const fieldName = val(fd, 'fieldName')!
+  if (fieldName === 'repottingInterval') throw new Error('Edit the repotting care cadence instead; legacy husbandry guidance is preserved.')
   if (!husbandryFieldNames.includes(fieldName as any)) throw new Error('Unknown husbandry field.')
   await prisma.plantDefinition.findFirstOrThrow({ where: { id: plantDefinitionId, collectionId: collection.id }, select: { id: true } })
 
@@ -2571,6 +2572,7 @@ export async function savePlantHusbandryOverrideField(fd: FormData) {
   const plantInstanceId = val(fd, 'plantInstanceId')!
   await assertPlantInstanceAcceptsChanges(collection.id, plantInstanceId)
   const fieldName = val(fd, 'fieldName')!
+  if (fieldName === 'repottingInterval') throw new Error('Edit the repotting care cadence instead; legacy husbandry guidance is preserved.')
   if (!husbandryFieldNames.includes(fieldName as any)) throw new Error('Unknown husbandry field.')
   await prisma.plantInstance.findFirstOrThrow({ where: { id: plantInstanceId, collectionId: collection.id }, select: { id: true } })
 
@@ -2926,6 +2928,12 @@ export async function skipCareSheetTask(fd: FormData) {
   })
   revalidateDestination(destination)
   redirect(destination)
+}
+
+export async function planRepottingTask(fd: FormData) {
+  await runCareQueueMutation('planRepotting', fd)
+  revalidatePath('/', 'layout')
+  redirect(back(fd))
 }
 
 export async function completeCareTask(fd: FormData) {

@@ -163,6 +163,8 @@ export function HusbandryGuideView({
   showEmptyFields = false,
   title = 'Plant husbandry',
   sourceLabel,
+  repottingIntervalLabel,
+  cadenceHref,
 }: {
   values?: HusbandryValues | null
   baseValues?: HusbandryValues | null
@@ -177,7 +179,11 @@ export function HusbandryGuideView({
   showEmptyFields?: boolean
   title?: string
   sourceLabel?: string
+  repottingIntervalLabel?: string
+  cadenceHref?: string
 }) {
+  const legacyInterval = values?.repottingInterval
+  if (repottingIntervalLabel !== undefined) values = { ...values, repottingInterval: repottingIntervalLabel }
   const differences = husbandryDifferences(baseValues, values)
   const hasAny = husbandryFieldNames.some((field) => values?.[field])
   const canEditFields = canEdit && editAction && collectionSlug && plantDefinitionId
@@ -202,7 +208,8 @@ export function HusbandryGuideView({
                     <dt className="flex flex-wrap items-center gap-2 font-semibold text-stone-800">
                       <span>{label}</span>
                       {differences.has(field) && <span className="rounded-full border border-[#c4a86a]/40 bg-[#fff5d6] px-2 py-0.5 text-[0.65rem] uppercase tracking-[0.12em] text-[#6f541f]">Local adjustment</span>}
-                      {canEditFields && (
+                      {field === 'repottingInterval' && cadenceHref && <Link href={cadenceHref} className="underline">Edit care cadence</Link>}
+                      {field !== 'repottingInterval' && canEditFields && (
                         <details className="relative z-10 inline-block max-w-full open:z-50">
                           <summary className="inline-flex cursor-pointer list-none items-center gap-1 rounded-full border border-[#b8c9ad] bg-[#eef4e8] px-2 py-0.5 text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-[#2f6b45] hover:bg-[#dfead7]">
                             <PencilLine className="h-3 w-3" />
@@ -230,7 +237,7 @@ export function HusbandryGuideView({
                           </form>
                         </details>
                       )}
-                      {canOverride && overrideAction && collectionSlug && plantInstanceId && (
+                      {field !== 'repottingInterval' && canOverride && overrideAction && collectionSlug && plantInstanceId && (
                         <details className="relative z-10 inline-block max-w-full open:z-50">
                           <summary className="inline-flex cursor-pointer list-none items-center gap-1 rounded-full border border-[#b8c9ad] bg-[#eef4e8] px-2 py-0.5 text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-[#2f6b45] hover:bg-[#dfead7]">
                             <PencilLine className="h-3 w-3" />
@@ -260,6 +267,7 @@ export function HusbandryGuideView({
                       )}
                     </dt>
                     <dd className={cn('text-stone-700', !values?.[field] && 'text-stone-400')}>{values?.[field] || '—'}</dd>
+                    {field === 'repottingInterval' && legacyInterval && legacyInterval !== repottingIntervalLabel && <dd className="text-xs">Preserved legacy guidance: {legacyInterval}</dd>}
                     {differences.has(field) && baseValues?.[field] && <dd className="text-xs text-stone-500">Inherited: {baseValues[field]}</dd>}
                   </div>
                 ))}
@@ -306,7 +314,7 @@ export function HusbandryGuideForm({
           <div key={section.key} className="rounded-lg border border-stone-200 bg-white/50 p-3">
             <h4 className="font-serif text-lg font-semibold">{section.title}</h4>
             <div className="mt-3 grid gap-3 md:grid-cols-2">
-              {section.fields.map(([field, label]) => (
+              {section.fields.filter(([field]) => field !== 'repottingInterval').map(([field, label]) => (
                 isHusbandrySummaryChoiceField(field) ? (
                   <label key={field} className="grid gap-1 text-sm font-medium text-stone-800">
                     <span>{label}</span>
@@ -366,7 +374,7 @@ export function HusbandryOverrideForm({
           <div key={section.key} className="rounded-lg border border-stone-200 bg-white/50 p-3">
             <h4 className="font-serif text-lg font-semibold">{section.title}</h4>
             <div className="mt-3 grid gap-3 md:grid-cols-2">
-              {section.fields.map(([field, label]) => (
+              {section.fields.filter(([field]) => field !== 'repottingInterval').map(([field, label]) => (
                 isHusbandrySummaryChoiceField(field) ? (
                   <label key={field} className="grid gap-1 text-sm font-medium text-stone-800">
                     <span>{label}</span>

@@ -1,3 +1,4 @@
+import { windowRange, windowFingerprint } from '@/lib/repotting-windows'
 import { linkedCareFields } from '@/lib/ai-curator-inheritance'
 import { isCuratorResponseFailure } from '@/lib/ai-curator-response'
 import { curatorFailureDescription, isCuratorHistoryConflict } from '@/lib/ai-curator-job-recovery'
@@ -329,6 +330,13 @@ function PrettyValue({ value, changedFields, targetField, contextValue }: { valu
   if (value === null || value === undefined || value === '') {
     const changed = Boolean(changedFields?.size)
     return <p className={`rounded-md border p-3 text-sm italic ${changed ? 'border-green-300 bg-green-50 text-green-950' : 'border-dashed border-stone-300 bg-white/45 text-stone-500'}`}>No value recorded.</p>
+  }
+  if (targetField === 'repottingWindows') {
+    const proposed = value as any, context = contextValue as any, current = context?.repottingWindowsCurrent || context?.repottingWindows || [], old = context?.repottingWindows || []
+    return <div className="space-y-2">{(['primary','alternate'] as const).map(key => {
+      const id = proposed?.[`${key}WindowId`], w = current.find((w:any) => w.id === id), prior = old.find((w:any) => w.id === id)
+      return <div key={key}><p className="font-semibold">{key === 'primary' ? 'Primary' : 'Alternate'}: {w ? `${w.name} · ${windowRange(w)}` : id ? 'Unavailable window' : 'Unresolved'}</p>{proposed?.[`${key}Confidence`] != null && <p>{Math.round(proposed[`${key}Confidence`] * 100)}% confidence</p>}<p>{proposed?.[`${key}Reasoning`]}</p>{w && prior && windowFingerprint(w) !== windowFingerprint(prior) && <p role="alert">Window dates or availability changed since research; approval is blocked. Research again.</p>}</div>
+    })}<p>{proposed?.researchAssumptions?.join(' · ')}</p><p className="text-xs">To accept only the primary, use Advanced edit and set alternateWindowId to null. Existing assignments are checked again at approval.</p></div>
   }
   if (targetField === 'aliases') return <AliasListValue value={value} changedFields={changedFields} />
   if (targetField === 'husbandry') return <HusbandryValue value={value} changedFields={changedFields} />

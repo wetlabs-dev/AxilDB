@@ -304,7 +304,7 @@ export default async function ServerDashboard({
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-3xl font-bold">Server Management</h2>
+          <h2 className="text-3xl font-bold">Server Management</h2><Link href="/server/repotting-windows" className="underline">Manage Repotting Windows</Link>
           <p className="mt-1 text-sm text-stone-600">Global AxilDB administration, collection lifecycle, health, and backup status.</p>
         </div>
         <div className="flex flex-wrap gap-2">

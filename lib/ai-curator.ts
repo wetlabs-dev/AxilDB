@@ -1,3 +1,4 @@
+import { validWindowRecommendation } from '@/lib/repotting'
 import { curatorInheritance, linkedCarePolicy, linkedCareFields, visibleLinkedCareSuggestion } from '@/lib/ai-curator-inheritance'
 import { curatorResponseFormat, parseCuratorResponse, CuratorResponseError } from '@/lib/ai-curator-response'
 import { isCuratorHistoryConflict } from '@/lib/ai-curator-job-recovery'
@@ -19,7 +20,7 @@ const ACTIVE_JOB_STATUSES = ['QUEUED', 'RUNNING', 'DEFERRED', 'WAITING_FOR_HUMAN
 const TERMINAL_JOB_STATUSES = ['COMPLETED', 'SKIPPED', 'CANCELLED', 'EXPIRED']
 const SIMPLE_ACCEPT_FIELDS = ['description', 'wikipediaUrl', 'inaturalistUrl', 'powoUrl', 'gbifUrl'] as const
 const IMAGE_HUMAN_BLOCK_REASON = 'AI Curator cannot create a reliable type image without a human-provided photograph.'
-const APPLYABLE_TARGET_FIELDS = ['references', 'tags', 'aliases', 'substrate', 'fertilizer', 'authority', 'husbandry'] as const
+const APPLYABLE_TARGET_FIELDS = ['references', 'tags', 'aliases', 'substrate', 'fertilizer', 'authority', 'husbandry', 'repottingWindows'] as const
 const NUMERIC_HUSBANDRY_FIELDS = new Set([
   'environmentTemperatureMinC',
   'environmentTemperatureMaxC',
@@ -254,7 +255,8 @@ export function aiCuratorSuggestionFormatIssues(value: unknown, targetField?: st
   if (targetField === 'husbandry' && isRecord(value)) {
     const fields = isRecord(value.fields) ? value.fields : value
     for (const [field, entryValue] of Object.entries(fields)) {
-      if (![...husbandryFieldNames, ...environmentalHusbandryFields].includes(field as any)) issues.push(`${field} is not a valid husbandry field.`)
+      if (field === 'repottingInterval') issues.push('Repotting interval is managed through care cadences.')
+      else if (![...husbandryFieldNames, ...environmentalHusbandryFields].includes(field as any)) issues.push(`${field} is not a valid husbandry field.`)
       else addHusbandryFormatIssues(issues, field, entryValue)
     }
     return issues
@@ -320,7 +322,7 @@ export function aiCuratorChangedFields(currentValue: unknown, suggestedValue: un
     return Object.entries(suggestedValue.fields).some(([key, value]) => comparableSuggestionValue(currentFocus[key]) !== comparableSuggestionValue(value)) ? ['fields'] : []
   }
   if (isRecord(currentFocus) && isRecord(suggestedValue)) {
-    return Object.keys(suggestedValue).filter((key) => key !== 'localOverride' && comparableSuggestionValue(currentFocus[key]) !== comparableSuggestionValue(suggestedValue[key]))
+    return Object.keys(suggestedValue).filter((key) => !['localOverride','primaryConfidence','alternateConfidence','primaryReasoning','alternateReasoning','researchAssumptions'].includes(key) && comparableSuggestionValue(currentFocus[key]) !== comparableSuggestionValue(suggestedValue[key]))
   }
   if (isRecord(suggestedValue) && Object.prototype.hasOwnProperty.call(suggestedValue, 'value')) {
     return comparableSuggestionValue(currentFocus) !== comparableSuggestionValue(suggestedValue.value) ? ['value'] : []
@@ -621,7 +623,7 @@ async function collectionResourceContext(prisma: PrismaClient, collectionId: str
   ])
 
   return {
-    validHusbandryFields: [...husbandryFieldNames, ...environmentalHusbandryFields],
+    validHusbandryFields: [...husbandryFieldNames, ...environmentalHusbandryFields].filter(field => field !== 'repottingInterval'),
     existingPlantTags: plantTags,
     existingSubstrateRecipeVersions: substrateRecipeVersions,
     existingFertilizerRecipes: fertilizerRecipes,
@@ -652,6 +654,7 @@ export async function enqueueReadinessCuratorJobs(prisma: PrismaClient, options:
       definitionIds: definitions.map((definition) => definition.id),
     })
     for (const definition of definitions) {
+      if (!definition.primaryRepottingWindowId && await enqueueAiCuratorJob(prisma, { collectionId: collection.id, plantDefinitionId: definition.id, phase: 'ENRICHMENT', jobType: 'REPOTTING_WINDOWS', targetField: 'repottingWindows', reason: 'Optional seasonal repotting enrichment; separate from cadence completeness.', priority: 15, dataHash: hashPayload({ id: definition.id, updatedAt: definition.updatedAt, seasonal: true }) })) created += 1;
       const completeness = completenessByDefinition.get(definition.id)
       if (!completeness) continue
       for (const job of jobsForCompleteness(collection.id, definition, completeness, settings)) {
@@ -700,6 +703,7 @@ export async function enqueueDefinitionResearchNow(prisma: PrismaClient, collect
     if (await enqueueAiCuratorJob(prisma, job)) created += 1
   }
   created += await enqueueCadenceResearch(prisma, { collectionId, definitionId: plantDefinitionId, source: 'AI_RESEARCH' })
+  if (await enqueueAiCuratorJob(prisma, { collectionId, plantDefinitionId, phase: 'ENRICHMENT', jobType: 'REPOTTING_WINDOWS', targetField: 'repottingWindows', reason: 'Explicit seasonal window research', priority: 1000, dataHash: hashPayload({ plantDefinitionId, seasonal: true, requested: Date.now() }), manualBoost: true })) created += 1
   return { created, completeness }
 }
 
@@ -877,7 +881,8 @@ async function currentValueForJob(prisma: PrismaClient, job: any) {
   }
   const tags = definition.tags.map((tag) => tag.plantTag)
   const focusCurrentValue =
-    job.targetField === 'description' ? definition.description
+    job.targetField === 'repottingWindows' ? { primaryWindowId: definition.primaryRepottingWindowId, alternateWindowId: definition.alternateRepottingWindowId }
+    : job.targetField === 'description' ? definition.description
     : job.targetField === 'authority' ? {
       taxonomicAuthorityId: definition.taxonomicAuthorityId,
       taxonomicAuthoritySource: definition.taxonomicAuthoritySource,
@@ -973,6 +978,8 @@ async function currentValueForJob(prisma: PrismaClient, job: any) {
     tags,
     husbandryGuide,
     inheritance,
+    repottingWindows: job.targetField === 'repottingWindows' ? await prisma.repottingWindow.findMany({ where: { isActive: true }, orderBy: { sortOrder: 'asc' } }) : undefined,
+    seasonalAssumptions: 'No region is guaranteed. Window defaults use temperate Northern Hemisphere dates; explain regional, indoor-light, tropical or winter-growth assumptions explicitly using available instance/location evidence.',
     substrateRecommendations,
     acquisitionResearchEntries,
     instances,
@@ -1151,8 +1158,10 @@ function curatorTargetInstructions(targetField?: string | null) {
       return 'Cadence intervals are reviewed separately through careCadences research; do not include fertilizationCadenceDays. For fertilizer, you may suggest an existing fertilizer recipe assignment, a new draft recipe using existing fertilizer products, and/or purchase ideas for a specific nutrient/care gap. suggestedValue may include "fertilizerRecipeId": "existing-recipe-id", "fertilizationType": "plain English text such as balanced liquid feeding", "fertilizationStrength": "plain English text such as light or quarter strength", "fertilizationFrequency": "plain English text such as every 2 weeks during active growth", "newRecipe": { "name": "draft name in plain English", "description": "why this recipe fills the gap", "declaredNpk": "optional", "applicationMethod": "ROOT_DRENCH|FOLIAR|TOP_DRESS|OTHER", "dilutionInstructions": "plain English string|null", "strengthLabel": "plain English string|null", "frequencyDays": number|null, "frequencyNotes": "plain English string|null", "seasonalNotes": "plain English string|null", "safetyNotes": "plain English string|null", "products": [{ "productId": "existing-product-id", "amount": "string|null", "unit": "string|null", "notes": "plain English string|null" }] }, and "purchaseSuggestions": [{ "name": "product or product class in plain English", "gap": "specific gap filled in plain English", "reason": "short plain English reason" }]. Never invent existing recipe/product IDs.'
     case 'authority':
       return 'For taxonomic authority coverage, suggest only authorities from context.resources.existingTaxonomicAuthorities. suggestedValue must be { "taxonomicAuthorityId": "existing-authority-id", "matchReason": "why its scope covers this definition" }. Never use this field for botanical authorship text.'
+    case 'repottingWindows':
+      return 'Recommend seasonal repotting during actual species-specific active growth using only active IDs in context.repottingWindows. Do not invent environmental details or assume universal Northern Hemisphere seasonality. Return null if evidence is insufficient. suggestedValue must be {primaryWindowId, alternateWindowId: string|null, primaryConfidence: number from 0 to 1, alternateConfidence: number|null, primaryReasoning: string, alternateReasoning: string|null, researchAssumptions: string[]}. Evaluate confidences independently. Existing assignments are proposals for explicit review only, never automatic replacement.'
     case 'husbandry':
-      return `For husbandry, fill as many missing care fields as can be supported. suggestedValue must be { "fields": { ... } } where keys are valid PlantHusbandryGuide fields from context.resources.validHusbandryFields: ${[...husbandryFieldNames, ...environmentalHusbandryFields].join(', ')}. Use natural plain English for text fields, numbers for numeric environment fields, and booleans for boolean fields. summaryWater must be one of ${husbandrySummaryChoices.summaryWater.map((choice) => choice.value).join(' | ')}. summaryLight must be one of ${husbandrySummaryChoices.summaryLight.map((choice) => choice.value).join(' | ')}. summaryToxicity must be one of ${husbandrySummaryChoices.summaryToxicity.map((choice) => choice.value).join(' | ')}. environmentLightLevel must be one of ${HUSBANDRY_ENUM_VALUES.environmentLightLevel.join(' | ')}. environmentLightExposure must be one of ${HUSBANDRY_ENUM_VALUES.environmentLightExposure.join(' | ')}. environmentAirflowLevel must be one of ${HUSBANDRY_ENUM_VALUES.environmentAirflowLevel.join(' | ')}. environmentStability must be one of ${HUSBANDRY_ENUM_VALUES.environmentStability.join(' | ')}. Omit unsupported fields rather than guessing.`
+      return `Repotting interval is cadence-authoritative; never suggest repottingInterval. For husbandry, fill as many missing care fields as can be supported. suggestedValue must be { "fields": { ... } } where keys are valid PlantHusbandryGuide fields from context.resources.validHusbandryFields: ${[...husbandryFieldNames, ...environmentalHusbandryFields].join(', ')}. Use natural plain English for text fields, numbers for numeric environment fields, and booleans for boolean fields. summaryWater must be one of ${husbandrySummaryChoices.summaryWater.map((choice) => choice.value).join(' | ')}. summaryLight must be one of ${husbandrySummaryChoices.summaryLight.map((choice) => choice.value).join(' | ')}. summaryToxicity must be one of ${husbandrySummaryChoices.summaryToxicity.map((choice) => choice.value).join(' | ')}. environmentLightLevel must be one of ${HUSBANDRY_ENUM_VALUES.environmentLightLevel.join(' | ')}. environmentLightExposure must be one of ${HUSBANDRY_ENUM_VALUES.environmentLightExposure.join(' | ')}. environmentAirflowLevel must be one of ${HUSBANDRY_ENUM_VALUES.environmentAirflowLevel.join(' | ')}. environmentStability must be one of ${HUSBANDRY_ENUM_VALUES.environmentStability.join(' | ')}. Omit unsupported fields rather than guessing.`
     default:
       return 'Return suggestedValue in the smallest shape needed for the requested target field.'
   }
@@ -1218,6 +1227,7 @@ async function createSuggestionFromResult(prisma: PrismaClient, settings: any, j
     await prisma.aiCuratorJob.updateMany({ where: { id: job.id, status: 'RUNNING', claimedBy: job.claimedBy }, data: { status: 'COMPLETED', blockingReason: null, nextRetryAt: null, completedAt: new Date(), actualCostDollars: actualCost == null ? undefined : actualCost.toFixed(6), resultSummary: `Created ${proposals.length} cadence proposals for review.` } })
     return proposals.length ? proposals[0] : null
   }
+  if (job.targetField === 'repottingWindows' && modelResult.suggestedValue && !validWindowRecommendation(modelResult.suggestedValue, (currentValue as any)?.repottingWindows || [])) throw new Error('Invalid repotting window recommendation; choose active catalog identifiers with confidence, reasoning and assumptions.')
   const liveInheritance = job.plantDefinitionId && linkedCareFields.includes(job.targetField) ? await curatorInheritance(prisma, job.plantDefinitionId, job.collectionId) : null
   if (!linkedCarePolicy(job.targetField, modelResult.suggestedValue, modelResult.confidence, liveInheritance)) {
     await prisma.aiCuratorJob.updateMany({ where: { id: job.id, status: 'RUNNING', claimedBy: job.claimedBy }, data: { status: 'SKIPPED', completedAt: new Date(), actualCostDollars: actualCost == null ? undefined : actualCost.toFixed(6), resultSummary: 'Linked care preserved: no evidence-backed local override at 90% confidence.' } })
@@ -1607,11 +1617,13 @@ export async function aiCuratorDashboard(prisma: PrismaClient) {
 }
 
 export async function aiCuratorReviewQueue(prisma: PrismaClient) {
+  const windowCatalog = await prisma.repottingWindow.findMany({ orderBy: { sortOrder: 'asc' } })
   const suggestions = (await prisma.aiCuratorSuggestion.findMany({
     where: { status: 'PENDING', OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
     orderBy: [{ plantDefinitionId: 'asc' }, { createdAt: 'asc' }],
     include: { collection: { select: { name: true, slug: true } }, plantDefinition: { include: { husbandryGuide: { select: { sourcePlantDefinitionId: true } } } } },
   })).filter((suggestion) => visibleLinkedCareSuggestion(suggestion) && hasAiCuratorSuggestionChange(suggestion.currentValue, suggestion.suggestedValue, suggestion.targetField))
+  for (const suggestion of suggestions) if (suggestion.targetField === 'repottingWindows') suggestion.currentValue = { ...(suggestion.currentValue as any), repottingWindowsCurrent: JSON.parse(JSON.stringify(windowCatalog)) }
   const groups = new Map<string, { key: string; collectionName: string; collectionSlug: string; plantName: string; plantDefinitionId: string | null; suggestions: typeof suggestions }>()
   for (const suggestion of suggestions) {
     const key = suggestion.plantDefinitionId || `collection:${suggestion.collectionId}`

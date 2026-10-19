@@ -1,3 +1,4 @@
+import { validWindowRecommendation } from '@/lib/repotting'
 import { RequestLimiter } from '@/lib/request-limiter'
 import { cadenceResearchInstructions, cadenceRecommendationShape } from '@/lib/cadence-recommendations'
 import { cadenceResearchContext, persistCadenceRecommendations } from '@/lib/cadence-research'
@@ -42,7 +43,7 @@ function rateLimit(userId: string) {
 
 function normalizeFields(raw: any, model: string) {
   const fields: Record<string, string | null> = {}
-  for (const field of husbandryFieldNames) {
+  for (const field of husbandryFieldNames.filter(field => field !== 'repottingInterval')) {
     const value = trimmedString(raw?.[field], 700)
     fields[field] = value || null
   }
@@ -123,6 +124,8 @@ export async function POST(req: Request) {
   ])
   const cadenceContext = typeof plant.id === 'string' && await prisma.plantDefinition.findFirst({ where: { id: plant.id, collectionId: collection.id }, select: { id: true } })
     ? await cadenceResearchContext(prisma, collection.id, plant.id) : null
+  const repottingWindows = await prisma.repottingWindow.findMany({ where: { isActive: true }, orderBy: { sortOrder: 'asc' } })
+  const windowDefinition = cadenceContext ? await prisma.plantDefinition.findUnique({ where: { id: plant.id } }) : null
   const fertilizerRecipeIds = new Set(fertilizerRecipes.map((recipe) => recipe.id))
   const substrateProfiles = new Map(substrateVersions.map((version) => [version.id, substrateRecipePhysicalProfile(version.components.map((row) => ({ percentByVolume: Number(row.percentByVolume), component: row.component })))]))
   const substrateComponentIds = new Set(substrateComponents.map((component) => component.id))
@@ -145,6 +148,7 @@ export async function POST(req: Request) {
       aliases: Array.isArray(plant.aliases) ? plant.aliases.slice(0, 8).map((alias: any) => trimmedString(alias.name, 160)).filter(Boolean) : [],
     },
     cadenceContext,
+    repottingWindows,
     activeFertilizerRecipes: fertilizerRecipes.map(recipeAiContext),
     activeSubstrateRecipes: substrateVersions.map((version) => ({
       recipeVersionId: version.id,
@@ -160,6 +164,7 @@ export async function POST(req: Request) {
     activeSubstrateComponents: substrateComponents.map((component) => ({ id: component.id, name: component.name, category: component.category, particleSize: component.particleSize, waterRetention: component.waterRetention, aeration: component.aeration, drainage: component.drainage, phTendency: component.phTendency })),
     rules: [
       cadenceResearchInstructions,
+      'Repotting interval is cadence-authoritative; omit repottingInterval. Optionally return repottingWindowRecommendation using only active IDs from repottingWindows. Research actual species seasonal growth, root sensitivity and dormancy. Explain geographical/indoor/artificial-light assumptions, never invent environmental conditions. Defaults are temperate Northern Hemisphere organizational labels, not botanical rules. Return null when unresolved. Human approval is mandatory; no assignments are automatically applied.',
       'Do not generate cadence recommendations if cadenceContext is null. Return only activities in cadenceContext.missingEligibleActivities.',
       'Return only valid JSON, with no markdown.',
       'Attempt to fill every field with concise practical husbandry guidance.',
@@ -178,6 +183,7 @@ export async function POST(req: Request) {
       'summaryWater, summaryLight, and summaryToxicity must be short badge-friendly phrases.',
     ],
     jsonShape: {
+      repottingWindowRecommendation: { primaryWindowId: 'active catalog id', alternateWindowId: 'active id|null', primaryConfidence: 'number 0-1', alternateConfidence: 'number 0-1|null', primaryReasoning: 'string', alternateReasoning: 'string|null', researchAssumptions: ['string'] },
       careCadenceRecommendations: cadenceRecommendationShape,
       ...Object.fromEntries([...husbandryFieldNames, 'reviewNotes'].map((field) => [field, 'string|null'])),
       fertilizerRecommendationType: 'USE_EXISTING_RECIPE|CREATE_NEW_RECIPE|NO_FERTILIZER_RECOMMENDED|UNCERTAIN',
@@ -231,6 +237,16 @@ export async function POST(req: Request) {
     const raw = extractJson(outputText(payload))
     const cadenceProposals = cadenceContext && Array.isArray(raw.careCadenceRecommendations)
       ? await persistCadenceRecommendations(prisma, { definitionId: plant.id, collectionId: collection.id, source: 'MAGIC_FILL', model, recommendations: raw.careCadenceRecommendations }) : []
+    let repottingWindowProposal = null
+    if (windowDefinition && validWindowRecommendation(raw.repottingWindowRecommendation, repottingWindows)) {
+      const existing = await prisma.aiCuratorSuggestion.findFirst({ where: { plantDefinitionId: plant.id, targetField: 'repottingWindows', status: 'PENDING' } })
+      repottingWindowProposal = existing || await prisma.aiCuratorSuggestion.create({ data: {
+        collectionId: collection.id, plantDefinitionId: plant.id, phase: 'ENRICHMENT', suggestionType: 'REPOTTING_WINDOWS', targetField: 'repottingWindows',
+        title: `Seasonal repotting windows for ${name}`, reasoning: raw.repottingWindowRecommendation.primaryReasoning,
+        confidence: raw.repottingWindowRecommendation.primaryConfidence, suggestedValue: raw.repottingWindowRecommendation,
+        currentValue: { focus: { currentValue: { primaryWindowId: windowDefinition.primaryRepottingWindowId, alternateWindowId: windowDefinition.alternateRepottingWindowId } }, repottingWindows: JSON.parse(JSON.stringify(repottingWindows)) }, model,
+      } })
+    }
     const fields = normalizeFields(raw, model)
     const fertilizerRecommendation = normalizeFertilizerRecommendation(raw, fertilizerRecipeIds)
     const substrateRecommendation = normalizeSubstrateRecommendation(raw, substrateProfiles, substrateComponentIds)
@@ -245,7 +261,7 @@ export async function POST(req: Request) {
     }
     await recordAiUsage({ collectionId: collection.id, userId: user.id, feature: 'AI_HUSBANDRY_FILL', model, usage: tokenUsage(payload) })
     await audit(user, 'GENERATE', 'AI_HUSBANDRY_FILL', null, `Generated husbandry fill for ${name}`, { model, applyMode }, collection.id)
-    return NextResponse.json({ fields, fertilizerRecommendation, substrateRecommendation: displaySubstrateRecommendation, cadenceProposals, canApproveCadences: isServerAdminRole(user.role) })
+    return NextResponse.json({ repottingWindowProposal, fields, fertilizerRecommendation, substrateRecommendation: displaySubstrateRecommendation, cadenceProposals, canApproveCadences: isServerAdminRole(user.role) })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'OpenAI husbandry fill request failed.'
     await recordAiUsage({ collectionId: collection.id, userId: user.id, feature: 'AI_HUSBANDRY_FILL', model, success: false, error: message })

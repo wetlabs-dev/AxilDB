@@ -82,6 +82,7 @@ export type CareQueueItem = {
   fertilizerRecipeSummary?: string | null
   fertilizerStrength?: string | null
   fertilizerSource?: 'definition' | 'override'
+  repottingPlanAvailable?: boolean
   currentSubstrate?: string | null
   recommendedSubstrateRecipeVersionId?: string | null
   recommendedSubstrate?: string | null
@@ -247,9 +248,12 @@ export async function getCareQueue(
     where: { collectionId, status: 'ACTIVE' },
     include: {
       careCadenceOverrides: true,
+      repottingQueueItems: { where: { status: 'QUEUED' } },
       plantDefinition: {
         include: {
           careCadences: true,
+          primaryRepottingWindow: true,
+          alternateRepottingWindow: true,
           husbandryGuide: { include: { fertilizerRecipe: { include: { products: { include: { product: true }, orderBy: { sortOrder: 'asc' } } } } } },
           substrateRecommendations: {
             where: { collectionId },
@@ -395,6 +399,7 @@ export async function getCareQueue(
     for (const { activity, label, task, event } of cadenceActivities) {
       const { cadence } = resolveCadence(activity, instance.plantDefinition.careCadences, instance.careCadenceOverrides)
       if (!cadence) continue
+      if (task === 'REPOT' && instance.repottingQueueItems.length) continue
       if (activity === 'FERTILIZING' && (!instance.plantDefinition.husbandryGuide?.fertilizerRecipe)) continue
       if (activity === 'PEST_INSPECTION' && openPestConditionPlantIds.has(instance.id)) continue
       if (activity === 'GENERAL_INSPECTION' && conditions.some(row => row.plantInstanceId === instance.id && row.category !== 'PESTS')) continue
@@ -416,6 +421,7 @@ export async function getCareQueue(
           fertilizerSource: fertilizer.source,
         } : {}),
         ...(task === 'REPOT' ? {
+          repottingPlanAvailable: Boolean(instance.plantDefinition.primaryRepottingWindow?.isActive || instance.plantDefinition.alternateRepottingWindow?.isActive),
           currentSubstrate: instance.currentSubstrate?.recipeVersion?.recipe.name || instance.currentSubstrate?.substrateMode || null,
           recommendedSubstrateRecipeVersionId: recommendation?.substrateRecipeVersionId || null,
           recommendedSubstrate: recommendation ? `${recommendation.recipeVersion.recipe.name} v${recommendation.recipeVersion.versionNumber}` : null,
@@ -572,6 +578,7 @@ export async function getCareQueue(
   }
 
   for (const reminder of reminders) {
+    if (instances.some(i => i.repottingQueueItems.some(q => q.sourceReminderId === reminder.id))) continue
     const reminderAdjustment = reminder.entityType === 'PLANT_INSTANCE' && reminder.entityId
       ? adjustmentMap.get(`${reminder.entityId}:REMINDER`)
       : null

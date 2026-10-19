@@ -1,21 +1,31 @@
+import { repottingCadenceLabel } from '@/lib/repotting-label'
+import { DefinitionRepotting } from '@/components/Repotting'
 import { actionableCadenceWhere } from '@/lib/cadence-review'
 import { CareCadences } from '@/components/CareCadences'
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { Button, Card } from '@/components/ui'
-import { HusbandryBadges, HusbandryEmptyPrompt, HusbandryGuideView } from '@/components/Husbandry'
-import { canEditInCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
+import { HusbandryBadges, HusbandryGuideView } from '@/components/Husbandry'
+import {
+  canEditInCollection,
+  collectionPath,
+  requireCollectionViewer,
+} from '@/lib/collections'
 import { plantName } from '@/lib/utils'
 
-export default async function PlantHusbandryPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function PlantHusbandryPage({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}) {
   const context = await requireCollectionViewer()
   const { collection, user } = context
   const { id } = await params
   const plant = await prisma.plantDefinition.findFirstOrThrow({
     where: { id, collectionId: collection.id },
     include: {
-        careCadences: true,
-        cadenceProposals: { where: actionableCadenceWhere(collection.id) },
+      careCadences: true,
+      cadenceProposals: { where: actionableCadenceWhere(collection.id) },
       aliases: { orderBy: { name: 'asc' } },
       husbandryGuide: { include: { fertilizerRecipe: true } },
     },
@@ -23,29 +33,75 @@ export default async function PlantHusbandryPage({ params }: { params: Promise<{
 
   const sourceDefinition = plant.husbandryGuide?.sourcePlantDefinitionId
     ? await prisma.plantDefinition.findFirst({
-        where: { id: plant.husbandryGuide.sourcePlantDefinitionId, collectionId: collection.id },
+        where: {
+          id: plant.husbandryGuide.sourcePlantDefinitionId,
+          collectionId: collection.id,
+        },
         include: { husbandryGuide: true },
       })
     : null
-  const effectiveGuide = sourceDefinition?.husbandryGuide || plant.husbandryGuide
+  const effectiveGuide =
+    sourceDefinition?.husbandryGuide || plant.husbandryGuide
   const canEdit = canEditInCollection(user, context)
 
   return (
     <div className="space-y-6">
-      <CareCadences collectionSlug={collection.slug} definitionId={plant.id} defaults={plant.careCadences} canEdit={canEdit} hasRecipe={Boolean(plant.husbandryGuide?.fertilizerRecipe?.active)} recipeHref={collectionPath(collection.slug, `/plants/${plant.id}/edit#husbandry`)} />
-      {plant.cadenceProposals.length > 0 && <p className="text-sm text-stone-600">{plant.cadenceProposals.length} AI care cadence recommendation(s) awaiting review: {plant.cadenceProposals.map(p => p.activity.toLowerCase().replaceAll('_',' ')).join(', ')}. {user?.role === 'SERVER_ADMIN' && <Link className="underline" href={`/server/care-cadence-research?tab=review&definition=${plant.id}`}>Review recommendations</Link>}</p>}
+      <DefinitionRepotting
+        id={plant.id}
+        slug={collection.slug}
+        canEdit={canEdit}
+      />
+      <CareCadences
+        collectionSlug={collection.slug}
+        definitionId={plant.id}
+        defaults={plant.careCadences}
+        canEdit={canEdit}
+        hasRecipe={Boolean(plant.husbandryGuide?.fertilizerRecipe?.active)}
+        recipeHref={collectionPath(
+          collection.slug,
+          `/plants/${plant.id}/edit#husbandry`
+        )}
+      />
+      {plant.cadenceProposals.length > 0 && (
+        <p className="text-sm text-stone-600">
+          {plant.cadenceProposals.length} AI care cadence recommendation(s)
+          awaiting review:{' '}
+          {plant.cadenceProposals
+            .map((p) => p.activity.toLowerCase().replaceAll('_', ' '))
+            .join(', ')}
+          .{' '}
+          {user?.role === 'SERVER_ADMIN' && (
+            <Link
+              className="underline"
+              href={`/server/care-cadence-research?tab=review&definition=${plant.id}`}
+            >
+              Review recommendations
+            </Link>
+          )}
+        </p>
+      )}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-sm text-stone-600">
-            <Link className="underline" href={collectionPath(collection.slug, '/plants')}>
+            <Link
+              className="underline"
+              href={collectionPath(collection.slug, '/plants')}
+            >
               Plant definitions
             </Link>
           </p>
-          <h2 className="mt-1 text-3xl font-bold">{plantName(plant)} husbandry</h2>
+          <h2 className="mt-1 text-3xl font-bold">
+            {plantName(plant)} husbandry
+          </h2>
           <HusbandryBadges values={effectiveGuide as any} />
         </div>
         {canEdit && (
-          <Link href={collectionPath(collection.slug, `/plants/${plant.id}/edit#husbandry`)}>
+          <Link
+            href={collectionPath(
+              collection.slug,
+              `/plants/${plant.id}/edit#husbandry`
+            )}
+          >
             <Button type="button">Edit husbandry</Button>
           </Link>
         )}
@@ -55,21 +111,32 @@ export default async function PlantHusbandryPage({ params }: { params: Promise<{
         {sourceDefinition && (
           <div className="mb-4 rounded-lg border border-[#d6dfc9] bg-[#f7f4e8]/80 p-3 text-sm text-stone-700">
             This guide is inherited from{' '}
-            <Link className="font-semibold underline" href={collectionPath(collection.slug, `/plants/${sourceDefinition.id}/husbandry`)}>
+            <Link
+              className="font-semibold underline"
+              href={collectionPath(
+                collection.slug,
+                `/plants/${sourceDefinition.id}/husbandry`
+              )}
+            >
               {plantName(sourceDefinition)}
             </Link>
             .
           </div>
         )}
-        {effectiveGuide ? (
-          <HusbandryGuideView
-            values={effectiveGuide as any}
-            title="Full husbandry guide"
-            sourceLabel={sourceDefinition ? `Inherited from ${plantName(sourceDefinition)}` : undefined}
-          />
-        ) : (
-          <HusbandryEmptyPrompt />
-        )}
+        <HusbandryGuideView
+          repottingIntervalLabel={repottingCadenceLabel(plant.careCadences)}
+          cadenceHref={collectionPath(
+            collection.slug,
+            `/plants/${plant.id}/edit#care-cadences`
+          )}
+          values={effectiveGuide as any}
+          title="Full husbandry guide"
+          sourceLabel={
+            sourceDefinition
+              ? `Inherited from ${plantName(sourceDefinition)}`
+              : undefined
+          }
+        />
       </Card>
     </div>
   )

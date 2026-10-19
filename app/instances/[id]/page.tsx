@@ -1,3 +1,5 @@
+import { repottingCadenceLabel } from '@/lib/repotting-label'
+import { InstanceRepotting } from '@/components/Repotting'
 import { CareCadences } from '@/components/CareCadences'
 import { cadenceActivities, cadenceDueAt, resolveCadence } from '@/lib/care-cadences'
 import {
@@ -960,6 +962,7 @@ export default async function InstanceDetail({
         </div>
       </div>
 
+      <InstanceRepotting id={i.id} slug={collection.slug} canAct={canEditRecords}/>
       <CareCadences collectionSlug={collection.slug} definitionId={i.plantDefinitionId} instanceId={i.id} defaults={i.plantDefinition.careCadences} overrides={i.careCadenceOverrides} canEdit={canEditRecords} hasRecipe={Boolean(i.plantDefinition.husbandryGuide?.fertilizerRecipe?.active)} recipeHref={collectionPath(collection.slug, `/plants/${i.plantDefinitionId}/edit#husbandry`)} dueLabels={dueLabels} />
 
       {i.mergeConstituent && (
@@ -1210,6 +1213,8 @@ export default async function InstanceDetail({
                 </summary>
                 <div className="border-t border-stone-200 p-3">
                   <HusbandryGuideView
+              repottingIntervalLabel={repottingCadenceLabel(i.plantDefinition.careCadences, i.careCadenceOverrides)}
+              cadenceHref={collectionPath(collection.slug, `/plants/${i.plantDefinitionId}/edit#care-cadences`)}
                     values={effectiveHusbandry}
                     baseValues={baseHusbandryGuide as any}
                     overrideValues={i.husbandryOverride as any}

@@ -1,3 +1,5 @@
+import { repottingCadenceLabel } from '@/lib/repotting-label'
+import { DefinitionRepotting } from '@/components/Repotting'
 import { actionableCadenceWhere } from '@/lib/cadence-review'
 import { CareCadences } from '@/components/CareCadences'
 import { prisma } from '@/lib/prisma'
@@ -176,6 +178,7 @@ export default async function EditPlant({
   return (
     <div className="space-y-6">
       <h2 className="text-3xl font-bold">Edit Plant Definition</h2>
+      <DefinitionRepotting id={plant.id} slug={collection.slug} canEdit={true}/>
       <CareCadences collectionSlug={collection.slug} definitionId={plant.id} defaults={plant.careCadences} canEdit={true} hasRecipe={Boolean(plant.husbandryGuide?.fertilizerRecipe?.active)} recipeHref={collectionPath(collection.slug, `/plants/${plant.id}/edit#husbandry`)} />
       {plant.cadenceProposals.length > 0 && <p className="text-sm text-stone-600">{plant.cadenceProposals.length} care cadence recommendation(s) awaiting review: {plant.cadenceProposals.map(p => p.activity.toLowerCase().replaceAll('_',' ')).join(', ')}. {user?.role === 'SERVER_ADMIN' && <Link className="underline" href={`/server/care-cadence-research?tab=review&definition=${plant.id}`}>Review recommendations</Link>}</p>}
       <PlantDefinitionReadinessPanel result={completeness} baseHref={collectionPath(collection.slug, `/plants/${plant.id}/edit`)} />
@@ -473,6 +476,8 @@ export default async function EditPlant({
 
           {effectiveGuide ? (
             <HusbandryGuideView
+              repottingIntervalLabel={repottingCadenceLabel(plant.careCadences)}
+              cadenceHref={collectionPath(collection.slug, `/plants/${plant.id}/edit#care-cadences`)}
               values={(sourceDefinition ? effectiveGuide : plant.husbandryGuide) as any}
               editAction={!sourceDefinition ? savePlantHusbandryGuideField : undefined}
               collectionSlug={collection.slug}
@@ -484,6 +489,8 @@ export default async function EditPlant({
             />
           ) : (
             <HusbandryGuideView
+              repottingIntervalLabel={repottingCadenceLabel(plant.careCadences)}
+              cadenceHref={collectionPath(collection.slug, `/plants/${plant.id}/edit#care-cadences`)}
               values={plant.husbandryGuide as any}
               editAction={savePlantHusbandryGuideField}
               collectionSlug={collection.slug}

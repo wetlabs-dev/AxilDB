@@ -52,6 +52,7 @@ export function HusbandryMagicFillButton({
   collectionSlug: string
 }) {
   const buttonRef = useRef<HTMLButtonElement>(null)
+  const [windowProposal, setWindowProposal] = useState(false)
   const [status, setStatus] = useState('')
   const [loading, setLoading] = useState(false)
   const [fertilizerRecommendation, setFertilizerRecommendation] = useState<any>(null)
@@ -115,6 +116,7 @@ export function HusbandryMagicFillButton({
       setControlValue(form, 'reviewStatus', 'DRAFT')
       setDraft(fillDraft)
       setFertilizerRecommendation(result.fertilizerRecommendation || null)
+      setWindowProposal(Boolean(result.repottingWindowProposal))
       setCadenceProposals(result.cadenceProposals || [])
       setSelectedCadences([])
       setCanApproveCadences(Boolean(result.canApproveCadences))
@@ -218,6 +220,7 @@ export function HusbandryMagicFillButton({
           {loading ? 'Filling...' : label}
         </button>
       </div>
+      {windowProposal && <p className="text-sm">Seasonal repotting recommendation saved for human review. <a href="/server/ai-curator" className="underline">Review in AI Curator</a>; saving husbandry does not assign windows.</p>}
       {cadenceProposals.length > 0 && <div className="w-full max-w-xl space-y-2 rounded-lg border p-3 text-left text-sm"><p className="font-semibold">Review care cadence recommendations</p><p>Saved as proposals. Select recommendations explicitly to activate them; saving husbandry does not activate these cadences.</p>{cadenceProposals.map(p => <label key={p.id} className="block rounded border p-2">{canApproveCadences && ['RECOMMENDED', 'NOT_APPLICABLE'].includes(p.applicability) && <input type="checkbox" checked={selectedCadences.includes(p.id)} onChange={e => setSelectedCadences(ids => e.target.checked ? [...ids,p.id] : ids.filter(id => id !== p.id))} />} {p.activity.replaceAll('_',' ')} · {p.interval ? `Every ${p.interval} ${p.unit.toLowerCase()}` : p.applicability.replaceAll('_',' ')} · {p.confidence.toLowerCase()} confidence<p>{p.rationale}</p></label>)}{canApproveCadences ? <button type="button" disabled={loading || !selectedCadences.length} onClick={async () => { setLoading(true); try { const result = await approveAllCadences(selectedCadences); setStatus(Object.entries(result).map(([reason,count]) => `${count} ${reason}`).join('; ')); if (result.APPROVED === selectedCadences.length) setCadenceProposals(rows => rows.filter(p => !selectedCadences.includes(p.id))); setSelectedCadences([]); router.refresh() } catch(e) { setStatus(e instanceof Error ? e.message : 'Approval failed.') } finally { setLoading(false) } }}>Approve selected recommendations</button> : <p>A server administrator can review these in Care Cadence Research.</p>}</div>}
       {autoSubmit && draft && (
         <details className="w-full max-w-xl rounded-lg border border-[#d6dfc9] bg-[#f7f4e8] p-3 text-left text-sm text-stone-700">

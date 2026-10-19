@@ -1,3 +1,4 @@
+import { queueRepotting } from '@/lib/repotting'
 import { Prisma } from '@prisma/client'
 import { randomUUID } from 'node:crypto'
 import { prisma as database } from '@/lib/prisma'
@@ -145,6 +146,9 @@ async function complete(prisma: Prisma.TransactionClient, context: MutationConte
         substrateRecipeVersionId,
       },
     } })
+    if (taskType === 'REPOT') {
+      await tx.repottingQueueItem.updateMany({ where: { plantInstanceId, status: 'QUEUED' }, data: { status: 'COMPLETED', completedAt: performedAt, careEventId: created.id } })
+    }
     if (taskType === 'REPOT' && substrateMode) {
       await setPlantSubstrate(tx, {
         collectionId: context.collection.id,
@@ -511,6 +515,7 @@ async function bulk(prisma: Prisma.TransactionClient, context: MutationContext, 
           },
         },
       })
+      if (careType === 'REPOTTING') await tx.repottingQueueItem.updateMany({ where: { plantInstanceId: plant.id, status: 'QUEUED' }, data: { status: 'COMPLETED', completedAt: performedAt, careEventId: event.id } })
       if (careType === 'REPOTTING' && substrateMode) {
         const substrate = await setPlantSubstrate(tx, {
           collectionId: context.collection.id,
@@ -592,7 +597,14 @@ async function bulk(prisma: Prisma.TransactionClient, context: MutationContext, 
   return { destination: collectionPath(context.collection.slug, `/care/bulk?${params.toString()}`), events: events.length, completed: matchingQueueItems.length, skipped: skipped.length }
 }
 
-const actions = { complete, snooze, resolve, update, attention, establish, bulk }
+async function planRepotting(tx: Prisma.TransactionClient, context: MutationContext, fd: FormData): Promise<MutationResult> {
+  if (val(fd,'taskType') !== 'REPOT') throw new Error('Only repotting assessments can be scheduled.')
+  const timezone=timeZoneForPreference(await tx.emailPreference.findUnique({where:{userId:context.user.id}}))
+  const item=await queueRepotting(tx,{collectionId:context.collection.id,instanceId:val(fd,'plantInstanceId')!,timezone,source:'CARE_QUEUE',reminderId:val(fd,'reminderId'),assessmentDueAt:parseDateLocal(val(fd,'dueAt'),timezone),notes:val(fd,'notes')})
+  await mutationAudit(tx,context.user,'SCHEDULE','REPOTTING_QUEUE',item.id,'Repotting assessment handled; scheduled for seasonal work',undefined,context.collection.id)
+  return {}
+}
+const actions = { planRepotting, complete, snooze, resolve, update, attention, establish, bulk }
 export function applyCareQueueMutation(tx: Prisma.TransactionClient, context: MutationContext, action: CareQueueAction, fd: FormData) {
   return actions[action](tx, context, fd)
 }

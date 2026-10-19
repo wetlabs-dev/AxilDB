@@ -1,5 +1,6 @@
 'use server'
 
+import { applyWindowRecommendation } from '@/lib/repotting'
 import { linkedCareFields } from '@/lib/ai-curator-inheritance'
 
 import { retryCuratorJob, retryDatabaseBlockedCuratorJobs, retryResponseBlockedCuratorJobs } from '@/lib/ai-curator-job-recovery'
@@ -264,6 +265,7 @@ async function applyHusbandrySuggestion(suggestion: any, overrideValue: unknown)
     aiGeneratedAt: new Date(),
   }
   for (const field of [...husbandryFieldNames, ...environmentalHusbandryFields]) {
+    if (field === 'repottingInterval') continue
     if (!Object.prototype.hasOwnProperty.call(fields, field)) continue
     const value = fields[field]
     if (numericHusbandryFields.has(field)) {
@@ -291,6 +293,7 @@ async function applyCuratorSuggestionValue(suggestion: any, overrideValue: unkno
     // Linked overrides are reviewed manually using the existing Make local copy workflow.
     if (guide?.sourcePlantDefinitionId) return false
   }
+  if (suggestion.targetField === 'repottingWindows') return prisma.$transaction(tx => applyWindowRecommendation(tx, suggestion, overrideValue))
   if (suggestion.targetField === 'references') {
     const data = referenceUpdateData(overrideValue)
     if (!Object.keys(data).length) return false

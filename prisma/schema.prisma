@@ -1400,6 +1400,10 @@ model FollowNotification {
 }
 
 model PlantDefinition {
+  primaryRepottingWindowId String?
+  alternateRepottingWindowId String?
+  primaryRepottingWindow RepottingWindow? @relation("PrimaryRepottingWindow", fields: [primaryRepottingWindowId], references: [id], onDelete: Restrict)
+  alternateRepottingWindow RepottingWindow? @relation("AlternateRepottingWindow", fields: [alternateRepottingWindowId], references: [id], onDelete: Restrict)
   cadenceProposals CareCadenceProposal[]
   careCadences PlantDefinitionCareCadence[]
   id                          String             @id @default(cuid())
@@ -2504,6 +2508,7 @@ model PlantAlias {
 }
 
 model PlantInstance {
+  repottingQueueItems RepottingQueueItem[]
   careCadenceOverrides PlantInstanceCareCadenceOverride[]
   id                            String    @id @default(cuid())
   collectionId                  String?
@@ -2883,6 +2888,7 @@ model PlantHusbandryOverride {
 }
 
 model PlantCareEvent {
+  repottingQueueItem RepottingQueueItem?
   id                       String   @id @default(cuid())
   collectionId             String?
   plantInstanceId          String
@@ -4013,4 +4019,56 @@ model CareCadenceProposal {
   @@index([plantDefinitionId, activity, status])
   @@index([status, researchedAt])
   @@index([jobId])
+}
+
+model RepottingWindow {
+  id String @id @default(cuid())
+  name String @unique
+  description String?
+  startMonth Int
+  startDay Int
+  endMonth Int
+  endDay Int
+  sortOrder Int @default(0)
+  isActive Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  primaryDefinitions PlantDefinition[] @relation("PrimaryRepottingWindow")
+  alternateDefinitions PlantDefinition[] @relation("AlternateRepottingWindow")
+  queueItems RepottingQueueItem[]
+}
+
+enum RepottingQueueStatus {
+  QUEUED
+  COMPLETED
+  CANCELED
+}
+
+enum RepottingQueueSource {
+  MANUAL
+  CARE_QUEUE
+}
+
+model RepottingQueueItem {
+  id String @id @default(cuid())
+  plantInstanceId String
+  plantInstance PlantInstance @relation(fields: [plantInstanceId], references: [id], onDelete: Restrict)
+  repottingWindowId String
+  repottingWindow RepottingWindow @relation(fields: [repottingWindowId], references: [id], onDelete: Restrict)
+  scheduledYear Int
+  status RepottingQueueStatus @default(QUEUED)
+  source RepottingQueueSource @default(MANUAL)
+  sourceReminderId String?
+  assessmentDueAt DateTime?
+  assignmentSnapshot Json?
+  requestedAt DateTime @default(now())
+  completedAt DateTime?
+  canceledAt DateTime?
+  careEventId String? @unique
+  careEvent PlantCareEvent? @relation(fields: [careEventId], references: [id], onDelete: Restrict)
+  notes String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([status, repottingWindowId, scheduledYear])
+  @@index([plantInstanceId, status])
 }
