@@ -1,3 +1,4 @@
+import { consolidationContext, husbandryLinkTarget, validCompatibilityAssessment, lockHusbandryGraph, validateHusbandryLinkProposal, husbandryFingerprint, criticalGuideConflicts } from '@/lib/husbandry-consolidation'
 import { validWindowRecommendation } from '@/lib/repotting'
 import { curatorInheritance, linkedCarePolicy, linkedCareFields, visibleLinkedCareSuggestion } from '@/lib/ai-curator-inheritance'
 import { curatorResponseFormat, parseCuratorResponse, CuratorResponseError } from '@/lib/ai-curator-response'
@@ -20,7 +21,7 @@ const ACTIVE_JOB_STATUSES = ['QUEUED', 'RUNNING', 'DEFERRED', 'WAITING_FOR_HUMAN
 const TERMINAL_JOB_STATUSES = ['COMPLETED', 'SKIPPED', 'CANCELLED', 'EXPIRED']
 const SIMPLE_ACCEPT_FIELDS = ['description', 'wikipediaUrl', 'inaturalistUrl', 'powoUrl', 'gbifUrl'] as const
 const IMAGE_HUMAN_BLOCK_REASON = 'AI Curator cannot create a reliable type image without a human-provided photograph.'
-const APPLYABLE_TARGET_FIELDS = ['references', 'tags', 'aliases', 'substrate', 'fertilizer', 'authority', 'husbandry', 'repottingWindows'] as const
+const APPLYABLE_TARGET_FIELDS = ['references', 'tags', 'aliases', 'substrate', 'fertilizer', 'authority', 'husbandry', 'repottingWindows', 'husbandryLink'] as const
 const NUMERIC_HUSBANDRY_FIELDS = new Set([
   'environmentTemperatureMinC',
   'environmentTemperatureMaxC',
@@ -318,6 +319,7 @@ export function aiCuratorCurrentFocusValue(currentValue: unknown, targetField?: 
 export function aiCuratorChangedFields(currentValue: unknown, suggestedValue: unknown, targetField?: string | null) {
   if (normalizedSuggestionValue(suggestedValue) === null) return []
   const currentFocus = aiCuratorCurrentFocusValue(currentValue, targetField)
+  if (targetField === husbandryLinkTarget) return isRecord(suggestedValue) && suggestedValue.sourcePlantDefinitionId && suggestedValue.sourcePlantDefinitionId !== (currentFocus as any)?.sourcePlantDefinitionId ? ['sourcePlantDefinitionId'] : []
   if (targetField === 'husbandry' && isRecord(suggestedValue) && isRecord(suggestedValue.fields) && isRecord(currentFocus)) {
     return Object.entries(suggestedValue.fields).some(([key, value]) => comparableSuggestionValue(currentFocus[key]) !== comparableSuggestionValue(value)) ? ['fields'] : []
   }
@@ -438,6 +440,7 @@ async function hasDuplicateWork(prisma: PrismaClient, input: CuratorJobInput, re
 export async function enqueueAiCuratorJob(prisma: PrismaClient, input: CuratorJobInput) {
   const settings = await ensureAiCuratorSettings(prisma)
   const scope = curatorJobScope(input)
+  if (input.targetField === husbandryLinkTarget && !input.manualBoost && await prisma.aiCuratorJob.findFirst({where:{collectionId:input.collectionId,plantDefinitionId:input.plantDefinitionId,dataHash:input.dataHash,targetField:husbandryLinkTarget,status:{in:['COMPLETED','SKIPPED']}}})) return null
   if (await hasDuplicateWork(prisma, input, Number(settings.rejectedSuggestionCooldownDays || 90))) return null
   try {
     return await prisma.aiCuratorJob.create({
@@ -647,13 +650,16 @@ export async function enqueueReadinessCuratorJobs(prisma: PrismaClient, options:
       where: { collectionId: collection.id },
       orderBy: { updatedAt: 'asc' },
       take: options.definitionsPerCollection || 60,
-      include: { _count: { select: { aliases: true, instances: true } } },
+      include: { husbandryGuide: { select: { sourcePlantDefinitionId: true } }, _count: { select: { aliases: true, instances: true, husbandrySourceFor: true } } },
     })
     const completenessByDefinition = await evaluatePlantDefinitionCompletenessBatch(prisma, {
       collectionId: collection.id,
       definitionIds: definitions.map((definition) => definition.id),
     })
+    const [guideVersion,proposalVersion]=await Promise.all([prisma.plantHusbandryGuide.aggregate({where:{collectionId:collection.id},_max:{updatedAt:true}}),prisma.aiCuratorSuggestion.aggregate({where:{collectionId:collection.id,targetField:husbandryLinkTarget},_max:{updatedAt:true}})])
     for (const definition of definitions) {
+      if (!definition.husbandryGuide?.sourcePlantDefinitionId && !definition._count.husbandrySourceFor && await enqueueAiCuratorJob(prisma, { collectionId: collection.id, plantDefinitionId: definition.id, phase: 'ENRICHMENT', jobType: 'HUSBANDRY_CONSOLIDATION', targetField: husbandryLinkTarget, reason: 'Compare cultivation requirements for safe shared husbandry, including completed guides.', priority: 12, dataHash: hashPayload({ id: definition.id, updatedAt: definition.updatedAt, guideVersion:guideVersion._max.updatedAt, proposalVersion:proposalVersion._max.updatedAt, consolidation: true }) })) created += 1
+
       if (!definition.primaryRepottingWindowId && await enqueueAiCuratorJob(prisma, { collectionId: collection.id, plantDefinitionId: definition.id, phase: 'ENRICHMENT', jobType: 'REPOTTING_WINDOWS', targetField: 'repottingWindows', reason: 'Optional seasonal repotting enrichment; separate from cadence completeness.', priority: 15, dataHash: hashPayload({ id: definition.id, updatedAt: definition.updatedAt, seasonal: true }) })) created += 1;
       const completeness = completenessByDefinition.get(definition.id)
       if (!completeness) continue
@@ -693,7 +699,7 @@ export async function enqueueDefinitionResearchNow(prisma: PrismaClient, collect
   const settings = await ensureAiCuratorSettings(prisma)
   const definition = await prisma.plantDefinition.findFirstOrThrow({
     where: { id: plantDefinitionId, collectionId },
-    include: { _count: { select: { aliases: true, instances: true } } },
+    include: { husbandryGuide: { select: { sourcePlantDefinitionId: true } }, _count: { select: { aliases: true, instances: true, husbandrySourceFor: true } } },
   })
   const completenessByDefinition = await evaluatePlantDefinitionCompletenessBatch(prisma, { collectionId, definitionIds: [plantDefinitionId] })
   const completeness = completenessByDefinition.get(plantDefinitionId)
@@ -704,6 +710,7 @@ export async function enqueueDefinitionResearchNow(prisma: PrismaClient, collect
   }
   created += await enqueueCadenceResearch(prisma, { collectionId, definitionId: plantDefinitionId, source: 'AI_RESEARCH' })
   if (await enqueueAiCuratorJob(prisma, { collectionId, plantDefinitionId, phase: 'ENRICHMENT', jobType: 'REPOTTING_WINDOWS', targetField: 'repottingWindows', reason: 'Explicit seasonal window research', priority: 1000, dataHash: hashPayload({ plantDefinitionId, seasonal: true, requested: Date.now() }), manualBoost: true })) created += 1
+  if (await enqueueAiCuratorJob(prisma, { collectionId, plantDefinitionId, phase: 'ENRICHMENT', jobType: 'HUSBANDRY_CONSOLIDATION', targetField: husbandryLinkTarget, reason: 'Explicit husbandry consolidation review, including complete guides.', priority: 1000, dataHash: hashPayload({ plantDefinitionId, consolidation: true, requested: Date.now() }), manualBoost: true })) created += 1
   return { created, completeness }
 }
 
@@ -881,7 +888,8 @@ async function currentValueForJob(prisma: PrismaClient, job: any) {
   }
   const tags = definition.tags.map((tag) => tag.plantTag)
   const focusCurrentValue =
-    job.targetField === 'repottingWindows' ? { primaryWindowId: definition.primaryRepottingWindowId, alternateWindowId: definition.alternateRepottingWindowId }
+    job.targetField === husbandryLinkTarget ? { sourcePlantDefinitionId: definition.husbandryGuide?.sourcePlantDefinitionId || null }
+    : job.targetField === 'repottingWindows' ? { primaryWindowId: definition.primaryRepottingWindowId, alternateWindowId: definition.alternateRepottingWindowId }
     : job.targetField === 'description' ? definition.description
     : job.targetField === 'authority' ? {
       taxonomicAuthorityId: definition.taxonomicAuthorityId,
@@ -978,6 +986,7 @@ async function currentValueForJob(prisma: PrismaClient, job: any) {
     tags,
     husbandryGuide,
     inheritance,
+    consolidation: job.targetField === husbandryLinkTarget ? await consolidationContext(prisma, job.collectionId, definition.id) : undefined,
     repottingWindows: job.targetField === 'repottingWindows' ? await prisma.repottingWindow.findMany({ where: { isActive: true }, orderBy: { sortOrder: 'asc' } }) : undefined,
     seasonalAssumptions: 'No region is guaranteed. Window defaults use temperate Northern Hemisphere dates; explain regional, indoor-light, tropical or winter-growth assumptions explicitly using available instance/location evidence.',
     substrateRecommendations,
@@ -1158,6 +1167,8 @@ function curatorTargetInstructions(targetField?: string | null) {
       return 'Cadence intervals are reviewed separately through careCadences research; do not include fertilizationCadenceDays. For fertilizer, you may suggest an existing fertilizer recipe assignment, a new draft recipe using existing fertilizer products, and/or purchase ideas for a specific nutrient/care gap. suggestedValue may include "fertilizerRecipeId": "existing-recipe-id", "fertilizationType": "plain English text such as balanced liquid feeding", "fertilizationStrength": "plain English text such as light or quarter strength", "fertilizationFrequency": "plain English text such as every 2 weeks during active growth", "newRecipe": { "name": "draft name in plain English", "description": "why this recipe fills the gap", "declaredNpk": "optional", "applicationMethod": "ROOT_DRENCH|FOLIAR|TOP_DRESS|OTHER", "dilutionInstructions": "plain English string|null", "strengthLabel": "plain English string|null", "frequencyDays": number|null, "frequencyNotes": "plain English string|null", "seasonalNotes": "plain English string|null", "safetyNotes": "plain English string|null", "products": [{ "productId": "existing-product-id", "amount": "string|null", "unit": "string|null", "notes": "plain English string|null" }] }, and "purchaseSuggestions": [{ "name": "product or product class in plain English", "gap": "specific gap filled in plain English", "reason": "short plain English reason" }]. Never invent existing recipe/product IDs.'
     case 'authority':
       return 'For taxonomic authority coverage, suggest only authorities from context.resources.existingTaxonomicAuthorities. suggestedValue must be { "taxonomicAuthorityId": "existing-authority-id", "matchReason": "why its scope covers this definition" }. Never use this field for botanical authorship text.'
+    case 'husbandryLink':
+      return 'Evaluate husbandry consolidation independently of completeness. Compare the existing target guide against at most the supplied context.consolidation.candidates. Taxonomic similarity narrows discovery but never proves compatibility. Compare light, watering, substrate, humidity, temperature, dormancy, fertilization, repotting, pruning, growthHabit, roots and specialRequirements. A single material incompatibility vetoes linking; do not average conflicts away. Prefer complete, representative, well-supported, stable sources; many consumers do not prove correctness. Keep independently assigned cadences, substrate recipes, seasonal repotting windows and instance overrides separate. Return suggestedValue null if uncertain or incompatible, even with high confidence of incompatibility. Only propose evidence-backed compatible links with confidence >= context.consolidation.minimumConfidence. suggestedValue must be {shouldRecommendLink:true, compatible:true, evidenceSufficient:true, targetPlantDefinitionId:context.plantDefinition.id, sourcePlantDefinitionId:exact candidate id, confidence:number 0-1, compatibleDimensions:array listing every evaluated dimension above, similarities:string[], minorDifferences:string[], criticalDifferences:[], botanicalReasoning:string, sourceQualityAssessment:string, evidenceLimitations:string}. Be explicit about evidence limitations and cultivar-specific differences. Never recommend a link for consolidation statistics alone.'
     case 'repottingWindows':
       return 'Recommend seasonal repotting during actual species-specific active growth using only active IDs in context.repottingWindows. Do not invent environmental details or assume universal Northern Hemisphere seasonality. Return null if evidence is insufficient. suggestedValue must be {primaryWindowId, alternateWindowId: string|null, primaryConfidence: number from 0 to 1, alternateConfidence: number|null, primaryReasoning: string, alternateReasoning: string|null, researchAssumptions: string[]}. Evaluate confidences independently. Existing assignments are proposals for explicit review only, never automatic replacement.'
     case 'husbandry':
@@ -1264,6 +1275,18 @@ async function createSuggestionFromResult(prisma: PrismaClient, settings: any, j
   return prisma.$transaction(async tx => {
     const current = await tx.aiCuratorJob.findUnique({where:{id:job.id}})
     if (!current || current.status !== 'RUNNING' || current.claimedBy !== job.claimedBy) return null
+    if (job.targetField === husbandryLinkTarget) {
+      await lockHusbandryGraph(tx,job.collectionId)
+      const context=(currentValue as any)?.consolidation,value=modelResult.suggestedValue
+      const candidate=context?.candidates?.find((c:any)=>c.id===value?.sourcePlantDefinitionId)
+      const target=await tx.plantDefinition.findUnique({where:{id:job.plantDefinitionId},include:{husbandryGuide:true}})
+      const source=candidate?await tx.plantDefinition.findUnique({where:{id:candidate.id},include:{husbandryGuide:true}}):null
+      const validation=await validateHusbandryLinkProposal(tx,{collectionId:job.collectionId,targetId:job.plantDefinitionId,sourceId:candidate?.id||''})
+      if(!target||!source||target.husbandryGuide?.sourcePlantDefinitionId||!validCompatibilityAssessment(value,job.plantDefinitionId,context?.candidates||[])||!validation.valid||husbandryFingerprint(target)!==context?.targetFingerprint||husbandryFingerprint(source)!==candidate?.fingerprint||criticalGuideConflicts(target.husbandryGuide,source.husbandryGuide).length){
+        await tx.aiCuratorJob.updateMany({where:{id:job.id,status:'RUNNING',claimedBy:job.claimedBy},data:{status:'SKIPPED',completedAt:new Date(),actualCostDollars:actualCost==null?undefined:actualCost.toFixed(6),resultSummary:'Consolidation withheld: incompatible, insufficient evidence, stale guides or reserved dependency. Independent husbandry retained.'}})
+        return null
+      }
+    }
     const suggestion = await tx.aiCuratorSuggestion.create({
       data: {
         collectionId: job.collectionId,
@@ -1278,7 +1301,7 @@ async function createSuggestionFromResult(prisma: PrismaClient, settings: any, j
         currentValue: jsonOrNull(currentValue),
         suggestedValue: jsonOrNull(suggestedValue),
         reasoning: String(modelResult.reasoning || 'AI Curator prepared this suggestion for human review.').slice(0, 4000),
-        confidence: boundedConfidence(modelResult.confidence),
+        confidence: boundedConfidence(job.targetField === husbandryLinkTarget ? (suggestedValue as any)?.confidence : modelResult.confidence),
         supportingReferences: jsonOrNull(Array.isArray(modelResult.supportingReferences) ? modelResult.supportingReferences : []),
         promptVersion: settings.promptVersion,
         model: settings.model,
@@ -1355,6 +1378,10 @@ async function processJob(prisma: PrismaClient, settings: any, job: any) {
   let attemptCost: number | null = null
   try {
     const currentValue = await currentValueForJob(prisma, job)
+    if (job.targetField === husbandryLinkTarget && !(currentValue as any)?.consolidation?.candidates?.length) {
+      await prisma.aiCuratorJob.updateMany({where:{id:job.id,status:'RUNNING',claimedBy:job.claimedBy},data:{status:'SKIPPED',completedAt:new Date(),resultSummary:'No stable, sufficiently complete and compatible source candidates; retained independent husbandry.'}})
+      return {status:'SKIPPED' as const,cost:0}
+    }
     if (job.targetField === 'careCadences' && !(currentValue as any).missingEligibleActivities.length) {
       await prisma.aiCuratorJob.updateMany({ where: { id: job.id, status: 'RUNNING' }, data: { status: 'SKIPPED', completedAt: new Date(), resultSummary: 'No eligible missing activities remain.' } })
       return { status: 'SKIPPED' as const, cost: 0 }

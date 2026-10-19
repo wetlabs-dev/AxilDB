@@ -49,6 +49,8 @@
     "check:plant-instance-filters": "tsx scripts/check-plant-instance-filters.ts",
     "check:definition-completeness": "tsx scripts/check-definition-completeness.ts",
     "check:ai-curator:history:ui": "node scripts/check-ai-curator-history-ui.mjs",
+    "check:husbandry-consolidation:ui": "tsx scripts/check-husbandry-consolidation-ui.ts",
+    "check:husbandry-consolidation": "tsx scripts/check-husbandry-consolidation.ts",
     "check:repotting:ui": "node scripts/check-repotting-ui.mjs",
     "check:repotting": "tsx scripts/check-repotting.ts",
     "check:ai-curator:inheritance": "tsx scripts/check-ai-curator-inheritance.ts",

@@ -417,7 +417,7 @@ export async function getCareQueue(
           fertilizerRecipeId: fertilizer.recipe?.id || null,
           fertilizerRecipeName: fertilizer.recipe?.name || null,
           fertilizerRecipeSummary: fertilizer.recipe ? fertilizerRecipeSummary(fertilizer.recipe) : null,
-          fertilizerStrength: guide.fertilizationStrength || fertilizer.recipe?.strengthLabel || null,
+          fertilizerStrength: (instance.plantDefinition.husbandryGuide?.sourcePlantDefinitionId ? instance.husbandryOverride?.fertilizationStrength : guide.fertilizationStrength) || fertilizer.recipe?.strengthLabel || null,
           fertilizerSource: fertilizer.source,
         } : {}),
         ...(task === 'REPOT' ? {

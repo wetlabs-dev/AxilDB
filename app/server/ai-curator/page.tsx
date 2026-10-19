@@ -1,3 +1,4 @@
+import { HusbandryLinkComparison, HusbandryConsolidationPanel } from '@/components/HusbandryConsolidation'
 import { windowRange, windowFingerprint } from '@/lib/repotting-windows'
 import { linkedCareFields } from '@/lib/ai-curator-inheritance'
 import { isCuratorResponseFailure } from '@/lib/ai-curator-response'
@@ -331,6 +332,7 @@ function PrettyValue({ value, changedFields, targetField, contextValue }: { valu
     const changed = Boolean(changedFields?.size)
     return <p className={`rounded-md border p-3 text-sm italic ${changed ? 'border-green-300 bg-green-50 text-green-950' : 'border-dashed border-stone-300 bg-white/45 text-stone-500'}`}>No value recorded.</p>
   }
+  if (targetField === 'husbandryLink') return <HusbandryLinkComparison value={value} context={(contextValue as any)?.consolidation}/>
   if (targetField === 'repottingWindows') {
     const proposed = value as any, context = contextValue as any, current = context?.repottingWindowsCurrent || context?.repottingWindows || [], old = context?.repottingWindows || []
     return <div className="space-y-2">{(['primary','alternate'] as const).map(key => {
@@ -439,16 +441,16 @@ function ReviewSuggestionCard({ suggestion }: { suggestion: any }) {
         <form action={reviewAiCuratorSuggestion} className="grid gap-3 rounded-lg border border-stone-200 bg-white/45 p-3">
           <input type="hidden" name="suggestionId" value={suggestion.id} />
           <TextArea label="Review note" name="reviewNote" className="min-h-16" />
-          <details className="rounded-md border border-stone-200 bg-[#fffdf7] p-3">
+          {suggestion.targetField !== 'husbandryLink' && <details className="rounded-md border border-stone-200 bg-[#fffdf7] p-3">
             <summary className="cursor-pointer text-sm font-semibold text-stone-800">Advanced edit</summary>
             <TextArea label="Suggested value JSON" name="suggestedValueJson" defaultValue={jsonDisplay(suggestion.suggestedValue)} className="mt-2 min-h-32 font-mono text-xs" />
-          </details>
+          </details>}
           <p className="text-xs text-stone-600">
             {appliesDirectly ? 'Accept applies this field to the plant definition.' : 'Accept records curator approval for manual follow-up.'}
           </p>
           <div className="flex flex-wrap gap-2">
-            <Button name="action" value="ACCEPT" className="px-3 py-1.5 text-xs">Accept</Button>
-            <Button name="action" value="EDIT_ACCEPT" className="bg-[#6d7f6d] px-3 py-1.5 text-xs hover:bg-[#536453]">Edit then Accept</Button>
+            <Button name="action" value="ACCEPT" className="px-3 py-1.5 text-xs">{suggestion.targetField === 'husbandryLink' ? 'Approve Link' : 'Accept'}</Button>
+            {suggestion.targetField !== 'husbandryLink' && <Button name="action" value="EDIT_ACCEPT" className="bg-[#6d7f6d] px-3 py-1.5 text-xs hover:bg-[#536453]">Edit then Accept</Button>}
             <Button name="action" value="REJECT" className="bg-[#9a3f35] px-3 py-1.5 text-xs hover:bg-[#7d3028]">Reject</Button>
           </div>
         </form>
@@ -460,7 +462,7 @@ function ReviewSuggestionCard({ suggestion }: { suggestion: any }) {
 export default async function AiCuratorPage({
   searchParams,
 }: {
-  searchParams: Promise<{ settings?: string; review?: string; errors?: string; recovered?: string; requeued?: string; retryFailed?: string; retrySkipped?: string; jobRetry?: string; responseRequeued?: string; responseRecovered?: string; responseFailed?: string; responseLimited?: string; responseBusy?: string }>
+  searchParams: Promise<{ linkBatch?: string; settings?: string; review?: string; errors?: string; recovered?: string; requeued?: string; retryFailed?: string; retrySkipped?: string; jobRetry?: string; responseRequeued?: string; responseRecovered?: string; responseFailed?: string; responseLimited?: string; responseBusy?: string }>
 }) {
   const admin = await requireServerAdmin()
   const sp = await searchParams
@@ -496,8 +498,11 @@ export default async function AiCuratorPage({
         <LinkButton href="/server">Server Management</LinkButton>
       </div>
 
+      <HusbandryConsolidationPanel/>
+      {sp.linkBatch && <p role="status">Consolidation batch results: {sp.linkBatch}</p>}
+      {sp.review === 'stale' && <p role="alert">The husbandry link was not applied. Review the stale comparison explanation and refresh or reject it.</p>}
       {sp.settings === 'updated' && <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900">AI Curator settings updated.</p>}
-      {sp.review && <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900">Review action recorded.</p>}
+      {sp.review && sp.review !== 'stale' && <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900">Review action recorded.</p>}
       {sp.responseRequeued !== undefined && <p role="status" className="rounded-lg border p-3 text-sm">Response-error jobs: {Number(sp.responseRecovered) || 0} results recovered, {Number(sp.responseRequeued) || 0} queued, {Number(sp.responseFailed) || 0} failed, {Number(sp.responseLimited) || 0} need a higher Max tokens setting, {Number(sp.responseBusy) || 0} busy or conflicting. Normal AI budget limits apply.</p>}
       {sp.jobRetry && <p role="status" className="rounded-lg border p-3 text-sm">{({OUTPUT_LIMIT_UNCHANGED:'Increase Curator Max tokens before retrying this output-limit job.',QUEUED:'Job requeued with a fresh bounded retry allowance.',RECOVERED:'The existing result was recovered without another AI request.',WORKER_BUSY:'The worker is active. Retry once it finishes.',ACTIVE_WORK_EXISTS:'Another job for this work is active. Review that job first.',UNCHANGED:'This job is no longer eligible for retry.'} as Record<string,string>)[sp.jobRetry] || 'Review the current job status.'}</p>}
       {sp.requeued !== undefined && <p role="status" className="rounded-lg border p-3 text-sm">Database-blocked jobs: {Number(sp.recovered) || 0} existing results recovered, {Number(sp.requeued) || 0} queued, {Number(sp.retryFailed) || 0} failed, {Number(sp.retrySkipped) || 0} left unchanged because work is active; retry after the worker finishes. Queued work follows the normal AI budget.</p>}

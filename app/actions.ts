@@ -7,6 +7,7 @@ import path from 'path'
 import { randomUUID } from 'crypto'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
+import { applyHusbandryLink, restoreIndependentHusbandry, lockHusbandryGraph, husbandryGraphIssues } from '@/lib/husbandry-consolidation'
 import { runCareQueueMutation, careEventForTask } from '@/lib/care-queue-mutations'
 import { audit, requireServerAdmin, requireUser } from '@/lib/auth'
 import {
@@ -200,24 +201,6 @@ async function cleanupGenericEntity(collectionId: string, entityType: string, en
   })
   await prisma.note.deleteMany({ where: { collectionId, entityType, entityId } })
   await prisma.photo.deleteMany({ where: { collectionId, entityType, entityId } })
-}
-
-async function assertHusbandryLinkAllowed(collectionId: string, plantDefinitionId: string, sourcePlantDefinitionId: string) {
-  if (plantDefinitionId === sourcePlantDefinitionId) throw new Error('A plant definition cannot link husbandry to itself.')
-  await prisma.plantDefinition.findFirstOrThrow({ where: { id: plantDefinitionId, collectionId }, select: { id: true } })
-  await prisma.plantDefinition.findFirstOrThrow({ where: { id: sourcePlantDefinitionId, collectionId }, select: { id: true } })
-
-  const seen = new Set([plantDefinitionId])
-  let cursor: string | null = sourcePlantDefinitionId
-  while (cursor) {
-    if (seen.has(cursor)) throw new Error('That husbandry link would create a circular guide reference.')
-    seen.add(cursor)
-    const guide: { sourcePlantDefinitionId: string | null } | null = await prisma.plantHusbandryGuide.findFirst({
-      where: { collectionId, plantDefinitionId: cursor },
-      select: { sourcePlantDefinitionId: true },
-    })
-    cursor = guide?.sourcePlantDefinitionId || null
-  }
 }
 
 function husbandryMutationData(fd: FormData) {
@@ -1895,6 +1878,8 @@ export async function mergePlantDefinition(fd: FormData) {
   if (sourceId === targetId) throw new Error('Choose a different target definition for the merge.')
 
   const result = await prisma.$transaction(async (tx) => {
+    await lockHusbandryGraph(tx,collection.id)
+    const previousGraphIssues = new Set(await husbandryGraphIssues(tx,collection.id))
     const [source, target] = await Promise.all([
       tx.plantDefinition.findFirstOrThrow({
         where: { id: sourceId, collectionId: collection.id },
@@ -1942,6 +1927,7 @@ export async function mergePlantDefinition(fd: FormData) {
 
     const sourceGuide = source.husbandryGuide
     const targetGuide = target.husbandryGuide
+    if (sourceGuide || targetGuide) await tx.auditLog.create({data:{collectionId:collection.id,userId:user.id,action:'ARCHIVE',entityType:'PLANT_HUSBANDRY_GUIDE',entityId:targetGuide?.id||sourceGuide?.id,summary:'Preserved husbandry states before explicit definition merge',metadata:JSON.stringify({sourceDefinitionId:source.id,targetDefinitionId:target.id,sourceGuide,targetGuide})}})
     if (targetGuide?.sourcePlantDefinitionId === source.id && sourceGuide) {
       await tx.plantHusbandryGuide.update({
         where: { id: targetGuide.id },
@@ -1975,6 +1961,8 @@ export async function mergePlantDefinition(fd: FormData) {
 
     await tx.plantDefinition.delete({ where: { id: source.id } })
 
+    const newIssues = (await husbandryGraphIssues(tx,collection.id)).filter(issue=>!previousGraphIssues.has(issue))
+    if(newIssues.length)throw new Error('Merge would introduce an unsafe husbandry dependency. Resolve links or pending consolidation first.')
     return { source, target }
   })
 
@@ -2239,42 +2227,32 @@ export async function linkPlantHusbandryGuide(fd: FormData) {
   const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const plantDefinitionId = val(fd, 'plantDefinitionId')!
   const sourcePlantDefinitionId = val(fd, 'sourcePlantDefinitionId')!
-  await assertHusbandryLinkAllowed(collection.id, plantDefinitionId, sourcePlantDefinitionId)
-
-  const guide = await prisma.plantHusbandryGuide.upsert({
-    where: { plantDefinitionId },
-    update: {
-      sourcePlantDefinitionId,
-      ...Object.fromEntries([...husbandryFieldNames, ...environmentalHusbandryFields].map((field) => [field, null])),
-      reviewStatus: 'LINKED',
-      reviewNotes: val(fd, 'reviewNotes') || 'Uses live-linked husbandry from another plant definition.',
-      aiGeneratedAt: null,
-      aiModel: null,
-    } as any,
-    create: {
-      collectionId: collection.id,
-      plantDefinitionId,
-      sourcePlantDefinitionId,
-      reviewStatus: 'LINKED',
-      reviewNotes: val(fd, 'reviewNotes') || 'Uses live-linked husbandry from another plant definition.',
-    },
-  })
-
-  await audit(user, 'LINK', 'PLANT_HUSBANDRY_GUIDE', guide.id, `Linked plant husbandry guide`, { sourcePlantDefinitionId }, collection.id)
+  await prisma.$transaction(tx => applyHusbandryLink(tx,{collectionId:collection.id,targetId:plantDefinitionId,sourceId:sourcePlantDefinitionId,userId:user.id}))
+  revalidatePath('/', 'layout')
   redirect(collectionPath(collection.slug, `/plants/${plantDefinitionId}/edit#husbandry`))
+}
+
+export async function restorePlantHusbandryGuide(fd: FormData) {
+  const {user,collection}=await requireCollectionAdmin(await collectionSlug(fd))
+  const plantDefinitionId=val(fd,'plantDefinitionId')!
+  await prisma.$transaction(tx=>restoreIndependentHusbandry(tx,{collectionId:collection.id,targetId:plantDefinitionId,userId:user.id}))
+  revalidatePath('/','layout')
+  redirect(collectionPath(collection.slug,`/plants/${plantDefinitionId}/edit#husbandry`))
 }
 
 export async function forkPlantHusbandryGuide(fd: FormData) {
   const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const plantDefinitionId = val(fd, 'plantDefinitionId')!
-  const guide = await prisma.plantHusbandryGuide.findFirstOrThrow({ where: { collectionId: collection.id, plantDefinitionId } })
-  if (!guide.sourcePlantDefinitionId) redirect(collectionPath(collection.slug, `/plants/${plantDefinitionId}/edit#husbandry`))
-  const source = await prisma.plantHusbandryGuide.findFirstOrThrow({
+  await prisma.$transaction(async tx => {
+  await lockHusbandryGraph(tx, collection.id)
+  const guide = await tx.plantHusbandryGuide.findFirstOrThrow({ where: { collectionId: collection.id, plantDefinitionId } })
+  if (!guide.sourcePlantDefinitionId) return
+  const source = await tx.plantHusbandryGuide.findFirstOrThrow({
     where: { collectionId: collection.id, plantDefinitionId: guide.sourcePlantDefinitionId },
   })
 
   const data = Object.fromEntries([...husbandryFieldNames, ...environmentalHusbandryFields].map((field) => [field, (source as any)[field] ?? null]))
-  const updated = await prisma.plantHusbandryGuide.update({
+  const updated = await tx.plantHusbandryGuide.update({
     where: { id: guide.id },
     data: {
       ...data,
@@ -2286,18 +2264,24 @@ export async function forkPlantHusbandryGuide(fd: FormData) {
     } as any,
   })
 
-  await audit(user, 'FORK', 'PLANT_HUSBANDRY_GUIDE', updated.id, `Forked linked plant husbandry guide`, { sourcePlantDefinitionId: source.plantDefinitionId }, collection.id)
+  await tx.auditLog.create({data:{collectionId:collection.id,userId:user.id,action:'FORK',entityType:'PLANT_HUSBANDRY_GUIDE',entityId:updated.id,summary:'Made local copy of linked source; prior local guide archived',metadata:JSON.stringify({sourcePlantDefinitionId:source.plantDefinitionId,previousGuide:guide})}})
+  })
+  revalidatePath('/', 'layout')
   redirect(collectionPath(collection.slug, `/plants/${plantDefinitionId}/edit#husbandry`))
 }
 
 export async function deletePlantHusbandryGuide(fd: FormData) {
   const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const plantDefinitionId = val(fd, 'plantDefinitionId')!
-  const guide = await prisma.plantHusbandryGuide.findFirst({ where: { collectionId: collection.id, plantDefinitionId } })
-  if (guide) {
-    await prisma.plantHusbandryGuide.delete({ where: { id: guide.id } })
-    await audit(user, 'DELETE', 'PLANT_HUSBANDRY_GUIDE', guide.id, `Deleted plant husbandry guide`, undefined, collection.id)
-  }
+  await prisma.$transaction(async tx => {
+    await lockHusbandryGraph(tx,collection.id)
+    const guide=await tx.plantHusbandryGuide.findFirst({where:{collectionId:collection.id,plantDefinitionId}})
+    if (!guide) return
+    if(await tx.plantHusbandryGuide.count({where:{sourcePlantDefinitionId:plantDefinitionId}}))throw new Error('This guide supplies other definitions. Resolve dependent links before deleting it.')
+    await tx.auditLog.create({data:{collectionId:collection.id,userId:user.id,action:'DELETE',entityType:'PLANT_HUSBANDRY_GUIDE',entityId:guide.id,summary:'Deleted unused husbandry guide; content archived',metadata:JSON.stringify({previousGuide:guide})}})
+    await tx.plantHusbandryGuide.delete({where:{id:guide.id}})
+  })
+  revalidatePath('/','layout')
   redirect(collectionPath(collection.slug, `/plants/${plantDefinitionId}/edit#husbandry`))
 }
 

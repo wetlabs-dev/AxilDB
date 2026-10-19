@@ -141,6 +141,8 @@ export function parseFertilizationCadenceDays(...values: Array<string | number |
 }
 
 export function effectiveFertilizerAssignment(base?: any | null, override?: any | null) {
+  // Preserved local narrative is archival while linked; keep existing schedule ownership.
+  if (base?.sourcePlantDefinitionId) base = { ...base, fertilizationFrequency: null }
   if (override?.fertilizationPaused) {
     return { paused: true, recipe: null, cadenceDays: null, source: 'override' as const }
   }

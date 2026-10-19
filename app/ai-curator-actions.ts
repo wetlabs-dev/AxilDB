@@ -1,5 +1,6 @@
 'use server'
 
+import { husbandryLinkTarget, reviewHusbandryLink } from '@/lib/husbandry-consolidation'
 import { applyWindowRecommendation } from '@/lib/repotting'
 import { linkedCareFields } from '@/lib/ai-curator-inheritance'
 
@@ -384,6 +385,13 @@ export async function reviewAiCuratorSuggestion(fd: FormData) {
     where: { id: suggestionId },
     include: { collection: true, plantDefinition: true },
   })
+  if (suggestion.targetField === husbandryLinkTarget) {
+    if (!['ACCEPT','REJECT'].includes(action) || fd.has('suggestedValueJson')) throw new Error('Link comparisons cannot be edited during approval; request a fresh comparison instead.')
+    // Link assessments are immutable: choosing another source requires a fresh comparison.
+    const result=await reviewHusbandryLink(prisma,suggestion.id,user.id,action==='REJECT'?'REJECT':'ACCEPT')
+    revalidatePath('/','layout')
+    redirect(`/server/ai-curator?review=${result.status.toLowerCase()}`)
+  }
   if (suggestion.status !== 'PENDING') throw new Error('This AI Curator suggestion has already been reviewed.')
 
   if (action === 'REJECT') {
@@ -479,4 +487,18 @@ export async function clearAiCuratorRecentErrors() {
   ])
   revalidatePath('/server/ai-curator')
   redirect('/server/ai-curator?errors=cleared')
+}
+
+export async function reviewHusbandryLinkBatch(fd: FormData) {
+  const user=await requireServerAdmin()
+  if (!['ACCEPT','REJECT'].includes(String(fd.get('action')))) throw new Error('Choose approve or reject for this batch.')
+  const ids=[...new Set(fd.getAll('suggestionId').map(String))]
+  if(!ids.length||ids.length>50||fd.get('confirmed')!=='on')throw new Error('Select up to 50 recommendations and confirm review.')
+  const results:Record<string,number>={}
+  for(const id of ids.sort()){
+    const result=await reviewHusbandryLink(prisma,id,user.id,fd.get('action')==='REJECT'?'REJECT':'ACCEPT')
+    results[result.status]=(results[result.status]||0)+1
+  }
+  revalidatePath('/','layout')
+  redirect(`/server/ai-curator?linkBatch=${encodeURIComponent(JSON.stringify(results))}`)
 }

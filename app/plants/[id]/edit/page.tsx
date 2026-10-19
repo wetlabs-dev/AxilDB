@@ -4,7 +4,7 @@ import { actionableCadenceWhere } from '@/lib/cadence-review'
 import { CareCadences } from '@/components/CareCadences'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
-import { deletePhoto, deletePlantDefinition, deletePlantHusbandryGuide, forkPlantHusbandryGuide, linkPlantHusbandryGuide, mergePlantDefinition, nominatePlantDefinitionForValidation, savePlantHusbandryGuide, savePlantHusbandryGuideField, setPlantDefinitionTypeImageFromInstancePhoto, updatePhotoCaption, updatePhotoFraming, updatePlantDefinition } from '@/app/actions'
+import { deletePhoto, deletePlantDefinition, deletePlantHusbandryGuide, forkPlantHusbandryGuide, restorePlantHusbandryGuide, linkPlantHusbandryGuide, mergePlantDefinition, nominatePlantDefinitionForValidation, savePlantHusbandryGuide, savePlantHusbandryGuideField, setPlantDefinitionTypeImageFromInstancePhoto, updatePhotoCaption, updatePhotoFraming, updatePlantDefinition } from '@/app/actions'
 import { Button, Card, Field, HelpTooltip, SuggestionDatalist, TextArea } from '@/components/ui'
 import { ConfidenceSelect, PlantAliasFields } from '@/components/PlantAliasFields'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
@@ -384,6 +384,7 @@ export default async function EditPlant({
                 </a>
                 . Changes to that source guide will appear here.
               </p>
+              <form action={restorePlantHusbandryGuide} className="mt-3"><input type="hidden" name="collectionSlug" value={collection.slug}/><input type="hidden" name="plantDefinitionId" value={plant.id}/><p className="text-xs">If an independent guide was preserved at linking, restore it explicitly. It may need review for currency.</p><Button>Restore preserved independent guide</Button></form>
               <form action={forkPlantHusbandryGuide} className="mt-3">
                 <input type="hidden" name="collectionSlug" value={collection.slug} />
                 <input type="hidden" name="plantDefinitionId" value={plant.id} />
