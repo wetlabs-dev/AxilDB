@@ -1144,3 +1144,5 @@ section {
 @container (min-width: 320px) { .care-cadences-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @container (min-width: 720px) { .care-cadences-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 :root[data-theme='dark'] .care-cadence-tile-editable:hover { background: var(--ax-primary-wash); }
+
+.care-cadence-value-resolved { color: var(--ax-primary); font-weight: 500; }

@@ -1,5 +1,5 @@
 import type { Prisma } from '@prisma/client'
-import { cadenceActivities, validateCadence } from '@/lib/care-cadences'
+import { cadenceActivities, validateCadenceState } from '@/lib/care-cadences'
 
 // All definition configuration, manual or approved research, uses the same dependency-protected records.
 export async function configureDefinitionCadence(
@@ -7,6 +7,7 @@ export async function configureDefinitionCadence(
   input: {
     definitionId: string
     activity: string
+    status?: string
     interval?: number | null
     unit?: string | null
     missingOnly?: boolean
@@ -19,12 +20,27 @@ export async function configureDefinitionCadence(
     plantDefinitionId: input.definitionId,
     activity: input.activity,
   }
-  if (input.interval != null) validateCadence(input.interval, input.unit!)
-  if (!input.missingOnly)
+  const status =
+    input.status || (input.interval == null ? 'NOT_SCHEDULED' : 'SCHEDULED')
+  validateCadenceState(input.activity, status, input.interval, input.unit)
+  if (!input.missingOnly) {
     await tx.plantDefinitionCareCadence.deleteMany({ where })
-  if (input.interval == null) return { count: 0 }
+    await tx.careCadenceProposal.updateMany({
+      where: { ...where, status: 'PENDING' },
+      data: {
+        status: 'SUPERSEDED',
+        reviewNote: 'A manual care decision superseded this recommendation.',
+      },
+    })
+  }
+  if (status === 'NOT_SCHEDULED') return { count: 0 }
   return tx.plantDefinitionCareCadence.createMany({
-    data: { ...where, interval: input.interval, unit: input.unit! },
+    data: {
+      ...where,
+      status,
+      interval: input.interval ?? null,
+      unit: input.unit ?? null,
+    },
     skipDuplicates: Boolean(input.missingOnly),
   })
 }

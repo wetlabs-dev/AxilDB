@@ -3949,8 +3949,9 @@ model PlantDefinitionCareCadence {
   id String @id @default(cuid())
   plantDefinitionId String
   activity String
-  interval Int
-  unit String
+  status String @default("SCHEDULED")
+  interval Int?
+  unit String?
   plantDefinition PlantDefinition @relation(fields: [plantDefinitionId], references: [id], onDelete: Cascade)
   @@unique([plantDefinitionId, activity])
 }

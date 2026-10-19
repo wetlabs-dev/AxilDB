@@ -1,4 +1,8 @@
-import { cadenceActivities, validateCadence } from '@/lib/care-cadences'
+import {
+  cadenceActivities,
+  validateCadence,
+  supportsNotApplicable,
+} from '@/lib/care-cadences'
 
 export type CadenceRecommendation = {
   activity: string
@@ -13,7 +17,7 @@ export type CadenceRecommendation = {
     | 'INSUFFICIENT_INFORMATION'
     | 'BLOCKED_BY_DEPENDENCY'
 }
-export const cadenceResearchInstructions = `Return careCadenceRecommendations using the shared shape below, only for missing eligible activities listed in context. Give botanically informed conservative starting intervals, never a generic schedule for every plant. Consider taxonomy/family, growth habit, habitat, dormancy, root sensitivity, existing husbandry and assigned recipe. Fixed watering intervals are inspection starting points: explain substrate, pot, light, temperature, humidity and seasonal uncertainty and require checking moisture before watering. Pruning and repotting may be condition based: use NOT_APPLICABLE or INSUFFICIENT_INFORMATION when a fixed interval is unjustified. General pest inspections are a practical precaution, not a species-specific scientific finding. Never fabricate citations: sourceReferences must be empty unless genuine references are known. FERTILIZING without an active assigned recipe must be BLOCKED_BY_DEPENDENCY with null interval and unit. Never replace configured cadences. Confidence must reflect uncertainty. RECOMMENDED requires a positive integer interval <=3650 and unit DAY|WEEK|MONTH|YEAR. All other applicability states require null interval and unit.`
+export const cadenceResearchInstructions = `Return careCadenceRecommendations using the shared shape below, only for missing eligible activities listed in context. Give botanically informed conservative starting intervals, never a generic schedule for every plant. Consider taxonomy/family, growth habit, habitat, dormancy, root sensitivity, existing husbandry and assigned recipe. Fixed watering intervals are inspection starting points: explain substrate, pot, light, temperature, humidity and seasonal uncertainty and require checking moisture before watering. Pruning and repotting may be condition based: use NOT_APPLICABLE or INSUFFICIENT_INFORMATION when a fixed interval is unjustified. General pest inspections are a practical precaution, not a species-specific scientific finding. Never fabricate citations: sourceReferences must be empty unless genuine references are known. FERTILIZING, REPOTTING and PRUNING may be NOT_APPLICABLE only when no recurring cadence is botanically appropriate; give a concise species- and context-specific rationale. This never prohibits occasional manual care. Do not generalize nutrient restrictions across carnivorous plants. WATERING, PEST_INSPECTION and GENERAL_INSPECTION cannot be NOT_APPLICABLE: return INSUFFICIENT_INFORMATION rather than fabricate intervals. FERTILIZING without an active assigned recipe may be justified NOT_APPLICABLE; otherwise return BLOCKED_BY_DEPENDENCY, never a scheduled interval. Never infer N/A from low maintenance or a missing recipe. Never replace configured cadences. Confidence must reflect uncertainty. RECOMMENDED requires a positive integer interval <=3650 and unit DAY|WEEK|MONTH|YEAR. All other applicability states require null interval and unit.`
 export const cadenceRecommendationShape = [
   {
     activity: cadenceActivities.map((a) => a.activity).join('|'),
@@ -55,6 +59,11 @@ export function validateRecommendations(
       throw new Error('Invalid cadence applicability.')
     if (typeof row.rationale !== 'string' || !row.rationale.trim())
       throw new Error('Cadence rationale is required.')
+    if (
+      row.applicability === 'NOT_APPLICABLE' &&
+      !supportsNotApplicable(row.activity)
+    )
+      throw new Error('N/A is not allowed for this activity.')
     if (row.applicability === 'RECOMMENDED')
       validateCadence(row.recommendedInterval, row.recommendedUnit)
     else if (row.recommendedInterval != null || row.recommendedUnit != null)
@@ -79,7 +88,9 @@ export function validateRecommendations(
       rationale: row.rationale.slice(0, 4000),
       sourceReferences,
       applicability: row.applicability,
-      ...(!hasRecipe && row.activity === 'FERTILIZING'
+      ...(!hasRecipe &&
+      row.activity === 'FERTILIZING' &&
+      row.applicability === 'RECOMMENDED'
         ? {
             recommendedInterval: null,
             recommendedUnit: null,

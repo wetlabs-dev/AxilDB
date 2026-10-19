@@ -1,5 +1,9 @@
 import type { Prisma } from '@prisma/client'
-import { cadenceActivities, cadenceUnits } from '@/lib/care-cadences'
+import {
+  cadenceActivities,
+  cadenceUnits,
+  supportsNotApplicable,
+} from '@/lib/care-cadences'
 
 /** Count independently approvable intervals; never load research payloads for a badge. */
 export function actionableCadenceWhere(
@@ -7,9 +11,6 @@ export function actionableCadenceWhere(
 ): Prisma.CareCadenceProposalWhereInput {
   return {
     status: 'PENDING',
-    applicability: 'RECOMMENDED',
-    interval: { gte: 1, lte: 3650 },
-    unit: { in: [...cadenceUnits] },
     AND: [
       { OR: [{ jobId: null }, { job: { status: 'COMPLETED' } }] },
       {
@@ -18,17 +19,35 @@ export function actionableCadenceWhere(
           plantDefinition: {
             ...(collectionId ? { collectionId } : {}),
             careCadences: { none: { activity } },
-            ...(activity === 'FERTILIZING'
-              ? {
-                  husbandryGuide: {
-                    fertilizerRecipe: {
-                      active: true,
-                      ...(collectionId ? { collectionId } : {}),
-                    },
-                  },
-                }
-              : {}),
           },
+          OR: [
+            {
+              applicability: 'RECOMMENDED',
+              interval: { gte: 1, lte: 3650 },
+              unit: { in: [...cadenceUnits] },
+              ...(activity === 'FERTILIZING'
+                ? {
+                    plantDefinition: {
+                      husbandryGuide: {
+                        fertilizerRecipe: {
+                          active: true,
+                          ...(collectionId ? { collectionId } : {}),
+                        },
+                      },
+                    },
+                  }
+                : {}),
+            },
+            ...(supportsNotApplicable(activity)
+              ? [
+                  {
+                    applicability: 'NOT_APPLICABLE',
+                    interval: null,
+                    unit: null,
+                  },
+                ]
+              : []),
+          ],
         })),
       },
     ],
@@ -57,15 +76,24 @@ export function isActionableCadenceProposal(
 ) {
   if (
     p.status !== 'PENDING' ||
-    p.applicability !== 'RECOMMENDED' ||
+    !['RECOMMENDED', 'NOT_APPLICABLE'].includes(p.applicability) ||
     !cadenceActivities.some((a) => a.activity === p.activity) ||
+    (p.jobId && p.job?.status !== 'COMPLETED') ||
+    d.careCadences.some((c) => c.activity === p.activity)
+  )
+    return false
+  if (p.applicability === 'NOT_APPLICABLE')
+    return (
+      supportsNotApplicable(p.activity) &&
+      p.interval === null &&
+      p.unit === null
+    )
+  if (
     !Number.isInteger(p.interval) ||
     !p.interval ||
     p.interval < 1 ||
     p.interval > 3650 ||
-    !cadenceUnits.some((unit) => unit === p.unit) ||
-    (p.jobId && p.job?.status !== 'COMPLETED') ||
-    d.careCadences.some((c) => c.activity === p.activity)
+    !cadenceUnits.some((unit) => unit === p.unit)
   )
     return false
   const recipe = d.husbandryGuide?.fertilizerRecipe

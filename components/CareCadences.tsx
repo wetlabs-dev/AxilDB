@@ -23,6 +23,8 @@ import {
 import { saveCareCadences } from '@/app/care-cadence-actions'
 import {
   cadenceActivities,
+  supportsNotApplicable,
+  evaluateCareScheduleCompleteness,
   cadenceLabel,
   cadenceUnits,
   resolveCadence,
@@ -57,6 +59,11 @@ export function CareCadences(props: Props) {
   const [saved, setSaved] = useState('')
   const opener = useRef<HTMLButtonElement | null>(null)
   const titleId = useId()
+  const completeness = evaluateCareScheduleCompleteness(
+    props.defaults,
+    props.overrides,
+    props.hasRecipe
+  )
   function edit(activity: string, button: HTMLButtonElement) {
     opener.current = button
     setSaved('')
@@ -94,6 +101,11 @@ export function CareCadences(props: Props) {
           </button>
         )}
       </div>
+      <p className="care-cadences-description" role="status">
+        {completeness.complete
+          ? 'Complete care schedule'
+          : `${completeness.resolved} of ${completeness.total} care decisions resolved`}
+      </p>
       <div className="care-cadences-grid">
         {cadenceActivities.map(({ activity, label }) => (
           <CareCadenceTile
@@ -135,19 +147,25 @@ function CareCadenceTile({
   onEdit: (button: HTMLButtonElement) => void
 }) {
   const result = resolveCadence(activity, props.defaults, props.overrides)
-  const blocked = activity === 'FERTILIZING' && !props.hasRecipe
+  const blocked =
+    activity === 'FERTILIZING' &&
+    !props.hasRecipe &&
+    result.status === 'SCHEDULED'
   const Icon = icons[activity]
-  const value = blocked
-    ? 'Recipe required'
-    : result.source === 'Disabled'
-      ? 'Disabled for this instance'
-      : cadenceLabel(result.cadence)
+  const value =
+    result.status === 'NOT_APPLICABLE'
+      ? 'Not applicable'
+      : blocked
+        ? 'Recipe required'
+        : result.source === 'Disabled'
+          ? 'Disabled for this instance'
+          : cadenceLabel(result.cadence)
   const contents = (
     <>
       <span className="care-cadence-tile-heading">
         <Icon aria-hidden="true" size={17} strokeWidth={1.75} />
         <span>{label}</span>
-        {props.canEdit && !blocked && (
+        {props.canEdit && (
           <Pencil
             aria-hidden="true"
             size={14}
@@ -156,7 +174,7 @@ function CareCadenceTile({
         )}
       </span>
       <span
-        className={`care-cadence-value${blocked || !result.cadence ? ' care-cadence-value-muted' : ''}`}
+        className={`care-cadence-value${result.status === 'NOT_APPLICABLE' ? ' care-cadence-value-resolved' : blocked || !result.cadence ? ' care-cadence-value-muted' : ''}`}
       >
         {value}
       </span>
@@ -173,35 +191,16 @@ function CareCadenceTile({
             )}
           </span>
         )}
-      {!blocked && result.cadence && props.dueLabels?.[activity] && (
-        <span className="care-cadence-context">
-          {props.dueLabels[activity]}
-        </span>
-      )}
+      {!blocked &&
+        result.status === 'SCHEDULED' &&
+        result.cadence &&
+        props.dueLabels?.[activity] && (
+          <span className="care-cadence-context">
+            {props.dueLabels[activity]}
+          </span>
+        )}
     </>
   )
-  if (blocked)
-    return props.canEdit ? (
-      <Link
-        data-cadence-activity={activity}
-        className="care-cadence-tile care-cadence-tile-editable"
-        href={props.recipeHref}
-        aria-label="Assign a fertilizer recipe"
-        title="Assign an active fertilizer recipe to enable scheduled fertilizing."
-      >
-        {contents}
-        <span className="care-cadence-recipe-link">
-          Assign recipe <span aria-hidden="true">→</span>
-        </span>
-      </Link>
-    ) : (
-      <div data-cadence-activity={activity} className="care-cadence-tile">
-        {contents}
-        <p className="care-cadence-context">
-          An assigned recipe enables scheduling.
-        </p>
-      </div>
-    )
   return props.canEdit ? (
     <button
       data-cadence-activity={activity}
@@ -266,8 +265,8 @@ function CadenceDialog({
       </h3>
       <p id={descriptionId} className="care-cadences-description">
         {props.instanceId
-          ? 'Choose inheritance, a custom interval, or disabled care.'
-          : 'Choose an interval or leave an activity unscheduled.'}
+          ? 'Inherit the definition, schedule recurring care, or make an explicit care decision.'
+          : 'Schedule recurring care, mark eligible activities not applicable, or leave a decision unresolved.'}
       </p>
       <form
         onSubmit={(event) => {
@@ -348,7 +347,9 @@ function CadenceEditor({
     props.instanceId
       ? original?.mode || 'INHERIT'
       : definition
-        ? 'OVERRIDE'
+        ? definition.status === 'NOT_APPLICABLE'
+          ? 'NOT_APPLICABLE'
+          : 'OVERRIDE'
         : 'DISABLED'
   )
   const cadence = original?.mode === 'OVERRIDE' ? original : definition
@@ -375,11 +376,10 @@ function CadenceEditor({
             <option value="OVERRIDE" disabled={blocked}>
               {props.instanceId ? 'Custom cadence' : 'Scheduled'}
             </option>
-            <option value="DISABLED">
-              {props.instanceId
-                ? 'Disabled for this instance'
-                : 'Not scheduled'}
-            </option>
+            {supportsNotApplicable(activity) && (
+              <option value="NOT_APPLICABLE">Not applicable</option>
+            )}
+            <option value="DISABLED">Not scheduled</option>
           </select>
         </label>
         {mode === 'OVERRIDE' && (
@@ -416,6 +416,12 @@ function CadenceEditor({
           </>
         )}
       </div>
+      {mode === 'NOT_APPLICABLE' && (
+        <p className="care-cadence-context mt-2">
+          No recurring schedule applies. Occasional care can still be logged
+          manually.
+        </p>
+      )}
       {blocked && (
         <p className="care-cadence-context mt-2">
           Assign an active fertilizer recipe before scheduling.{' '}
@@ -426,21 +432,25 @@ function CadenceEditor({
           )}
         </p>
       )}
-      {props.instanceId && mode !== 'DISABLED' && (
-        <label className="mt-3 grid max-w-xs gap-1 text-sm">
-          Set initial next due (optional)
-          <input
-            type="date"
-            name={`${activity}.initialDate`}
-            value={initialDate}
-            onChange={(event) => setInitialDate(event.target.value)}
-            className={control}
-          />
-          <span className="text-xs text-stone-600">
-            Sets a due date without recording completed care.
-          </span>
-        </label>
-      )}
+      {props.instanceId &&
+        (mode === 'OVERRIDE' ||
+          (mode === 'INHERIT' &&
+            definition?.status !== 'NOT_APPLICABLE' &&
+            definition)) && (
+          <label className="mt-3 grid max-w-xs gap-1 text-sm">
+            Set initial next due (optional)
+            <input
+              type="date"
+              name={`${activity}.initialDate`}
+              value={initialDate}
+              onChange={(event) => setInitialDate(event.target.value)}
+              className={control}
+            />
+            <span className="text-xs text-stone-600">
+              Sets a due date without recording completed care.
+            </span>
+          </label>
+        )}
       {props.instanceId && mode !== 'INHERIT' && (
         <button
           type="button"

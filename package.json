@@ -73,6 +73,9 @@
     "check:memory:resources": "tsx scripts/check-memory-resources.ts",
     "check:memory:browser": "node scripts/check-memory-browser.mjs",
     "check:request-origin": "tsx scripts/check-request-origin.ts",
+    "check:not-applicable-cadences:migration": "python3 scripts/check-not-applicable-migration.py",
+    "check:not-applicable-cadences": "tsx scripts/check-not-applicable-cadences.ts",
+    "check:not-applicable-cadences:ui": "tsx scripts/check-not-applicable-cadences-ui.mjs",
     "check:dashboard-reviews": "tsx scripts/check-dashboard-reviews.ts",
     "check:dashboard-reviews:ui": "tsx scripts/check-dashboard-reviews-ui.mjs"
   },

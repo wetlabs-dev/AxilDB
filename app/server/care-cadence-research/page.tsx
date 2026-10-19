@@ -3,9 +3,13 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { requireServerAdmin } from '@/lib/auth'
-import { cadenceActivities } from '@/lib/care-cadences'
+import {
+  cadenceActivities,
+  evaluateCareScheduleCompleteness,
+} from '@/lib/care-cadences'
 import {
   cadenceActivityState,
+  definitionHasRecipe,
   missingActivities,
   researchDefinitionInclude,
 } from '@/lib/cadence-research'
@@ -80,6 +84,17 @@ export default async function CadenceResearchPage({
   const stats = [
     ['Plant Definitions', definitions.length],
     [
+      'Complete care schedules',
+      definitions.filter(
+        (d) =>
+          evaluateCareScheduleCompleteness(
+            d.careCadences,
+            [],
+            definitionHasRecipe(d)
+          ).complete
+      ).length,
+    ],
+    [
       'Definitions needing research',
       enabled.filter((d) => missingActivities(d).length).length,
     ],
@@ -101,7 +116,10 @@ export default async function CadenceResearchPage({
       'Blocked by dependency',
       states.filter((s) => s === 'BLOCKED_BY_DEPENDENCY').length,
     ],
-    ['Not applicable', states.filter((s) => s === 'NOT_APPLICABLE').length],
+    [
+      'Not applicable',
+      states.filter((s) => s === 'NOT_APPLICABLE_CONFIGURED').length,
+    ],
     [
       'Insufficient information',
       states.filter((s) => s === 'INSUFFICIENT_INFORMATION').length,
@@ -163,6 +181,12 @@ export default async function CadenceResearchPage({
               ) : null
           )}
         </div>
+        {p.status === 'APPROVED' && p.applicability === 'NOT_APPLICABLE' && (
+          <p>
+            Approved: Not applicable ·{' '}
+            {p.reviewedAt?.toISOString().slice(0, 10)}
+          </p>
+        )}
         {p.approvedInterval && (
           <p>
             Approved: {p.approvedInterval} {p.approvedUnit?.toLowerCase()} ·{' '}
@@ -200,8 +224,8 @@ export default async function CadenceResearchPage({
       </Link>
       <h1 className="text-3xl font-bold">Care Cadence Research</h1>
       <p>
-        Research creates proposals. Only approval activates definition cadences;
-        specimens inherit through their existing care settings.
+        Research creates proposals. Approval applies scheduled or not applicable
+        decisions; specimens inherit through their existing care settings.
       </p>
       <CadenceResearchControls collectionId={selectedCollection?.id} />
       {selectedCollection && (
@@ -372,8 +396,8 @@ export default async function CadenceResearchPage({
           <p>{rows.length} recommendations</p>
           {tab === 'review' && (
             <p>
-              Only currently actionable intervals are shown. Blocked and
-              resolved proposals remain in History.
+              Only currently actionable schedules and N/A decisions are shown.
+              Blocked and resolved proposals remain in History.
             </p>
           )}
           {q.view === 'table' ? (
@@ -401,7 +425,9 @@ export default async function CadenceResearchPage({
                       <td className="p-2">{plantName(p.definition)}</td>
                       <td>{p.activity.replaceAll('_', ' ')}</td>
                       <td>
-                        {p.interval} {p.unit || p.applicability}
+                        {p.applicability === 'NOT_APPLICABLE'
+                          ? 'Not applicable'
+                          : `${p.interval ?? ''} ${p.unit || p.applicability}`}
                       </td>
                       <td>{p.confidence}</td>
                       <td>{p.status}</td>

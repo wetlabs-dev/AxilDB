@@ -177,7 +177,7 @@ export function CadenceProposalReview({
       className="flex flex-wrap items-center gap-2"
     >
       <input type="hidden" name="id" value={id} />
-      {actionable && (
+      {actionable && interval !== null && (
         <>
           <label className="text-xs">
             Approved interval{' '}
@@ -202,10 +202,12 @@ export function CadenceProposalReview({
               <option key={u}>{u}</option>
             ))}
           </select>
-          <button disabled={busy} name="decision" value="approve">
-            Approve
-          </button>
         </>
+      )}
+      {actionable && (
+        <button disabled={busy} name="decision" value="approve">
+          Approve
+        </button>
       )}
       <button disabled={busy} name="decision" value="reject" formNoValidate>
         Reject

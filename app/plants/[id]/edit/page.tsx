@@ -1,3 +1,4 @@
+import { actionableCadenceWhere } from '@/lib/cadence-review'
 import { CareCadences } from '@/components/CareCadences'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
@@ -69,7 +70,7 @@ export default async function EditPlant({
       where: { id, collectionId: collection.id },
       include: {
         careCadences: true,
-        cadenceProposals: { where: { status: 'PENDING', applicability: 'RECOMMENDED' } },
+        cadenceProposals: { where: actionableCadenceWhere(collection.id) },
         taxonomicAuthority: { include: { publications: true } },
         automaticTaxonomicAuthority: true,
         taxonomicAuthorityMatches: { include: { taxonomicAuthority: true }, orderBy: { priority: 'desc' } },

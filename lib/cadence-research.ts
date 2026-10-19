@@ -1,4 +1,7 @@
-import { actionableCadenceWhere, isActionableCadenceProposal } from '@/lib/cadence-review'
+import {
+  actionableCadenceWhere,
+  isActionableCadenceProposal,
+} from '@/lib/cadence-review'
 import { configureDefinitionCadence } from '@/lib/care-cadence-service'
 import { createHash } from 'crypto'
 import { Prisma, type PrismaClient } from '@prisma/client'
@@ -23,14 +26,17 @@ export function definitionHasRecipe(d: ResearchDefinition) {
   )
 }
 export function cadenceActivityState(d: ResearchDefinition, activity: string) {
-  if (d.careCadences.some((c) => c.activity === activity)) return 'CONFIGURED'
-  if (activity === 'FERTILIZING' && !definitionHasRecipe(d))
-    return 'BLOCKED_BY_DEPENDENCY'
+  const configured = d.careCadences.find((c) => c.activity === activity)
+  if (configured)
+    return configured.status === 'NOT_APPLICABLE'
+      ? 'NOT_APPLICABLE_CONFIGURED'
+      : 'CONFIGURED'
   const prior = d.cadenceProposals
     .filter((p) => p.activity === activity)
     .sort((a, b) => b.researchedAt.getTime() - a.researchedAt.getTime())[0]
   if (!prior || prior.status === 'FAILED') return 'MISSING'
-  if (prior.applicability !== 'RECOMMENDED') return prior.applicability
+  if (!['RECOMMENDED', 'NOT_APPLICABLE'].includes(prior.applicability))
+    return prior.applicability
   return prior.status
 }
 export function missingActivities(d: ResearchDefinition, explicit = false) {
@@ -40,7 +46,12 @@ export function missingActivities(d: ResearchDefinition, explicit = false) {
       return (
         state === 'MISSING' ||
         (explicit &&
-          !['CONFIGURED', 'BLOCKED_BY_DEPENDENCY', 'PENDING'].includes(state))
+          ![
+            'CONFIGURED',
+            'NOT_APPLICABLE_CONFIGURED',
+            'BLOCKED_BY_DEPENDENCY',
+            'PENDING',
+          ].includes(state))
       )
     })
     .map((a) => a.activity)
@@ -170,10 +181,16 @@ export async function approveCadenceProposal(
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(186104, 1)`
     const p = await tx.careCadenceProposal.findUnique({
       where: { id },
-      include: { plantDefinition: { include: researchDefinitionInclude } },
+      include: {
+        job: { select: { status: true } },
+        plantDefinition: { include: researchDefinitionInclude },
+      },
     })
     if (!p || p.status !== 'PENDING') return 'No longer pending'
-    if (p.applicability !== 'RECOMMENDED') return 'No actionable interval'
+    if (!['RECOMMENDED', 'NOT_APPLICABLE'].includes(p.applicability))
+      return 'No actionable recommendation'
+    if (p.applicability === 'NOT_APPLICABLE' && edit)
+      throw new Error('N/A recommendations cannot include an interval.')
     if (p.plantDefinition.careCadences.some((c) => c.activity === p.activity)) {
       await tx.careCadenceProposal.update({
         where: { id },
@@ -181,16 +198,28 @@ export async function approveCadenceProposal(
       })
       return 'Already configured'
     }
-    if (p.activity === 'FERTILIZING' && !definitionHasRecipe(p.plantDefinition))
+    if (
+      p.applicability === 'RECOMMENDED' &&
+      p.activity === 'FERTILIZING' &&
+      !definitionHasRecipe(p.plantDefinition)
+    )
       return 'Fertilizer recipe is no longer assigned or active'
-    const interval = edit?.interval ?? p.interval!
-    const unit = edit?.unit ?? p.unit!
-    validateCadence(interval, unit)
+    if (!isActionableCadenceProposal(p, p.plantDefinition))
+      return 'Recommendation is no longer actionable'
+    const interval =
+      p.applicability === 'NOT_APPLICABLE'
+        ? null
+        : (edit?.interval ?? p.interval!)
+    const unit =
+      p.applicability === 'NOT_APPLICABLE' ? null : (edit?.unit ?? p.unit!)
+    if (p.applicability === 'RECOMMENDED') validateCadence(interval!, unit!)
     const created = await configureDefinitionCadence(tx, {
       definitionId: p.plantDefinitionId,
       activity: p.activity,
       interval,
       unit,
+      status:
+        p.applicability === 'NOT_APPLICABLE' ? 'NOT_APPLICABLE' : 'SCHEDULED',
       missingOnly: true,
     })
     if (!created.count) return 'Already configured'
@@ -203,7 +232,10 @@ export async function approveCadenceProposal(
         reviewedByUserId: reviewerId,
         approvedInterval: interval,
         approvedUnit: unit,
-        reviewNote: null,
+        reviewNote:
+          p.applicability === 'NOT_APPLICABLE'
+            ? 'Approved: no recurring cadence applies. Manual care remains available.'
+            : null,
       },
     })
     return 'APPROVED'
@@ -226,12 +258,18 @@ export async function approveCadenceBatch(
   }
   return results
 }
-export async function eligibleCadenceProposals(db: PrismaClient, collectionId?: string) {
+export async function eligibleCadenceProposals(
+  db: PrismaClient,
+  collectionId?: string
+) {
   const rows = await db.careCadenceProposal.findMany({
     where: actionableCadenceWhere(collectionId),
-    include: { job: {select: {status: true}}, plantDefinition: { include: researchDefinitionInclude } },
+    include: {
+      job: { select: { status: true } },
+      plantDefinition: { include: researchDefinitionInclude },
+    },
   })
-  return rows.filter(p => isActionableCadenceProposal(p, p.plantDefinition))
+  return rows.filter((p) => isActionableCadenceProposal(p, p.plantDefinition))
 }
 export async function recoverLegacyCadences(db: PrismaClient) {
   let saved = 0

@@ -59,6 +59,7 @@ assert.equal(
     [
       {
         ...recommendation,
+        activity: 'PRUNING',
         applicability: 'NOT_APPLICABLE',
         recommendedInterval: null,
         recommendedUnit: null,

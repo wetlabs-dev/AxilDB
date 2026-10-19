@@ -1,3 +1,4 @@
+import { actionableCadenceWhere } from '@/lib/cadence-review'
 import { CareCadences } from '@/components/CareCadences'
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
@@ -14,7 +15,7 @@ export default async function PlantHusbandryPage({ params }: { params: Promise<{
     where: { id, collectionId: collection.id },
     include: {
         careCadences: true,
-        cadenceProposals: { where: { status: 'PENDING', applicability: 'RECOMMENDED' } },
+        cadenceProposals: { where: actionableCadenceWhere(collection.id) },
       aliases: { orderBy: { name: 'asc' } },
       husbandryGuide: { include: { fertilizerRecipe: true } },
     },
