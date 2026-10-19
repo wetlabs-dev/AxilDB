@@ -160,6 +160,83 @@ try {
     }),
     1
   )
+  const responseIds = []
+  for (const reason of [
+    'AI Curator response did not contain JSON.',
+    "Expected ',' or '}' after property value in JSON at position 3818",
+  ]) {
+    const definition = await db.plantDefinition.create({
+      data: {
+        collectionId: collection.id,
+        genus: 'Begonia',
+        cultivarName: `Response ${responseIds.length}`,
+      },
+    })
+    const job = await db.aiCuratorJob.create({
+      data: {
+        collectionId: collection.id,
+        plantDefinitionId: definition.id,
+        targetEntityType: 'PLANT_DEFINITION',
+        targetEntityId: definition.id,
+        jobType: 'REFERENCE_RESEARCH',
+        phase: 'ENRICHMENT',
+        targetField: 'references',
+        status: 'WAITING_FOR_HUMAN',
+        blockingReason: reason,
+        attempts: 3,
+      },
+    })
+    responseIds.push(job.id)
+  }
+  await page.reload()
+  await expect(page.locator('main')).not.toContainText('at position 3818')
+  await page
+    .getByRole('button', { name: 'Retry response-error jobs', exact: true })
+    .click()
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Response-error jobs:' })
+  ).toContainText('0 results recovered, 2 queued, 0 failed')
+  assert.equal(
+    await db.aiCuratorJob.count({
+      where: { id: { in: responseIds }, status: 'QUEUED', attempts: 0 },
+    }),
+    2
+  )
+  assert.equal(
+    (await db.aiCuratorJob.findUniqueOrThrow({ where: { id: unrelated.id } }))
+      .status,
+    'WAITING_FOR_HUMAN'
+  )
+  assert.equal(
+    await db.auditLog.count({
+      where: {
+        userId: user.id,
+        summary: 'Retried response-error Curator jobs',
+      },
+    }),
+    1
+  )
+  const responseRequest = request
+  const unauthenticated = await browser.newContext()
+  await unauthenticated.request.post(`${base}/server/ai-curator`, {
+    headers: {
+      'Next-Action': responseRequest.headers['next-action'],
+      'Content-Type': responseRequest.headers['content-type'],
+      Origin: base,
+    },
+    data: responseRequest.body,
+    maxRedirects: 0,
+  })
+  assert.equal(
+    await db.auditLog.count({
+      where: {
+        userId: user.id,
+        summary: 'Retried response-error Curator jobs',
+      },
+    }),
+    1
+  )
+  await unauthenticated.close()
   await page.setViewportSize({ width: 390, height: 844 })
   await page.reload()
   assert.ok(
@@ -168,7 +245,7 @@ try {
     )
   )
   console.log(
-    'Curator recovery browser passed: readable errors, hidden jobs beyond eight recovered, existing output retained, attempts reset, unrelated blockers untouched, administrator-only action, audit and mobile layout.'
+    'Curator recovery browser passed: readable errors, hidden jobs beyond eight recovered, existing output retained, attempts reset, unrelated blockers untouched, administrator-only history/response recovery actions, selective JSON-error retry, audit and mobile layout.'
   )
 } finally {
   if (collection) await db.collection.delete({ where: { id: collection.id } })

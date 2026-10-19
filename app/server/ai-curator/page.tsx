@@ -1,5 +1,6 @@
+import { isCuratorResponseFailure } from '@/lib/ai-curator-response'
 import { curatorFailureDescription, isCuratorHistoryConflict } from '@/lib/ai-curator-job-recovery'
-import { retryDatabaseBlockedJobs, clearAiCuratorRecentErrors, updateAiCuratorSettings, reviewAiCuratorSuggestion, resolveAiCuratorJob } from '@/app/ai-curator-actions'
+import { retryResponseErrorJobs, retryDatabaseBlockedJobs, clearAiCuratorRecentErrors, updateAiCuratorSettings, reviewAiCuratorSuggestion, resolveAiCuratorJob } from '@/app/ai-curator-actions'
 import { Button, Card, Field, LinkButton, Select, TextArea } from '@/components/ui'
 import { requireServerAdmin } from '@/lib/auth'
 import { aiCuratorChangedFields, aiCuratorCurrentFocusValue, aiCuratorDashboard, aiCuratorReviewQueue, canApplyCuratorSuggestion } from '@/lib/ai-curator'
@@ -448,7 +449,7 @@ function ReviewSuggestionCard({ suggestion }: { suggestion: any }) {
 export default async function AiCuratorPage({
   searchParams,
 }: {
-  searchParams: Promise<{ settings?: string; review?: string; errors?: string; recovered?: string; requeued?: string; retryFailed?: string; retrySkipped?: string; jobRetry?: string }>
+  searchParams: Promise<{ settings?: string; review?: string; errors?: string; recovered?: string; requeued?: string; retryFailed?: string; retrySkipped?: string; jobRetry?: string; responseRequeued?: string; responseRecovered?: string; responseFailed?: string; responseLimited?: string; responseBusy?: string }>
 }) {
   const admin = await requireServerAdmin()
   const sp = await searchParams
@@ -486,7 +487,8 @@ export default async function AiCuratorPage({
 
       {sp.settings === 'updated' && <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900">AI Curator settings updated.</p>}
       {sp.review && <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900">Review action recorded.</p>}
-      {sp.jobRetry && <p role="status" className="rounded-lg border p-3 text-sm">{({QUEUED:'Job requeued with a fresh bounded retry allowance.',RECOVERED:'The existing result was recovered without another AI request.',WORKER_BUSY:'The worker is active. Retry once it finishes.',ACTIVE_WORK_EXISTS:'Another job for this work is active. Review that job first.',UNCHANGED:'This job is no longer eligible for retry.'} as Record<string,string>)[sp.jobRetry] || 'Review the current job status.'}</p>}
+      {sp.responseRequeued !== undefined && <p role="status" className="rounded-lg border p-3 text-sm">Response-error jobs: {Number(sp.responseRecovered) || 0} results recovered, {Number(sp.responseRequeued) || 0} queued, {Number(sp.responseFailed) || 0} failed, {Number(sp.responseLimited) || 0} need a higher Max tokens setting, {Number(sp.responseBusy) || 0} busy or conflicting. Normal AI budget limits apply.</p>}
+      {sp.jobRetry && <p role="status" className="rounded-lg border p-3 text-sm">{({OUTPUT_LIMIT_UNCHANGED:'Increase Curator Max tokens before retrying this output-limit job.',QUEUED:'Job requeued with a fresh bounded retry allowance.',RECOVERED:'The existing result was recovered without another AI request.',WORKER_BUSY:'The worker is active. Retry once it finishes.',ACTIVE_WORK_EXISTS:'Another job for this work is active. Review that job first.',UNCHANGED:'This job is no longer eligible for retry.'} as Record<string,string>)[sp.jobRetry] || 'Review the current job status.'}</p>}
       {sp.requeued !== undefined && <p role="status" className="rounded-lg border p-3 text-sm">Database-blocked jobs: {Number(sp.recovered) || 0} existing results recovered, {Number(sp.requeued) || 0} queued, {Number(sp.retryFailed) || 0} failed, {Number(sp.retrySkipped) || 0} left unchanged because work is active; retry after the worker finishes. Queued work follows the normal AI budget.</p>}
       {sp.errors === 'cleared' && <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900">Recent AI Curator errors cleared.</p>}
 
@@ -553,6 +555,7 @@ export default async function AiCuratorPage({
             {['none', 'minimal', 'low', 'medium', 'high', 'xhigh'].map((effort) => <option key={effort} value={effort}>{effort}</option>)}
           </Select>
           <Field label="Max tokens" name="maxTokens" type="number" min="100" max="8000" defaultValue={dashboard.settings.maxTokens} />
+          <p className="text-xs text-stone-600 lg:col-span-4">Max tokens includes model reasoning and visible JSON. If responses hit this limit, increase it here (for example, to 6000), save settings, then retry response-error jobs. The worker never raises this limit automatically; normal spending budgets still apply.</p>
           <Field label="Daily budget" name="dailyBudgetDollars" type="number" min="0" step="0.01" defaultValue={Number(dashboard.settings.dailyBudgetDollars)} />
           <Field label="Monthly budget" name="monthlyBudgetDollars" type="number" min="0" step="0.01" defaultValue={Number(dashboard.settings.monthlyBudgetDollars)} />
           <Field label="Concurrency" name="concurrency" type="number" min="1" max="16" defaultValue={dashboard.settings.concurrency} />
@@ -582,6 +585,10 @@ export default async function AiCuratorPage({
             <Button>Retry database-blocked jobs</Button>
             <p className="text-xs text-stone-600">After installing the repair, recover existing results or requeue only jobs blocked by the legacy uniqueness error. Other human-review jobs stay unchanged. Queued work uses the normal AI budget.</p>
           </form>
+          <form action={retryResponseErrorJobs} className="mt-3 space-y-2">
+            <Button>Retry response-error jobs</Button>
+            <p className="text-xs text-stone-600">Requeue invalid or incomplete AI responses after upgrading. Token-limit jobs require a higher Max tokens setting first. Refusals and unrelated human-review blockers stay unchanged.</p>
+          </form>
           <div className="mt-4 grid gap-3">
             {dashboard.waitingJobs.map((job) => (
               <div key={job.id} className="rounded-lg border border-amber-200 bg-amber-50/55 p-3">
@@ -589,8 +596,8 @@ export default async function AiCuratorPage({
                   <div>
                     <p className="font-semibold">{job.plantDefinition ? plantName(job.plantDefinition) : job.collection.name}</p>
                     <p className="text-sm text-amber-950">{curatorFailureDescription(job.blockingReason)}</p>
-                    {!isCuratorHistoryConflict(job.blockingReason) && job.humanActionRequired && <p className="mt-1 text-sm text-stone-700">Suggested action: {job.humanActionRequired}</p>}
-                    {!isCuratorHistoryConflict(job.blockingReason) && job.retryConditions && <p className="mt-1 text-xs text-stone-600">Retry when: {job.retryConditions}</p>}
+                    {!isCuratorHistoryConflict(job.blockingReason) && (!isCuratorResponseFailure(job.blockingReason) || job.blockingReason?.includes('configured output limit')) && job.humanActionRequired && <p className="mt-1 text-sm text-stone-700">Suggested action: {job.humanActionRequired}</p>}
+                    {!isCuratorHistoryConflict(job.blockingReason) && (!isCuratorResponseFailure(job.blockingReason) || job.blockingReason?.includes('configured output limit')) && job.retryConditions && <p className="mt-1 text-xs text-stone-600">Retry when: {job.retryConditions}</p>}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {job.plantDefinitionId && (

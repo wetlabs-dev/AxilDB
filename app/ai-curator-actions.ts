@@ -1,6 +1,6 @@
 'use server'
 
-import { retryCuratorJob, retryDatabaseBlockedCuratorJobs } from '@/lib/ai-curator-job-recovery'
+import { retryCuratorJob, retryDatabaseBlockedCuratorJobs, retryResponseBlockedCuratorJobs } from '@/lib/ai-curator-job-recovery'
 
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
@@ -446,6 +446,14 @@ export async function retryDatabaseBlockedJobs() {
   await audit(user, 'UPDATE', 'AI_CURATOR', null, 'Retried database-blocked Curator jobs', results)
   revalidatePath('/', 'layout')
   redirect(`/server/ai-curator?recovered=${results.RECOVERED || 0}&requeued=${results.QUEUED || 0}&retryFailed=${results.FAILED || 0}&retrySkipped=${(results.ACTIVE_WORK_EXISTS || 0) + (results.WORKER_BUSY || 0)}`)
+}
+
+export async function retryResponseErrorJobs() {
+  const user = await requireServerAdmin()
+  const results = await retryResponseBlockedCuratorJobs(prisma)
+  await audit(user, 'UPDATE', 'AI_CURATOR', null, 'Retried response-error Curator jobs', results)
+  revalidatePath('/', 'layout')
+  redirect(`/server/ai-curator?responseRequeued=${results.QUEUED || 0}&responseRecovered=${results.RECOVERED || 0}&responseFailed=${results.FAILED || 0}&responseLimited=${results.OUTPUT_LIMIT_UNCHANGED || 0}&responseBusy=${(results.ACTIVE_WORK_EXISTS || 0) + (results.WORKER_BUSY || 0)}`)
 }
 
 export async function clearAiCuratorRecentErrors() {

@@ -1,3 +1,4 @@
+import { curatorResponseFormat, parseCuratorResponse, CuratorResponseError } from '@/lib/ai-curator-response'
 import { isCuratorHistoryConflict } from '@/lib/ai-curator-job-recovery'
 import { cadenceRecommendationShape, cadenceResearchInstructions } from '@/lib/cadence-recommendations'
 import { cadenceResearchContext, missingActivities, persistCadenceRecommendations, researchDefinitionInclude } from '@/lib/cadence-research'
@@ -92,25 +93,6 @@ export function effectiveAiCuratorSpend(rows: Array<{ actualCostDollars?: unknow
 
 function hashPayload(payload: unknown) {
   return createHash('sha256').update(JSON.stringify(payload)).digest('hex')
-}
-
-function outputText(payload: any) {
-  if (typeof payload.output_text === 'string') return payload.output_text
-  const parts = payload.output
-    ?.flatMap((item: any) => item.content || [])
-    ?.map((content: any) => content.text)
-    ?.filter(Boolean)
-  return parts?.join('\n') || ''
-}
-
-function parseJsonObject(text: string) {
-  const trimmed = text.trim()
-  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/)
-  const body = fenced?.[1] || trimmed
-  const start = body.indexOf('{')
-  const end = body.lastIndexOf('}')
-  if (start < 0 || end < start) throw new Error('AI Curator response did not contain JSON.')
-  return JSON.parse(body.slice(start, end + 1))
 }
 
 function boundedConfidence(value: unknown) {
@@ -1171,6 +1153,7 @@ async function callCuratorModel(settings: any, job: any, currentValue: unknown) 
     body: JSON.stringify({
       model: settings.model,
       max_output_tokens: Number(settings.maxTokens),
+      text: curatorResponseFormat,
       reasoning: settings.reasoningEffort ? { effort: settings.reasoningEffort } : undefined,
       instructions: [
         'You are AI Curator for AxilDB, a botanical collection database.',
@@ -1184,7 +1167,7 @@ async function callCuratorModel(settings: any, job: any, currentValue: unknown) 
         'When suggesting existing AxilDB records such as tags, recipes, products, or taxonomic authorities, use only IDs that appear in the supplied context.resources lists.',
         'Every suggested value must match the expected storage format for that field. Use ALL_CAPS or SNAKE_CASE only where the target instructions explicitly list fixed enum options. For ordinary text fields, return human-readable plain English without underscores, for example "every other watering during active growth" instead of "EVERY_OTHER_WATERING_DURING_GROWING_SEASON".',
         curatorTargetInstructions(job.targetField),
-        'Return strict JSON with keys: title, suggestedValue, reasoning, confidence, supportingReferences.',
+        'Return one complete compact JSON object with keys: title, suggestedValue, reasoning, confidence, supportingReferences. Keep reasoning to one or two short sentences, avoid repeating current context, and prefer a small focused suggestion over a long answer. Return suggestedValue null when no defensible change is available.',
         'supportingReferences must be an array of short objects with label and url when reliable public references are known; otherwise use an empty array.',
         'confidence must be from 0 to 1. Keep reasoning concise and explain uncertainty.',
       ].join(' '),
@@ -1205,7 +1188,7 @@ async function callCuratorModel(settings: any, job: any, currentValue: unknown) 
   })
   const payload = await response.json().catch(() => ({}))
   if (!response.ok) throw new Error(payload.error?.message || 'AI Curator model request failed.')
-  return { payload, result: parseJsonObject(outputText(payload)) }
+  return { payload }
 }
 
 async function createSuggestionFromResult(prisma: PrismaClient, settings: any, job: any, currentValue: unknown, modelResult: any, actualCost: number | null) {
@@ -1336,20 +1319,25 @@ async function processJob(prisma: PrismaClient, settings: any, job: any) {
     return { status: 'DEFERRED' as const, cost: 0 }
   }
 
+  let usageId: string | undefined
+  let attemptCost: number | null = null
   try {
     const currentValue = await currentValueForJob(prisma, job)
     if (job.targetField === 'careCadences' && !(currentValue as any).missingEligibleActivities.length) {
       await prisma.aiCuratorJob.updateMany({ where: { id: job.id, status: 'RUNNING' }, data: { status: 'SKIPPED', completedAt: new Date(), resultSummary: 'No eligible missing activities remain.' } })
       return { status: 'SKIPPED' as const, cost: 0 }
     }
-    const { payload, result } = await callCuratorModel(settings, job, currentValue)
+    const { payload } = await callCuratorModel(settings, job, currentValue)
     const usage = tokenUsage(payload)
     const hasUsage = Boolean((usage.inputTokens || 0) + (usage.outputTokens || 0))
     const actualCost = hasUsage ? aiUsageCostDollars(usage, settings.model) : null
-    await prisma.aiUsageEvent.create({
+    attemptCost = actualCost
+    const usageEvent = await prisma.aiUsageEvent.create({
       data: {
         collectionId: job.collectionId,
         feature: 'AI_CURATOR',
+        success: false,
+        error: 'Curator response validation pending.',
         model: settings.model,
         inputTokens: usage.inputTokens,
         cachedInputTokens: usage.cachedInputTokens,
@@ -1357,24 +1345,29 @@ async function processJob(prisma: PrismaClient, settings: any, job: any) {
         totalTokens: usage.totalTokens,
         webSearchCalls: usage.webSearchCalls,
         webSearchPreviewCalls: usage.webSearchPreviewCalls,
-        estimatedCostDollars: (actualCost || 0).toFixed(6),
+        estimatedCostDollars: (actualCost ?? dollars(job.estimatedCostDollars)).toFixed(6),
       },
     })
+    usageId = usageEvent.id
+    const result = parseCuratorResponse(payload, Number(settings.maxTokens))
     const suggestion = await createSuggestionFromResult(prisma, settings, job, currentValue, result, actualCost)
+    await prisma.aiUsageEvent.update({ where: { id: usageId }, data: { success: true, error: null } })
     return { status: suggestion ? 'COMPLETED' as const : 'SKIPPED' as const, cost: actualCost || dollars(job.estimatedCostDollars) }
   } catch (error) {
     const rawMessage = error instanceof Error ? error.message : String(error)
     const message = isCuratorHistoryConflict(rawMessage) ? 'Unique constraint failed on AiCuratorJob_active_scope_key; terminal job history blocked completion.' : rawMessage
-    const exhausted = job.attempts >= job.maxAttempts
+    if (usageId) await prisma.aiUsageEvent.update({ where: { id: usageId }, data: { success: false, error: message.slice(0, 800) } })
+    const responseError = error instanceof CuratorResponseError ? error : null
+    const exhausted = job.attempts >= job.maxAttempts || responseError?.kind === 'OUTPUT_LIMIT' || responseError?.kind === 'REFUSAL'
     await prisma.aiCuratorJob.updateMany({
       where: { id: job.id, status: 'RUNNING', claimedBy: job.claimedBy },
       data: exhausted
         ? {
             status: 'WAITING_FOR_HUMAN',
             blockingReason: message.slice(0, 800),
-            humanActionRequired: 'Review this job and either cancel it, adjust the definition, or retry after the underlying issue is resolved.',
-            retryConditions: 'Manual review clears the blocker or changes the source record.',
-            resultSummary: 'Stopped after repeated AI Curator failures.',
+            humanActionRequired: responseError?.kind === 'OUTPUT_LIMIT' ? 'Increase Curator Max tokens in Service settings, save, then retry this job. The limit includes reasoning and visible output.' : responseError?.kind === 'REFUSAL' ? 'Review the request and evidence before retrying; do not automatically repeat a declined request.' : responseError ? 'Retry after deploying the response-format fix. This is an AI response problem, not missing botanical evidence.' : 'Review this job and either cancel it, adjust the definition, or retry after the underlying issue is resolved.',
+            retryConditions: responseError?.kind === 'OUTPUT_LIMIT' ? 'A higher configured output-token limit is required before retry.' : responseError ? 'Review the response failure and retry explicitly under the normal budget.' : 'Manual review clears the blocker or changes the source record.',
+            resultSummary: responseError ? 'Paused after an unusable AI response; no partial suggestion was saved.' : 'Stopped after repeated AI Curator failures.',
             errorClearedAt: null,
             errorClearedByUserId: null,
           }
@@ -1387,12 +1380,12 @@ async function processJob(prisma: PrismaClient, settings: any, job: any) {
             errorClearedByUserId: null,
           },
     })
-    return { status: exhausted ? 'WAITING_FOR_HUMAN' as const : 'DEFERRED' as const, cost: 0 }
+    return { status: exhausted ? 'WAITING_FOR_HUMAN' as const : 'DEFERRED' as const, cost: usageId ? (attemptCost ?? dollars(job.estimatedCostDollars)) : 0 }
   }
 }
 
 async function budgetSnapshot(prisma: PrismaClient, settings: any) {
-  const [today, month] = await Promise.all([
+  const [today, month, failedToday, failedMonth] = await Promise.all([
     prisma.aiCuratorJob.findMany({
       where: { completedAt: { gte: startOfLocalDay() } },
       select: { actualCostDollars: true, estimatedCostDollars: true },
@@ -1401,9 +1394,11 @@ async function budgetSnapshot(prisma: PrismaClient, settings: any) {
       where: { completedAt: { gte: startOfMonth() } },
       select: { actualCostDollars: true, estimatedCostDollars: true },
     }),
+    prisma.aiUsageEvent.aggregate({ where: { feature: 'AI_CURATOR', success: false, createdAt: { gte: startOfLocalDay() } }, _sum: { estimatedCostDollars: true } }),
+    prisma.aiUsageEvent.aggregate({ where: { feature: 'AI_CURATOR', success: false, createdAt: { gte: startOfMonth() } }, _sum: { estimatedCostDollars: true } }),
   ])
-  const todaySpend = effectiveAiCuratorSpend(today)
-  const monthSpend = effectiveAiCuratorSpend(month)
+  const todaySpend = effectiveAiCuratorSpend(today) + dollars(failedToday._sum.estimatedCostDollars)
+  const monthSpend = effectiveAiCuratorSpend(month) + dollars(failedMonth._sum.estimatedCostDollars)
   const dailyBudget = dollars(settings.dailyBudgetDollars)
   const monthlyBudget = dollars(settings.monthlyBudgetDollars)
   const hardLimit = Number(settings.hardLimitPercent || 100) / 100
