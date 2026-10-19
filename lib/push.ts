@@ -15,6 +15,8 @@ export type PushPreferenceKey =
   | 'collectionUpdateDigestPushEnabled'
   | 'careQueueDigestPushEnabled'
   | 'serverHealthPushEnabled'
+  | 'serverUpgradeCompletedPushEnabled'
+  | 'serverUpgradeFailedPushEnabled'
 
 export type SafePushNotification = {
   title: string

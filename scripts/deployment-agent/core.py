@@ -198,6 +198,14 @@ CREATE TABLE IF NOT EXISTS jobs(id TEXT PRIMARY KEY, request_id TEXT UNIQUE, act
 CREATE UNIQUE INDEX IF NOT EXISTS one_active ON jobs((1)) WHERE status IN ('QUEUED','RUNNING','RECOVERY_REQUIRED');
 CREATE TABLE IF NOT EXISTS events(id INTEGER PRIMARY KEY AUTOINCREMENT,job_id TEXT NOT NULL, timestamp TEXT NOT NULL,stage TEXT NOT NULL,level TEXT NOT NULL,message TEXT NOT NULL);
 CREATE INDEX IF NOT EXISTS events_job ON events(job_id,id);
+CREATE TABLE IF NOT EXISTS terminal_notifications(id INTEGER PRIMARY KEY AUTOINCREMENT, job_id TEXT NOT NULL, outcome TEXT NOT NULL, finished TEXT NOT NULL, revision TEXT NOT NULL, stage TEXT NOT NULL, acknowledged INTEGER NOT NULL DEFAULT 0, UNIQUE(job_id,outcome));
+CREATE TRIGGER IF NOT EXISTS terminal_notification AFTER UPDATE OF status ON jobs
+WHEN NEW.status IN ('COMPLETED','FAILED','RECOVERY_REQUIRED') AND NEW.status != OLD.status
+AND coalesce(json_extract(NEW.data,'$.error'),'') NOT LIKE 'Agent restarted during an operation.%'
+BEGIN
+INSERT OR IGNORE INTO terminal_notifications(job_id,outcome,finished,revision,stage)
+VALUES(NEW.id,CASE WHEN NEW.status='COMPLETED' THEN 'COMPLETED' ELSE 'FAILED' END,coalesce(NEW.finished,NEW.created),NEW.revision,coalesce(json_extract(NEW.data,'$.failedStage'),NEW.stage));
+END;
 CREATE TABLE IF NOT EXISTS metadata(key TEXT PRIMARY KEY,value TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS nonces(nonce TEXT PRIMARY KEY,expires REAL NOT NULL);
 CREATE TABLE IF NOT EXISTS limits(actor TEXT, operation TEXT, timestamp REAL);
@@ -262,6 +270,12 @@ CREATE TABLE IF NOT EXISTS limits(actor TEXT, operation TEXT, timestamp REAL);
                 "UPDATE jobs SET " + ",".join(k + "=?" for k in fields) + " WHERE id=?",
                 (*fields.values(), id),
             )
+
+    def notifications(self, acknowledge=None):
+        with self.connect() as db:
+            if acknowledge:
+                db.executemany("UPDATE terminal_notifications SET acknowledged=1 WHERE id=?", [(id,) for id in acknowledge])
+            return {"notifications": [dict(r) for r in db.execute("SELECT id,job_id,outcome,finished,revision,stage FROM terminal_notifications WHERE acknowledged=0 ORDER BY id LIMIT 100")]}
 
     def event(self, id, stage, message, level="INFO"):
         with self.connect() as db:
@@ -392,8 +406,10 @@ class Agent:
                 "SELECT id FROM jobs WHERE finished<? AND status IN ('COMPLETED','FAILED','RECOVERED')",
                 (cutoff,),
             ).fetchall():
-                if row[0] not in keep:
+                pending = db.execute("SELECT 1 FROM terminal_notifications WHERE job_id=? AND acknowledged=0 LIMIT 1", (row[0],)).fetchone()
+                if row[0] not in keep and not pending:
                     db.execute("DELETE FROM events WHERE job_id=?", (row[0],))
+                    db.execute("DELETE FROM terminal_notifications WHERE job_id=? AND acknowledged=1", (row[0],))
                     db.execute("DELETE FROM jobs WHERE id=?", (row[0],))
 
     def redact(self, value):
@@ -1441,6 +1457,7 @@ print(hashlib.sha256(r.stdout+schema).hexdigest())
         actor = request.get("actor")
         fields = {
             "STATUS": set(),
+            "NOTIFICATIONS": {"acknowledge"},
             "CHECK_UPDATES": set(),
             "PREFLIGHT": {"revision"},
             "START_UPGRADE": {"revision", "requestId", "migrationApproval"},
@@ -1469,8 +1486,13 @@ print(hashlib.sha256(r.stdout+schema).hexdigest())
             or not re.fullmatch(r"[a-f0-9]{32}", request["jobId"])
         ):
             raise ValueError("Invalid job identifier")
-        if operation not in ("STATUS", "JOB", "EVENTS"):
+        if operation not in ("STATUS", "JOB", "EVENTS", "NOTIFICATIONS"):
             self.store.rate_limit(actor, operation)
+        if operation == "NOTIFICATIONS":
+            ids = request.get("acknowledge", [])
+            if not isinstance(ids, list) or len(ids) > 100 or any(type(id) is not int or id < 1 for id in ids):
+                raise ValueError("Invalid notification acknowledgements")
+            return self.store.notifications(ids)
         if operation == "STATUS":
             return self.status()
         if operation == "JOB":

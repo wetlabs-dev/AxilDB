@@ -1,5 +1,6 @@
 import { assertMigrationOutboundReleased } from '@/lib/migration-hold'
 import { Prisma, type DomainEvent, type PrismaClient } from '@prisma/client'
+import { deliverUpgradeNotification } from '../server-upgrade-notifications'
 import { consumersForEvent } from './consumers'
 
 export type EventWorkerConfig = {
@@ -58,19 +59,21 @@ async function processEvent(prisma: PrismaClient, event: DomainEvent, maxAttempt
     data: { eventId: event.id, attempt, status: 'PROCESSING' },
   })
   try {
+    if (event.eventType === 'server.upgrade_completed' || event.eventType === 'server.upgrade_failed') await deliverUpgradeNotification(prisma, event)
     const consumers = consumersForEvent(event.eventType)
     for (const consumer of consumers) await consumer.handler(event)
     await prisma.$transaction([
-      prisma.domainEventProcessingAttempt.update({ where: { id: history.id }, data: { status: 'PROCESSED', finishedAt: new Date(), metadataJson: { consumers: consumers.map((consumer) => `${consumer.name}@${consumer.version}`) } } }),
+      prisma.domainEventProcessingAttempt.update({ where: { id: history.id }, data: { status: 'PROCESSED', finishedAt: new Date(), metadataJson: { consumers: [...(event.eventType.startsWith('server.upgrade_') ? ['server-upgrade-alerts@1'] : []), ...consumers.map((consumer) => `${consumer.name}@${consumer.version}`)] } } }),
       prisma.domainEvent.update({ where: { id: event.id }, data: { processingStatus: 'PROCESSED', processedAt: new Date(), lastProcessingError: null, nextAttemptAt: null } }),
     ])
     return 'PROCESSED'
   } catch (error) {
     const message = error instanceof Error ? error.message.slice(0, 4000) : String(error).slice(0, 4000)
-    const dead = attempt >= maxAttempts
+    const deferred = message === 'Upgrade alert deferred until quiet hours end.'
+    const dead = !deferred && attempt >= maxAttempts
     await prisma.$transaction([
       prisma.domainEventProcessingAttempt.update({ where: { id: history.id }, data: { status: dead ? 'DEAD_LETTER' : 'FAILED', error: message, finishedAt: new Date() } }),
-      prisma.domainEvent.update({ where: { id: event.id }, data: { processingStatus: dead ? 'DEAD_LETTER' : 'FAILED', lastProcessingError: message, nextAttemptAt: dead ? null : new Date(Date.now() + retryDelayMs(attempt)) } }),
+      prisma.domainEvent.update({ where: { id: event.id }, data: { processingStatus: dead ? 'DEAD_LETTER' : 'FAILED', ...(deferred ? { processingAttempts: { decrement: 1 } } : {}), lastProcessingError: message, nextAttemptAt: dead ? null : new Date(Date.now() + (deferred ? 15 * 60_000 : retryDelayMs(attempt))) } }),
     ])
     return dead ? 'DEAD_LETTER' : 'FAILED'
   }

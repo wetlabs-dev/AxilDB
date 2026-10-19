@@ -34,12 +34,13 @@ export async function GET(req: NextRequest) {
     const user = await authorize()
     const mode = req.nextUrl.searchParams.get('mode') || 'status'
     const id = req.nextUrl.searchParams.get('jobId') || ''
-    if (!['status', 'events', 'recovery'].includes(mode))
+    if (!['status', 'job', 'events', 'recovery'].includes(mode))
       return json({ error: 'Invalid deployment operation.' }, 400)
     if (mode !== 'status' && !/^[a-f0-9]{32}$/.test(id))
       return json({ error: 'Invalid deployment job.' }, 400)
     if (mode === 'status')
       return json(await callDeploymentAgent('STATUS', user.id, {}, req.signal))
+    if (mode === 'job') return json(await callDeploymentAgent('JOB', user.id, { jobId: id }, req.signal))
     if (mode === 'recovery')
       return json(
         await callDeploymentAgent(

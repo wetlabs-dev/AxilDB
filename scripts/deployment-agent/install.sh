@@ -37,6 +37,8 @@ drop=Path('/etc/systemd/system/axildb-deploy.service.d');drop.mkdir(exist_ok=Tru
 connection=Path('/etc/axildb/deployment-connection.json')
 connection.parent.mkdir(exist_ok=True)
 value={'services':{c['app_service']:{'environment':{'AXILDB_DEPLOY_AGENT_SOCKET':'/run/axildb-deploy/agent.sock','AXILDB_DEPLOY_AGENT_KEY_FILE':'/run/axildb-deploy-key/agent.key'},'volumes':[{'type':'bind','source':'/run/axildb-deploy','target':'/run/axildb-deploy','read_only':True},{'type':'bind','source':str(key),'target':'/run/axildb-deploy-key/agent.key','read_only':True}]}}}
+# Only the existing event worker receives the same narrow authenticated interface.
+value['services']['events']=value['services'][c['app_service']]
 if connection.exists():
  if json.loads(connection.read_text())!=value: raise SystemExit('Existing connection overlay differs; review it manually.')
 else:

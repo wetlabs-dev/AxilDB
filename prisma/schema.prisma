@@ -1285,6 +1285,10 @@ model EmailPreference {
   collectionUpdateDigestPushEnabled  Boolean   @default(false)
   careQueueDigestPushEnabled         Boolean   @default(false)
   serverHealthPushEnabled            Boolean   @default(false)
+  serverUpgradeCompletedEmailEnabled Boolean   @default(false)
+  serverUpgradeCompletedPushEnabled Boolean   @default(false)
+  serverUpgradeFailedEmailEnabled Boolean   @default(false)
+  serverUpgradeFailedPushEnabled Boolean   @default(false)
   careQueueDigestSendTime            String    @default("08:00")
   careQueueDigestLastSentAt          DateTime?
   serverHealthAlertLastSentAt        DateTime?

@@ -1,3 +1,4 @@
+import { syncUpgradeNotifications } from '../lib/server-upgrade-notifications'
 import { migrationOutboundHeld } from '../lib/migration-hold'
 import { prisma } from '../lib/prisma'
 import { eventEngineEnabled } from '../lib/events/emit'
@@ -10,6 +11,8 @@ async function main() {
   if (await migrationOutboundHeld()) { console.info('Migration hold: worker paused.'); return }
   if (!eventEngineEnabled()) return
   try {
+    // Agent absence must not block unrelated events or already ingested alerts.
+    try { await syncUpgradeNotifications(prisma) } catch { console.warn('Deployment notification handoff unavailable; retrying on the next worker run.') }
     const result = await processDomainEventBatch(prisma)
     await recordServerWorkerRun(prisma, {
       workerName: 'domain-events', status: 'SUCCEEDED', startedAt,

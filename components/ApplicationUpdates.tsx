@@ -21,13 +21,13 @@ async function responseJson(response: Response) {
     throw new Error(data.error || 'Deployment connection interrupted.')
   return data
 }
-export function ApplicationUpdates({ configured }: { configured: boolean }) {
+export function ApplicationUpdates({ configured, initialJobId = '' }: { configured: boolean; initialJobId?: string }) {
   const [status, setStatus] = useState<DeploymentStatus | null>(null)
   const [update, setUpdate] = useState<UpdateCheck | null>(null)
   const [migrationConsent, setMigrationConsent] = useState(false)
   const [typedRevision, setTypedRevision] = useState('')
   const [preflight, setPreflight] = useState<Preflight | null>(null)
-  const [jobId, setJobId] = useState('')
+  const [jobId, setJobId] = useState(initialJobId)
   const [events, setEvents] = useState<DeploymentEvent[]>([])
   const cursor = useRef(0)
   const [busy, setBusy] = useState(false)
@@ -52,6 +52,10 @@ export function ApplicationUpdates({ configured }: { configured: boolean }) {
       await fetch(endpoint, { cache: 'no-store', signal })
     )
     if (signal?.aborted) return next
+    if (initialJobId && !next.history.some(item => item.id === initialJobId)) {
+      const requested: DeploymentJob = await responseJson(await fetch(`${endpoint}?mode=job&jobId=${initialJobId}`, { cache: 'no-store', signal }))
+      next.history = [...next.history, requested]
+    }
     setStatus(next)
     setReconnecting(false)
     setConnectionLost(false)
@@ -69,7 +73,7 @@ export function ApplicationUpdates({ configured }: { configured: boolean }) {
       )
     })
     return next
-  }, [])
+  }, [initialJobId])
   useEffect(() => {
     if (!configured) return
     let stopped = false

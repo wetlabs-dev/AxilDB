@@ -50,6 +50,10 @@ export default async function Account({
     ['careQueueDigestEmailEnabled', 'careQueueDigestPushEnabled', 'Care queue digest', preferences?.careQueueDigestEmailEnabled ?? true, preferences?.careQueueDigestPushEnabled ?? false],
     ['serverHealthEmailEnabled', 'serverHealthPushEnabled', 'Server health alerts', preferences?.serverHealthEmailEnabled ?? true, preferences?.serverHealthPushEnabled ?? false],
   ] as const
+  const upgradeRows = user.role === 'SERVER_ADMIN' ? [
+    ['serverUpgradeCompletedEmailEnabled', 'serverUpgradeCompletedPushEnabled', 'Upgrade completed successfully', preferences?.serverUpgradeCompletedEmailEnabled ?? false, preferences?.serverUpgradeCompletedPushEnabled ?? false],
+    ['serverUpgradeFailedEmailEnabled', 'serverUpgradeFailedPushEnabled', 'Upgrade failed', preferences?.serverUpgradeFailedEmailEnabled ?? false, preferences?.serverUpgradeFailedPushEnabled ?? false],
+  ] as const : []
   const sunshineRows = await prisma.sunshine.findMany({
     where: { userId: user.id, targetType: 'PLANT_INSTANCE' },
     include: { collection: { select: { id: true, slug: true, name: true, status: true } } },
@@ -230,17 +234,17 @@ export default async function Account({
               <span>Email</span>
               <span>Push</span>
             </div>
-            {notificationRows.map(([emailName, pushName, label, emailChecked, pushChecked]) => (
+            {[...notificationRows, ...upgradeRows].map(([emailName, pushName, label, emailChecked, pushChecked]) => (
               <div key={emailName} className="grid grid-cols-[minmax(0,1fr)_5rem_5rem] items-center gap-2 border-t border-[color:var(--ax-border)] bg-[var(--ax-surface)] px-3 py-2 text-sm text-[var(--ax-text)]">
-                <span>{label}</span>
+                <span>{emailName.startsWith('serverUpgrade') && <span className="block text-xs text-[var(--ax-muted)]">Server Upgrades</span>}{label}</span>
                 <label className="inline-flex items-center gap-2">
-                  <input type="checkbox" name={emailName} defaultChecked={Boolean(emailChecked)} />
+                  <input type="checkbox" name={emailName} aria-label={`${label} email`} defaultChecked={Boolean(emailChecked)} />
                   <span className="sr-only">Email</span>
                 </label>
                 <label className="inline-flex items-center gap-2">
                   {pushName ? (
                     <>
-                      <input type="checkbox" name={pushName} defaultChecked={Boolean(pushChecked)} />
+                      <input type="checkbox" name={pushName} aria-label={`${label} push`} defaultChecked={Boolean(pushChecked)} />
                       <span className="sr-only">Push</span>
                     </>
                   ) : (

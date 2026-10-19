@@ -642,6 +642,7 @@ export async function requestMagicLogin(fd: FormData) {
 
 export async function updateEmailPreferences(fd: FormData) {
   const user = await requireUser()
+  const upgradePreferences = Object.fromEntries(['serverUpgradeCompletedEmailEnabled', 'serverUpgradeCompletedPushEnabled', 'serverUpgradeFailedEmailEnabled', 'serverUpgradeFailedPushEnabled'].map(key => [key, user.role === 'SERVER_ADMIN' && checkbox(fd, key)]))
   const timezone = normalizeTimeZone(val(fd, 'timezone') || defaultTimeZone())
   const careQueueDigestSendTime = timeOfDayFromForm(fd, 'careQueueDigestSendTime', '08:00')
 
@@ -670,6 +671,7 @@ export async function updateEmailPreferences(fd: FormData) {
       collectionUpdateDigestPushEnabled: checkbox(fd, 'collectionUpdateDigestPushEnabled'),
       careQueueDigestPushEnabled: checkbox(fd, 'careQueueDigestPushEnabled'),
       serverHealthPushEnabled: checkbox(fd, 'serverHealthPushEnabled'),
+      ...upgradePreferences,
       careQueueDigestSendTime,
       quietHoursStart: val(fd, 'quietHoursStart') || undefined,
       quietHoursEnd: val(fd, 'quietHoursEnd') || undefined,
@@ -698,6 +700,7 @@ export async function updateEmailPreferences(fd: FormData) {
       collectionUpdateDigestPushEnabled: checkbox(fd, 'collectionUpdateDigestPushEnabled'),
       careQueueDigestPushEnabled: checkbox(fd, 'careQueueDigestPushEnabled'),
       serverHealthPushEnabled: checkbox(fd, 'serverHealthPushEnabled'),
+      ...upgradePreferences,
       careQueueDigestSendTime,
       quietHoursStart: val(fd, 'quietHoursStart') || undefined,
       quietHoursEnd: val(fd, 'quietHoursEnd') || undefined,

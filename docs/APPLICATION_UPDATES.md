@@ -171,3 +171,30 @@ Technical identifiers and backup/migration metadata are under Deployment details
 Existing status polling and SSE replay remain the transport. Temporary restart failures preserve the last confirmed state and retry with a maximum 30-second backoff. After five minutes without status, the interface explicitly reports that status is unknown and suggests checking the host agent; it does not infer deployment failure. Confirmed terminal jobs stop routine status polling and read retained logs without maintaining an SSE subscription. Focus or explicit operations refresh status, and a newly discovered active job restarts monitoring. Request controllers, streams and animation timers are cleaned up on unmount.
 
 This presentation change requires no agent upgrade, protocol change, database migration or new dependency. `check:deployment-progress` covers state mapping; `check:application-updates:ui` exercises the existing authenticated agent fixture plus queued/active/failed/skipped/unknown/success states, transition rendering, reduced motion, dark mode, keyboard details, long diagnostics, terminal polling cleanup, and 320/375/390/430/768/1280px layouts. The fixture simulates Docker operations and never deploys production.
+
+## Upgrade outcome alerts
+
+Verified server administrators can opt in under **Account → Alert Preferences → Server Upgrades**. Completed and failed upgrades each have independent email and push switches; all four start off. Existing alert settings are unchanged. Enable browser push and register a device through the existing controls, or configure SMTP as usual. Notifications link to the exact authenticated deployment job, including older retained history.
+
+The agent records a terminal outcome in its SQLite outbox in the **same transaction** as job status. `COMPLETED` follows exact-revision health verification; `FAILED` and actual execution failures requiring recovery create failure outcomes. An interrupted agent with uncertain results, temporary browser disconnect, queued/running state and recovered rollback are not completion/failure notifications. No old job history is backfilled when the agent is updated. Unacknowledged outbox rows survive agent restarts and history pruning.
+
+The existing `events` worker polls the authenticated private agent interface, commits INTERNAL domain events and recipient/channel fanout to PostgreSQL, then acknowledges the host outbox. Replaying a handoff uses unique keys containing job, outcome, recipient and channel. Individual push device receipts prevent repeat delivery to devices that succeeded while another device failed. Role, verified email and preferences are checked again at delivery. Quiet hours defer delivery without exhausting the provider retry budget. Existing event retry/backoff, stale claim recovery, dead-letter inspection and migration outbound holds apply. Turning off the event engine pauses ingestion and delivery. Disabling either preference suppresses its pending delivery.
+
+External messages contain a short revision, terminal timestamp, safe stage description and authenticated link; raw agent errors and command output remain behind administrator authentication. Provider errors never change deployment outcomes. Delivery resumes when the application database and event worker are available; an upgrade that leaves all application workers unavailable cannot send until that worker is recovered. This is durable at-least-once provider delivery: like existing SMTP/Web Push infrastructure, a crash after a provider accepts a message but before its database receipt commits can cause a repeat. No claim of provider-level exactly-once delivery is made.
+
+### One-time host enablement for existing installations
+
+This feature adds one read/ack operation to the independent agent and gives the **existing events worker** the same restricted socket/key connection as the application. No Docker socket is exposed and no new public port or service is added. The four Boolean preferences are an additive migration and normal PostgreSQL backups include the domain-event outbox and delivery state. Keep the agent state directory in host backups as already documented.
+
+After obtaining this revision on the host, with no deployment/recovery pending and without starting another upgrade concurrently, run:
+
+```sh
+cd /opt/axildb
+sudo sh scripts/deployment-agent/enable-notifications.sh
+```
+
+The script refuses active jobs, backs up the external connection overlay, preserves its other settings and permissions, installs the reviewed agent files, and restarts only the independent agent. It does **not** build or deploy AxilDB. Then use the web interface normally to deploy this application revision; the events worker receives the connection overlay during that deployment. New installations receive that worker connection from `install.sh`. The agent service account and container runtime identity need the same existing socket/key read permissions; no additional host filesystem or Git permissions are needed.
+
+Confirm the events worker is running and opted-in preferences are saved. Inspect `docker compose logs events` using your configured Compose files if delivery is delayed; inspect failed/dead-letter domain events for provider failures. A generic worker warning about the handoff means the agent is old, unreachable or the worker connection is absent; unrelated event processing continues. Update the host agent/connection as above. To disable upgrade alerts, turn off the four preferences; to disable ingestion entirely remove the events connection overlay and recreate that worker. Preserve outbox/history for diagnostics.
+
+Validation: `npm run check:upgrade-notifications` against a disposable PostgreSQL database checks opt-in defaults, independent channels, replay/concurrency, authorization, provider failure, worker processing, safe content and job links. Agent tests verify transactional terminal capture, replay/acknowledgement, restart survival and exclusion of uncertain interrupted operations.

@@ -1,4 +1,5 @@
 export const DOMAIN_EVENT_TYPES = [
+  'server.upgrade_completed', 'server.upgrade_failed',
   'plant.created', 'plant.updated', 'plant.archived', 'plant.restored', 'plant.merged', 'plant.location_moved', 'plant.photo_added', 'plant.historical_observation_added', 'plant.lifecycle_type_changed', 'plant.established', 'plant.lifecycle_date_recorded',
   'care.watered', 'care.fertilized', 'care.repotting_completed', 'care.pest_checked', 'care.health_checked', 'care.schedule_synced', 'care.quiet_day_adjusted', 'care.bulk_batch_completed',
   'condition.opened', 'condition.updated', 'condition.resolved', 'condition.reopened', 'condition.treatment_linked', 'condition.resolved_after_treatment', 'condition.recurred',
@@ -55,6 +56,7 @@ export type EventDefinition = {
 }
 
 const visibilityFor = (type: DomainEventType): EventVisibility => {
+  if (type.startsWith('server.')) return 'INTERNAL'
   if (['bloom.started', 'bloom.peaked', 'exhibit.published'].includes(type)) return 'PUBLIC'
   if (type.startsWith('condition.') || type.startsWith('quarantine.') || type.startsWith('workflow.') || type.startsWith('treatment.') || type.startsWith('seller.') || type.startsWith('provenance.') || type.startsWith('distributor.outlet')) return 'STAFF'
   if (type.startsWith('collection.') || type.startsWith('membership.') || type === 'event.redacted') return 'SERVER_ADMIN'
@@ -63,6 +65,7 @@ const visibilityFor = (type: DomainEventType): EventVisibility => {
 }
 
 const aggregateFor = (type: DomainEventType) => {
+  if (type.startsWith('server.upgrade_')) return 'DeploymentJob'
   if (type.startsWith('plant.')) return 'PlantInstance'
   if (type.startsWith('care.')) return 'PlantCareEvent'
   if (type.startsWith('condition.')) return 'PlantCondition'

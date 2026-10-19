@@ -182,6 +182,26 @@ try {
     403
   )
   assert.equal((await fetch(endpoint)).status, 403)
+  await page.goto(`${base}/account`)
+  const upgradeKeys = ['serverUpgradeCompletedEmailEnabled', 'serverUpgradeCompletedPushEnabled', 'serverUpgradeFailedEmailEnabled', 'serverUpgradeFailedPushEnabled']
+  for (const key of upgradeKeys) await expect(page.locator(`input[name="${key}"]`)).not.toBeChecked()
+  await page.locator('input[name="serverUpgradeCompletedEmailEnabled"]').check()
+  await Promise.all([page.waitForResponse(r => r.url().includes('/account') && r.request().method() === 'POST'), page.getByRole('button', { name: 'Save notification preferences', exact: true }).click()])
+  await expect(page.locator('input[name="serverUpgradeCompletedEmailEnabled"]')).toBeChecked()
+  const saved = await db.emailPreference.findUniqueOrThrow({ where: { userId } })
+  assert.equal(saved.serverUpgradeCompletedEmailEnabled, true)
+  for (const key of upgradeKeys.slice(1)) assert.equal(saved[key], false)
+  const loggerPage = await loggerContext.newPage()
+  await loggerPage.goto(`${base}/account`)
+  assert.equal(await loggerPage.locator('input[name^="serverUpgrade"]').count(), 0)
+  // Injecting hidden controls cannot opt an ordinary member into infrastructure alerts.
+  await loggerPage.locator('form').filter({ has: loggerPage.getByRole('button', { name: 'Save notification preferences', exact: true }) }).evaluate(form => {
+    const input = document.createElement('input'); input.type='hidden'; input.name='serverUpgradeFailedEmailEnabled'; input.value='on'; form.append(input)
+  })
+  await Promise.all([loggerPage.waitForResponse(r => r.url().includes('/account') && r.request().method() === 'POST'), loggerPage.getByRole('button', { name: 'Save notification preferences', exact: true }).click()])
+  await loggerPage.waitForLoadState('networkidle')
+  assert.equal((await db.emailPreference.findUniqueOrThrow({ where: { userId: loggerId } })).serverUpgradeFailedEmailEnabled, false)
+  await loggerPage.close()
   await page.goto(`${base}/server/application-updates`)
   await expect(
     page.getByRole('heading', { name: 'Application Updates', exact: true })
@@ -292,7 +312,7 @@ try {
   })
   assert.equal(repeated.status(), 200)
   assert.equal((await repeated.json()).id, state.history[0].id)
-  await page.reload()
+  await page.goto(`${base}/server/application-updates?jobId=${state.history[0].id}`)
   await expect(
     page.getByText('Upgrade completed successfully.', { exact: false })
   ).toBeVisible()

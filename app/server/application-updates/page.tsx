@@ -4,7 +4,9 @@ import { deploymentAgentConfigured } from '@/lib/deployment-agent'
 import { applicationRevision } from '@/lib/application-revision'
 import { ApplicationUpdates } from '@/components/ApplicationUpdates'
 import packageInfo from '@/package.json'
-export default async function ApplicationUpdatesPage() {
+export default async function ApplicationUpdatesPage({ searchParams }: { searchParams: Promise<{ jobId?: string }> }) {
+  const requested = (await searchParams).jobId
+  const initialJobId = requested && /^[a-f0-9]{32}$/.test(requested) ? requested : ''
   await requireServerAdmin()
   const revision = await applicationRevision()
   return (
@@ -17,7 +19,7 @@ export default async function ApplicationUpdatesPage() {
         AxilDB deployment management · Package {packageInfo.version} · Running
         image revision: <span className="font-mono" title={revision}>{revision.slice(0, 7)}</span>
       </p>
-      <ApplicationUpdates configured={deploymentAgentConfigured()} />
+      <ApplicationUpdates configured={deploymentAgentConfigured()} initialJobId={initialJobId} />
     </div>
   )
 }
