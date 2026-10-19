@@ -1,3 +1,4 @@
+import { BulkCareEligibility } from '@/components/BulkCareEligibility'
 import { CareActionForm, CareQueueProvider } from '@/components/CareQueueOptimistic'
 import { randomUUID } from 'crypto'
 import Link from 'next/link'
@@ -8,7 +9,7 @@ import { careTaskLabel, getCareQueue } from '@/lib/care-queue'
 import { collectionPath, requireCollectionLogger } from '@/lib/collections'
 import { descendantLocationIds, locationPathWithCodes } from '@/lib/locations'
 import { prisma } from '@/lib/prisma'
-import { formatDate, parseDateLocal } from '@/lib/time'
+import { timeZoneForPreference, dateInputValue } from '@/lib/time'
 import { plantName } from '@/lib/utils'
 import { substrateLabel, substrateModes } from '@/lib/substrates'
 
@@ -16,6 +17,7 @@ const careTypes = [
   ['WATERING', 'Watering'],
   ['FERTILIZING', 'Fertilizing'],
   ['REPOTTING', 'Repotting'],
+  ['PRUNING', 'Pruning'],
   ['PEST_CHECK', 'Pest check'],
   ['HEALTH_CHECK', 'Health check'],
   ['PROPAGATION_CHECK', 'Propagation check'],
@@ -35,17 +37,12 @@ function allParams(value?: string | string[]) {
 }
 
 function queueTaskForCareType(careType: string) {
+  if (careType === 'PRUNING') return 'PRUNE'
   if (careType === 'WATERING') return 'WATER'
   if (careType === 'FERTILIZING') return 'FERTILIZE'
   if (['PEST_CHECK', 'HEALTH_CHECK', 'PROPAGATION_CHECK', 'BLOOM_CHECK'].includes(careType)) return careType
   if (careType === 'OTHER') return 'REMINDER'
   return null
-}
-
-function inputDateTimeValue(date = new Date()) {
-  const offset = date.getTimezoneOffset()
-  const local = new Date(date.getTime() - offset * 60 * 1000)
-  return local.toISOString().slice(0, 16)
 }
 
 export default async function BulkCarePage({
@@ -55,6 +52,7 @@ export default async function BulkCarePage({
 }) {
   const params = await searchParams
   const context = await requireCollectionLogger()
+  const timezone = timeZoneForPreference(await prisma.emailPreference.findUnique({ where: { userId: context.user.id } }))
   const [locations, fertilizerRecipes, substrateVersions] = await Promise.all([
     prisma.location.findMany({
       where: { collectionId: context.collection.id, status: 'ACTIVE' },
@@ -152,14 +150,14 @@ export default async function BulkCarePage({
   const substrateRecipeVersionId = firstParam(params.substrateRecipeVersionId)
   const receivedSubstrateDescription = firstParam(params.receivedSubstrateDescription) || ''
   const substrateNotes = firstParam(params.substrateNotes) || ''
-  const performedAt = firstParam(params.performedAt) || inputDateTimeValue()
+  const performedAt = firstParam(params.performedAt) || `${dateInputValue(new Date(), timezone)}T${new Intl.DateTimeFormat('en-GB', { timeZone: timezone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date())}`
   const success = firstParam(params.bulk) === 'success'
   const duplicate = firstParam(params.bulk) === 'duplicate'
   const error = firstParam(params.error)
   const formId = 'bulk-care-form'
 
   return (
-    <CareQueueProvider collectionSlug={context.collection.slug} userId={context.user.id} initialItems={queueItems} snapshotAt={snapshotAt}>
+    <CareQueueProvider collectionSlug={context.collection.slug} userId={context.user.id} initialItems={queueItems} snapshotAt={snapshotAt} timezone={timezone}>
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
@@ -175,7 +173,7 @@ export default async function BulkCarePage({
         <Card className="border-[#c7d8bd] bg-[#f5fbf0]">
           <p className="font-semibold text-[#2f6b45]">Bulk care recorded.</p>
           <p className="mt-1 text-sm text-stone-700">
-            {firstParam(params.events) || '0'} care event(s) created · {firstParam(params.completed) || '0'} matching queue item(s) completed · {firstParam(params.skipped) || '0'} skipped.
+            {firstParam(params.events) || '0'} care event(s) created · {firstParam(params.completed) || '0'} matching queue item(s) completed · {firstParam(params.skipped) || '0'} skipped, including {firstParam(params.alreadyCompleted) || '0'} already completed on the performed date.
           </p>
         </Card>
       )}
@@ -209,16 +207,12 @@ export default async function BulkCarePage({
         </form>
       </Card>
 
-      <CareActionForm actionName="bulk" optimistic={review} id={formId} method={review ? undefined : 'get'} action={review ? completeBulkCare : collectionPath(context.collection.slug, '/care/bulk')} className="space-y-4">
+      <CareActionForm actionName="bulk" optimistic={false} id={formId} method={review ? undefined : 'get'} action={review ? completeBulkCare : collectionPath(context.collection.slug, '/care/bulk')} className="space-y-4">
         <input type="hidden" name="collectionSlug" value={context.collection.slug} />
         <input type="hidden" name="locationId" value={locationId} />
         <input type="hidden" name="careType" value={careType} />
-        {review && fertilizerRecipeId && <input type="hidden" name="fertilizerRecipeId" value={fertilizerRecipeId} />}
-        {review && fertilizerStrength && <input type="hidden" name="fertilizerStrength" value={fertilizerStrength} />}
-        {review && fertilizerDose && <input type="hidden" name="fertilizerDose" value={fertilizerDose} />}
-        {review && fertilizerWaterVolume && <input type="hidden" name="fertilizerWaterVolume" value={fertilizerWaterVolume} />}
-        {review && careType === 'REPOTTING' && <><input type="hidden" name="substrateMode" value={substrateMode} />{substrateRecipeVersionId && <input type="hidden" name="substrateRecipeVersionId" value={substrateRecipeVersionId} />}<input type="hidden" name="receivedSubstrateDescription" value={receivedSubstrateDescription} /><input type="hidden" name="substrateNotes" value={substrateNotes} /></>}
         <input type="hidden" name="q" value={firstParam(params.q) || ''} />
+        <input type="hidden" name="bulkCareIssuedAt" value={firstParam(params.bulkCareIssuedAt) || String(Date.now())} />
         <input type="hidden" name="bulkCareBatchId" value={firstParam(params.bulkCareBatchId) || randomUUID()} />
         {includeNested && <input type="hidden" name="includeNested" value="on" />}
         {includeArchived && <input type="hidden" name="includeArchived" value="on" />}
@@ -263,7 +257,7 @@ export default async function BulkCarePage({
               Location: {location ? `${location.code} · ${locationPathWithCodes(location.id, locationNodes)}` : 'No location selected'} · {includeNested ? 'direct and nested plants' : 'direct plants only'}
             </p>
             <p className="text-sm text-stone-700">
-              Matching due queue items that will be advanced: {selectedMatchingQueueItems.length}
+              Matching due queue items in selection (only newly completed plants advance): {selectedMatchingQueueItems.length}
             </p>
             {sharedNote && <p className="whitespace-pre-wrap text-sm text-stone-700">Shared note: {sharedNote}</p>}
             {sharedResult && <p className="text-sm text-stone-700">Shared result: {sharedResult}</p>}
@@ -300,7 +294,7 @@ export default async function BulkCarePage({
               </div>
             ))}
             <div className="flex flex-wrap gap-2">
-              <Button>Submit bulk care</Button>
+              <BulkCareEligibility key={firstParam(params.bulkCareBatchId)} formId={formId} collectionSlug={context.collection.slug} careType={careType} scopeCount={filteredPlants.length} />
               <Link href={collectionPath(context.collection.slug, `/care/bulk?locationId=${encodeURIComponent(locationId)}&includeNested=${includeNested ? '1' : '0'}&careType=${encodeURIComponent(careType)}`)} className="rounded-md border border-stone-300 bg-white/80 px-4 py-2 text-sm font-semibold">
                 Back to edit
               </Link>

@@ -1,6 +1,6 @@
+import { bulkCareEvents, findSameDayCareRecords, lockCarePlants, requireBulkCareType } from '@/lib/bulk-care'
 import { queueRepotting } from '@/lib/repotting'
 import { Prisma } from '@prisma/client'
-import { randomUUID } from 'node:crypto'
 import { prisma as database } from '@/lib/prisma'
 import { type AuthUser } from '@/lib/auth'
 import { collectionPath, requireCollectionAdmin, requireCollectionLogger } from '@/lib/collections'
@@ -14,7 +14,7 @@ import { executeCareOperation, type CareOperationIdentity } from '@/lib/care-que
 import type { CareQueueAction } from '@/lib/care-queue-optimistic'
 
 export type MutationContext = Awaited<ReturnType<typeof requireCollectionLogger>>
-export type MutationResult = { destination?: string; duplicate?: boolean; events?: number; completed?: number; skipped?: number }
+export type MutationResult = { destination?: string; duplicate?: boolean; events?: number; completed?: number; skipped?: number; requestedCount?: number; createdCount?: number; skippedAlreadyCompletedCount?: number; skippedOtherCount?: number; createdPlantInstanceIds?: string[]; skippedPlantInstanceIds?: string[] }
 const val = (fd: FormData, key: string) => String(fd.get(key) || '').trim() || undefined
 const clearableVal = (fd: FormData, key: string) => fd.has(key) ? val(fd, key) || null : undefined
 const boundedInt = (value: string | undefined, fallback: number, min: number, max: number) => Number.isFinite(Number(value)) ? Math.max(min, Math.min(max, Math.floor(Number(value)))) : fallback
@@ -43,16 +43,7 @@ export const careEventForTask = (taskType?: string | null) => {
   if (taskType === 'BLOOM_CHECK') return 'BLOOM_CHECK'
   return 'OTHER'
 }
-const careEventForBulkCare = (careType?: string | null) => {
-  if (careType === 'WATERING') return 'WATERED'
-  if (careType === 'FERTILIZING') return 'FERTILIZED'
-  if (careType === 'REPOTTING') return 'REPOTTED'
-  if (careType === 'PEST_CHECK') return 'PEST_CHECK'
-  if (careType === 'HEALTH_CHECK') return 'HEALTH_CHECK'
-  if (careType === 'PROPAGATION_CHECK') return 'PROPAGATION_CHECK'
-  if (careType === 'BLOOM_CHECK') return 'BLOOM_CHECK'
-  return 'OTHER'
-}
+const careEventForBulkCare = (careType: string) => bulkCareEvents[requireBulkCareType(careType)]
 const domainEventForCare = (eventType: string) => {
   if (eventType === 'WATERED') return 'care.watered' as const
   if (eventType === 'FERTILIZED') return 'care.fertilized' as const
@@ -61,6 +52,7 @@ const domainEventForCare = (eventType: string) => {
   return 'care.health_checked' as const
 }
 const queueTaskForBulkCare = (careType?: string | null) => {
+  if (careType === 'PRUNING') return 'PRUNE'
   if (careType === 'WATERING') return 'WATER'
   if (careType === 'FERTILIZING') return 'FERTILIZE'
   if (['PEST_CHECK', 'HEALTH_CHECK', 'PROPAGATION_CHECK', 'BLOOM_CHECK'].includes(careType || '')) return careType
@@ -123,6 +115,13 @@ async function complete(prisma: Prisma.TransactionClient, context: MutationConte
     ? (await requireSubstrateRecipeVersion(prisma, context.collection.id, val(fd, 'substrateRecipeVersionId')))?.id || null
     : null
   const performedAt = parseDateLocal(val(fd, 'performedAt'), timezone) || new Date()
+
+  await lockCarePlants(prisma, context.collection.id, [plantInstanceId])
+  const bulkType = Object.entries(bulkCareEvents).find(([, event]) => event === careEventForTask(taskType))?.[0]
+  if (fd.get('queueCompletion') === 'on' && bulkType && (await findSameDayCareRecords(prisma, {
+    collectionId: context.collection.id, plantInstanceIds: [plantInstanceId], careType: requireBulkCareType(bulkType),
+    referenceDate: performedAt, timezone, fertilizerRecipeId,
+  })).length) return { skipped: 1 }
 
   const event = await withinMutation(prisma, async (tx) => {
     const created = await tx.plantCareEvent.create({ data: {
@@ -398,7 +397,7 @@ async function bulk(prisma: Prisma.TransactionClient, context: MutationContext, 
   const locationId = val(fd, 'locationId')!
   const includeNested = fd.get('includeNested') === 'on'
   const includeArchived = fd.get('includeArchived') === 'on'
-  const careType = val(fd, 'careType') || 'OTHER'
+  const careType = requireBulkCareType(val(fd, 'careType') || '')
   const sharedNote = val(fd, 'sharedNote') || ''
   const sharedResult = val(fd, 'sharedResult') || ''
   const fertilizerRecipeId = careType === 'FERTILIZING'
@@ -411,8 +410,11 @@ async function bulk(prisma: Prisma.TransactionClient, context: MutationContext, 
     ? (await requireSubstrateRecipeVersion(prisma, context.collection.id, val(fd, 'substrateRecipeVersionId')))?.id || null
     : null
   const performedAt = parseDateLocal(val(fd, 'performedAt'), timezone) || new Date()
-  const selectedIds = fd.getAll('plantInstanceId').map((item) => String(item)).filter(Boolean)
-  const batchId = val(fd, 'bulkCareBatchId') || randomUUID()
+  const selectedIds = [...new Set(fd.getAll('plantInstanceId').map((item) => String(item)).filter(Boolean))]
+  const batchId = val(fd, 'bulkCareBatchId') || ''
+  if (!/^[0-9a-f-]{36}$/i.test(batchId)) throw new Error('Invalid bulk care operation identifier.')
+  if (selectedIds.length > 1000) throw new Error('Choose at most 1,000 plants per operation.')
+  if (val(fd, 'performedAt') && !parseDateLocal(val(fd, 'performedAt'), timezone)) throw new Error('Choose a valid performed date.')
 
   if (!selectedIds.length) {
     throw new Error('Choose at least one plant.')
@@ -440,7 +442,7 @@ async function bulk(prisma: Prisma.TransactionClient, context: MutationContext, 
     plantInstanceId: id,
     reason: val(fd, `skipReason:${id}`) || (validIds.has(id) ? 'Skipped by user' : 'Plant not eligible for this location scope'),
   }))
-  const eventPlants = plants.filter((plant) => !skipped.includes(plant.id))
+  let eventPlants = plants.filter((plant) => !skipped.includes(plant.id))
 
   if (!eventPlants.length) {
     throw new Error('All selected plants were skipped or are outside the chosen location.')
@@ -458,6 +460,17 @@ async function bulk(prisma: Prisma.TransactionClient, context: MutationContext, 
   if (existingBatch) {
     return { duplicate: true, destination: collectionPath(context.collection.slug, `/care/bulk?locationId=${encodeURIComponent(locationId)}&includeNested=${includeNested ? '1' : '0'}&bulk=duplicate`) }
   }
+
+  await lockCarePlants(prisma, context.collection.id, eventPlants.map(plant => plant.id))
+  const alreadyCompleted = fd.get('includeAlreadyCompleted') === 'on' ? [] : await findSameDayCareRecords(prisma, {
+    collectionId: context.collection.id, plantInstanceIds: eventPlants.map(plant => plant.id), careType,
+    referenceDate: performedAt, timezone, fertilizerRecipeId,
+  })
+  for (const event of alreadyCompleted) {
+    skipped.push(event.plantInstanceId)
+    skippedDetails.push({ plantInstanceId: event.plantInstanceId, reason: 'Equivalent care already recorded on this local date' })
+  }
+  eventPlants = eventPlants.filter(plant => !skipped.includes(plant.id))
 
   const queueTaskType = queueTaskForBulkCare(careType)
   const queueItems = queueTaskType
@@ -590,11 +603,12 @@ async function bulk(prisma: Prisma.TransactionClient, context: MutationContext, 
     locationId,
     includeNested: includeNested ? '1' : '0',
     bulk: 'success',
+    alreadyCompleted: String(alreadyCompleted.length),
     events: String(events.length),
     completed: String(matchingQueueItems.length),
     skipped: String(skipped.length),
   })
-  return { destination: collectionPath(context.collection.slug, `/care/bulk?${params.toString()}`), events: events.length, completed: matchingQueueItems.length, skipped: skipped.length }
+  return { destination: collectionPath(context.collection.slug, `/care/bulk?${params.toString()}`), events: events.length, completed: matchingQueueItems.length, skipped: skipped.length, requestedCount: selectedIds.length, createdCount: events.length, skippedAlreadyCompletedCount: alreadyCompleted.length, skippedOtherCount: skipped.length - alreadyCompleted.length, createdPlantInstanceIds: eventPlants.map(plant => plant.id), skippedPlantInstanceIds: skipped }
 }
 
 async function planRepotting(tx: Prisma.TransactionClient, context: MutationContext, fd: FormData): Promise<MutationResult> {
@@ -610,5 +624,8 @@ export function applyCareQueueMutation(tx: Prisma.TransactionClient, context: Mu
 }
 export async function runCareQueueMutation(action: CareQueueAction, fd: FormData, identity?: CareOperationIdentity) {
   const context = await requireCollectionLogger(val(fd, 'collectionSlug'))
+  if (action === 'bulk' && !identity) {
+    identity = { operationId: val(fd, 'bulkCareBatchId') || '', issuedAt: Number(fd.get('bulkCareIssuedAt')) }
+  }
   return executeCareOperation(database, { collectionId: context.collection.id, userId: context.user.id, action, fd, identity }, tx => applyCareQueueMutation(tx, context, action, fd))
 }

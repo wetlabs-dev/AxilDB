@@ -1,6 +1,7 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import { isRedirectError } from 'next/dist/client/components/redirect-error'
 import { revalidatePath } from 'next/cache'
 import { unlink } from 'fs/promises'
 import path from 'path'
@@ -2927,7 +2928,18 @@ export async function completeCareTask(fd: FormData) {
 }
 
 export async function completeBulkCare(fd: FormData) {
-  const result = await runCareQueueMutation('bulk', fd)
+  let result
+  try {
+    result = await runCareQueueMutation('bulk', fd)
+  } catch (error) {
+    if (isRedirectError(error)) throw error
+    const context = await requireCollectionLogger(await collectionSlug(fd))
+    const params = new URLSearchParams({ error: 'unable-to-confirm-care-check-history-before-starting-a-new-operation' })
+    const locationId = val(fd, 'locationId')
+    if (locationId) params.set('locationId', locationId)
+    redirect(collectionPath(context.collection.slug, `/care/bulk?${params}`))
+  }
+
   revalidatePath('/', 'layout')
   redirect(result.destination || back(fd))
 }

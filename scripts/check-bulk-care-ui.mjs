@@ -1,0 +1,73 @@
+import assert from 'node:assert/strict'
+import { createHash, randomBytes, randomUUID } from 'node:crypto'
+import { PrismaClient } from '@prisma/client'
+import { chromium } from '@playwright/test'
+const db = new PrismaClient()
+const baseURL = process.env.BULK_CARE_TEST_URL || 'http://localhost:3107'
+const browser = await chromium.launch({ channel: 'chrome', headless: true })
+const user = await db.user.create({ data: { email: `bulk-ui-${randomUUID()}@example.test`, passwordHash: 'fixture', emailVerifiedAt: new Date(), role: 'SERVER_ADMIN', twoFactor: { create: { enabledAt: new Date(), secretCiphertext: 'fixture' } } } })
+const collection = await db.collection.create({ data: { name: 'Bulk UI', slug: `bulk-ui-${randomUUID()}` } })
+try {
+  await db.collectionMembership.create({ data: { collectionId: collection.id, userId: user.id, role: 'OWNER', status: 'ACTIVE' } })
+  await db.emailPreference.create({ data: { userId: user.id, timezone: 'America/New_York' } })
+  const token = randomBytes(32).toString('hex')
+  await db.session.create({ data: { userId: user.id, tokenHash: createHash('sha256').update(token).digest('hex'), expiresAt: new Date(Date.now() + 3600000), twoFactorVerifiedAt: new Date() } })
+  const type = await db.locationType.create({ data: { collectionId: collection.id, name: 'Room', abbreviation: 'ROOM' } })
+  const location = await db.location.create({ data: { collectionId: collection.id, locationTypeId: type.id, name: 'Living Room', code: 'ROOM' } })
+  const definition = await db.plantDefinition.create({ data: { collectionId: collection.id, genus: 'Monstera', species: 'deliciosa' } })
+  const plants = await Promise.all(['UI-1', 'UI-2'].map(plantId => db.plantInstance.create({ data: { collectionId: collection.id, plantDefinitionId: definition.id, plantId, instanceType: 'ACQUIRED', currentLocationId: location.id } })))
+  await db.plantCareEvent.create({ data: { collectionId: collection.id, plantInstanceId: plants[0].id, eventType: 'WATERED', performedAt: new Date('2026-10-19T13:15Z'), metadata: { source: 'CARE_QUEUE' } } })
+  const context = await browser.newContext()
+  await context.addCookies([{ name: 'axildb_session', value: token, url: baseURL }])
+  const page = await context.newPage()
+  const params = new URLSearchParams({ locationId: location.id, careType: 'WATERING', performedAt: '2026-10-19T15:00', review: '1', bulkCareBatchId: randomUUID(), bulkCareIssuedAt: String(Date.now()) })
+  plants.forEach(plant => params.append('plantInstanceId', plant.id))
+  const url = `${baseURL}/c/${collection.slug}/care/bulk?${params}`
+  await page.goto(url)
+  const submit = page.getByRole('button', { name: 'Record care for 1 plant', exact: true })
+  await submit.waitFor()
+  await submit.isEnabled().then(enabled => assert.ok(enabled))
+  const override = page.getByRole('checkbox', { name: /Include plants already watered/ })
+  assert.equal(await override.isChecked(), false)
+  await override.check()
+  await page.getByRole('button', { name: 'Record care for 2 plants', exact: true }).waitFor()
+  await override.uncheck()
+  const performed = page.locator('input[name="performedAt"]')
+  await performed.fill('2026-10-20T15:00')
+  await page.getByRole('button', { name: 'Record care for 2 plants', exact: true }).waitFor()
+  await performed.fill('2026-10-19T15:00')
+  await submit.waitFor()
+
+  await page.getByText('1 already watered on this date', { exact: true }).click()
+  await page.getByRole('link', { name: 'Monstera deliciosa · UI-1' }).waitFor()
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: 900 })
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `No horizontal overflow at ${width}px`)
+  }
+  await page.screenshot({ path: '/tmp/axildb-bulk-care-mobile.png', fullPage: true })
+  // Simulate an individual completion in another session after the preview.
+  await db.plantCareEvent.create({ data: { collectionId: collection.id, plantInstanceId: plants[1].id, eventType: 'WATERED', performedAt: new Date('2026-10-19T14:00Z') } })
+  await submit.click()
+  await page.getByText('Bulk care recorded.', { exact: true }).waitFor()
+  assert.match(await page.locator('body').innerText(), /0 care event\(s\) created.*2.*already completed/)
+  assert.equal(await db.plantCareEvent.count({ where: { collectionId: collection.id, eventType: 'WATERED' } }), 2)
+  await page.goto(url.replace(params.get('bulkCareBatchId'), randomUUID()))
+  await page.getByRole('button', { name: 'Record care for 0 plants', exact: true }).waitFor()
+  assert.equal(await page.getByRole('button', { name: 'Record care for 0 plants', exact: true }).isDisabled(), true)
+  assert.equal(await override.isChecked(), false, 'Override resets for a new review.')
+  await override.check()
+  await page.getByRole('button', { name: 'Record care for 2 plants', exact: true }).click()
+  await page.getByText('Bulk care recorded.', { exact: true }).waitFor()
+  assert.equal(await db.plantCareEvent.count({ where: { collectionId: collection.id, eventType: 'WATERED' } }), 4)
+  const unauth = await browser.newContext()
+  const denied = await unauth.request.post(`${baseURL}/api/care/bulk-preview`, { headers: { Origin: baseURL }, data: {} })
+  assert.equal(denied.status(), 401)
+  const invalidOrigin = await context.request.post(`${baseURL}/api/care/bulk-preview`, { headers: { Origin: 'https://untrusted.example' }, data: {} })
+  assert.equal(invalidOrigin.status(), 403)
+  console.log('Bulk-care browser checks passed: desktop/mobile layout, preview/exclusion details, override/reset, stale submission, zero eligibility, confirmed results, authorization and origin protection.')
+} finally {
+  await browser.close()
+  await db.collection.delete({ where: { id: collection.id } })
+  await db.user.delete({ where: { id: user.id } })
+  await db.$disconnect()
+}

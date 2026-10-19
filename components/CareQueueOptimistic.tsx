@@ -85,7 +85,7 @@ export function CareActionForm({ actionName, item, optimistic = true, children, 
     })
   }}>
     {hiddenBulk && <p className="rounded-md border border-stone-200 bg-white/70 p-4 text-sm">{!operation || operation.status === 'confirmed' ? 'Selected care recorded.' : 'Recording selected care… You can continue using the queue.'}</p>}
-    <fieldset disabled={Boolean(busy || hiddenBulk)} hidden={Boolean(hiddenBulk)} style={{ display: hiddenBulk ? 'none' : undefined }} className="contents disabled:opacity-60">{children}</fieldset>
+    <fieldset disabled={Boolean(busy || hiddenBulk)} hidden={Boolean(hiddenBulk)} style={{ display: hiddenBulk ? 'none' : undefined }} className="contents disabled:opacity-60">{item && actionName === 'complete' && <input type="hidden" name="queueCompletion" value="on" />}{children}</fieldset>
   </form>
 }
 function fieldsForItem(item: CareQueueItem) {

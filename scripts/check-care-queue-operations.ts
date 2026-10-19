@@ -47,7 +47,7 @@ async function main() {
     const propagation = await db.plantInstance.create({ data: { collectionId: collection.id, plantDefinitionId: definition.id, plantId: 'PROP-1', instanceType: 'PROPAGATION', propagationDate: new Date(Date.now() - 20 * 86400000) } })
     await run('establish', fields({ plantInstanceId: propagation.id }))
     assert.ok((await db.plantInstance.findUniqueOrThrow({ where: { id: propagation.id } })).propagationEstablishedAt)
-    const bulk = fields({ taskType: 'WATER', locationId: location.id, careType: 'WATERING', bulkCareBatchId: randomUUID(), sharedNote: 'Bulk note' })
+    const bulk = fields({ taskType: 'WATER', locationId: location.id, careType: 'WATERING', bulkCareBatchId: randomUUID(), sharedNote: 'Bulk note', includeAlreadyCompleted: 'on' })
     const batchBefore = await db.plantCareEvent.count({ where: { plantInstanceId: plant.id } })
     const batchResults = await Promise.all([run('bulk', bulk), run('bulk', bulk)])
     assert.equal(await db.plantCareEvent.count({ where: { plantInstanceId: plant.id } }), batchBefore + 1, 'Batch identity protects simultaneous operations too.')
