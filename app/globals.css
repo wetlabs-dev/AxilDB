@@ -432,6 +432,42 @@ section {
   }
 }
 
+.preflight-results {
+  display: table;
+}
+
+.preflight-pass {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.preflight-fail {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.preflight-failure-detail {
+  color: #b91c1c;
+}
+
+:root[data-theme='dark'] .preflight-results thead {
+  background: #ffffff0a;
+}
+
+:root[data-theme='dark'] .preflight-pass {
+  color: #bbf7d0;
+  background: #14532d;
+}
+
+:root[data-theme='dark'] .preflight-fail {
+  color: #fecaca;
+  background: #7f1d1d;
+}
+
+:root[data-theme='dark'] .preflight-failure-detail {
+  color: #fca5a5;
+}
+
 :root[data-theme='dark'] a:not([class*="bg-"]):not([class*="text-white"]):not([class*="text-stone"]):not([class*="text-[#"]) {
   color: var(--ax-primary);
 }

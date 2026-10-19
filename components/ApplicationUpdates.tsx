@@ -410,14 +410,37 @@ export function ApplicationUpdates({ configured }: { configured: boolean }) {
         <section className="space-y-3 rounded-lg border p-4">
           <h2 className="text-xl font-bold">Preflight checks</h2>
           {preflight.reviewable && !preflight.ready && <p role="status">Infrastructure checks passed. Review the migration SQL and approve its database risks before starting.</p>}
-          <ul>
-            {preflight.checks.map((check) => (
-              <li key={check.name}>
-                {check.ok ? '✓' : '✕'} {check.name}
-                {check.message && `: ${check.message}`}
-              </li>
-            ))}
-          </ul>
+          <div className="overflow-hidden rounded-lg border">
+            <table className="preflight-results w-full table-fixed text-left text-sm">
+              <caption className="sr-only">Deployment preflight check results</caption>
+              <thead className="bg-stone-100/60">
+                <tr>
+                  <th scope="col" className="px-4 py-3 font-semibold">Check</th>
+                  <th scope="col" className="w-24 px-3 py-3 text-center font-semibold">Result</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {preflight.checks.map((check) => (
+                  <tr key={check.name}>
+                    <th scope="row" className="break-words px-4 py-3 align-top font-medium">
+                      {check.name}
+                      {check.message && (
+                        <p className={`mt-1 whitespace-pre-wrap break-words text-sm font-normal ${check.ok ? 'text-stone-600' : 'preflight-failure-detail'}`}>
+                          {check.message}
+                        </p>
+                      )}
+                    </th>
+                    <td className="px-3 py-3 text-center align-top">
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold ${check.ok ? 'preflight-pass' : 'preflight-fail'}`}>
+                        <span aria-hidden="true">{check.ok ? '✓' : '✕'}</span>
+                        {check.ok ? 'Pass' : 'Fail'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           <p>
             {preflight.migrations.length
               ? `${preflight.migrations.length} new migrations require deployment. Schema compatibility with the previous application is unproven; automatic database rollback is unavailable.`
