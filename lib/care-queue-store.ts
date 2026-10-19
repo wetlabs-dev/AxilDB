@@ -109,6 +109,7 @@ export function getCareQueueStore(collectionSlug: string, userId: string) {
         const response = await fetch('/api/care-queue', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ operationId: operation.operationId, issuedAt: operation.issuedAt, action: operation.action, fields: operation.fields }), redirect: 'error' })
         const result = await response.json()
         if (!response.ok) throw new CareRequestError(result.error || 'Unable to record care.', response.status >= 400 && response.status < 500)
+        if (typeof window !== 'undefined') window.dispatchEvent(new Event('axildb:care-saved'))
       },
       snapshot: () => read(`/api/care-queue?${query}`),
       committed: async operation => (await read(`/api/care-queue?${query}&operationId=${encodeURIComponent(operation.operationId)}`)).committed,

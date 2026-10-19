@@ -3417,6 +3417,9 @@ model CollectionQuietDayShiftRule {
 }
 
 model CareQuietDayAdjustment {
+  scheduleKey     String?  @unique
+  taskKey         String?
+  timezone        String?
   id              String   @id @default(cuid())
   collectionId    String
   quietDayId      String?

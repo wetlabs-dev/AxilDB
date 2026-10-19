@@ -87,7 +87,10 @@
     "check:dashboard-reviews": "tsx scripts/check-dashboard-reviews.ts",
     "check:dashboard-reviews:ui": "tsx scripts/check-dashboard-reviews-ui.mjs",
     "check:bulk-care": "tsx scripts/check-bulk-care.ts",
-    "check:bulk-care-ui": "node scripts/check-bulk-care-ui.mjs"
+    "check:bulk-care-ui": "node scripts/check-bulk-care-ui.mjs",
+    "check:care-calendar": "tsx scripts/check-care-calendar.ts",
+    "check:care-calendar:db": "tsx scripts/check-care-calendar-db.ts",
+    "check:care-calendar:ui": "node scripts/check-care-calendar-ui.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

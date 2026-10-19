@@ -6,9 +6,9 @@ import { Prisma } from '@prisma/client'
 import { audit } from '@/lib/auth'
 import { collectionPath, requireCollectionLogger, requireCollectionManager } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
-import { normalizeCareTypes, parseTargetDueAt, resolveQuietDayShift, schedulableCareTypes } from '@/lib/care-scheduling'
+import { normalizeCareTypes, parseTargetDueAt, schedulableCareTypes } from '@/lib/care-scheduling'
 import { descendantLocationIds } from '@/lib/locations'
-import { parseDateLocal, timeZoneForPreference } from '@/lib/time'
+import { timeZoneForPreference } from '@/lib/time'
 
 const val = (fd: FormData, key: string) => String(fd.get(key) || '').trim()
 const optional = (fd: FormData, key: string) => val(fd, key) || null
@@ -25,63 +25,22 @@ const boundedInt = (value: string, fallback: number, min: number, max: number) =
 
 export async function createQuietDay(fd: FormData) {
   const context = await requireCollectionManager(val(fd, 'collectionSlug'))
-  const preferences = await prisma.emailPreference.findUnique({ where: { userId: context.user.id } })
-  const timezone = val(fd, 'timezone') || timeZoneForPreference(preferences)
-  const quietType = ['ONE_TIME', 'WEEKLY_RECURRING', 'DATE_RANGE'].includes(val(fd, 'quietType')) ? val(fd, 'quietType') : 'ONE_TIME'
-  const quietDay = await prisma.collectionQuietDay.create({
-    data: {
-      collectionId: context.collection.id,
-      createdByUserId: context.user.id,
-      name: val(fd, 'name') || 'Quiet day',
-      description: optional(fd, 'description'),
-      quietType,
-      date: quietType === 'ONE_TIME' ? parseDateLocal(val(fd, 'date'), timezone) : null,
-      startDate: quietType === 'DATE_RANGE' ? parseDateLocal(val(fd, 'startDate'), timezone) : null,
-      endDate: quietType === 'DATE_RANGE' ? parseDateLocal(val(fd, 'endDate'), timezone) : null,
-      dayOfWeek: quietType === 'WEEKLY_RECURRING' ? boundedInt(val(fd, 'dayOfWeek'), 0, 0, 6) : null,
-      timezone,
-      active: fd.get('active') !== 'off',
-    },
-  })
-  await audit(context.user, 'CREATE', 'COLLECTION_QUIET_DAY', quietDay.id, `Created quiet day ${quietDay.name}`, { quietType }, context.collection.id)
-  revalidatePath(collectionPath(context.collection.slug, '/collection-settings'))
-  redirect(collectionPath(context.collection.slug, '/collection-settings?quiet=created'))
+  const draft = { kind: 'create', name: val(fd, 'name').slice(0, 100) || 'Quiet day', description: val(fd, 'description').slice(0, 2000), active: fd.get('active') !== 'off', quietType: val(fd, 'quietType'), date: val(fd, 'date'), startDate: val(fd, 'startDate'), endDate: val(fd, 'endDate'), dayOfWeek: Number(val(fd, 'dayOfWeek')) }
+  redirect(collectionPath(context.collection.slug, `/care/quiet-day-review?draft=${encodeURIComponent(JSON.stringify(draft))}`))
 }
 
 export async function deleteQuietDay(fd: FormData) {
   const context = await requireCollectionManager(val(fd, 'collectionSlug'))
-  const id = val(fd, 'quietDayId')
-  const quietDay = await prisma.collectionQuietDay.findFirstOrThrow({ where: { id, collectionId: context.collection.id } })
-  await prisma.collectionQuietDay.delete({ where: { id } })
-  await audit(context.user, 'DELETE', 'COLLECTION_QUIET_DAY', id, `Deleted quiet day ${quietDay.name}`, undefined, context.collection.id)
-  revalidatePath(collectionPath(context.collection.slug, '/collection-settings'))
-  redirect(collectionPath(context.collection.slug, '/collection-settings?quiet=deleted'))
+  const draft = { kind: 'remove', id: val(fd, 'quietDayId') }
+  redirect(collectionPath(context.collection.slug, `/care/quiet-day-review?draft=${encodeURIComponent(JSON.stringify(draft))}`))
 }
 
 export async function updateQuietDayShiftRule(fd: FormData) {
   const context = await requireCollectionManager(val(fd, 'collectionSlug'))
   const careType = schedulableCareTypes.includes(val(fd, 'careType') as any) ? val(fd, 'careType') : 'REMINDER'
   const direction = ['EARLIER', 'LATER', 'SMART'].includes(val(fd, 'defaultShiftDirection')) ? val(fd, 'defaultShiftDirection') : 'LATER'
-  const rule = await prisma.collectionQuietDayShiftRule.upsert({
-    where: { collectionId_careType: { collectionId: context.collection.id, careType } },
-    create: {
-      collectionId: context.collection.id,
-      careType,
-      defaultShiftDirection: direction,
-      maxShiftDaysBefore: boundedInt(val(fd, 'maxShiftDaysBefore'), 2, 0, 14),
-      maxShiftDaysAfter: boundedInt(val(fd, 'maxShiftDaysAfter'), 2, 0, 14),
-      active: fd.get('active') !== 'off',
-    },
-    update: {
-      defaultShiftDirection: direction,
-      maxShiftDaysBefore: boundedInt(val(fd, 'maxShiftDaysBefore'), 2, 0, 14),
-      maxShiftDaysAfter: boundedInt(val(fd, 'maxShiftDaysAfter'), 2, 0, 14),
-      active: fd.get('active') !== 'off',
-    },
-  })
-  await audit(context.user, 'UPDATE', 'COLLECTION_QUIET_DAY_SHIFT_RULE', rule.id, `Updated quiet-day shift rule for ${careType}`, undefined, context.collection.id)
-  revalidatePath(collectionPath(context.collection.slug, '/collection-settings'))
-  redirect(collectionPath(context.collection.slug, '/collection-settings?quiet=rule-updated'))
+  const draft = { kind: 'rule', careType, defaultShiftDirection: direction, maxShiftDaysBefore: boundedInt(val(fd, 'maxShiftDaysBefore'), 2, 0, 14), maxShiftDaysAfter: boundedInt(val(fd, 'maxShiftDaysAfter'), 2, 0, 14), active: fd.get('active') !== 'off' }
+  redirect(collectionPath(context.collection.slug, `/care/quiet-day-review?draft=${encodeURIComponent(JSON.stringify(draft))}`))
 }
 
 export async function applyCareScheduleSync(fd: FormData) {
@@ -122,12 +81,6 @@ export async function applyCareScheduleSync(fd: FormData) {
     where: { collectionId: context.collection.id, plantInstanceId: { in: plants.map((plant) => plant.id) }, taskType: { in: careTypes } },
   })
   const adjustmentByKey = new Map(existingAdjustments.map((adjustment) => [`${adjustment.plantInstanceId}:${adjustment.taskType}`, adjustment]))
-  const [quietDays, quietRules] = await Promise.all([
-    prisma.collectionQuietDay.findMany({ where: { collectionId: context.collection.id, active: true } }),
-    prisma.collectionQuietDayShiftRule.findMany({ where: { collectionId: context.collection.id, active: true } }),
-  ])
-  const quietRuleByType = new Map(quietRules.map((rule) => [rule.careType, rule]))
-
   const batch = await prisma.$transaction(async (tx) => {
     const createdBatch = await tx.careScheduleSyncBatch.create({
       data: {
@@ -161,14 +114,7 @@ export async function applyCareScheduleSync(fd: FormData) {
           })
           continue
         }
-        const quietShift = resolveQuietDayShift({
-          dueAt: targetDueAt,
-          careType,
-          quietDays,
-          rule: quietRuleByType.get(careType),
-          timezone,
-        })
-        const adjustedDueAt = quietShift?.adjustedDueAt || targetDueAt
+        const adjustedDueAt = targetDueAt
         await tx.plantCareAdjustment.upsert({
           where: { collectionId_plantInstanceId_taskType: { collectionId: context.collection.id, plantInstanceId: plant.id, taskType: careType } },
           create: {
@@ -202,21 +148,7 @@ export async function applyCareScheduleSync(fd: FormData) {
             action: existing ? 'UPDATED' : 'CREATED',
           },
         })
-        if (quietShift && quietShift.adjustedDueAt.getTime() !== targetDueAt.getTime()) {
-          await tx.careQuietDayAdjustment.create({
-            data: {
-              collectionId: context.collection.id,
-              plantInstanceId: plant.id,
-              quietDayId: quietShift.quietDay.id || null,
-              careType,
-              originalDueAt: targetDueAt,
-              adjustedDueAt,
-              shiftDirection: quietShift.shiftDirection,
-              ruleUsed: quietShift.ruleUsed,
-              reason: quietShift.reason,
-            },
-          })
-        }
+
       }
     }
     return createdBatch

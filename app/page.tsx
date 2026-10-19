@@ -7,6 +7,7 @@ import { Button, Card, Select } from '@/components/ui'
 import { researchReviewQueues, summarizeReviewQueues, type OpenReviewItem } from '@/lib/dashboard-reviews'
 import { OpenReviewItems } from '@/components/OpenReviewItems'
 import { getOrCreateTodaysCollectionBriefing } from '@/lib/briefing'
+import { CareForecast } from '@/components/CareForecast'
 import { careQueueSummary, getCareQueue } from '@/lib/care-queue'
 import { canCreateInCollection, canEditInCollection, canManageCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { recentCollectionUpdates } from '@/lib/collection-updates'
@@ -670,6 +671,7 @@ export default async function Dashboard({
 
       {(activeTreatmentPlans > 0 || overdueTreatmentSteps > 0 || adverseTreatmentApplications > 0) && <Card><div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="font-serif text-xl font-semibold">Treatment attention</h3><p className="mt-1 text-sm text-stone-600">{activeTreatmentPlans} active plans · {overdueTreatmentSteps} overdue steps · {adverseTreatmentApplications} adverse reactions in the last 30 days</p></div><Link className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm font-semibold" href={collectionPath(collection.slug, '/treatments/reports')}>Open treatment reports</Link></div></Card>}
 
+      <CareForecast collectionSlug={collection.slug} />
       <OpenReviewItems items={reviewItems} />
 
       {briefing && (

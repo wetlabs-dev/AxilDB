@@ -1,6 +1,8 @@
 
 'use client'
 import Link from 'next/link'
+import { CareForecast } from '@/components/CareForecast'
+import { formatDate } from '@/lib/time'
 import { CheckCircle2 } from 'lucide-react'
 import { startWorkflowRun } from '@/app/workflow-actions'
 import { CareQueueLocationBoard } from '@/components/CareQueueLocationBoard'
@@ -57,8 +59,8 @@ export function CareQueueView({ collectionSlug, canAct, timezone, filter, search
     <div className="space-y-5" data-care-queue-root>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-3xl font-bold">Care Queue</h2>
-          <p className="text-sm text-stone-600">What needs attention today, and why.</p>
+          <h2 className="text-3xl font-bold">Today&apos;s Care</h2>
+          <p className="text-sm text-stone-600">{formatDate(new Date(), timezone)} · Calendar-day care, available from local midnight.</p>
         </div>
         <div className="flex flex-wrap items-end justify-end gap-2">
           <Link
@@ -90,6 +92,7 @@ export function CareQueueView({ collectionSlug, canAct, timezone, filter, search
         </div>
       </div>
 
+      <CareForecast collectionSlug={collectionSlug} />
       <div className="flex gap-2 overflow-x-auto pb-1">
         {filters.map(([value, label]) => (
           <Link

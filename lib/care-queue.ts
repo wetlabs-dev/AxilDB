@@ -2,11 +2,13 @@ import { conditionPriority, conditionFollowUpDays } from '@/lib/care-queue-view'
 import { cadenceActivities, cadenceDueAt, cadenceLabel, resolveCadence } from '@/lib/care-cadences'
 import type { Prisma, PrismaClient } from '@prisma/client'
 import type { PlantImageFrame } from '@/components/PlantImage'
-import { resolveQuietDayShift } from '@/lib/care-scheduling'
+import { resolveCalendarPlan } from '@/lib/care-calendar-store'
+import type { QuietDate, ShiftRule } from '@/lib/care-calendar'
+import { normalizeTimeZone } from '@/lib/time'
 import { collectionPath } from '@/lib/collections'
 import { effectiveFertilizerAssignment, fertilizerRecipeSummary } from '@/lib/fertilizers'
 import { nextOccurrence, reminderCategoryLabel } from '@/lib/reminders'
-import { addCalendarDays, calendarDayIndexInTimeZone, endOfDayInTimeZone, startOfDayInTimeZone } from '@/lib/time'
+import { addCalendarDays, calendarDayIndexInTimeZone, endOfDayInTimeZone, startOfDayInTimeZone, dateInputValue } from '@/lib/time'
 import { plantName } from '@/lib/utils'
 import { defaultLifecycleDateForType, isTransitionalPlantInstanceType, plantInstanceTypeLabel } from '@/lib/plant-instance-types'
 import { locationPathWithCodes, type LocationNode } from '@/lib/locations'
@@ -40,6 +42,13 @@ export type CareTaskType = (typeof careTaskTypes)[number]
 export type CareQueueFilter = 'today' | 'overdue' | 'water' | 'fertilize' | 'repot' | 'treatment' | 'propagation' | 'health' | 'pest' | 'bloom' | 'custom' | 'completed'
 
 export type CareQueueItem = {
+  notBeforeDate?: string
+  scheduleAnchor?: string
+  cadenceDays?: number
+  recurrenceRule?: string | null
+  recurrenceCadence?: import('@/lib/care-cadences').Cadence
+  manualSchedule?: boolean
+  projected?: boolean
   key: string
   taskType: CareTaskType
   source: 'derived' | 'reminder' | 'treatment-plan'
@@ -222,7 +231,6 @@ function imageLookup(photos: Array<{ entityId: string } & PlantImageFrame>) {
 function isSuppressed(adjustment: any, now: Date) {
   if (!adjustment) return false
   if (adjustment.disabled) return true
-  if (adjustment.snoozedUntil && adjustment.snoozedUntil > now) return true
   return false
 }
 
@@ -235,6 +243,10 @@ export async function getCareQueue(
     now = new Date(),
     includeCompleted = false,
     timezone,
+    quietDayOverride,
+    quietRuleOverride,
+    persistQuietPlan = true,
+    reviseQuietPlan = false,
   }: {
     collectionId: string
     collectionSlug: string
@@ -242,8 +254,13 @@ export async function getCareQueue(
     now?: Date
     includeCompleted?: boolean
     timezone?: string
+    quietDayOverride?: QuietDate[]
+    quietRuleOverride?: ShiftRule[]
+    persistQuietPlan?: boolean
+    reviseQuietPlan?: boolean
   },
 ) {
+  timezone = normalizeTimeZone(timezone)
   const instances = await prisma.plantInstance.findMany({
     where: { collectionId, status: 'ACTIVE' },
     include: {
@@ -344,26 +361,7 @@ export async function getCareQueue(
   for (const adjustment of adjustments) {
     adjustmentMap.set(`${adjustment.plantInstanceId}:${adjustment.taskType}`, adjustment)
   }
-  const quietRuleMap = new Map(quietRules.map((rule) => [rule.careType, rule]))
-
-  const quietAdjusted = (dueAt: Date, careType: string, plantInstanceId?: string) => {
-    const shift = resolveQuietDayShift({
-      dueAt,
-      careType,
-      quietDays,
-      rule: quietRuleMap.get(careType),
-      timezone: timezone || undefined || '',
-      now,
-    })
-    if (!shift || shift.adjustedDueAt.getTime() === dueAt.getTime()) return { dueAt }
-    return {
-      dueAt: shift.adjustedDueAt,
-      originalDueAt: dueAt,
-      quietDayName: shift.quietDay.name,
-      quietDayReason: shift.reason,
-      quietDayShiftDirection: shift.shiftDirection,
-    }
-  }
+  const quietAdjusted = (dueAt: Date, _careType: string, _plantInstanceId?: string) => ({ dueAt: dayStart(dueAt, timezone), originalDueAt: null as Date | null, quietDayName: null as string | null, quietDayReason: null as string | null, quietDayShiftDirection: null as string | null })
 
   const items: CareQueueItem[] = []
 
@@ -372,10 +370,12 @@ export async function getCareQueue(
     if (isSuppressed(adjustment, now)) return
     const rawDueAt = item.plantInstanceId && !item.conditionId ? adjustment?.nextDueAt || item.dueAt : item.dueAt
     const adjusted = quietAdjusted(dayStart(rawDueAt, timezone), item.taskType, item.plantInstanceId)
-    const dueAt = adjusted.dueAt
+    const dueAt = adjustment?.snoozedUntil && dayStart(adjustment.snoozedUntil, timezone) > adjusted.dueAt ? dayStart(adjustment.snoozedUntil, timezone) : adjusted.dueAt
     const overdueDays = Math.max(0, daysBetween(now, dueAt, timezone))
     items.push({
       ...item,
+      scheduleAnchor: [item.scheduleAnchor || item.dueAt.toISOString(), adjustment?.nextDueAt?.toISOString(), adjustment?.snoozedUntil?.toISOString()].join(':'),
+      manualSchedule: item.manualSchedule || Boolean(adjustment?.nextDueAt || adjustment?.snoozedUntil),
       source: 'derived',
       dueAt,
       href: taskPath(collectionSlug, item.plantInstanceId, item.bloomEventId),
@@ -411,6 +411,10 @@ export async function getCareQueue(
       pushDerived({
         key: `${task}:${instance.id}`, taskType: task, title: `${label}: ${instance.plantId}`,
         reason: `${cadenceLabel(cadence)}${latest ? '; based on last completed care.' : '; initial due date set manually.'}`,
+        scheduleAnchor: `${latest?.toISOString() || 'initial'}:${JSON.stringify(cadence)}`,
+        notBeforeDate: latest ? dateInputValue(addCalendarDays(dayStart(latest, timezone), 1, timezone), timezone) : undefined,
+        cadenceDays: latest ? Math.max(1, daysBetween(dueAt, latest, timezone)) : undefined,
+        recurrenceCadence: cadence,
         dueAt, basePriority: 55, plantInstanceId: instance.id, plantId: instance.plantId,
         plantName: plantDisplayName, ...itemLocation(instance), image,
         ...(task === 'FERTILIZE' ? {
@@ -432,7 +436,7 @@ export async function getCareQueue(
 
     if ((['PROPAGATION', 'ACQUIRED_PROPAGATION'].includes(instance.instanceType) || isTransitionalPlantInstanceType(instance.instanceType)) && !instance.propagationEstablishedAt && !instance.establishedAt) {
       const start = defaultLifecycleDateForType(instance) as Date
-      const ageDays = Math.max(0, daysBetween(now, start))
+      const ageDays = Math.max(0, daysBetween(now, start, timezone))
       const cadence = ageDays <= 30 ? 3 : ageDays <= 90 ? 7 : null
       if (cadence) {
         const lastCheck = latestPropagationCheck.get(instance.id)?.performedAt || start
@@ -482,6 +486,7 @@ export async function getCareQueue(
         plantName: plantDisplayName,
         ...itemLocation(instance),
         image,
+        manualSchedule: true,
         conditionId: condition.id,
         condition: {
           id: condition.id,
@@ -520,6 +525,7 @@ export async function getCareQueue(
   for (const quarantine of activeQuarantines) {
     const overdueDays = Math.max(0, daysBetween(now, quarantine.targetReleaseDate, timezone))
     pushDerived({
+      manualSchedule: true,
       key: `QUARANTINE_REVIEW:${quarantine.id}`,
       taskType: 'QUARANTINE_REVIEW',
       title: `Review quarantine ${quarantine.plantInstance.plantId}`,
@@ -550,6 +556,7 @@ export async function getCareQueue(
       safety?.reentryIntervalHours ? `${safety.reentryIntervalHours}h re-entry` : null,
     ].filter(Boolean).join(' · ')
     items.push({
+      manualSchedule: true,
       key: `TREATMENT:${step.id}`,
       taskType: 'TREATMENT',
       source: 'treatment-plan',
@@ -585,7 +592,7 @@ export async function getCareQueue(
     if (isSuppressed(reminderAdjustment, now)) continue
     const reminderDueAt = reminderAdjustment?.nextDueAt || reminder.nextSendAt || reminder.dueAt
     const adjusted = quietAdjusted(reminderDueAt, 'REMINDER', reminder.entityType === 'PLANT_INSTANCE' ? reminder.entityId || undefined : undefined)
-    const adjustedDueAt = adjusted.dueAt
+    const adjustedDueAt = reminderAdjustment?.snoozedUntil && dayStart(reminderAdjustment.snoozedUntil, timezone) > adjusted.dueAt ? dayStart(reminderAdjustment.snoozedUntil, timezone) : adjusted.dueAt
     const overdueDays = Math.max(0, daysBetween(now, adjustedDueAt, timezone))
     const reminderInstance = reminder.entityType === 'PLANT_INSTANCE' && reminder.entityId
       ? instanceById.get(reminder.entityId)
@@ -598,6 +605,8 @@ export async function getCareQueue(
         ? collectionPath(collectionSlug, `/reminders`)
         : collectionPath(collectionSlug, '/reminders')
     items.push({
+      manualSchedule: true,
+      recurrenceRule: reminder.rrule,
       key: `REMINDER:${reminder.id}`,
       taskType: 'REMINDER',
       source: 'reminder',
@@ -622,7 +631,8 @@ export async function getCareQueue(
     })
   }
 
-  return items.sort((a, b) => {
+  const plan = await resolveCalendarPlan(prisma, collectionId, [...new Map(items.map(item => [item.key, item])).values()], { quietDays: quietDayOverride || quietDays, rules: quietRuleOverride || quietRules, timezone }, now, persistQuietPlan, reviseQuietPlan)
+  return plan.sort((a, b) => {
     if (Boolean(a.completedAt) !== Boolean(b.completedAt)) return a.completedAt ? 1 : -1
     return b.priority - a.priority || a.dueAt.getTime() - b.dueAt.getTime()
   })

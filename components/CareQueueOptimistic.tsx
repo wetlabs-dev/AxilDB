@@ -6,7 +6,7 @@ import type { CareQueueItem } from '@/lib/care-queue'
 import { careOperationLocks, overlayCareItems, type CareOperation, type CareQueueAction } from '@/lib/care-queue-optimistic'
 import { getCareQueueStore, type CareQueueStore } from '@/lib/care-queue-store'
 import { conditionPriority, conditionFollowUpDays } from '@/lib/care-queue-view'
-import { addCalendarDays, calendarDayIndexInTimeZone, parseDateLocal } from '@/lib/time'
+import { addCalendarDays, calendarDayIndexInTimeZone, parseDateLocal, startOfDayInTimeZone } from '@/lib/time'
 
 type QueueContext = { store: CareQueueStore; items: CareQueueItem[]; authoritativeItems: CareQueueItem[]; operations: CareOperation[]; timezone?: string | null }
 const Context = createContext<QueueContext | null>(null)
@@ -31,6 +31,16 @@ export function CareQueueProvider({ collectionSlug, userId, initialItems, snapsh
   useEffect(() => {
     if (state.reconciliation > 0) router.refresh()
   }, [state.reconciliation, router])
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>
+    let stopped = false
+    const rollover = () => {
+      const midnight = addCalendarDays(startOfDayInTimeZone(new Date(), timezone || undefined), 1, timezone || undefined)
+      timer = setTimeout(async () => { await store.reconcile(); if (!stopped) rollover() }, Math.max(1000, midnight.getTime() - Date.now() + 100))
+    }
+    rollover()
+    return () => { stopped = true; clearTimeout(timer) }
+  }, [store, timezone])
   const authoritativeItems = state.items || initialItems
   const items = overlayCareItems(authoritativeItems, state.operations)
   return <Context.Provider value={{ store, items, authoritativeItems, operations: state.operations, timezone }}>

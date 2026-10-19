@@ -343,6 +343,9 @@ export const manualSections: ManualSection[] = [
     purpose: 'The Care Queue answers “what needs attention today, and why?” by combining husbandry guidance, watering history, propagation stage, open conditions, bloom follow-ups, pest checks, and manual reminders.',
     howTo: [
       'Open Care Queue from the sidebar to review today’s tasks, overdue work, watering, fertilizing, repotting, treatment plan steps, propagation checks, health issues, pest checks, bloom follow-ups, custom reminders, and completed care.',
+      'Care due on a local calendar day is available from midnight in the configured timezone. Overdue work remains visible; explicit dates and snoozes are respected. Exact care-history timestamps are unchanged.',
+      'The Care forecast on the dashboard and Care Queue shows today plus six days, care-type counts, overdue carryover and Quiet Days. Select a date to inspect projected work. Counts assume care is completed on time and update when actual care changes.',
+      'Collection managers can set, remove or move Quiet Days from the forecast. Review the earlier/later workload and required exceptions before confirming. A Quiet Day tomorrow warns when watering assessments need attention today. Incomplete advanced care remains outstanding; check substrate moisture before watering.',
       'Use the dynamic Location chips to focus on one physical area. In All locations, work is grouped into collapsible Location sections with due, overdue, and care-type counts.',
       'Choose Parent grouped for room-by-room rounds, Flat paths for one section per exact Location, or Full hierarchy for an indented tree view. Location sections can open bulk care or start a workflow already scoped to that Location and its children.',
       'Expand a repot task to compare the current substrate with the top-ranked recommendation, then record the new recipe or explicit non-recipe substrate state when completing it.',

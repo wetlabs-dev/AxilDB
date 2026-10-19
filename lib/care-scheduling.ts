@@ -3,6 +3,7 @@ import { addCalendarDays, calendarDayIndexInTimeZone, dateInputValue, formatDate
 
 export const schedulableCareTypes = [
   'WATER',
+  'PRUNE',
   'FERTILIZE',
   'PEST_CHECK',
   'HEALTH_CHECK',
@@ -27,6 +28,7 @@ type QuietDayLike = {
 
 export const quietDayRuleDefaults: Record<SchedulableCareType, { direction: ShiftDirection; before: number; after: number }> = {
   WATER: { direction: 'SMART', before: 1, after: 1 },
+  PRUNE: { direction: 'SMART', before: 2, after: 2 },
   FERTILIZE: { direction: 'LATER', before: 1, after: 3 },
   PEST_CHECK: { direction: 'SMART', before: 2, after: 1 },
   HEALTH_CHECK: { direction: 'SMART', before: 2, after: 1 },
@@ -38,6 +40,7 @@ export const quietDayRuleDefaults: Record<SchedulableCareType, { direction: Shif
 
 export function careScheduleLabel(type: string) {
   if (type === 'WATER') return 'Watering'
+  if (type === 'PRUNE') return 'Pruning'
   if (type === 'FERTILIZE') return 'Fertilizing'
   if (type === 'PEST_CHECK') return 'Pest check'
   if (type === 'HEALTH_CHECK') return 'Health check'
