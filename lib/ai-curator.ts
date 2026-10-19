@@ -1,3 +1,4 @@
+import { isCuratorHistoryConflict } from '@/lib/ai-curator-job-recovery'
 import { cadenceRecommendationShape, cadenceResearchInstructions } from '@/lib/cadence-recommendations'
 import { cadenceResearchContext, missingActivities, persistCadenceRecommendations, researchDefinitionInclude } from '@/lib/cadence-research'
 import { assertMigrationOutboundReleased } from '@/lib/migration-hold'
@@ -1245,41 +1246,46 @@ async function createSuggestionFromResult(prisma: PrismaClient, settings: any, j
     })
     return null
   }
-  const suggestion = await prisma.aiCuratorSuggestion.create({
-    data: {
-      collectionId: job.collectionId,
-      plantDefinitionId: job.plantDefinitionId,
-      jobId: job.id,
-      phase: job.phase,
-      suggestionType: job.jobType,
-      targetEntityType: job.targetEntityType,
-      targetEntityId: job.targetEntityId,
-      targetField: job.targetField,
-      title: String(modelResult.title || `${job.phase.toLowerCase()} suggestion`).slice(0, 180),
-      currentValue: jsonOrNull(currentValue),
-      suggestedValue: jsonOrNull(suggestedValue),
-      reasoning: String(modelResult.reasoning || 'AI Curator prepared this suggestion for human review.').slice(0, 4000),
-      confidence: boundedConfidence(modelResult.confidence),
-      supportingReferences: jsonOrNull(Array.isArray(modelResult.supportingReferences) ? modelResult.supportingReferences : []),
-      promptVersion: settings.promptVersion,
-      model: settings.model,
-      estimatedCostDollars: job.estimatedCostDollars,
-      actualCostDollars: actualCost == null ? undefined : actualCost.toFixed(6),
-      sourceDataHash: job.dataHash,
-      expiresAt: suggestionExpiry(settings),
-    },
+  return prisma.$transaction(async tx => {
+    const current = await tx.aiCuratorJob.findUnique({where:{id:job.id}})
+    if (!current || current.status !== 'RUNNING' || current.claimedBy !== job.claimedBy) return null
+    const suggestion = await tx.aiCuratorSuggestion.create({
+      data: {
+        collectionId: job.collectionId,
+        plantDefinitionId: job.plantDefinitionId,
+        jobId: job.id,
+        phase: job.phase,
+        suggestionType: job.jobType,
+        targetEntityType: job.targetEntityType,
+        targetEntityId: job.targetEntityId,
+        targetField: job.targetField,
+        title: String(modelResult.title || `${job.phase.toLowerCase()} suggestion`).slice(0, 180),
+        currentValue: jsonOrNull(currentValue),
+        suggestedValue: jsonOrNull(suggestedValue),
+        reasoning: String(modelResult.reasoning || 'AI Curator prepared this suggestion for human review.').slice(0, 4000),
+        confidence: boundedConfidence(modelResult.confidence),
+        supportingReferences: jsonOrNull(Array.isArray(modelResult.supportingReferences) ? modelResult.supportingReferences : []),
+        promptVersion: settings.promptVersion,
+        model: settings.model,
+        estimatedCostDollars: job.estimatedCostDollars,
+        actualCostDollars: actualCost == null ? undefined : actualCost.toFixed(6),
+        sourceDataHash: job.dataHash,
+        expiresAt: suggestionExpiry(settings),
+      },
+    })
+    const completed = await tx.aiCuratorJob.updateMany({
+      where: { id: job.id, status: 'RUNNING', claimedBy: job.claimedBy },
+      data: {
+        status: 'COMPLETED',
+        completedAt: new Date(),
+        actualCostDollars: actualCost == null ? undefined : actualCost.toFixed(6),
+        confidence: suggestion.confidence,
+        resultSummary: `Created suggestion: ${suggestion.title}`,
+      },
+    })
+    if (completed.count !== 1) throw new Error('Curator job ownership changed before completion.')
+    return suggestion
   })
-  await prisma.aiCuratorJob.update({
-    where: { id: job.id },
-    data: {
-      status: 'COMPLETED',
-      completedAt: new Date(),
-      actualCostDollars: actualCost == null ? undefined : actualCost.toFixed(6),
-      confidence: suggestion.confidence,
-      resultSummary: `Created suggestion: ${suggestion.title}`,
-    },
-  })
-  return suggestion
 }
 
 async function claimNextJob(prisma: PrismaClient, workerId: string) {
@@ -1357,7 +1363,8 @@ async function processJob(prisma: PrismaClient, settings: any, job: any) {
     const suggestion = await createSuggestionFromResult(prisma, settings, job, currentValue, result, actualCost)
     return { status: suggestion ? 'COMPLETED' as const : 'SKIPPED' as const, cost: actualCost || dollars(job.estimatedCostDollars) }
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
+    const rawMessage = error instanceof Error ? error.message : String(error)
+    const message = isCuratorHistoryConflict(rawMessage) ? 'Unique constraint failed on AiCuratorJob_active_scope_key; terminal job history blocked completion.' : rawMessage
     const exhausted = job.attempts >= job.maxAttempts
     await prisma.aiCuratorJob.updateMany({
       where: { id: job.id, status: 'RUNNING', claimedBy: job.claimedBy },

@@ -1,9 +1,11 @@
 'use server'
 
+import { retryCuratorJob, retryDatabaseBlockedCuratorJobs } from '@/lib/ai-curator-job-recovery'
+
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { Prisma } from '@prisma/client'
-import { requireServerAdmin } from '@/lib/auth'
+import { audit, requireServerAdmin } from '@/lib/auth'
 import { collectionPath, requireCollectionAdmin } from '@/lib/collections'
 import { environmentalHusbandryFields, husbandryFieldNames } from '@/lib/husbandry'
 import { prisma } from '@/lib/prisma'
@@ -423,25 +425,27 @@ export async function reviewAiCuratorSuggestion(fd: FormData) {
 }
 
 export async function resolveAiCuratorJob(fd: FormData) {
-  await requireServerAdmin()
+  const user = await requireServerAdmin()
   const jobId = val(fd, 'jobId')
   const action = val(fd, 'action')
   if (action === 'CANCEL') {
     await prisma.aiCuratorJob.update({ where: { id: jobId }, data: { status: 'CANCELLED', completedAt: new Date(), resultSummary: 'Cancelled by server admin.' } })
   } else if (action === 'RETRY') {
-    await prisma.aiCuratorJob.update({
-      where: { id: jobId },
-      data: {
-        status: 'QUEUED',
-        blockingReason: null,
-        humanActionRequired: null,
-        retryConditions: null,
-        nextRetryAt: null,
-      },
-    })
+    const result = await retryCuratorJob(prisma, jobId)
+    await audit(user, 'UPDATE', 'AI_CURATOR_JOB', jobId, 'Retried Curator job', {result})
+    revalidatePath('/', 'layout')
+    redirect(`/server/ai-curator?jobRetry=${result}`)
   }
   revalidatePath('/server/ai-curator')
   redirect('/server/ai-curator')
+}
+
+export async function retryDatabaseBlockedJobs() {
+  const user = await requireServerAdmin()
+  const results = await retryDatabaseBlockedCuratorJobs(prisma)
+  await audit(user, 'UPDATE', 'AI_CURATOR', null, 'Retried database-blocked Curator jobs', results)
+  revalidatePath('/', 'layout')
+  redirect(`/server/ai-curator?recovered=${results.RECOVERED || 0}&requeued=${results.QUEUED || 0}&retryFailed=${results.FAILED || 0}&retrySkipped=${(results.ACTIVE_WORK_EXISTS || 0) + (results.WORKER_BUSY || 0)}`)
 }
 
 export async function clearAiCuratorRecentErrors() {

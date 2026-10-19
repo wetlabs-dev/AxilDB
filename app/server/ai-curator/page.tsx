@@ -1,4 +1,5 @@
-import { clearAiCuratorRecentErrors, updateAiCuratorSettings, reviewAiCuratorSuggestion, resolveAiCuratorJob } from '@/app/ai-curator-actions'
+import { curatorFailureDescription, isCuratorHistoryConflict } from '@/lib/ai-curator-job-recovery'
+import { retryDatabaseBlockedJobs, clearAiCuratorRecentErrors, updateAiCuratorSettings, reviewAiCuratorSuggestion, resolveAiCuratorJob } from '@/app/ai-curator-actions'
 import { Button, Card, Field, LinkButton, Select, TextArea } from '@/components/ui'
 import { requireServerAdmin } from '@/lib/auth'
 import { aiCuratorChangedFields, aiCuratorCurrentFocusValue, aiCuratorDashboard, aiCuratorReviewQueue, canApplyCuratorSuggestion } from '@/lib/ai-curator'
@@ -447,7 +448,7 @@ function ReviewSuggestionCard({ suggestion }: { suggestion: any }) {
 export default async function AiCuratorPage({
   searchParams,
 }: {
-  searchParams: Promise<{ settings?: string; review?: string; errors?: string }>
+  searchParams: Promise<{ settings?: string; review?: string; errors?: string; recovered?: string; requeued?: string; retryFailed?: string; retrySkipped?: string; jobRetry?: string }>
 }) {
   const admin = await requireServerAdmin()
   const sp = await searchParams
@@ -485,6 +486,8 @@ export default async function AiCuratorPage({
 
       {sp.settings === 'updated' && <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900">AI Curator settings updated.</p>}
       {sp.review && <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900">Review action recorded.</p>}
+      {sp.jobRetry && <p role="status" className="rounded-lg border p-3 text-sm">{({QUEUED:'Job requeued with a fresh bounded retry allowance.',RECOVERED:'The existing result was recovered without another AI request.',WORKER_BUSY:'The worker is active. Retry once it finishes.',ACTIVE_WORK_EXISTS:'Another job for this work is active. Review that job first.',UNCHANGED:'This job is no longer eligible for retry.'} as Record<string,string>)[sp.jobRetry] || 'Review the current job status.'}</p>}
+      {sp.requeued !== undefined && <p role="status" className="rounded-lg border p-3 text-sm">Database-blocked jobs: {Number(sp.recovered) || 0} existing results recovered, {Number(sp.requeued) || 0} queued, {Number(sp.retryFailed) || 0} failed, {Number(sp.retrySkipped) || 0} left unchanged because work is active; retry after the worker finishes. Queued work follows the normal AI budget.</p>}
       {sp.errors === 'cleared' && <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900">Recent AI Curator errors cleared.</p>}
 
       <Card>
@@ -575,15 +578,19 @@ export default async function AiCuratorPage({
             </div>
             <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-900">{waitingJobBadge}</span>
           </div>
+          <form action={retryDatabaseBlockedJobs} className="mt-3 space-y-2">
+            <Button>Retry database-blocked jobs</Button>
+            <p className="text-xs text-stone-600">After installing the repair, recover existing results or requeue only jobs blocked by the legacy uniqueness error. Other human-review jobs stay unchanged. Queued work uses the normal AI budget.</p>
+          </form>
           <div className="mt-4 grid gap-3">
             {dashboard.waitingJobs.map((job) => (
               <div key={job.id} className="rounded-lg border border-amber-200 bg-amber-50/55 p-3">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="font-semibold">{job.plantDefinition ? plantName(job.plantDefinition) : job.collection.name}</p>
-                    <p className="text-sm text-amber-950">{job.blockingReason}</p>
-                    {job.humanActionRequired && <p className="mt-1 text-sm text-stone-700">Suggested action: {job.humanActionRequired}</p>}
-                    {job.retryConditions && <p className="mt-1 text-xs text-stone-600">Retry when: {job.retryConditions}</p>}
+                    <p className="text-sm text-amber-950">{curatorFailureDescription(job.blockingReason)}</p>
+                    {!isCuratorHistoryConflict(job.blockingReason) && job.humanActionRequired && <p className="mt-1 text-sm text-stone-700">Suggested action: {job.humanActionRequired}</p>}
+                    {!isCuratorHistoryConflict(job.blockingReason) && job.retryConditions && <p className="mt-1 text-xs text-stone-600">Retry when: {job.retryConditions}</p>}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {job.plantDefinitionId && (
@@ -663,7 +670,7 @@ export default async function AiCuratorPage({
               {dashboard.recentErrors.map((error, index) => (
                 <div key={`${error.updatedAt.toISOString()}-${index}`} className="rounded-lg border border-amber-200 bg-amber-50/55 p-2 text-sm text-amber-950">
                   <p className="text-xs font-semibold uppercase tracking-[0.12em] text-amber-800">{formatDateTime(error.updatedAt, timezone)}</p>
-                  <p className="mt-1">{error.blockingReason}</p>
+                  <p className="mt-1">{curatorFailureDescription(error.blockingReason)}</p>
                 </div>
               ))}
             </div>
