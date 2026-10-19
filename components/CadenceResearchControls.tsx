@@ -21,7 +21,11 @@ export function CadenceResearchRefresh({ active }: { active: boolean }) {
   }, [active, pending, router])
   return null
 }
-export function CadenceResearchControls() {
+export function CadenceResearchControls({
+  collectionId,
+}: {
+  collectionId?: string
+}) {
   const [busy, start] = useTransition()
   const [message, setMessage] = useState('')
   const [preview, setPreview] = useState<Awaited<
@@ -65,7 +69,7 @@ export function CadenceResearchControls() {
           className="rounded-md bg-[#2f6b45] px-4 py-2 font-semibold text-white disabled:opacity-50"
           onClick={() =>
             run(async () => {
-              setPreview(await cadenceApprovalPreview())
+              setPreview(await cadenceApprovalPreview(collectionId))
             })
           }
         >

@@ -382,6 +382,7 @@ export async function reviewAiCuratorSuggestion(fd: FormData) {
       data: { status: 'REJECTED', reviewedAt: new Date(), reviewedByUserId: user.id, reviewNote },
     })
     revalidatePath('/server/ai-curator')
+    revalidatePath('/', 'layout')
     redirect('/server/ai-curator?review=rejected')
   }
 
@@ -416,6 +417,7 @@ export async function reviewAiCuratorSuggestion(fd: FormData) {
     })
   }
   revalidatePath('/server/ai-curator')
+  revalidatePath('/', 'layout')
   if (suggestion.plantDefinitionId) revalidatePath(collectionPath(suggestion.collection.slug, `/plants/${suggestion.plantDefinitionId}/edit`))
   redirect(`/server/ai-curator?review=${applied ? 'accepted' : 'accepted-manual'}`)
 }

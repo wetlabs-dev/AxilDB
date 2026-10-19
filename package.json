@@ -72,7 +72,9 @@
     "check:care-cadences:redesign": "node scripts/check-care-cadences-redesign.mjs",
     "check:memory:resources": "tsx scripts/check-memory-resources.ts",
     "check:memory:browser": "node scripts/check-memory-browser.mjs",
-    "check:request-origin": "tsx scripts/check-request-origin.ts"
+    "check:request-origin": "tsx scripts/check-request-origin.ts",
+    "check:dashboard-reviews": "tsx scripts/check-dashboard-reviews.ts",
+    "check:dashboard-reviews:ui": "tsx scripts/check-dashboard-reviews-ui.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

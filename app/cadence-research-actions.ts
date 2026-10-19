@@ -72,9 +72,16 @@ export async function reviewCadence(fd: FormData) {
   revalidatePath('/', 'layout')
   return { result }
 }
-export async function cadenceApprovalPreview() {
+export async function cadenceApprovalPreview(collectionId?: string) {
   await requireServerAdmin()
-  const rows = await eligibleCadenceProposals(prisma)
+  if (
+    collectionId !== undefined &&
+    (typeof collectionId !== 'string' ||
+      !collectionId ||
+      collectionId.length > 200)
+  )
+    throw new Error('Invalid collection.')
+  const rows = await eligibleCadenceProposals(prisma, collectionId)
   return {
     ids: rows.map((p) => p.id),
     count: rows.length,

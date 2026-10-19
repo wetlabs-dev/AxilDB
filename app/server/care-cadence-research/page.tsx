@@ -1,10 +1,11 @@
+import { isActionableCadenceProposal } from '@/lib/cadence-review'
+import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { requireServerAdmin } from '@/lib/auth'
 import { cadenceActivities } from '@/lib/care-cadences'
 import {
   cadenceActivityState,
-  definitionHasRecipe,
   missingActivities,
   researchDefinitionInclude,
 } from '@/lib/cadence-research'
@@ -27,11 +28,23 @@ export default async function CadenceResearchPage({
 }) {
   await requireServerAdmin()
   const q = await searchParams
+  const selectedCollection = q.collection
+    ? await prisma.collection.findUnique({
+        where: { slug: q.collection },
+        select: { id: true, name: true },
+      })
+    : null
+  if (q.collection && !selectedCollection) notFound()
+  const collectionQuery = q.collection
+    ? `&collection=${encodeURIComponent(q.collection)}`
+    : ''
   const tab = ['review', 'history'].includes(q.tab || '') ? q.tab : 'research'
   const [definitions, jobs] = await Promise.all([
     prisma.plantDefinition.findMany({
+      where: selectedCollection ? { collectionId: selectedCollection.id } : {},
       include: {
         ...researchDefinitionInclude,
+        cadenceProposals: { include: { job: { select: { status: true } } } },
         collection: {
           select: {
             slug: true,
@@ -44,7 +57,10 @@ export default async function CadenceResearchPage({
       orderBy: [{ genus: 'asc' }, { species: 'asc' }],
     }),
     prisma.aiCuratorJob.findMany({
-      where: { targetField: 'careCadences' },
+      where: {
+        targetField: 'careCadences',
+        ...(selectedCollection ? { collectionId: selectedCollection.id } : {}),
+      },
       include: { _count: { select: { cadenceProposals: true } } },
       orderBy: { createdAt: 'desc' },
     }),
@@ -73,9 +89,7 @@ export default async function CadenceResearchPage({
     ],
     [
       'Recommendations awaiting review',
-      all.filter(
-        (p) => p.status === 'PENDING' && p.applicability === 'RECOMMENDED'
-      ).length,
+      all.filter((p) => isActionableCadenceProposal(p, p.definition)).length,
     ],
     ['Previously approved', all.filter((p) => p.status === 'APPROVED').length],
     [
@@ -95,7 +109,9 @@ export default async function CadenceResearchPage({
   ]
   const rows = all.filter(
     (p) =>
-      (tab === 'history' ? p.status !== 'PENDING' : p.status === 'PENDING') &&
+      (tab === 'history'
+        ? !isActionableCadenceProposal(p, p.definition)
+        : isActionableCadenceProposal(p, p.definition)) &&
       (!q.definition || p.plantDefinitionId === q.definition) &&
       (!q.activity || p.activity === q.activity) &&
       (!q.confidence || p.confidence === q.confidence) &&
@@ -113,10 +129,7 @@ export default async function CadenceResearchPage({
           : plantName(a.definition).localeCompare(plantName(b.definition))
   )
   function proposal(p: (typeof rows)[number]) {
-    const actionable =
-      p.applicability === 'RECOMMENDED' &&
-      !p.definition.careCadences.some((c) => c.activity === p.activity) &&
-      (p.activity !== 'FERTILIZING' || definitionHasRecipe(p.definition))
+    const actionable = isActionableCadenceProposal(p, p.definition)
     return (
       <div key={p.id} className="space-y-2 rounded-lg border p-3">
         <p className="font-semibold">
@@ -167,8 +180,8 @@ export default async function CadenceResearchPage({
             />
             {p.applicability === 'RECOMMENDED' && !actionable && (
               <p>
-                No longer eligible: cadence configured or fertilizer recipe
-                unavailable.
+                No longer actionable: check research status, the proposed
+                interval, existing cadences and the assigned fertilizer recipe.
               </p>
             )}
           </>
@@ -190,13 +203,25 @@ export default async function CadenceResearchPage({
         Research creates proposals. Only approval activates definition cadences;
         specimens inherit through their existing care settings.
       </p>
-      <CadenceResearchControls />
+      <CadenceResearchControls collectionId={selectedCollection?.id} />
+      {selectedCollection && (
+        <p>
+          Reviewing {selectedCollection.name}. The collection filter applies to
+          this list and bulk approval.{' '}
+          <Link
+            href={`/server/care-cadence-research?tab=${tab}`}
+            className="underline"
+          >
+            All collections
+          </Link>
+        </p>
+      )}
       <nav className="flex gap-4">
         {['research', 'review', 'history'].map((t) => (
           <Link
             key={t}
             className={t === tab ? 'font-bold underline' : 'underline'}
-            href={`/server/care-cadence-research?tab=${t}`}
+            href={`/server/care-cadence-research?tab=${t}${collectionQuery}`}
           >
             {t[0].toUpperCase() + t.slice(1)}
           </Link>
@@ -296,6 +321,9 @@ export default async function CadenceResearchPage({
         <>
           <form className="flex flex-wrap items-end gap-3">
             <input type="hidden" name="tab" value={tab} />
+            {q.collection && (
+              <input type="hidden" name="collection" value={q.collection} />
+            )}
             <label>
               Definition
               <select name="definition" defaultValue={q.definition || ''}>
@@ -342,6 +370,12 @@ export default async function CadenceResearchPage({
             <button>Filter</button>
           </form>
           <p>{rows.length} recommendations</p>
+          {tab === 'review' && (
+            <p>
+              Only currently actionable intervals are shown. Blocked and
+              resolved proposals remain in History.
+            </p>
+          )}
           {q.view === 'table' ? (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">

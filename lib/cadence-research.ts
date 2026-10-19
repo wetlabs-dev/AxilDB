@@ -1,3 +1,4 @@
+import { actionableCadenceWhere, isActionableCadenceProposal } from '@/lib/cadence-review'
 import { configureDefinitionCadence } from '@/lib/care-cadence-service'
 import { createHash } from 'crypto'
 import { Prisma, type PrismaClient } from '@prisma/client'
@@ -225,16 +226,12 @@ export async function approveCadenceBatch(
   }
   return results
 }
-export async function eligibleCadenceProposals(db: PrismaClient) {
+export async function eligibleCadenceProposals(db: PrismaClient, collectionId?: string) {
   const rows = await db.careCadenceProposal.findMany({
-    where: { status: 'PENDING', applicability: 'RECOMMENDED' },
-    include: { plantDefinition: { include: researchDefinitionInclude } },
+    where: actionableCadenceWhere(collectionId),
+    include: { job: {select: {status: true}}, plantDefinition: { include: researchDefinitionInclude } },
   })
-  return rows.filter(
-    (p) =>
-      !p.plantDefinition.careCadences.some((c) => c.activity === p.activity) &&
-      (p.activity !== 'FERTILIZING' || definitionHasRecipe(p.plantDefinition))
-  )
+  return rows.filter(p => isActionableCadenceProposal(p, p.plantDefinition))
 }
 export async function recoverLegacyCadences(db: PrismaClient) {
   let saved = 0
