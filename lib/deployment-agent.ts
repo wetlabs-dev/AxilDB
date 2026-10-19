@@ -53,6 +53,17 @@ export type UpdateCheck = {
   commits: Array<{ revision: string; subject: string }>
 }
 export type Preflight = {
+  reviewable?: boolean
+  migrationReview?: {
+    digest: string
+    requiresApproval: boolean
+    files: Array<{
+      path: string
+      blob: string
+      sql: string
+      requiresApproval: boolean
+    }>
+  } | null
   ready: boolean
   revision: string
   previous: string
@@ -60,6 +71,7 @@ export type Preflight = {
   checks: Array<{ name: string; ok: boolean; message?: string }>
 }
 export type DeploymentStatus = {
+  capabilities?: string[]
   protocol: number
   application: string
   revision: string | null

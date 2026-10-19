@@ -286,14 +286,14 @@ CREATE TABLE IF NOT EXISTS limits(actor TEXT, operation TEXT, timestamp REAL);
                 )
             ]
 
-    def claim(self, revision, actor, request_id):
+    def claim(self, revision, actor, request_id, migration_approval=None):
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
             row = db.execute(
-                "SELECT id,revision,actor FROM jobs WHERE request_id=?", (request_id,)
+                "SELECT id,revision,actor,data FROM jobs WHERE request_id=?", (request_id,)
             ).fetchone()
             if row:
-                if row["revision"] != revision or row["actor"] != actor:
+                if row["revision"] != revision or row["actor"] != actor or json.loads(row["data"]).get("migrationApproval") != migration_approval:
                     raise ValueError("Request identifier already used")
                 return row["id"]
             row = db.execute(
@@ -303,8 +303,8 @@ CREATE TABLE IF NOT EXISTS limits(actor TEXT, operation TEXT, timestamp REAL);
                 raise ValueError("Another deployment is active or requires recovery")
             id = uuid.uuid4().hex
             db.execute(
-                "INSERT INTO jobs(id,request_id,actor,revision,status,stage,created) VALUES(?,?,?,?,?,?,?)",
-                (id, request_id, actor, revision, "QUEUED", "QUEUED", now()),
+                "INSERT INTO jobs(id,request_id,actor,revision,status,stage,created,data) VALUES(?,?,?,?,?,?,?,?)",
+                (id, request_id, actor, revision, "QUEUED", "QUEUED", now(), json.dumps({"migrationApproval": migration_approval})),
             )
             return id
 
@@ -622,7 +622,7 @@ class Agent:
             self.store.meta("checked", result)
             return result
 
-    def migrations(self, current, target):
+    def migration_review(self, current, target):
         def tree(sha):
             output = self.git("ls-tree", "-r", sha, "--", "prisma/migrations")
             return {
@@ -637,20 +637,25 @@ class Agent:
                 "An existing migration was removed or changed; manual deployment review is required"
             )
         added = sorted(set(new) - set(old))
+        files = []
+        requires_approval = False
+        total = 0
         for file in added:
             if not file.endswith("/migration.sql"):
-                raise RuntimeError(
-                    "Unexpected migration artifact; manual review required"
-                )
+                raise RuntimeError("Unexpected migration artifact; manual review required")
             sql = self.git("show", target + ":" + file)
-            if re.search(
-                r"\b(DROP|TRUNCATE|DELETE)\b|\bALTER\b[^;]*\b(TYPE|RENAME)\b", sql, re.I
-            ):
-                raise RuntimeError(
-                    "Potentially destructive migration requires manual host review: "
-                    + file
-                )
-        return added
+            total += len(sql.encode())
+            self.ensure(total <= 262144, "Migration SQL exceeds web review limit; manual host review required")
+            sensitive = bool(re.search(r"\b(DROP|TRUNCATE|DELETE)\b|\bALTER\b[^;]*\b(TYPE|RENAME)\b", sql, re.I))
+            requires_approval = requires_approval or sensitive
+            files.append({"path": file, "blob": new[file], "sql": self.redact(sql), "requiresApproval": sensitive})
+        digest = hashlib.sha256(json.dumps([current, target, [(f["path"], f["blob"]) for f in files]], separators=(",", ":")).encode()).hexdigest()
+        return {"digest": digest, "requiresApproval": requires_approval, "files": files}
+
+    def migrations(self, current, target, approval=None):
+        review = self.migration_review(current, target)
+        self.ensure(not review["requiresApproval"] or approval == review["digest"], "Potentially destructive SQL requires explicit approval of the exact migration review")
+        return [file["path"] for file in review["files"]]
 
     def health(self, expected=None):
         script = (
@@ -710,7 +715,7 @@ class Agent:
             "checkedAt": now(),
         }
 
-    def preflight(self, target, job_id=None):
+    def preflight(self, target, job_id=None, migration_approval=None):
         if not isinstance(target, str) or not SHA.fullmatch(target):
             raise ValueError("Use an exact 40-character approved revision")
         checks = []
@@ -794,10 +799,13 @@ class Agent:
                 "A newer revision is available",
                 lambda: self.ensure(current != target, "AxilDB is up to date"),
             )
-            context["migrations"] = check(
-                "Migration history and destructive SQL screening",
-                lambda: self.migrations(current, target),
-            )
+            review = check("Migration history and SQL review", lambda: self.migration_review(current, target))
+            if review:
+                context["migrationReview"] = review
+                context["migrations"] = [file["path"] for file in review["files"]]
+                check("Explicit approval for potentially destructive SQL", lambda: self.ensure(
+                    not review["requiresApproval"] or migration_approval == review["digest"],
+                    "Review the exact SQL and explicitly approve its database risks before starting the upgrade"))
             check(
                 "Host Compose topology unchanged",
                 lambda: self.verify_topology(current, target),
@@ -818,6 +826,8 @@ class Agent:
             check("Agent protocol compatibility", lambda: self.protocol_for(target))
         return {
             "ready": all(c["ok"] for c in checks),
+            "reviewable": all(c["ok"] for c in checks if c["name"] != "Explicit approval for potentially destructive SQL"),
+            "migrationReview": context.get("migrationReview"),
             "revision": target,
             "checks": checks,
             "migrations": context.get("migrations") or [],
@@ -1073,7 +1083,7 @@ print(hashlib.sha256(r.stdout+schema).hexdigest())
         self.compose_config(overlay)
         return overlay
 
-    def queue(self, target, actor, request_id):
+    def queue(self, target, actor, request_id, migration_approval=None):
         self.ensure(
             isinstance(target, str) and SHA.fullmatch(target), "Invalid target revision"
         )
@@ -1082,7 +1092,8 @@ print(hashlib.sha256(r.stdout+schema).hexdigest())
             checked and checked.get("revision") == target and checked.get("eligible"),
             "Check and review the approved update first",
         )
-        id = self.store.claim(target, actor, request_id)
+        self.migrations(checked["current"], target, migration_approval)
+        id = self.store.claim(target, actor, request_id, migration_approval)
         return self.public_job(self.store.job(id))
 
     def stage(self, id, name, **data):
@@ -1101,7 +1112,7 @@ print(hashlib.sha256(r.stdout+schema).hexdigest())
         directory.mkdir(mode=0o700, exist_ok=True)
         self.store.update(id, status="RUNNING", stage="PREFLIGHT", started=now())
         try:
-            report, context = self.preflight(job["revision"], id)
+            report, context = self.preflight(job["revision"], id, job["data"].get("migrationApproval"))
             self.stage(id, "PREFLIGHT", preflight=report)
             self.ensure(
                 report["ready"],
@@ -1358,6 +1369,7 @@ print(hashlib.sha256(r.stdout+schema).hexdigest())
                 if k
                 in (
                     "preflight",
+                    "migrationApproval",
                     "backup",
                     "hasMigrations",
                     "migrationStatus",
@@ -1389,6 +1401,7 @@ print(hashlib.sha256(r.stdout+schema).hexdigest())
         return {
             "protocol": PROTOCOL,
             "application": "AxilDB",
+            "capabilities": ["migration-sql-review-v1"],
             "revision": current,
             "branch": self.c.branch,
             "deployedAt": deployed.get("deployedAt") if deployed else None,
@@ -1430,7 +1443,7 @@ print(hashlib.sha256(r.stdout+schema).hexdigest())
             "STATUS": set(),
             "CHECK_UPDATES": set(),
             "PREFLIGHT": {"revision"},
-            "START_UPGRADE": {"revision", "requestId"},
+            "START_UPGRADE": {"revision", "requestId", "migrationApproval"},
             "JOB": {"jobId"},
             "EVENTS": {"jobId", "after"},
             "RECOVERY_OPTIONS": {"jobId"},
@@ -1479,7 +1492,10 @@ print(hashlib.sha256(r.stdout+schema).hexdigest())
                 r"[a-f0-9-]{32,36}", request["requestId"]
             ):
                 raise ValueError("Invalid idempotency identifier")
-            return self.queue(request.get("revision"), actor, request["requestId"])
+            approval = request.get("migrationApproval")
+            if approval is not None and (not isinstance(approval, str) or not re.fullmatch(r"[a-f0-9]{64}", approval)):
+                raise ValueError("Invalid migration approval digest")
+            return self.queue(request.get("revision"), actor, request["requestId"], approval)
         if operation in ("ROLLBACK", "RECONCILE"):
             self.ensure(
                 request.get("confirmed") is True,

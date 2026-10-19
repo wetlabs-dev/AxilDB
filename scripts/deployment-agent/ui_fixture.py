@@ -17,6 +17,8 @@ directory = Path(args.directory)
 directory.mkdir(mode=0o700)
 fixture = Tests("test_private_socket_protocol")
 fixture.setUp()
+if os.environ.get('AXILDB_TEST_MIGRATION_REVIEW') == '1':
+    fixture.add_migration('ALTER TABLE example DROP CONSTRAINT old_rule;')
 key = directory / "agent.key"
 key.write_text("ab" * 32)
 key.chmod(0o600)

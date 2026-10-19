@@ -215,7 +215,7 @@ class Tests(unittest.TestCase):
 
     def add_migration(self, sql="CREATE TABLE example(id integer);"):
         path = self.repo / "prisma/migrations/20261020_example"
-        path.mkdir(parents=True)
+        path.mkdir(parents=True, exist_ok=True)
         (path / "migration.sql").write_text(sql)
         self.git("add", ".")
         self.git("commit", "-m", "schema")
@@ -335,6 +335,75 @@ class Tests(unittest.TestCase):
         report, _ = self.agent.preflight(self.new)
         self.assertFalse(report["ready"])
         self.assertIn("destructive", json.dumps(report).lower())
+
+    def test_exact_migration_review_approval(self):
+        self.add_migration('ALTER TABLE example DROP CONSTRAINT old_rule;')
+        self.agent.check_updates()
+        report, _ = self.agent.preflight(self.new)
+        self.assertFalse(report["ready"])
+        self.assertTrue(report["reviewable"])
+        review = report["migrationReview"]
+        self.assertTrue(review["requiresApproval"])
+        self.assertIn('DROP CONSTRAINT', review["files"][0]["sql"])
+        for approval in (None, '0' * 64):
+            with self.assertRaises(RuntimeError):
+                self.agent.queue(self.new, 'admin', 'd' * 32, approval)
+        self.assertIsNone(self.agent.store.active())
+        id = self.agent.queue(self.new, 'admin', 'd' * 32, review["digest"])["id"]
+        self.assertEqual(self.agent.queue(self.new, 'admin', 'd' * 32, review["digest"])["id"], id)
+        self.assertEqual(self.agent.store.job(id)["data"]["migrationApproval"], review["digest"])
+        self.agent.worker_once()
+        job = self.agent.store.job(id)
+        self.assertEqual(job["status"], 'COMPLETED')
+        self.assertEqual(job["data"]["migrationStatus"], 'COMPLETED')
+        self.assertFalse(self.agent.recovery_options(id)["applicationRollback"])
+
+    def test_review_digest_changes_with_exact_content_and_previous_revision(self):
+        self.add_migration('DROP TABLE example;')
+        first = self.agent.migration_review(self.old, self.new)
+        self.assertNotEqual(first["digest"], self.agent.migration_review(self.new, self.new)["digest"])
+        self.add_migration('DROP TABLE another;')
+        self.assertNotEqual(first["digest"], self.agent.migration_review(self.old, self.new)["digest"])
+        self.agent.check_updates()
+        with self.assertRaises(RuntimeError):
+            self.agent.queue(self.new, 'admin', 'd' * 32, first["digest"])
+
+    def test_review_does_not_bypass_backup_failure(self):
+        self.add_migration('DROP TABLE example;')
+        self.agent.check_updates()
+        review = self.agent.migration_review(self.old, self.new)
+        id = self.agent.queue(self.new, 'admin', 'd' * 32, review["digest"])["id"]
+        self.agent.failure = 'backup'
+        self.agent.worker_once()
+        self.assertEqual(self.agent.store.job(id)["status"], 'FAILED')
+        self.assertEqual(self.agent.running, self.old)
+
+    def test_review_does_not_bypass_critical_preflight(self):
+        self.add_migration('DROP TABLE example;')
+        review = self.agent.migration_review(self.old, self.new)
+        (self.repo / '.env').unlink()
+        report, _ = self.agent.preflight(self.new, migration_approval=review["digest"])
+        self.assertFalse(report["ready"])
+        self.assertFalse(report["reviewable"])
+
+    def test_review_migration_failure_requires_recovery(self):
+        self.add_migration('DROP TABLE example;')
+        self.agent.check_updates()
+        review = self.agent.migration_review(self.old, self.new)
+        id = self.agent.queue(self.new, 'admin', 'd' * 32, review["digest"])["id"]
+        self.agent.failure = 'migration'
+        self.agent.worker_once()
+        job = self.agent.store.job(id)
+        self.assertEqual(job["status"], 'RECOVERY_REQUIRED')
+        self.assertEqual(job["data"]["migrationStatus"], 'MAY_HAVE_PARTIALLY_COMMITTED')
+        self.assertFalse(self.agent.recovery_options(id)["applicationRollback"])
+
+    def test_existing_migration_edits_cannot_be_approved(self):
+        self.add_migration('CREATE TABLE example(id integer);')
+        previous = self.new
+        self.add_migration('DROP TABLE example;')
+        with self.assertRaisesRegex(RuntimeError, 'existing migration'):
+            self.agent.migration_review(previous, self.new)
 
     def test_deployment_failure_and_explicit_compatible_recovery(self):
         id = self.queue()

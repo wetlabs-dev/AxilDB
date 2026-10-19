@@ -265,6 +265,9 @@ CMD ["node", "fixture-server.cjs"]
             (migration / "migration.sql").write_text(
                 'CREATE TABLE "DeploymentFixture" (id TEXT PRIMARY KEY);'
             )
+            if os.environ.get("AXILDB_TEST_MIGRATION_REVIEW") == "1":
+                with (migration / "migration.sql").open("a") as sql:
+                    sql.write('ALTER TABLE "DeploymentFixture" ADD CONSTRAINT fixture_check CHECK(length(id)>0); ALTER TABLE "DeploymentFixture" DROP CONSTRAINT fixture_check; ALTER TABLE "DeploymentFixture" ADD CONSTRAINT fixture_check CHECK(length(id)>0);')
             (repo / "fixture-release.txt").write_text("approved new code")
             git("add", ".")
             git("commit", "-m", "fixture upgrade")
@@ -273,8 +276,13 @@ CMD ["node", "fixture-server.cjs"]
             check = agent.check_updates()
             assert check["revision"] == target
             report, _ = agent.preflight(target)
-            assert report["ready"], report
-            id = agent.queue(target, "fixture-admin", uuid.uuid4().hex)["id"]
+            approval = None
+            if os.environ.get("AXILDB_TEST_MIGRATION_REVIEW") == "1":
+                assert not report["ready"] and report["reviewable"], report
+                approval = report["migrationReview"]["digest"]
+            else:
+                assert report["ready"], report
+            id = agent.queue(target, "fixture-admin", uuid.uuid4().hex, approval)["id"]
             thread = threading.Thread(target=agent.worker_once)
             thread.start()
             # Simulate closing the initiating browser: no client is needed for execution.

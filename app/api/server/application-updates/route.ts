@@ -161,7 +161,12 @@ export async function POST(req: NextRequest) {
     const allowed: Record<string, string[]> = {
       CHECK_UPDATES: [],
       PREFLIGHT: ['revision'],
-      START_UPGRADE: ['revision', 'requestId', 'confirmed'],
+      START_UPGRADE: [
+        'revision',
+        'requestId',
+        'confirmed',
+        'migrationApproval',
+      ],
       ROLLBACK: ['jobId', 'confirmed'],
       RECONCILE: ['jobId', 'confirmed'],
     }
@@ -196,6 +201,12 @@ export async function POST(req: NextRequest) {
       !/^[a-f0-9-]{32,36}$/.test(input.requestId || '')
     )
       return json({ error: 'Invalid request identifier.' }, 400)
+    if (
+      input.migrationApproval !== undefined &&
+      (typeof input.migrationApproval !== 'string' ||
+        !/^[a-f0-9]{64}$/.test(input.migrationApproval))
+    )
+      return json({ error: 'Invalid migration approval.' }, 400)
     const { operation, ...fields } = input
     if (operation === 'START_UPGRADE') delete fields.confirmed
     await audit(
@@ -204,7 +215,11 @@ export async function POST(req: NextRequest) {
       'APPLICATION_DEPLOYMENT',
       fields.jobId || null,
       `Requested ${operation}`,
-      { revision: fields.revision, requestId: fields.requestId }
+      {
+        revision: fields.revision,
+        requestId: fields.requestId,
+        migrationApproval: fields.migrationApproval,
+      }
     )
     const result = await callDeploymentAgent(
       operation as DeploymentOperation,

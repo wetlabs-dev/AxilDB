@@ -10,6 +10,7 @@ const directory = await mkdtemp('/tmp/axildb-update-ui-')
 const fixtureDirectory = path.join(directory, 'agent')
 const port = 3113
 const base = `http://localhost:${port}`
+const migrationReview = process.env.AXILDB_TEST_MIGRATION_REVIEW === '1'
 const fixture = spawn(
   'python3',
   ['scripts/deployment-agent/ui_fixture.py', '--directory', fixtureDirectory],
@@ -195,6 +196,15 @@ try {
   await expect(
     page.getByRole('button', { name: 'Review Upgrade', exact: true })
   ).toBeEnabled()
+  if (migrationReview) {
+    const sql = page
+      .locator('details')
+      .filter({ hasText: 'ALTER TABLE example DROP CONSTRAINT old_rule;' })
+    await sql.locator('summary').click()
+    await expect(sql.locator('pre')).toContainText(
+      'ALTER TABLE example DROP CONSTRAINT old_rule;'
+    )
+  }
   await page
     .getByRole('button', { name: 'Review Upgrade', exact: true })
     .click()
@@ -238,6 +248,33 @@ try {
     }
     return route.continue()
   })
+  if (migrationReview) {
+    const start = page.getByRole('button', {
+      name: 'Start Upgrade',
+      exact: true,
+    })
+    await expect(start).toBeDisabled()
+    await page
+      .getByRole('checkbox', {
+        name: 'I reviewed the migration SQL and authorize these database changes.',
+      })
+      .check()
+    await expect(start).toBeDisabled()
+    const report = await (
+      await context.request.post(endpoint, {
+        headers: { origin: base },
+        data: {
+          operation: 'PREFLIGHT',
+          revision: (await (await context.request.get(endpoint)).json()).checked
+            .revision,
+        },
+      })
+    ).json()
+    await page
+      .getByRole('textbox', { name: /Type target revision/ })
+      .fill(report.revision.slice(0, 12))
+    await expect(start).toBeEnabled()
+  }
   await page.getByRole('button', { name: 'Start Upgrade', exact: true }).click()
   await expect(
     page.getByText(/Connection will resume automatically/)
@@ -275,6 +312,8 @@ try {
   ).json()
   assert.ok(replay.events.every((event) => event.id > last))
   assert.ok(!JSON.stringify(state).includes('ab'.repeat(32)))
+  if (migrationReview)
+    assert.match(startPayload.migrationApproval, /^[a-f0-9]{64}$/)
   await page.setViewportSize({ width: 390, height: 844 })
   await page.screenshot({
     path: '/tmp/axildb-application-updates-mobile.png',

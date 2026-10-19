@@ -64,7 +64,7 @@ Stages are QUEUED → PREFLIGHT → BACKUP → FETCHING → PREPARING → BUILDI
 
 An isolated detached Git worktree is prepared under private state. Build contexts point there; Compose's project directory, bind mounts, environment/secrets and named volumes retain their original host paths. Host Compose configuration remains pinned; a target change to the tracked host Compose files requires manual deployment review. The agent builds revision-tagged app and builder images, preserves previous immutable image IDs and configuration, and never prunes Docker resources. New application code is not copied into the production checkout.
 
-New migrations must preserve every prior migration file. Potentially destructive SQL (DROP, TRUNCATE, DELETE, ALTER TYPE/RENAME) blocks the remote workflow and requires manual host review. This is conservative screening, **not a SQL safety proof or a backward-compatibility guarantee**. All approved new migration files are shown before confirmation. Builds precede migration execution. For a schema transition the app and configured workers stop before the existing migration/bootstrap command runs; the database, proxy and tunnel remain up. A failed migration is treated as potentially partially committed and is never automatically retried or restored. With no new migrations, the migration stage is explicitly NOT_REQUIRED.
+New migrations must preserve every prior migration file. Potentially destructive SQL (DROP, TRUNCATE, DELETE, ALTER TYPE/RENAME) requires explicit migration review in the web interface. Preflight displays the exact new SQL and Git blob identities. Review Upgrade requires a separate risk acknowledgment and typed target revision; Start Upgrade sends the reviewed digest, which binds the previous running revision, target commit and migration blob manifest. The agent validates this digest at queue creation and again during execution and persists it with the administrator/job. SQL without these keywords follows the existing ordinary confirmation path. Edited or deleted historical migration files remain blocked; unexpected migration artifacts and SQL exceeding the 256 KiB web review limit require host review. All other critical preflight checks still block deployment. This is conservative screening, **not a SQL safety proof or a backward-compatibility guarantee**. All approved new migration files are shown before confirmation. Builds precede migration execution. For a schema transition the app and configured workers stop before the existing migration/bootstrap command runs; the database, proxy and tunnel remain up. A failed migration is treated as potentially partially committed and is never automatically retried or restored. With no new migrations, the migration stage is explicitly NOT_REQUIRED.
 
 Deployment uses `compose up -d --no-deps --no-build --pull never` only for the configured app workers; the already built images are deployed. No `down`, volume deletion, database reset or system-wide cleanup is used. Health verification reads the actual running revision and checks `SELECT 1` readiness, all configured workers running, and direct local proxy reachability over a stabilization interval. Success is recorded only after verification.
 
@@ -134,3 +134,28 @@ Older builds compare an internal HTTP request URL with the browser's HTTPS Origi
 `npm ci` reporting `ECONNRESET` means a download connection was reset; it does not establish which proxy, network path or registry endpoint caused it. Dependency installation uses a BuildKit npm cache mount, prefers cached content, limits registry sockets to five and retries failed fetches up to five times with bounded backoff and a two-minute fetch timeout. The package lock, integrity verification and lifecycle scripts remain enforced. Cached downloads are separate from the resulting image and can be reused on subsequent attempts with the same builder; fresh builders start with empty caches. This improves transient-failure recovery but cannot repair persistent host/VM/Docker networking problems.
 
 Keep the running application in place until its replacement image builds successfully. Retry the normal revision-stamped app build with `--progress plain`; do not use `--no-cache`, prune caches, regenerate the lockfile, disable TLS verification or upgrade npm solely because of a registry connection reset. If retries still fail, test `npm ping --registry=https://registry.npmjs.org/` from `node:22-alpine` on the deployment host, compare host/container connectivity and inspect the npm error's failing URL before changing DNS, proxy or MTU settings. Never paste credentials or proxy passwords from diagnostic logs.
+
+
+## One-time host agent update for migration SQL review
+
+After all current deployments have completed and no job is queued/running/requires recovery, update the independently installed host agent. Do not restart it during an application deployment. The source checkout and installed code are separate; a web application upgrade alone does not update the agent.
+
+```bash
+cd /opt/axildb
+git pull --ff-only
+sudo systemctl stop axildb-deploy.service
+sudo install -o root -g root -m 0644 \
+  scripts/deployment-agent/core.py \
+  scripts/deployment-agent/agent.py \
+  /opt/axildb-deploy/
+sudo systemctl start axildb-deploy.service
+sudo -u axildb-deploy timeout 60s /usr/bin/python3 \
+  /opt/axildb-deploy/agent.py \
+  --config /etc/axildb-deploy/config.json --probe
+```
+
+No configuration, key, systemd unit, database volume, proxy or tunnel change is needed. With the updated agent, deploy this web interface through the normal application update flow. No application schema migration is introduced by this change. The optional protocol-v1 extension remains compatible with older application clients for ordinary upgrades; the interface detects older agents and explains that migration review needs a host agent update.
+
+Future new migrations needing review can be deployed entirely through Application Updates: check updates, run preflight, expand and review SQL, select Review Upgrade, acknowledge database risks, type the shown target revision and start. The worker still verifies a mandatory checkpoint, builds before applying migrations, stops only application/worker services for schema transitions, and confirms exact-revision local and proxy readiness before success. Approval is permission to apply the reviewed code, not proof that the SQL is nondestructive or that old code remains compatible. No automatic database restore or schema rollback is introduced. Failed or interrupted migrations retain Recovery Required and are not blindly replayed. Host Compose topology changes still require separate host administration.
+
+Verification: the agent regression suite includes exact-content approval binding, absent/incorrect/stale digest rejection, durable consent/idempotency, critical-preflight and backup failures, migration failure recovery, and historical-file protection. Run `AXILDB_TEST_MIGRATION_REVIEW=1 npm run check:application-updates:ui` for the authenticated Unix transport/browser approval flow, or `AXILDB_TEST_MIGRATION_REVIEW=1 npm run check:deployment-agent:docker` for the real isolated PostgreSQL constraint replacement, backup, application replacement and health verification. Both are disposable fixtures; never point them at production.

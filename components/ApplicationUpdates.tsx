@@ -32,6 +32,8 @@ async function responseJson(response: Response) {
 export function ApplicationUpdates({ configured }: { configured: boolean }) {
   const [status, setStatus] = useState<DeploymentStatus | null>(null)
   const [update, setUpdate] = useState<UpdateCheck | null>(null)
+  const [migrationConsent, setMigrationConsent] = useState(false)
+  const [typedRevision, setTypedRevision] = useState('')
   const [preflight, setPreflight] = useState<Preflight | null>(null)
   const [jobId, setJobId] = useState('')
   const [events, setEvents] = useState<DeploymentEvent[]>([])
@@ -96,8 +98,11 @@ export function ApplicationUpdates({ configured }: { configured: boolean }) {
     }
   }, [configured, refresh])
   useEffect(() => {
-    if (confirmation) dialog.current?.showModal()
-    else dialog.current?.close()
+    if (confirmation) {
+      setMigrationConsent(false)
+      setTypedRevision('')
+      dialog.current?.showModal()
+    } else dialog.current?.close()
   }, [confirmation])
   useEffect(() => {
     if (!jobId) return
@@ -199,7 +204,11 @@ export function ApplicationUpdates({ configured }: { configured: boolean }) {
           result.eligible ? 'Update ready for review.' : 'AxilDB is up to date.'
         )
       }
-      if (operation === 'PREFLIGHT') setPreflight(result)
+      if (operation === 'PREFLIGHT') {
+        setPreflight(result)
+        setMigrationConsent(false)
+        setTypedRevision('')
+      }
       if (operation === 'START_UPGRADE') {
         setJobId(result.id)
         localStorage.setItem('axildb-deployment-job', result.id)
@@ -249,6 +258,9 @@ export function ApplicationUpdates({ configured }: { configured: boolean }) {
       )
       await operate('START_UPGRADE', {
         revision: current.revision,
+        ...(preflight?.migrationReview?.requiresApproval
+          ? { migrationApproval: preflight.migrationReview.digest }
+          : {}),
         confirmed: true,
         requestId,
       })
@@ -294,6 +306,13 @@ export function ApplicationUpdates({ configured }: { configured: boolean }) {
     )
   return (
     <div className="space-y-5 [&_button]:rounded-md [&_button]:border [&_button]:border-stone-300 [&_button]:px-3 [&_button]:py-2 [&_button]:font-semibold [&_button:disabled]:opacity-50">
+      {status && !status.capabilities?.includes('migration-sql-review-v1') && (
+        <p role="status" className="rounded border p-3">
+          The host agent needs a one-time update to support migration SQL review
+          in this interface. Existing deployment operations remain available.
+          See docs/APPLICATION_UPDATES.md.
+        </p>
+      )}
       {reconnecting && (
         <p role="status" className="rounded-lg bg-amber-50 p-3">
           AxilDB may be restarting with the updated application. Connection will
@@ -390,6 +409,7 @@ export function ApplicationUpdates({ configured }: { configured: boolean }) {
       {preflight && (
         <section className="space-y-3 rounded-lg border p-4">
           <h2 className="text-xl font-bold">Preflight checks</h2>
+          {preflight.reviewable && !preflight.ready && <p role="status">Infrastructure checks passed. Review the migration SQL and approve its database risks before starting.</p>}
           <ul>
             {preflight.checks.map((check) => (
               <li key={check.name}>
@@ -410,10 +430,24 @@ export function ApplicationUpdates({ configured }: { configured: boolean }) {
               </li>
             ))}
           </ul>
+          {preflight.migrationReview?.files.map((file) => (
+            <details key={file.path} className="rounded border p-3">
+              <summary className="cursor-pointer break-all">
+                {file.path}
+                {file.requiresApproval
+                  ? ' · Database risk review required'
+                  : ''}
+              </summary>
+              <p className="text-xs break-all">Git blob: {file.blob}</p>
+              <pre className="mt-2 max-h-96 overflow-auto whitespace-pre-wrap break-words text-xs">
+                {file.sql}
+              </pre>
+            </details>
+          ))}
           <button
             disabled={
               busy ||
-              !preflight.ready ||
+              !(preflight.ready || preflight.reviewable) ||
               preflight.revision !== update?.revision ||
               Boolean(status?.activeJob)
             }
@@ -621,11 +655,52 @@ export function ApplicationUpdates({ configured }: { configured: boolean }) {
                 ? 'Restore only the captured previous application images after rechecking unchanged schema history. This does not restore or reverse the database.'
                 : 'Verify the target revision, database and proxy readiness before recording an interrupted deployment as completed. No deployment or migration operation is replayed.'}
           </p>
+          {confirmation.operation === 'START_UPGRADE' &&
+            preflight?.migrationReview?.requiresApproval && (
+              <fieldset className="space-y-3 rounded border p-3">
+                <p>
+                  These migrations contain SQL that may remove data, replace
+                  constraints or change schema behavior. Keyword screening
+                  cannot prove safety. A backup is mandatory, but it will not be
+                  restored automatically. Previous application compatibility is
+                  unproven.
+                </p>
+                <label className="flex gap-2">
+                  <input
+                    type="checkbox"
+                    checked={migrationConsent}
+                    onChange={(event) =>
+                      setMigrationConsent(event.target.checked)
+                    }
+                  />
+                  I reviewed the migration SQL and authorize these database
+                  changes.
+                </label>
+                <label className="block">
+                  Type target revision {short(confirmation.revision)} to approve
+                  <input
+                    className="mt-1 block w-full rounded border p-2"
+                    value={typedRevision}
+                    onChange={(event) => setTypedRevision(event.target.value)}
+                    autoComplete="off"
+                  />
+                </label>
+              </fieldset>
+            )}
           <div className="flex gap-3">
             <button autoFocus onClick={() => setConfirmation(null)}>
               Cancel
             </button>
-            <button disabled={busy} onClick={confirm}>
+            <button
+              disabled={
+                busy ||
+                (confirmation.operation === 'START_UPGRADE' &&
+                  Boolean(preflight?.migrationReview?.requiresApproval) &&
+                  (!migrationConsent ||
+                    typedRevision !== short(confirmation.revision)))
+              }
+              onClick={confirm}
+            >
               {confirmation.operation === 'START_UPGRADE'
                 ? 'Start Upgrade'
                 : 'Confirm Recovery'}
