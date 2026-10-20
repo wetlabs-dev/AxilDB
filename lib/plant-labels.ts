@@ -9,6 +9,11 @@ export const BROTHER_DK_2210_WIDTH_PT = (1 + 1 / 7) * POINTS_PER_INCH
 
 export type LabelFormat = 'fixed' | 'sheet' | 'brother-dk-2210'
 export type LabelOrientation = 'portrait' | 'landscape'
+export const labelFormatOptions: Array<{ value: LabelFormat; label: string }> = [
+  { value: 'fixed', label: '2.25 x 1.25 inch label, one per page' },
+  { value: 'sheet', label: 'Legacy print sheet, ganged labels' },
+  { value: 'brother-dk-2210', label: 'Brother DK-2210 continuous 1 1/7 inch label' },
+]
 
 export function defaultLabelOrientation(format: LabelFormat): LabelOrientation {
   return format === 'fixed' ? 'landscape' : 'portrait'

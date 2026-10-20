@@ -673,6 +673,7 @@ App route: `/labels`
 ### How It Is Used
 
 - Open Bulk Tags to choose plants, locations, or both for label export.
+- The bulk label page automatically remembers your last category and keeps separate print format/orientation settings for Plants, Locations, and Plants + Locations. Plant sorting is remembered only after you press Sort. These preferences are specific to your account in this browser; clearing site storage resets them, and outdated options fall back safely. Label selections are not saved.
 - Choose a label format: 2.25 × 1.25 inch single labels, a legacy ganged print sheet, or Brother DK-2210 continuous labels.
 - Choose portrait or landscape orientation independently of the label format.
 - Scan a plant label QR code to open the specimen detail page, or a location label QR code to open the location detail page.
