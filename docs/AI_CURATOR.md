@@ -144,6 +144,10 @@ Existing generic pending recommendations for linked definitions are hidden from 
 
 ## Seasonal repotting windows
 
+This is already a standard automatic research task: each enabled worker wake runs readiness discovery, which queues `REPOTTING_WINDOWS` enrichment for definitions without a primary assignment. It is lower-priority seasonal enrichment (priority 15), so core research and manually requested work can run first. “Optional” means a missing window does not reduce cadence completeness; it does not mean automatic research is disabled. Linked husbandry does not suppress this independent research.
+
+To request it immediately, use **Research Now** on the definition. This includes seasonal-window research even when an assignment already exists, with the usual high manual priority and duplicate/pending-suggestion protection. Review the resulting proposal in the existing Curator suggestion queue. The global Curator setting, collection AI/Curator participation, credentials, spending limits and worker availability still apply; no assignment changes until approval.
+
 Repotting windows are optional definition enrichment, independent of cadence completeness and linked husbandry. Curator's `repottingWindows` target receives the active window catalog and proposes primary/alternate IDs with independent confidence, reasoning and explicit cultivation/hemisphere assumptions. Manual Research Now includes this target; routine readiness research includes missing primary assignments. Unresolved output is allowed. Magic Fill can persist the same kind of suggestion for review without changing assignments.
 
 Approval uses the existing Curator queue and dashboard counts. It revalidates active IDs, original definition assignments and catalog date fingerprints. Review shows current dates and flags changed windows; stale proposals cannot apply. Advanced edit can omit the alternate to approve only the primary. See [Seasonal Repotting Planner](REPOTTING_PLANNER.md) for setup, calendar rules and assessment/completion semantics.
@@ -151,3 +155,5 @@ Approval uses the existing Curator queue and dashboard counts. It revalidates ac
 ## Husbandry consolidation
 
 The `husbandryLink` enrichment target compares full, partial or missing independent guides against a bounded stable-source shortlist. It is distinct from filling husbandry fields or proposing a cultivar-specific local override. Only explicitly compatible, sufficiently evidenced results above the configured confidence threshold become pending recommendations. Actual and pending dependencies prevent chains, cycles and competing source choices; approvals revalidate guide fingerprints and preserve prior independent care. Individual and batch review use the same transaction service. See [Husbandry consolidation](HUSBANDRY_CONSOLIDATION.md) for candidate limits, configuration, shared ownership, preservation/restoration and validation details.
+
+Regression check: `DATABASE_URL=<isolated-local-test-database> npm run check:repotting:research` verifies automatic discovery, duplicate protection, linked-husbandry independence, Research Now, preservation of assigned windows and collection opt-out without contacting an AI provider. `check:repotting` exercises mocked model output and stale-approval protection alongside the seasonal planner.

@@ -94,7 +94,8 @@
     "check:deployment-progress": "tsx scripts/check-deployment-progress.ts",
     "check:upgrade-notifications": "tsx scripts/check-upgrade-notifications.ts",
     "check:label-preferences": "tsx scripts/check-label-preferences.ts",
-    "check:label-preferences:ui": "node scripts/check-label-preferences-ui.mjs"
+    "check:label-preferences:ui": "node scripts/check-label-preferences-ui.mjs",
+    "check:repotting:research": "tsx scripts/check-repotting-research.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
