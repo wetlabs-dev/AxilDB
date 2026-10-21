@@ -244,7 +244,7 @@ async function main() {
     globalThis.fetch = async (_url, init) => {
       calls++
       const request = JSON.parse(String(init?.body)),
-        ctx = JSON.parse(request.input[0].content[0].text).context
+        ctx = JSON.parse(request.input.find((message: any) => message.role === 'user').content[0].text).context
       assert.ok(ctx.consolidation.candidates.some((c: any) => c.id === b.id))
       return new Response(
         JSON.stringify({

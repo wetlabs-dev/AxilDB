@@ -1,10 +1,15 @@
 export const curatorResponseFormat = {
   format: { type: 'json_object' },
 } as const
+// JSON mode validates the input messages, independently of top-level instructions.
+export const curatorJsonInstruction = 'Return one complete compact JSON object with keys title, suggestedValue, reasoning, confidence, supportingReferences. Do not include Markdown or text outside the JSON object.'
+export function isCuratorJsonModeRequestFailure(message: string | null | undefined) {
+  return Boolean(message && /(?:response\s+)?input messages must contain the word ['"]json['"][\s\S]*json_object/i.test(message))
+}
 export class CuratorResponseError extends Error {
   constructor(
     public kind:
-      'OUTPUT_LIMIT' | 'REFUSAL' | 'INCOMPLETE' | 'EMPTY' | 'INVALID_JSON',
+      'REQUEST_FORMAT' | 'OUTPUT_LIMIT' | 'REFUSAL' | 'INCOMPLETE' | 'EMPTY' | 'INVALID_JSON',
     message: string
   ) {
     super(message)
@@ -14,7 +19,7 @@ export class CuratorResponseError extends Error {
 export function isCuratorResponseFailure(message: string | null | undefined) {
   return Boolean(
     message &&
-    (/AI Curator response (?:did not contain JSON|reached the configured output limit|was incomplete|contained no usable text|was not a valid JSON object|was missing suggestedValue)/i.test(
+    (isCuratorJsonModeRequestFailure(message) || /AI Curator response (?:did not contain JSON|reached the configured output limit|was incomplete|contained no usable text|was not a valid JSON object|was missing suggestedValue)/i.test(
       message
     ) ||
       /(?:Expected|Unexpected|Unterminated|Bad control character|Bad escaped character)[\s\S]*\bJSON\b/i.test(

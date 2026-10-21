@@ -1,7 +1,7 @@
 import { consolidationContext, husbandryLinkTarget, validCompatibilityAssessment, lockHusbandryGraph, validateHusbandryLinkProposal, husbandryFingerprint, criticalGuideConflicts } from '@/lib/husbandry-consolidation'
 import { validWindowRecommendation } from '@/lib/repotting'
 import { curatorInheritance, linkedCarePolicy, linkedCareFields, visibleLinkedCareSuggestion } from '@/lib/ai-curator-inheritance'
-import { curatorResponseFormat, parseCuratorResponse, CuratorResponseError } from '@/lib/ai-curator-response'
+import { curatorJsonInstruction, isCuratorJsonModeRequestFailure, curatorResponseFormat, parseCuratorResponse, CuratorResponseError } from '@/lib/ai-curator-response'
 import { isCuratorHistoryConflict } from '@/lib/ai-curator-job-recovery'
 import { cadenceRecommendationShape, cadenceResearchInstructions } from '@/lib/cadence-recommendations'
 import { cadenceResearchContext, missingActivities, persistCadenceRecommendations, researchDefinitionInclude } from '@/lib/cadence-research'
@@ -1209,6 +1209,9 @@ async function callCuratorModel(settings: any, job: any, currentValue: unknown) 
         'confidence must be from 0 to 1. Keep reasoning concise and explain uncertainty.',
       ].join(' '),
       input: [{
+        role: 'developer',
+        content: [{ type: 'input_text', text: curatorJsonInstruction }],
+      }, {
         role: 'user',
         content: [{
           type: 'input_text',
@@ -1224,7 +1227,11 @@ async function callCuratorModel(settings: any, job: any, currentValue: unknown) 
     }),
   })
   const payload = await response.json().catch(() => ({}))
-  if (!response.ok) throw new Error(payload.error?.message || 'AI Curator model request failed.')
+  if (!response.ok) {
+    const message = payload.error?.message || 'AI Curator model request failed.'
+    if (isCuratorJsonModeRequestFailure(message)) throw new CuratorResponseError('REQUEST_FORMAT', message)
+    throw new Error(message)
+  }
   return { payload }
 }
 
@@ -1417,16 +1424,16 @@ async function processJob(prisma: PrismaClient, settings: any, job: any) {
     const message = isCuratorHistoryConflict(rawMessage) ? 'Unique constraint failed on AiCuratorJob_active_scope_key; terminal job history blocked completion.' : rawMessage
     if (usageId) await prisma.aiUsageEvent.update({ where: { id: usageId }, data: { success: false, error: message.slice(0, 800) } })
     const responseError = error instanceof CuratorResponseError ? error : null
-    const exhausted = job.attempts >= job.maxAttempts || responseError?.kind === 'OUTPUT_LIMIT' || responseError?.kind === 'REFUSAL'
+    const exhausted = job.attempts >= job.maxAttempts || responseError?.kind === 'OUTPUT_LIMIT' || responseError?.kind === 'REFUSAL' || responseError?.kind === 'REQUEST_FORMAT'
     await prisma.aiCuratorJob.updateMany({
       where: { id: job.id, status: 'RUNNING', claimedBy: job.claimedBy },
       data: exhausted
         ? {
             status: 'WAITING_FOR_HUMAN',
             blockingReason: message.slice(0, 800),
-            humanActionRequired: responseError?.kind === 'OUTPUT_LIMIT' ? 'Increase Curator Max tokens in Service settings, save, then retry this job. The limit includes reasoning and visible output.' : responseError?.kind === 'REFUSAL' ? 'Review the request and evidence before retrying; do not automatically repeat a declined request.' : responseError ? 'Retry after deploying the response-format fix. This is an AI response problem, not missing botanical evidence.' : 'Review this job and either cancel it, adjust the definition, or retry after the underlying issue is resolved.',
+            humanActionRequired: responseError?.kind === 'REQUEST_FORMAT' ? 'Deploy the JSON-mode request fix, then use Retry response-error jobs. The provider rejected this request before research started.' : responseError?.kind === 'OUTPUT_LIMIT' ? 'Increase Curator Max tokens in Service settings, save, then retry this job. The limit includes reasoning and visible output.' : responseError?.kind === 'REFUSAL' ? 'Review the request and evidence before retrying; do not automatically repeat a declined request.' : responseError ? 'Retry after deploying the response-format fix. This is an AI response problem, not missing botanical evidence.' : 'Review this job and either cancel it, adjust the definition, or retry after the underlying issue is resolved.',
             retryConditions: responseError?.kind === 'OUTPUT_LIMIT' ? 'A higher configured output-token limit is required before retry.' : responseError ? 'Review the response failure and retry explicitly under the normal budget.' : 'Manual review clears the blocker or changes the source record.',
-            resultSummary: responseError ? 'Paused after an unusable AI response; no partial suggestion was saved.' : 'Stopped after repeated AI Curator failures.',
+            resultSummary: responseError?.kind === 'REQUEST_FORMAT' ? 'Paused after provider request validation failed; no research result was generated.' : responseError ? 'Paused after an unusable AI response; no partial suggestion was saved.' : 'Stopped after repeated AI Curator failures.',
             errorClearedAt: null,
             errorClearedByUserId: null,
           }

@@ -124,7 +124,7 @@ async function main() {
     let answer: any, context: any
     globalThis.fetch = async (_url, init) => {
       const body = JSON.parse(String(init?.body))
-      context = JSON.parse(body.input[0].content[0].text).context
+      context = JSON.parse(body.input.find((message: any) => message.role === 'user').content[0].text).context
       assert.equal(context.inheritance.sourcePlantDefinitionId, source.id)
       assert.equal(
         context.inheritance.effectiveGuide.summaryCare,

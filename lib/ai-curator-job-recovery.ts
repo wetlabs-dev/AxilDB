@@ -1,4 +1,4 @@
-import { isCuratorResponseFailure } from '@/lib/ai-curator-response'
+import { isCuratorJsonModeRequestFailure, isCuratorResponseFailure } from '@/lib/ai-curator-response'
 import type { PrismaClient } from '@prisma/client'
 
 export function isCuratorHistoryConflict(message: string | null | undefined) {
@@ -19,6 +19,7 @@ export function isCuratorHistoryConflict(message: string | null | undefined) {
   )
 }
 export function curatorFailureDescription(message: string | null | undefined) {
+  if (isCuratorJsonModeRequestFailure(message)) return 'The AI provider rejected an invalid JSON-mode request before research started. This is an application request-format issue. After upgrading, use Retry response-error jobs.'
   if (isCuratorHistoryConflict(message))
     return 'A legacy database index blocked this job from finishing. This is an application issue, not missing botanical evidence. Install the Curator repair, then retry database-blocked jobs.'
   if (

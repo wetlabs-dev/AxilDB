@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client'
 import {
   parseCuratorResponse,
   CuratorResponseError,
+  isCuratorJsonModeRequestFailure,
   isCuratorResponseFailure,
 } from '../lib/ai-curator-response'
 import {
@@ -20,6 +21,10 @@ const result = {
   confidence: 0.8,
   supportingReferences: [],
 }
+const requestFailure = "Response input messages must contain the word 'json' in some form to use 'text.format' of type 'json_object'."
+assert.equal(isCuratorJsonModeRequestFailure(requestFailure), true)
+assert.equal(isCuratorResponseFailure(requestFailure), true)
+assert.equal(isCuratorJsonModeRequestFailure('Request rate limit exceeded'), false)
 const valid = JSON.stringify(result)
 assert.deepEqual(
   parseCuratorResponse({ status: 'completed', output_text: valid }, 1200),
@@ -133,13 +138,18 @@ async function main() {
         usage: { input_tokens: 30, output_tokens: 1200 },
       }
     let expectedCap = 1200
+    let responseStatus = 200
     globalThis.fetch = async (_url, init) => {
       calls++
       const body = JSON.parse(String(init?.body))
       assert.deepEqual(body.text, { format: { type: 'json_object' } })
       assert.equal(body.max_output_tokens, expectedCap)
       assert.ok(body.instructions.includes('compact JSON'))
-      return new Response(JSON.stringify(payload), { status: 200 })
+      const developer = body.input.find((message: any) => message.role === 'developer')
+      assert.ok(developer?.content.some((part: any) => /\bJSON\b/.test(part.text)), 'JSON instruction must appear in an actual input message, not only top-level instructions')
+      const source = body.input.find((message: any) => message.role === 'user')
+      assert.ok(JSON.parse(source.content[0].text).context, 'Structured source context remains intact')
+      return new Response(JSON.stringify(payload), { status: responseStatus })
     }
     const create = async (name: string) => {
       const definition = await db.plantDefinition.create({
@@ -269,6 +279,16 @@ async function main() {
         null
       )
     }
+    const invalidRequest = await create('JSON mode request validation')
+    responseStatus = 400
+    payload = { error: { message: requestFailure } }
+    await processAiCuratorWake(db)
+    const blockedRequest = await db.aiCuratorJob.findUniqueOrThrow({ where: { id: invalidRequest.id } })
+    assert.equal(blockedRequest.status, 'WAITING_FOR_HUMAN')
+    assert.equal(blockedRequest.attempts, 1, 'Invalid API requests pause instead of repeating automatically')
+    assert.equal(blockedRequest.blockingReason, requestFailure)
+    assert.equal(await db.aiCuratorSuggestion.count({ where: { jobId: invalidRequest.id } }), 0)
+    responseStatus = 200
     const refusal = await db.aiCuratorJob.findFirstOrThrow({
       where: {
         collectionId: collection.id,
@@ -277,13 +297,14 @@ async function main() {
     })
     const countBefore = calls
     const retries = await retryResponseBlockedCuratorJobs(db)
-    assert.equal(retries.QUEUED, 2)
+    assert.equal(retries.QUEUED, 3)
     assert.equal(retries.OUTPUT_LIMIT_UNCHANGED, 1)
     assert.equal(
       (await db.aiCuratorJob.findUniqueOrThrow({ where: { id: refusal.id } }))
         .status,
       'WAITING_FOR_HUMAN'
     )
+    assert.equal((await db.aiCuratorJob.findUniqueOrThrow({ where: { id: invalidRequest.id } })).status, 'QUEUED', 'Existing request-format failures are included in selective bulk recovery')
     assert.equal(
       calls,
       countBefore,

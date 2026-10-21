@@ -470,7 +470,7 @@ async function main() {
     globalThis.fetch = async (_url, init) => {
       calls++
       const body = JSON.parse(String(init?.body)),
-        context = JSON.parse(body.input[0].content[0].text).context
+        context = JSON.parse(body.input.find((message: any) => message.role === 'user').content[0].text).context
       assert.ok(context.repottingWindows.some((w: any) => w.id === window.id))
       return new Response(
         JSON.stringify({
