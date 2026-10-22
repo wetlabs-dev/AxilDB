@@ -1,3 +1,4 @@
+import { observeHttp } from '@/lib/runtime-diagnostics'
 import { NextRequest, NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { isRedirectError } from 'next/dist/client/components/redirect-error'
@@ -12,13 +13,13 @@ import { getCareQueue } from '@/lib/care-queue'
 export const dynamic = 'force-dynamic'
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: { 'Cache-Control': 'private, no-store' } })
 async function timezone(userId?: string) { return timeZoneForPreference(userId ? await prisma.emailPreference.findUnique({ where: { userId } }) : null) }
-export async function GET(req: NextRequest) {
+async function getForecast(req: NextRequest) {
   try {
     const context = await requireCollectionViewer(req.nextUrl.searchParams.get('collectionSlug') || '')
     return json({ ...await loadCareForecast(prisma, { collectionId: context.collection.id, collectionSlug: context.collection.slug, userId: context.user?.id, timezone: await timezone(context.user?.id) }), canManage: canManageCollection(context.user, context) })
   } catch { return json({ error: 'Care forecast is unavailable. Check collection access and try again.' }, 403) }
 }
-export async function POST(req: NextRequest) {
+async function postForecast(req: NextRequest) {
   try {
     if (!validRequestOrigin(req)) return json({ error: 'Invalid request origin.' }, 403)
     if (!(await getCurrentUser())) return json({ error: 'Sign in first.' }, 401)
@@ -55,3 +56,6 @@ export async function POST(req: NextRequest) {
     return json({ error: error instanceof Error && !error.name.startsWith('Prisma') ? error.message : 'Could not apply Quiet Day changes. No partial plan was saved.' }, 400)
   }
 }
+
+export async function GET(req: NextRequest) { return observeHttp("care_forecast.read", false, () => getForecast(req)) }
+export async function POST(req: NextRequest) { return observeHttp("care_forecast.change", true, () => postForecast(req)) }

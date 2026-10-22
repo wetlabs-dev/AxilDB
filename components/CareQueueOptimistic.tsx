@@ -1,7 +1,6 @@
 'use client'
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type FormHTMLAttributes, type ReactNode } from 'react'
-import { useRouter } from 'next/navigation'
 import type { CareQueueItem } from '@/lib/care-queue'
 import { careOperationLocks, overlayCareItems, type CareOperation, type CareQueueAction } from '@/lib/care-queue-optimistic'
 import { getCareQueueStore, type CareQueueStore } from '@/lib/care-queue-store'
@@ -19,7 +18,6 @@ export function CareQueueProvider({ collectionSlug, userId, initialItems, snapsh
   const store = useMemo(() => getCareQueueStore(collectionSlug, userId), [collectionSlug, userId])
   const serverSnapshot = useMemo(() => ({ items: initialItems, operations: [] as CareOperation[], reconciliation: 0, notice: '' }), [initialItems])
   const state = useSyncExternalStore(store.subscribe, store.getSnapshot, () => serverSnapshot)
-  const router = useRouter()
   useEffect(() => { store.seed(initialItems, snapshotAt) }, [store, initialItems, snapshotAt])
   useEffect(() => {
     const refresh = () => { void store.reconcile() }
@@ -27,10 +25,7 @@ export function CareQueueProvider({ collectionSlug, userId, initialItems, snapsh
     window.addEventListener('online', refresh)
     window.addEventListener('focus', refresh)
     return () => { window.removeEventListener('online', refresh); window.removeEventListener('focus', refresh) }
-  }, [store, router])
-  useEffect(() => {
-    if (state.reconciliation > 0) router.refresh()
-  }, [state.reconciliation, router])
+  }, [store])
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>
     let stopped = false

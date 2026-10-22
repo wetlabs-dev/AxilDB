@@ -1,4 +1,6 @@
 'use client'
+import { careQueueSummary } from '@/lib/care-queue-view'
+import type { CareQueueItem } from '@/lib/care-queue'
 
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
@@ -183,7 +185,17 @@ export function SidebarClient({
     })
   }
 
-  const badgeFor = (key: string) => badges[key] || 0
+  const [careBadge, setCareBadge] = useState<{ slug: string; count: number } | null>(null)
+  useEffect(() => {
+    const update = (event: Event) => {
+      const detail = (event as CustomEvent<{ collectionSlug: string; items: CareQueueItem[]; forecast?: { timezone?: string } }>).detail
+      if (detail.collectionSlug === slug) setCareBadge({ slug, count: careQueueSummary(detail.items, new Date(), detail.forecast?.timezone).today })
+    }
+    window.addEventListener('axildb:care-snapshot', update)
+    return () => window.removeEventListener('axildb:care-snapshot', update)
+  }, [slug])
+  useEffect(() => setCareBadge(null), [badges])
+  const badgeFor = (key: string) => key === '/care' && careBadge?.slug === slug ? careBadge.count : badges[key] || 0
 
   const nav = (
     <nav className="grid gap-4">
@@ -191,7 +203,7 @@ export function SidebarClient({
         <div key={section.label} className="grid gap-1">
           <p className="px-3 text-[0.65rem] font-bold uppercase tracking-[0.16em] text-stone-500">{section.label}</p>
           {section.items.map(([href, label, Icon]) => (
-            <GhostLink key={href} href={collectionPath(slug, href)}>
+            <GhostLink prefetch={false} key={href} href={collectionPath(slug, href)}>
               <Icon className="h-4 w-4 shrink-0" />
               <span className="min-w-0 flex-1 truncate">{label}</span>
               <CountBadge value={badgeFor(href)} attention={href === '/care'} />
@@ -203,14 +215,14 @@ export function SidebarClient({
         <div className="grid gap-1 border-t border-stone-200 pt-4">
           <p className="px-3 text-[0.65rem] font-bold uppercase tracking-[0.16em] text-stone-500">Admin</p>
           {collectionAdminItemsForRole.map(([href, label, Icon]) => (
-            <GhostLink key={href} href={collectionPath(slug, href)}>
+            <GhostLink prefetch={false} key={href} href={collectionPath(slug, href)}>
               <Icon className="h-4 w-4 shrink-0" />
               <span className="min-w-0 flex-1 truncate">{label}</span>
               <CountBadge value={badgeFor(href)} attention={href === '/transfers' || href === '/members'} />
             </GhostLink>
           ))}
           {isSiteAdmin && (
-            <GhostLink href="/server">
+            <GhostLink prefetch={false} href="/server">
               <FlaskConical className="h-4 w-4 shrink-0" />
               <span className="min-w-0 flex-1 truncate">Server Management</span>
               <CountBadge value={badgeFor('server')} attention />
@@ -244,20 +256,20 @@ export function SidebarClient({
         inert={accountExpanded ? undefined : true}
       >
         <div className="grid min-h-0 gap-2">
-          <GhostLink href={globalPath('/help')}>
+          <GhostLink prefetch={false} href={globalPath('/help')}>
             <CircleHelp className="h-4 w-4 shrink-0" />
             <span className="min-w-0 flex-1 truncate">Help</span>
           </GhostLink>
-          <GhostLink href={globalPath('/account')}>
+          <GhostLink prefetch={false} href={globalPath('/account')}>
             <BookOpen className="h-4 w-4 shrink-0" />
             <span className="min-w-0 flex-1 truncate">Account</span>
             <CountBadge value={badgeFor('account')} attention />
           </GhostLink>
-          <GhostLink href={globalPath('/privacy')}>
+          <GhostLink prefetch={false} href={globalPath('/privacy')}>
             <ShieldCheck className="h-4 w-4 shrink-0" />
             <span className="min-w-0 flex-1 truncate">Privacy</span>
           </GhostLink>
-          <GhostLink href={globalPath('/terms')}>
+          <GhostLink prefetch={false} href={globalPath('/terms')}>
             <FileText className="h-4 w-4 shrink-0" />
             <span className="min-w-0 flex-1 truncate">Terms</span>
           </GhostLink>
@@ -270,19 +282,19 @@ export function SidebarClient({
     </div>
   ) : (
     <div className="grid gap-2">
-      <GhostLink href={globalPath('/help')}>
+      <GhostLink prefetch={false} href={globalPath('/help')}>
         <CircleHelp className="h-4 w-4 shrink-0" />
         <span className="min-w-0 flex-1 truncate">Help</span>
       </GhostLink>
-      <GhostLink href="/login">
+      <GhostLink prefetch={false} href="/login">
         <BookOpen className="h-4 w-4 shrink-0" />
         <span className="min-w-0 flex-1 truncate">Sign in</span>
       </GhostLink>
-      <GhostLink href={globalPath('/privacy')}>
+      <GhostLink prefetch={false} href={globalPath('/privacy')}>
         <ShieldCheck className="h-4 w-4 shrink-0" />
         <span className="min-w-0 flex-1 truncate">Privacy</span>
       </GhostLink>
-      <GhostLink href={globalPath('/terms')}>
+      <GhostLink prefetch={false} href={globalPath('/terms')}>
         <FileText className="h-4 w-4 shrink-0" />
         <span className="min-w-0 flex-1 truncate">Terms</span>
       </GhostLink>

@@ -1,5 +1,6 @@
 'use server'
 
+import { observeOperation } from '@/lib/runtime-diagnostics'
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { audit, requireServerAdmin } from '@/lib/auth'
@@ -10,6 +11,16 @@ import {
   eligibleCadenceProposals,
   recoverLegacyCadences,
 } from '@/lib/cadence-research'
+
+async function invalidateCadenceViews(ids: string[]) {
+  const definitions = await prisma.plantDefinition.findMany({ where: { cadenceProposals: { some: { id: { in: ids } } } }, select: { id: true, collection: { select: { slug: true } } } })
+  for (const definition of definitions) {
+    if (!definition.collection) { revalidatePath('/', 'layout'); continue }
+    const slug = definition.collection.slug
+    for (const suffix of ['', '/plants', '/care', '/instances', `/plants/${definition.id}`, `/plants/${definition.id}/edit`]) revalidatePath(`/c/${slug}${suffix}`)
+  }
+  revalidatePath('/server/care-cadence-research')
+}
 
 export async function researchMissingCadences(fd: FormData) {
   const user = await requireServerAdmin()
@@ -40,7 +51,7 @@ export async function recoverCadenceData() {
   revalidatePath('/', 'layout')
   return { created }
 }
-export async function reviewCadence(fd: FormData) {
+async function reviewCadenceWork(fd: FormData) {
   const user = await requireServerAdmin()
   const id = String(fd.get('id') || '')
   if (!['approve', 'reject'].includes(String(fd.get('decision'))))
@@ -69,7 +80,8 @@ export async function reviewCadence(fd: FormData) {
         : undefined
     )
   await audit(user, 'UPDATE', 'CARE_CADENCE_PROPOSAL', id, result)
-  revalidatePath('/', 'layout')
+  if (result === 'APPROVED') await invalidateCadenceViews([id])
+  else revalidatePath('/server/care-cadence-research')
   return { result }
 }
 export async function cadenceApprovalPreview(collectionId?: string) {
@@ -88,9 +100,9 @@ export async function cadenceApprovalPreview(collectionId?: string) {
     definitions: new Set(rows.map((p) => p.plantDefinitionId)).size,
   }
 }
-export async function approveAllCadences(ids: string[]) {
+async function approveAllCadencesWork(ids: string[]) {
   const user = await requireServerAdmin()
-  if (!Array.isArray(ids) || ids.some((id) => typeof id !== 'string'))
+  if (!Array.isArray(ids) || ids.length > 5000 || ids.some((id) => typeof id !== 'string' || id.length > 200))
     throw new Error('Invalid proposal selection.')
   const results = await approveCadenceBatch(prisma, ids, user.id)
   await audit(
@@ -101,7 +113,7 @@ export async function approveAllCadences(ids: string[]) {
     'Bulk cadence approval',
     results
   )
-  revalidatePath('/', 'layout')
+  await invalidateCadenceViews(ids)
   return results
 }
 export async function manageCadenceJob(fd: FormData) {
@@ -162,3 +174,6 @@ export async function manageCadenceJob(fd: FormData) {
   )
   revalidatePath('/server/care-cadence-research')
 }
+
+export async function reviewCadence(fd: FormData) { return observeOperation("cadence_research.review", true, () => reviewCadenceWork(fd)) }
+export async function approveAllCadences(ids: string[]) { return observeOperation("cadence_research.approve_all", true, () => approveAllCadencesWork(ids)) }

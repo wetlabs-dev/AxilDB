@@ -1,7 +1,7 @@
 import { hydrateCareItems, overlayCareItems, type CareOperation, type QueueSnapshot } from '@/lib/care-queue-optimistic'
 import type { CareQueueItem } from '@/lib/care-queue'
 
-type Transport = { mutate: (operation: CareOperation) => Promise<void>; snapshot: () => Promise<QueueSnapshot>; committed: (operation: CareOperation) => Promise<boolean> }
+type Transport = { onSnapshot?: (snapshot: QueueSnapshot) => void; mutate: (operation: CareOperation) => Promise<void>; snapshot: () => Promise<QueueSnapshot>; committed: (operation: CareOperation) => Promise<boolean> }
 export class CareRequestError extends Error {
   constructor(message: string, readonly definite = false) { super(message) }
 }
@@ -74,6 +74,7 @@ export class CareQueueStore {
       this.state.reconciliation++
       this.state.operations = this.state.operations.filter(op => op.status !== 'confirmed')
       this.publish()
+      this.transport.onSnapshot?.({ ...snapshot, items: this.state.items })
     } catch {
       this.state.notice = 'Queue refresh is unavailable. Saved actions stay hidden until the next refresh.'
       this.publish()
@@ -109,9 +110,9 @@ export function getCareQueueStore(collectionSlug: string, userId: string) {
         const response = await fetch('/api/care-queue', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ operationId: operation.operationId, issuedAt: operation.issuedAt, action: operation.action, fields: operation.fields }), redirect: 'error' })
         const result = await response.json()
         if (!response.ok) throw new CareRequestError(result.error || 'Unable to record care.', response.status >= 400 && response.status < 500)
-        if (typeof window !== 'undefined') window.dispatchEvent(new Event('axildb:care-saved'))
       },
-      snapshot: () => read(`/api/care-queue?${query}`),
+      onSnapshot: snapshot => { if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('axildb:care-snapshot', { detail: { collectionSlug, ...snapshot } })) },
+      snapshot: () => read(`/api/care-queue?${query}&forecast=1`),
       committed: async operation => (await read(`/api/care-queue?${query}&operationId=${encodeURIComponent(operation.operationId)}`)).committed,
     })
     if (typeof window !== 'undefined') stores.set(key, store)

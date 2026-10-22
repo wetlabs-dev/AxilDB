@@ -13,7 +13,7 @@ export type CareOperation = {
   status: 'pending' | 'confirmed' | 'failed' | 'uncertain'
   message?: string
 }
-export type QueueSnapshot = { items: CareQueueItem[]; snapshotAt: number }
+export type QueueSnapshot = { items: CareQueueItem[]; snapshotAt: number; forecast?: unknown }
 export function hydrateCareItems(items: CareQueueItem[]): CareQueueItem[] {
   return items.map(item => ({ ...item, dueAt: new Date(item.dueAt), completedAt: item.completedAt ? new Date(item.completedAt) : null, snoozedUntil: item.snoozedUntil ? new Date(item.snoozedUntil) : null,
     originalDueAt: item.originalDueAt ? new Date(item.originalDueAt) : null,

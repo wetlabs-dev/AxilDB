@@ -1,5 +1,5 @@
 'use client'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { collectionPath } from '@/lib/collection-path'
@@ -14,6 +14,7 @@ type Forecast = { timezone: string; days: Day[]; canManage: boolean; quietDays: 
 type Preview = { careRisks?: { key: string; title: string; taskType: string; locationName?: string | null; date: string; reason: string }[]; hash: string; draft: QuietDraft; earlier: number; later: number; todayCount: number; wateringToday: number; tomorrow: boolean; days: Day[]; exceptions: { key: string; title: string; date: string; reason: string }[]; changes: { key: string; title: string; from: string; to: string; reason: string }[] }
 export function CareForecast({ collectionSlug, initialDraft, stayOnPage = false }: { collectionSlug: string; initialDraft?: QuietDraft; stayOnPage?: boolean }) {
   const router = useRouter()
+  const readRevision = useRef(0)
   const [forecast, setForecast] = useState<Forecast | null>(null)
   const [selected, setSelected] = useState('')
   const [locationFilter, setLocationFilter] = useState('')
@@ -21,10 +22,11 @@ export function CareForecast({ collectionSlug, initialDraft, stayOnPage = false 
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
   const load = useCallback(async (signal?: AbortSignal) => {
+    const revision = ++readRevision.current
     const response = await fetch(`/api/care/forecast?collectionSlug=${encodeURIComponent(collectionSlug)}`, { cache: 'no-store', signal })
     const result = await response.json()
     if (!response.ok) throw new Error(result.error)
-    if (!signal?.aborted) { setForecast(result); setSelected(old => result.days.some((day: Day) => day.date === old) ? old : result.days[0].date) }
+    if (!signal?.aborted && revision === readRevision.current) { setForecast(result); setSelected(old => result.days.some((day: Day) => day.date === old) ? old : result.days[0].date) }
     return result as Forecast
   }, [collectionSlug])
   const propose = useCallback(async (draft: QuietDraft) => {
@@ -53,10 +55,19 @@ export function CareForecast({ collectionSlug, initialDraft, stayOnPage = false 
       } catch (error) { if (!controller.signal.aborted) setMessage(error instanceof Error ? error.message : 'Forecast unavailable.') }
     }
     void rollover()
+    const snapshot = (event: Event) => {
+      const detail = (event as CustomEvent<{ collectionSlug: string; forecast?: Forecast }>).detail
+      if (detail.collectionSlug !== collectionSlug || !detail.forecast) return
+      clearTimeout(refreshTimer)
+      readRevision.current++
+      setForecast(detail.forecast)
+      setSelected(old => detail.forecast!.days.some(day => day.date === old) ? old : detail.forecast!.days[0].date)
+    }
+    window.addEventListener('axildb:care-snapshot', snapshot)
     window.addEventListener('focus', refresh)
     window.addEventListener('axildb:care-saved', refresh)
-    return () => { controller.abort(); clearTimeout(timer); clearTimeout(refreshTimer); window.removeEventListener('focus', refresh); window.removeEventListener('axildb:care-saved', refresh) }
-  }, [load])
+    return () => { window.removeEventListener('axildb:care-snapshot', snapshot); controller.abort(); clearTimeout(timer); clearTimeout(refreshTimer); window.removeEventListener('focus', refresh); window.removeEventListener('axildb:care-saved', refresh) }
+  }, [load, collectionSlug])
   useEffect(() => { if (initialDraft) void propose(initialDraft) }, [initialDraft, propose])
   async function confirm() {
     if (!preview) return

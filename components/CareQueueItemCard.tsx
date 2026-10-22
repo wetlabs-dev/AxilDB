@@ -121,7 +121,7 @@ function PlantHeading({ item, collectionSlug }: { item: CareQueueItem; collectio
     <div>
       <h3 className="font-serif text-xl font-bold leading-tight md:text-lg">
         {item.plantId && item.plantInstanceId ? (
-          <PlantIdPreviewLink collectionSlug={collectionSlug} plantId={item.plantId} href={item.href}>
+          <PlantIdPreviewLink prefetch={false} collectionSlug={collectionSlug} plantId={item.plantId} href={item.href}>
             {item.plantId}
           </PlantIdPreviewLink>
         ) : item.title}
@@ -166,7 +166,7 @@ function ConditionActionsPanel({
 
       <div className="rounded-md border border-stone-200 bg-white/75 p-3">
         <h4 className="text-sm font-semibold text-stone-800">Condition actions</h4>
-        {item.plantInstanceId && item.conditionId && <div className="mt-2 flex flex-wrap gap-2"><Link href={`/c/${encodeURIComponent(collectionSlug)}/treatments?plant=${encodeURIComponent(item.plantInstanceId)}&condition=${encodeURIComponent(item.conditionId)}`} className="rounded-md bg-[#2f6b45] px-3 py-2 text-sm font-semibold text-white">Start treatment plan</Link><Link href={`/c/${encodeURIComponent(collectionSlug)}/treatments/apply?plant=${encodeURIComponent(item.plantInstanceId)}&condition=${encodeURIComponent(item.conditionId)}`} className="rounded-md border border-[#8fa58f] bg-white px-3 py-2 text-sm font-semibold text-[#2f6b45]">Apply one-off treatment</Link></div>}
+        {item.plantInstanceId && item.conditionId && <div className="mt-2 flex flex-wrap gap-2"><Link prefetch={false} href={`/c/${encodeURIComponent(collectionSlug)}/treatments?plant=${encodeURIComponent(item.plantInstanceId)}&condition=${encodeURIComponent(item.conditionId)}`} className="rounded-md bg-[#2f6b45] px-3 py-2 text-sm font-semibold text-white">Start treatment plan</Link><Link prefetch={false} href={`/c/${encodeURIComponent(collectionSlug)}/treatments/apply?plant=${encodeURIComponent(item.plantInstanceId)}&condition=${encodeURIComponent(item.conditionId)}`} className="rounded-md border border-[#8fa58f] bg-white px-3 py-2 text-sm font-semibold text-[#2f6b45]">Apply one-off treatment</Link></div>}
         <div className="mt-3 grid gap-3">
           <CareActionForm actionName="resolve" item={item} action={resolveConditionFromCareQueue} className="grid gap-2">
             <ConditionHiddenFields item={item} collectionSlug={collectionSlug} back={back} />
@@ -233,7 +233,7 @@ function NormalCareDetails({
       {item.treatmentName && <p>Treatment: {item.treatmentName}</p>}
       {item.treatmentProgress && <p>{item.treatmentProgress}</p>}
       {item.treatmentSafetySummary && <p className="font-medium text-amber-900">Safety: {item.treatmentSafetySummary}</p>}
-      <Link href={item.href} className="mt-1 inline-flex w-fit rounded-md bg-[#2f6b45] px-3 py-2 font-semibold text-white">Continue plan</Link>
+      <Link prefetch={false} href={item.href} className="mt-1 inline-flex w-fit rounded-md bg-[#2f6b45] px-3 py-2 font-semibold text-white">Continue plan</Link>
     </div>
   )
   return (
@@ -361,7 +361,7 @@ function DesktopPrimaryAction({
 }) {
   if (canAct && !item.completedAt && item.taskType === 'REPOT' && item.repottingPlanAvailable) return <CareActionForm actionName="planRepotting" action={planRepottingTask} item={item}><CompleteCareHiddenFields item={item} collectionSlug={collectionSlug} back={back}/><Button>Add to Next Repotting Window</Button></CareActionForm>
   if (!canAct || item.completedAt || item.condition || item.taskType === 'REPOT') return null
-  if (item.source === 'treatment-plan') return <Link href={item.href} className="rounded-md bg-[#2f6b45] px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#28593b]">Continue plan</Link>
+  if (item.source === 'treatment-plan') return <Link prefetch={false} href={item.href} className="rounded-md bg-[#2f6b45] px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#28593b]">Continue plan</Link>
   return (
     <CareActionForm actionName="complete" item={item} action={completeCareTask}>
       <CompleteCareHiddenFields item={item} collectionSlug={collectionSlug} back={back} />
@@ -403,7 +403,7 @@ export function CareQueueItemCard({
           <p className="text-sm text-stone-700">{item.reason}</p>
           <QuietDayNotice item={item} />
           <CareQueueItemDetails item={item} collectionSlug={collectionSlug} back={back} canAct={canAct} timezone={timezone} substrateVersions={substrateVersions} />
-          <Link href={item.href} className="text-sm font-medium text-[#2f6b45] underline">View record</Link>
+          <Link prefetch={false} href={item.href} className="text-sm font-medium text-[#2f6b45] underline">View record</Link>
         </div>
       </div>
 
@@ -439,7 +439,7 @@ export function CareQueueItemCard({
             <div className="grid gap-2">
               <p className="text-sm text-stone-700">{item.reason}</p>
               <CareQueueItemDetails item={item} collectionSlug={collectionSlug} back={back} canAct={canAct} timezone={timezone} substrateVersions={substrateVersions} />
-              <Link href={item.href} className="text-sm font-medium text-[#2f6b45] underline">View record</Link>
+              <Link prefetch={false} href={item.href} className="text-sm font-medium text-[#2f6b45] underline">View record</Link>
             </div>
           </div>
         )}

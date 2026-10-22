@@ -9,8 +9,9 @@ const item = (key: string): CareQueueItem => ({ key, taskType: 'WATER', source: 
 const operation = (key: string): CareOperation => ({ operationId: key, issuedAt: Date.now(), action: 'complete', fields: [], keys: [key], locks: [key], status: 'pending' })
 async function main() {
   const mutations = new Map<string, ReturnType<typeof defer<void>>>()
+  let acceptedSnapshots = 0
   const snapshots: Array<ReturnType<typeof defer<QueueSnapshot>>> = []
-  const store = new CareQueueStore({ mutate: op => { const pending = defer<void>(); mutations.set(op.operationId, pending); return pending.promise }, snapshot: () => { const pending = defer<QueueSnapshot>(); snapshots.push(pending); return pending.promise }, committed: async () => false })
+  const store = new CareQueueStore({ onSnapshot: () => { acceptedSnapshots++ }, mutate: op => { const pending = defer<void>(); mutations.set(op.operationId, pending); return pending.promise }, snapshot: () => { const pending = defer<QueueSnapshot>(); snapshots.push(pending); return pending.promise }, committed: async () => false })
   const originals = ['A', 'B', 'C', 'D', 'E'].map(item)
   store.seed(originals, 1)
   for (const key of ['A', 'B', 'C', 'D']) assert.equal(store.start(operation(key)), true)
@@ -29,10 +30,12 @@ async function main() {
   assert.equal(store.start(operation('E')), true)
   snapshots[0].resolve({ items: originals, snapshotAt: 20 }); await tick()
   assert.deepEqual(store.visible(originals).map(row => row.key), ['B', 'D'], 'An overlapping stale snapshot is ignored.')
+  assert.equal(acceptedSnapshots, 0, 'Stale snapshots never update the shared forecast or sidebar.')
   mutations.get('E')!.resolve(); await tick()
   snapshots[1].resolve({ items: [item('B'), item('D')], snapshotAt: 30 }); await tick()
   assert.deepEqual(store.visible(originals).map(row => row.key), ['B', 'D'])
   assert.equal(store.getSnapshot().operations.filter(op => op.status === 'confirmed').length, 0)
+  assert.equal(acceptedSnapshots, 1, 'A single authoritative read updates all care views.')
   store.retry('B'); assert.deepEqual(store.visible(originals).map(row => row.key), ['D']); mutations.get('B')!.resolve(); await tick()
   snapshots[2].resolve({ items: [item('D')], snapshotAt: 40 }); await tick()
   void store.reconcile()

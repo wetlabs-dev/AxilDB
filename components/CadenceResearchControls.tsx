@@ -31,7 +31,6 @@ export function CadenceResearchControls({
   const [preview, setPreview] = useState<Awaited<
     ReturnType<typeof cadenceApprovalPreview>
   > | null>(null)
-  const router = useRouter()
   const dialogRef = useRef<HTMLDialogElement>(null)
   useEffect(() => {
     if (preview) dialogRef.current?.showModal()
@@ -41,7 +40,6 @@ export function CadenceResearchControls({
     start(async () => {
       try {
         await work()
-        router.refresh()
       } catch (e) {
         setMessage(e instanceof Error ? e.message : 'Operation failed.')
       }
@@ -155,7 +153,6 @@ export function CadenceProposalReview({
 }) {
   const [busy, start] = useTransition()
   const [message, setMessage] = useState('')
-  const router = useRouter()
   return (
     <form
       onSubmit={(event) => {
@@ -168,8 +165,7 @@ export function CadenceProposalReview({
           try {
             const r = await reviewCadence(fd)
             setMessage(r.result)
-            router.refresh()
-          } catch (e) {
+              } catch (e) {
             setMessage(e instanceof Error ? e.message : 'Review failed.')
           }
         })

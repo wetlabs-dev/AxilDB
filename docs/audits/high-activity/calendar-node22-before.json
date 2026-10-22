@@ -1,0 +1,105 @@
+{
+  "node": "v22.22.3",
+  "samples": [
+    {
+      "cycle": 0,
+      "elapsedMs": 64.39683300000002,
+      "cpuMs": 61.918,
+      "peakRssBytes": 141377536,
+      "active": {
+        "rss": 141115392,
+        "heapTotal": 12050432,
+        "heapUsed": 7825904,
+        "external": 2473976,
+        "arrayBuffers": 37652
+      },
+      "settled": {
+        "rss": 112070656,
+        "heapTotal": 12050432,
+        "heapUsed": 6540976,
+        "external": 2474016,
+        "arrayBuffers": 37652
+      }
+    },
+    {
+      "cycle": 1,
+      "elapsedMs": 43.06008300000002,
+      "cpuMs": 43.888,
+      "peakRssBytes": 142454784,
+      "active": {
+        "rss": 142192640,
+        "heapTotal": 12312576,
+        "heapUsed": 7395760,
+        "external": 2474016,
+        "arrayBuffers": 37652
+      },
+      "settled": {
+        "rss": 113098752,
+        "heapTotal": 12312576,
+        "heapUsed": 6538528,
+        "external": 2474016,
+        "arrayBuffers": 37652
+      }
+    },
+    {
+      "cycle": 2,
+      "elapsedMs": 45.048834,
+      "cpuMs": 48.434,
+      "peakRssBytes": 142458880,
+      "active": {
+        "rss": 142327808,
+        "heapTotal": 12312576,
+        "heapUsed": 7519984,
+        "external": 2474016,
+        "arrayBuffers": 37652
+      },
+      "settled": {
+        "rss": 113139712,
+        "heapTotal": 12312576,
+        "heapUsed": 6540248,
+        "external": 2474016,
+        "arrayBuffers": 37652
+      }
+    },
+    {
+      "cycle": 3,
+      "elapsedMs": 42.906791999999996,
+      "cpuMs": 43.766,
+      "peakRssBytes": 142610432,
+      "active": {
+        "rss": 142217216,
+        "heapTotal": 12312576,
+        "heapUsed": 7396824,
+        "external": 2474016,
+        "arrayBuffers": 37652
+      },
+      "settled": {
+        "rss": 113307648,
+        "heapTotal": 16506880,
+        "heapUsed": 6539104,
+        "external": 2474016,
+        "arrayBuffers": 37652
+      }
+    },
+    {
+      "cycle": 4,
+      "elapsedMs": 44.99899999999997,
+      "cpuMs": 48.092,
+      "peakRssBytes": 143347712,
+      "active": {
+        "rss": 143085568,
+        "heapTotal": 16506880,
+        "heapUsed": 9393920,
+        "external": 2474016,
+        "arrayBuffers": 37652
+      },
+      "settled": {
+        "rss": 114081792,
+        "heapTotal": 16506880,
+        "heapUsed": 6547200,
+        "external": 2474016,
+        "arrayBuffers": 37652
+      }
+    }
+  ]
+}

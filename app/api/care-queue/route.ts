@@ -1,10 +1,12 @@
+import { loadCareForecast } from '@/lib/care-forecast-service'
+import { observeHttp, errorCategory } from '@/lib/runtime-diagnostics'
 import { validRequestOrigin } from '@/lib/request-origin'
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { isRedirectError } from 'next/dist/client/components/redirect-error'
 import { Prisma } from '@prisma/client'
 import { getCurrentUser } from '@/lib/auth'
-import { collectionPath, requireCollectionLogger, requireCollectionViewer } from '@/lib/collections'
+import { canManageCollection, collectionPath, requireCollectionLogger, requireCollectionViewer } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
 import { getCareQueue } from '@/lib/care-queue'
 import { runCareQueueMutation } from '@/lib/care-queue-mutations'
@@ -24,7 +26,7 @@ function failure(error: unknown) {
   if (error instanceof Error) return json({ error: error.message, category: 'validation' }, 400)
   return json({ error: 'Could not confirm the care action.', category: 'server' }, 500)
 }
-export async function GET(request: NextRequest) {
+async function getQueue(request: NextRequest) {
   try {
     const slug = request.nextUrl.searchParams.get('collectionSlug') || ''
     if (!slug) return json({ error: 'Choose a collection.' }, 400)
@@ -38,10 +40,11 @@ export async function GET(request: NextRequest) {
     const preference = context.user ? await prisma.emailPreference.findUnique({ where: { userId: context.user.id } }) : null
     const snapshotAt = Date.now()
     const items = await getCareQueue(prisma, { collectionId: context.collection.id, collectionSlug: slug, userId: context.user?.id, timezone: preference?.timezone, includeCompleted: true })
-    return json({ items, snapshotAt })
+    const forecast = request.nextUrl.searchParams.get('forecast') === '1' ? { ...await loadCareForecast(prisma, { collectionId: context.collection.id, collectionSlug: slug, userId: context.user?.id, timezone: preference?.timezone }, items), canManage: canManageCollection(context.user, context) } : undefined
+    return json({ items, snapshotAt, forecast })
   } catch (error) { return failure(error) }
 }
-export async function POST(request: NextRequest) {
+async function postQueue(request: NextRequest) {
   const startedAt = Date.now()
   let operationId: unknown
   let action: unknown
@@ -67,7 +70,10 @@ export async function POST(request: NextRequest) {
     return json({ ok: true, result })
   } catch (error) {
     const response = failure(error)
-    console.warn('care_queue_mutation_failed', { operationId: typeof operationId === 'string' ? operationId : undefined, action: typeof action === 'string' ? action : undefined, category: response.status, durationMs: Date.now() - startedAt })
+    console.warn('care_queue_mutation_failed', { operationId: typeof operationId === 'string' ? operationId : undefined, action: typeof action === 'string' ? action : undefined, category: errorCategory(error), status: response.status, durationMs: Date.now() - startedAt })
     return response
   }
 }
+
+export async function GET(request: NextRequest) { return observeHttp("care_queue.read", false, () => getQueue(request)) }
+export async function POST(request: NextRequest) { return observeHttp("care_queue.mutate", true, () => postQueue(request)) }

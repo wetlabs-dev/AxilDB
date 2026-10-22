@@ -19,7 +19,7 @@ export const researchDefinitionInclude = {
 export type ResearchDefinition = Prisma.PlantDefinitionGetPayload<{
   include: typeof researchDefinitionInclude
 }>
-export function definitionHasRecipe(d: ResearchDefinition) {
+export function definitionHasRecipe(d: Pick<ResearchDefinition, 'husbandryGuide' | 'collectionId'>) {
   return Boolean(
     d.husbandryGuide?.fertilizerRecipe?.active &&
       d.husbandryGuide.fertilizerRecipe.collectionId === d.collectionId
@@ -183,7 +183,7 @@ export async function approveCadenceProposal(
       where: { id },
       include: {
         job: { select: { status: true } },
-        plantDefinition: { include: researchDefinitionInclude },
+        plantDefinition: { include: { careCadences: true, husbandryGuide: { include: { fertilizerRecipe: true } } } },
       },
     })
     if (!p || p.status !== 'PENDING') return 'No longer pending'
@@ -266,7 +266,7 @@ export async function eligibleCadenceProposals(
     where: actionableCadenceWhere(collectionId),
     include: {
       job: { select: { status: true } },
-      plantDefinition: { include: researchDefinitionInclude },
+      plantDefinition: { include: { careCadences: true, husbandryGuide: { include: { fertilizerRecipe: true } } } },
     },
   })
   return rows.filter((p) => isActionableCadenceProposal(p, p.plantDefinition))

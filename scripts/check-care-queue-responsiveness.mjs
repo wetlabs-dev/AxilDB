@@ -111,28 +111,21 @@ try {
   await expect(page.locator('main').getByRole('alert')).toContainText('offline')
   await context.setOffline(false)
   hold = false
-  // Bulk remains atomic, hides its selected review immediately, and records each specimen once.
+  // Bulk uses its dedicated server action and same-day eligibility review.
   const bulkUrl = `${prefix}/care/bulk?review=1&locationId=${location.id}&careType=WATERING&plantInstanceId=${d.id}&plantInstanceId=${e.id}`
   await page.goto(bulkUrl)
-  hold = true
-  await page.getByRole('button', { name: 'Submit bulk care', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Submit bulk care', exact: true })).toBeHidden()
-  await expect(page.getByText('Recording selected care… You can continue using the queue.', { exact: true })).toBeVisible()
-  await expect.poll(() => pending.length).toBe(6)
-  await pending[5].route.continue()
-  await expect(page.locator('#bulk-care-form').getByText('Selected care recorded.', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Record care for 2 plants', exact: true }).click()
   await expect.poll(() => db.plantCareEvent.count({ where: { plantInstanceId: d.id } })).toBe(2)
   await expect.poll(() => db.plantCareEvent.count({ where: { plantInstanceId: e.id } })).toBe(2)
-  hold = false
   const f = await makePlant('TEST-F')
   await page.goto(`${prefix}/care?filter=today`)
   hold = true
   await row(f).getByRole('button', { name: 'Complete', exact: true }).click()
   await expect(row(f)).toBeHidden()
-  await expect.poll(() => pending.length).toBe(7)
-  const lostResponse = await pending[6].route.fetch()
+  await expect.poll(() => pending.length).toBe(6)
+  const lostResponse = await pending[5].route.fetch()
   assert.equal(lostResponse.status(), 200)
-  await pending[6].route.abort('failed')
+  await pending[5].route.abort('failed')
   await expect.poll(() => db.plantCareEvent.count({ where: { plantInstanceId: f.id } })).toBe(2)
   await expect(row(f)).toBeHidden()
   hold = false
@@ -147,13 +140,13 @@ try {
   await conditionRow.getByRole('button', { name: 'Update condition', exact: true }).click()
   await expect(conditionRow).toBeVisible()
   await expect(conditionRow).toContainText('Improving')
-  await expect.poll(() => pending.length).toBe(8)
-  await pending[7].route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ error: 'Controlled condition failure.' }) })
+  await expect.poll(() => pending.length).toBe(7)
+  await pending[6].route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ error: 'Controlled condition failure.' }) })
   await expect(conditionRow).toContainText('High')
   await conditionRow.getByRole('button', { name: 'Resolve condition', exact: true }).click()
   await expect(conditionRow).toBeHidden()
-  await expect.poll(() => pending.length).toBe(9)
-  await pending[8].route.continue()
+  await expect.poll(() => pending.length).toBe(8)
+  await pending[7].route.continue()
   await expect.poll(async () => (await db.plantCondition.findUniqueOrThrow({ where: { id: condition.id } })).status).toBe('RESOLVED')
   hold = false
   const g = await db.plantInstance.create({ data: { collectionId, plantDefinitionId: definition.id, plantId: 'TEST-G', instanceType: 'PROPAGATION', propagationDate: new Date(Date.now() - 20 * 86400000), currentLocationId: location.id } })
@@ -164,8 +157,8 @@ try {
   await propagationRow.getByRole('button', { name: 'Mark established', exact: true }).focus()
   await page.keyboard.press('Enter')
   await expect(propagationRow).toBeHidden()
-  await expect.poll(() => pending.length).toBe(10)
-  await pending[9].route.continue()
+  await expect.poll(() => pending.length).toBe(9)
+  await pending[8].route.continue()
   await expect.poll(async () => Boolean((await db.plantInstance.findUniqueOrThrow({ where: { id: g.id } })).propagationEstablishedAt)).toBe(true)
   hold = false
   const h = await makePlant('TEST-H')
@@ -174,8 +167,8 @@ try {
   hold = true
   await row(h).getByRole('button', { name: 'Complete', exact: true }).tap()
   await expect(row(h)).toBeHidden()
-  await expect.poll(() => pending.length).toBe(11)
-  await pending[10].route.continue()
+  await expect.poll(() => pending.length).toBe(10)
+  await pending[9].route.continue()
   await expect.poll(() => db.plantCareEvent.count({ where: { plantInstanceId: h.id } })).toBe(2)
   // Access checks apply to API requests independently from the UI.
   const anonymous = await browser.newContext()

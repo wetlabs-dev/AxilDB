@@ -1,6 +1,6 @@
 import type { Prisma, PrismaClient } from '@prisma/client'
 import { isQuietDate, schedulableCareTypes } from '@/lib/care-scheduling'
-import { getCareQueue } from '@/lib/care-queue'
+import { getCareQueue, type CareQueueItem } from '@/lib/care-queue'
 import { careForecast, type CalendarConfig, type QuietDate } from '@/lib/care-calendar'
 import { scheduleDigest } from '@/lib/care-calendar-store'
 import { addCalendarDays, calendarDayIndexInTimeZone, dateInputValue, normalizeTimeZone, parseDateLocal } from '@/lib/time'
@@ -13,10 +13,10 @@ export async function forecastConfiguration(db: PrismaClient | Prisma.Transactio
   ])
   return { quietDays, rules, timezone: normalizeTimeZone(scope.timezone) }
 }
-export async function loadCareForecast(db: PrismaClient | Prisma.TransactionClient, scope: ForecastScope) {
+export async function loadCareForecast(db: PrismaClient | Prisma.TransactionClient, scope: ForecastScope, suppliedItems?: CareQueueItem[]) {
   const config = await forecastConfiguration(db, scope)
   const locations = await db.location.findMany({ where: { collectionId: scope.collectionId }, select: { id: true, name: true }, orderBy: { name: 'asc' } })
-  const items = await getCareQueue(db, { ...scope, timezone: config.timezone })
+  const items = suppliedItems || await getCareQueue(db, { ...scope, timezone: config.timezone })
   return { timezone: config.timezone, days: careForecast(items, config, scope.now), quietDays: config.quietDays.filter(day => day.active), allQuietDays: config.quietDays, locations }
 }
 export function proposedQuietDays(config: CalendarConfig, draft: QuietDraft, collectionId: string): QuietDate[] {

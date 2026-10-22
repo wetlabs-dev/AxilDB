@@ -67,10 +67,11 @@ export function smartDirection(careType: string, dueAt: Date, now = new Date(), 
 }
 
 export function isQuietDate<TQuietDay extends QuietDayLike>(date: Date, quietDays: TQuietDay[], timezone: string): TQuietDay | null {
+  if (!quietDays.some(rule => rule.active)) return null
   timezone = normalizeTimeZone(timezone)
   const localDate = dateInputValue(date, timezone)
-  const localDay = new Intl.DateTimeFormat('en-US', { timeZone: timezone, weekday: 'short' }).format(date)
-  const dayIndex = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(localDay)
+  // Weekday of the already-resolved local calendar date; no per-task ICU allocation.
+  const dayIndex = new Date(`${localDate}T00:00:00Z`).getUTCDay()
   return quietDays.find((quietDay) => {
     if (!quietDay.active) return false
     if (quietDay.quietType === 'ONE_TIME' && quietDay.date) return dateInputValue(quietDay.date, timezone) === localDate

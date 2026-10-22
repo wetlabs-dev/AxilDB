@@ -187,6 +187,7 @@ export function PlantIdPreviewLink({
   children,
   previewData,
   className = '',
+  prefetch,
 }: {
   collectionSlug: string
   plantId: string
@@ -194,6 +195,7 @@ export function PlantIdPreviewLink({
   children?: ReactNode
   previewData?: PlantInstancePreview | null
   className?: string
+  prefetch?: boolean
 }) {
   const tooltipId = useId()
   const anchorRef = useRef<HTMLAnchorElement | null>(null)
@@ -242,6 +244,7 @@ export function PlantIdPreviewLink({
     <>
       <Link
         ref={anchorRef}
+        prefetch={prefetch}
         href={href}
         className={cn(plantIdLinkClassName, className)}
         aria-describedby={open ? tooltipId : undefined}

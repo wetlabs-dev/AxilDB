@@ -1,9 +1,8 @@
 import { migrationOutboundHeld } from '../lib/migration-hold'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '../lib/prisma'
 import { processAiCuratorWake } from '../lib/ai-curator'
 import { recordServerWorkerRun } from '../lib/server-incidents'
 
-const prisma = new PrismaClient()
 const startedAt = new Date()
 
 async function main() {

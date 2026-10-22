@@ -1,3 +1,4 @@
+import { runtimeDiagnostics } from '@/lib/runtime-diagnostics'
 import { availableMemory, processMemory } from '@/lib/process-memory'
 import Link from 'next/link'
 import { approveAiAccessRequest, approveCollectionRequest, rejectAiAccessRequest, rejectCollectionRequest } from '@/app/collection-actions'
@@ -270,6 +271,7 @@ export default async function ServerDashboard({
     take: 50,
   })
   const liveMemory = processMemory()
+  const runtime = runtimeDiagnostics()
   const latest = latestSnapshot.metrics
   const diskUsedPercent = latest.disk.totalBytes ? (latest.disk.usedBytes / latest.disk.totalBytes) * 100 : 0
   const memoryUsedBytes = Math.max(0, latest.memory.systemTotalBytes - availableMemory(latest.memory))
@@ -528,6 +530,7 @@ export default async function ServerDashboard({
 
       <Card>
         <h3 className="font-serif text-xl font-semibold">Memory Diagnostics</h3>
+        <p className="mt-2 text-sm text-stone-600">Tracked requests: {runtime.activeRequests} active · {runtime.inFlightMutations} mutations · event loop p99 {runtime.eventLoop.p99Ms.toFixed(1)} ms. Detailed counters: <a href="/api/server/runtime" className="underline">runtime diagnostics</a>.</p>
         <p className="mt-1 text-sm text-stone-600">Live web server process memory (PID {liveMemory.processId}). ArrayBuffers are included in external memory. Container figures below belong to the saved sample ({latest.memory.processSource || 'source unknown'}), not necessarily the web server.</p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-md border border-stone-200 bg-white/50 p-3">

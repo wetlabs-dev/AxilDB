@@ -1,3 +1,4 @@
+import { BoundedCache } from '@/lib/bounded-cache'
 export const FALLBACK_TIMEZONE = 'America/New_York'
 
 type DateInput = Date | string | null | undefined
@@ -11,7 +12,9 @@ type ZonedParts = {
   second: number
 }
 
-const partFormatters = new Map<string, Intl.DateTimeFormat>()
+const partFormatters = new BoundedCache<Intl.DateTimeFormat>(64, 86_400_000)
+const validTimeZones = new BoundedCache<boolean>(128, 86_400_000)
+const displayFormatters = new BoundedCache<Intl.DateTimeFormat>(96, 86_400_000)
 
 function partsFormatter(timeZone: string) {
   const cached = partFormatters.get(timeZone)
@@ -34,10 +37,15 @@ function partsFormatter(timeZone: string) {
 
 export function normalizeTimeZone(timeZone?: string | null) {
   const candidate = timeZone || process.env.AXILDB_DEFAULT_TIMEZONE || FALLBACK_TIMEZONE
+  const known = validTimeZones.get(candidate)
+  if (known !== undefined) return known ? candidate : FALLBACK_TIMEZONE
   try {
-    new Intl.DateTimeFormat('en-US', { timeZone: candidate }).format(new Date())
+    // Validation allocates native ICU state; never do this for every date operation.
+    new Intl.DateTimeFormat('en-US', { timeZone: candidate })
+    validTimeZones.set(candidate, true)
     return candidate
   } catch {
+    validTimeZones.set(candidate, false)
     return FALLBACK_TIMEZONE
   }
 }
@@ -160,13 +168,11 @@ export function formatDate(value: DateInput, timeZone = defaultTimeZone(), optio
   if (!value) return '—'
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return '—'
-  return new Intl.DateTimeFormat(undefined, {
-    timeZone: normalizeTimeZone(timeZone),
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    ...options,
-  }).format(date)
+  const settings = { timeZone: normalizeTimeZone(timeZone), month: 'short', day: 'numeric', year: 'numeric', ...options } as Intl.DateTimeFormatOptions
+  const key = JSON.stringify(Object.entries(settings).sort(([a], [b]) => a.localeCompare(b)))
+  let formatter = displayFormatters.get(key)
+  if (!formatter) { formatter = new Intl.DateTimeFormat(undefined, settings); displayFormatters.set(key, formatter) }
+  return formatter.format(date)
 }
 
 export function formatDateTime(value: DateInput, timeZone = defaultTimeZone(), options: Intl.DateTimeFormatOptions = {}) {
