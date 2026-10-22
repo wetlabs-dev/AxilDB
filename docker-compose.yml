@@ -43,12 +43,6 @@ services:
     command: sh -c "npm run db:migrate:deploy && npm run db:bootstrap"
   app:
     build: .
-    healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health/live',{signal:AbortSignal.timeout(3000)}).then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
-      interval: 30s
-      timeout: 5s
-      start_period: 60s
-      retries: 3
     restart: unless-stopped
     env_file:
       - path: ./.env

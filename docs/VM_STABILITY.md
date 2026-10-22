@@ -67,6 +67,21 @@ Look for growing idle-in-transaction sessions, blockers and repeated acquisition
 - **Memory budgets:** measure app + workers + PostgreSQL + connector/proxy + build peaks. Reserve at least roughly 1.5–2 GiB for the OS/filesystem cache and service variance as an initial planning allowance, then validate on this host. A 2 GiB Node heap allowance for every worker is not a safe aggregate plan for an 8 GiB VM. Heap limits exclude native ICU, Prisma engine, buffers and other RSS. Do not impose an app cgroup cap until its observed native/heap peak and deployment overlap are known; a low cap can create exactly this outage. No Docker memory/CPU caps were changed in this patch. [Docker documents memory and swap limits](https://docs.docker.com/engine/containers/resource_constraints/).
 - **Swap:** verify `swapon --show` first. If absent and disk has headroom, a host administrator can provision a small (~2 GiB) swap file following Ubuntu's filesystem-specific procedure. It is emergency headroom, not a solution to sustained pressure; high swap I/O can cause timeouts. Do not disable the OOM killer or force a swappiness value without measurements. This is optional server work.
 - **Postgres:** preserve current tuning until measurements justify a change. For this shared 8 GiB host, avoid blindly assigning the usual dedicated-DB 25% RAM recommendation; workers and app share the same RAM. `work_mem` multiplies per execution node/session, so increasing it globally can amplify bursts. Long idle transactions should be traced before applying a timeout that could interrupt valid maintenance.
-- **Health and restart:** Web deployment adds the cheap app liveness check. Keep the existing readiness check for deployment verification. Docker restart policies respond to exited processes, not an unhealthy status; do not assume this check automatically restarts a stuck process. Investigate the first failure before a manual restart. [Docker restart behavior](https://docs.docker.com/engine/containers/start-containers-automatically/).
+- **Health and restart:** Web deployment adds the cheap app liveness endpoint, without changing Compose. Adding a container health check is optional host configuration; the remote agent intentionally rejects Compose-file changes. Keep the existing readiness check for deployment verification. Docker restart policies respond to exited processes, not an unhealthy status; do not assume this check automatically restarts a stuck process. Investigate the first failure before a manual restart. [Docker restart behavior](https://docs.docker.com/engine/containers/start-containers-automatically/).
 
 In the app, Server Management → runtime diagnostics provides a snapshot; save before/after values during ordinary activity. Filter app logs for `application_operation`, `database_pool_timeout`, slow durations and changing process IDs. Do not continuously poll at high frequency. After deployment, a normal session should show stable connection counts and completed mutations, without forced full-page refreshes. Host changes, optional worker overrides, swap and tunnel adjustments require server access; **none is mandatory for deploying the code fixes through Web deployment**.
+
+## Optional host-managed health check
+
+This is not required for the Web deployment. If you want Docker to report app health, a host administrator can add the following under `services.app` in a separately managed Compose override and validate it with the host deployment procedure. Use the same configured Compose files consistently. Do not modify or bypass the remote agent's topology verification to install this.
+
+```yaml
+healthcheck:
+  test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health/live',{signal:AbortSignal.timeout(3000)}).then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+  interval: 30s
+  timeout: 5s
+  start_period: 60s
+  retries: 3
+```
+
+The new endpoint must be deployed before enabling the check. Unhealthy status alone does not trigger Docker's restart policy.

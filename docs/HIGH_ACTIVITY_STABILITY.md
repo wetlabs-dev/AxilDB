@@ -52,7 +52,7 @@ Structured `application_operation` logs contain timestamp, random correlation ID
 
 Care HTTP paths fail fast with 503 and Retry-After when more than 32 tracked mutations or eight tracked reads are active, before executing the rejected work. This is process-local pressure protection, not distributed rate limiting or an automatic replay queue. Sequential use never reaches this limit. Existing ambiguous-response reconciliation retains operation identity rather than blindly repeating a mutation.
 
-Page/root error boundaries provide manual reload/recovery and explicitly warn that a previous action may have saved. They cannot keep an OOM-killed process alive. `/api/health/live` is a cheap DB-independent check; existing `/api/health/ready` checks database/revision readiness. Compose uses liveness for container health. **Docker does not restart a process solely because its health is unhealthy**; the existing unless-stopped policy restarts an exited process. Host/tunnel diagnosis remains necessary.
+Page/root error boundaries provide manual reload/recovery and explicitly warn that a previous action may have saved. They cannot keep an OOM-killed process alive. `/api/health/live` is a cheap DB-independent check; existing `/api/health/ready` checks database/revision readiness. The endpoint is available for an optional host-managed container health check; this update leaves Compose unchanged because remote preflight rejects Compose-file changes. **Docker does not restart a process solely because its health is unhealthy**; the existing unless-stopped policy restarts an exited process. Host/tunnel diagnosis remains necessary.
 
 ## Regression and reproduction
 
@@ -70,7 +70,7 @@ The harness covers 100 approvals/completions, twenty concurrent independent writ
 
 ## Deployment and remaining risks
 
-Deploy through the existing **Web deployment**. No schema migration, new dependency, deployment-agent update, tunnel change, or mandatory host setting is required. Rebuild/recreate the app and workers through the usual deployment mechanism. Existing data, transaction receipts, backups, upgrade preflight/history, and readiness protocol remain compatible. Rollback is code-only.
+Deploy through the existing **Web deployment**. No schema migration, new dependency, deployment-agent update, Compose-file change, tunnel change, or mandatory host setting is required. The optional Compose health check originally included in 045b1ea was removed in the follow-up because the existing preflight intentionally rejects any Compose-file diff. Deploy the follow-up target directly from the previously deployed revision; the net Compose diff is empty. Rebuild/recreate the app and workers through the usual deployment mechanism. Existing data, transaction receipts, backups, upgrade preflight/history, and readiness protocol remain compatible. Rollback is code-only.
 
 The VM's actual OOM history, restart sequence, pool wait behavior, CPU steal/I/O pressure, swap, and connector logs remain unknown. Heavy unrelated pages, very large collections/history, simultaneous users, native allocator retention, worker overlap, and production runtime differences still warrant observation. Do not claim an unbounded leak is fixed or the specific Cloudflare outage is fully explained. Follow [the VM runbook](VM_STABILITY.md) to correlate the first origin failure with Docker/kernel/tunnel evidence.
 
