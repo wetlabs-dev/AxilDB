@@ -2672,9 +2672,11 @@ model Location {
   movesTo                 PlantLocationMove[]         @relation("PlantLocationMoveTo")
   quarantineRecords       PlantQuarantine[]
   workflowRuns            WorkflowRun[]
+  quietDays               CollectionQuietDay[]
   careScheduleSyncBatches CareScheduleSyncBatch[]
   environmentProfile      LocationEnvironmentProfile?
 
+  @@unique([collectionId, id])
   @@unique([collectionId, code])
   @@index([collectionId])
   @@index([parentLocationId])
@@ -3372,6 +3374,8 @@ model CareScheduleSyncItem {
 }
 
 model CollectionQuietDay {
+  locationId      String?
+  location        Location? @relation(fields: [collectionId, locationId], references: [collectionId, id], onDelete: Cascade)
   id              String    @id @default(cuid())
   collectionId    String
   name            String
@@ -3391,6 +3395,7 @@ model CollectionQuietDay {
   createdByUser User?                    @relation("CollectionQuietDayCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
   adjustments   CareQuietDayAdjustment[]
 
+  @@index([collectionId, locationId])
   @@index([collectionId])
   @@index([createdByUserId])
   @@index([quietType])

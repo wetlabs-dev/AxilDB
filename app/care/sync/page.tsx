@@ -1,8 +1,9 @@
+import { quietDateReasons } from '@/lib/care-calendar'
 import Link from 'next/link'
 import { applyCareScheduleSync } from '@/app/care-schedule-actions'
 import { Button, Card, Field, Select, TextArea } from '@/components/ui'
 import { canCreateInCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
-import { careScheduleLabel, normalizeCareTypes, parseTargetDueAt, resolveQuietDayShift } from '@/lib/care-scheduling'
+import { careScheduleLabel, normalizeCareTypes, parseTargetDueAt } from '@/lib/care-scheduling'
 import { getCareQueue } from '@/lib/care-queue'
 import { descendantLocationIds, locationPathWithCodes } from '@/lib/locations'
 import { prisma } from '@/lib/prisma'
@@ -97,7 +98,6 @@ export default async function CareScheduleSyncPage({
     const existing = dueByPlantType.get(key)
     if (!existing || item.dueAt < existing.dueAt) dueByPlantType.set(key, item)
   }
-  const ruleByType = new Map(quietRules.map((rule) => [rule.careType, rule]))
   const targetDueAt = parseTargetDueAt(targetDate, targetTime, timezone)
 
   const selectedPlants = plants.filter((plant) => selectedPlantIds.has(plant.id))
@@ -106,21 +106,15 @@ export default async function CareScheduleSyncPage({
       ? selectedPlants.flatMap((plant) => selectedCareTypes.map((careType) => {
         const current = dueByPlantType.get(`${plant.id}:${careType}`)
         const adjustment = adjustmentByPlantType.get(`${plant.id}:${careType}`)
-        const shift = resolveQuietDayShift({
-          dueAt: targetDueAt,
-          careType,
-          quietDays,
-          rule: ruleByType.get(careType),
-          timezone,
-        })
+        const conflicts = quietDateReasons(targetDueAt, { quietDays, rules: quietRules, timezone }, plant.currentLocationId)
         return {
           plant,
           careType,
           current,
-          proposed: shift?.adjustedDueAt || targetDueAt,
+          proposed: targetDueAt,
           currentCadence: adjustment?.cadenceOverrideDays || null,
           proposedCadence: syncCadence ? cadenceDays : null,
-          quietReason: shift?.adjustedDueAt.getTime() !== targetDueAt.getTime() ? shift?.reason : null,
+          quietReason: conflicts.length ? `Explicit date preserved on Quiet Day: ${conflicts.map(rule => rule.name).join(', ')}. Choose another date if care is unavailable.` : null,
           action: current ? 'UPDATED' : 'CREATED',
         }
       }))

@@ -27,7 +27,7 @@ type QuietDayLike = {
 }
 
 export const quietDayRuleDefaults: Record<SchedulableCareType, { direction: ShiftDirection; before: number; after: number }> = {
-  WATER: { direction: 'SMART', before: 1, after: 1 },
+  WATER: { direction: 'SMART', before: 14, after: 14 },
   PRUNE: { direction: 'SMART', before: 2, after: 2 },
   FERTILIZE: { direction: 'LATER', before: 1, after: 3 },
   PEST_CHECK: { direction: 'SMART', before: 2, after: 1 },

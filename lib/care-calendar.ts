@@ -4,13 +4,20 @@ import { cadenceDueAt } from '@/lib/care-cadences'
 import { isQuietDate, quietDayRuleDefaults } from '@/lib/care-scheduling'
 import { addCalendarDays, calendarDayIndexInTimeZone, dateInputValue, normalizeTimeZone, startOfDayInTimeZone } from '@/lib/time'
 
-export type QuietDate = { description?: string | null; id: string; name: string; quietType: string; date: Date | null; startDate: Date | null; endDate: Date | null; dayOfWeek: number | null; active: boolean }
+export type QuietDate = { locationId?: string | null; description?: string | null; id: string; name: string; quietType: string; date: Date | null; startDate: Date | null; endDate: Date | null; dayOfWeek: number | null; active: boolean }
 export type ShiftRule = { careType: string; active: boolean; defaultShiftDirection: string; maxShiftDaysBefore: number; maxShiftDaysAfter: number }
 export type CalendarConfig = { quietDays: QuietDate[]; rules: ShiftRule[]; timezone: string }
 export type SavedShift = { adjustedDueAt: Date; originalDueAt: Date; reason: string; ruleUsed: string; shiftDirection: string; quietDayId: string | null }
 // Cadence is a moisture-assessment heuristic, never a drought-tolerance claim.
 export const calendarPolicy = { shortWateringDays: 7, longWateringDays: 14, wateringShiftDays: 1, maximumShiftDays: 14, coherentGroupLimit: 40 }
-export function calendarSchedule(items: CareQueueItem[], config: CalendarConfig, now = new Date(), saved = new Map<string, SavedShift>(), revision = '') {
+// Exact assignment only: parent locations do not implicitly restrict children.
+export function effectiveQuietRules(quietDays: QuietDate[], locationId?: string | null) {
+  return quietDays.filter(rule => !rule.locationId || rule.locationId === locationId)
+}
+export function quietDateReasons(date: Date, config: CalendarConfig, locationId?: string | null) {
+  return effectiveQuietRules(config.quietDays, locationId).filter(rule => isQuietDate(date, [rule], config.timezone))
+}
+export function calendarSchedule(items: CareQueueItem[], config: CalendarConfig, now = new Date(), saved = new Map<string, SavedShift>(), revision: string | Map<string, string> = '') {
   const timezone = normalizeTimeZone(config.timezone)
   const today = startOfDayInTimeZone(now, timezone)
   const dates = new Map<string, number>()
@@ -21,15 +28,15 @@ export function calendarSchedule(items: CareQueueItem[], config: CalendarConfig,
     const item = { ...original, dueAt: startOfDayInTimeZone(original.dueAt, timezone) }
     const previous = saved.get(item.key)
     // Once an adjusted occurrence is actionable, do not make unfinished work vanish.
-    if (previous && (!item.manualSchedule || item.dueAt.getTime() === previous.originalDueAt.getTime()) && (previous.ruleUsed === revision || previous.adjustedDueAt <= today)) {
+    if (previous && (!item.manualSchedule || item.dueAt.getTime() === previous.originalDueAt.getTime()) && (previous.ruleUsed === (typeof revision === 'string' ? revision : revision.get(item.key)) || previous.adjustedDueAt <= today)) {
       item.originalDueAt = previous.originalDueAt
       item.dueAt = previous.adjustedDueAt
-      item.quietDayReason = isQuietDate(previous.adjustedDueAt, config.quietDays, timezone) ? `${previous.reason} Quiet Day exception: an already-started plan remains outstanding.` : previous.reason
+      item.quietDayReason = isQuietDate(previous.adjustedDueAt, effectiveQuietRules(config.quietDays, item.locationId), timezone) ? `${previous.reason} Quiet Day exception: an already-started plan remains outstanding.` : previous.reason
       item.quietDayShiftDirection = previous.shiftDirection
       item.quietDayName = config.quietDays.find(day => day.id === previous.quietDayId)?.name || 'Quiet Day adjustment'
       result.set(item.key, item); if (!item.completedAt) count(item.dueAt, 1); continue
     }
-    const quiet = isQuietDate(item.dueAt, config.quietDays, timezone)
+    const quiet = isQuietDate(item.dueAt, effectiveQuietRules(config.quietDays, item.locationId), timezone)
     if (!quiet || item.completedAt || item.manualSchedule || item.dueAt < today) {
       if (quiet && !item.completedAt) item.quietDayReason = item.manualSchedule ? 'Required on Quiet Day: explicit schedule or time-sensitive care is preserved.' : 'Overdue care remains outstanding on Quiet Day.'
       result.set(item.key, item); if (!item.completedAt) count(item.dueAt, 1)
@@ -39,7 +46,7 @@ export function calendarSchedule(items: CareQueueItem[], config: CalendarConfig,
   const groups = new Map<string, CareQueueItem[]>()
   for (const item of waiting.sort((a, b) => a.key.localeCompare(b.key))) {
     const waterClass = item.taskType === 'WATER' ? (item.cadenceDays || 0) <= calendarPolicy.shortWateringDays ? ':short' : (item.cadenceDays || 0) >= calendarPolicy.longWateringDays ? ':long' : ':middle' : ''
-    const key = `${dateInputValue(item.dueAt, timezone)}:${item.taskType}${waterClass}${item.taskType === 'WATER' ? `:${item.key}` : ''}`
+    const key = `${item.locationId || "collection"}:${dateInputValue(item.dueAt, timezone)}:${item.taskType}${waterClass}${item.taskType === 'WATER' ? `:${item.key}` : ''}`
     groups.set(key, [...(groups.get(key) || []), item])
   }
   const coherentGroups = [...groups].sort(([a], [b]) => a.localeCompare(b)).flatMap(([, group]) => {
@@ -51,9 +58,9 @@ export function calendarSchedule(items: CareQueueItem[], config: CalendarConfig,
     const type = first.taskType === 'REPOT' ? 'REPOTTING' : first.taskType
     const defaults = quietDayRuleDefaults[type as keyof typeof quietDayRuleDefaults] || { direction: 'SMART', before: 1, after: 1 }
     const rule = config.rules.find(rule => rule.careType === type && rule.active)
-    const bound = first.taskType === 'WATER' ? calendarPolicy.wateringShiftDays : calendarPolicy.maximumShiftDays
-    const before = Math.min(bound, rule?.maxShiftDaysBefore ?? defaults.before)
-    const after = Math.min(bound, rule?.maxShiftDaysAfter ?? defaults.after)
+    const bound = first.taskType === 'WATER' ? Math.min(calendarPolicy.maximumShiftDays, Math.min(first.cadenceDays || 3, Math.max(2, Math.floor((first.cadenceDays || 3) / 3)))) : calendarPolicy.maximumShiftDays
+    const before = Math.min(bound, rule?.maxShiftDaysBefore ?? (first.taskType === 'WATER' ? bound : defaults.before))
+    const after = Math.min(bound, rule?.maxShiftDaysAfter ?? (first.taskType === 'WATER' ? bound : defaults.after))
     const direction = rule?.defaultShiftDirection || 'SMART'
     let preferred: string | null = direction === 'SMART' ? null : direction
     if (!preferred && first.taskType === 'WATER') {
@@ -64,7 +71,7 @@ export function calendarSchedule(items: CareQueueItem[], config: CalendarConfig,
     for (const [sign, limit, label] of [[-1, before, 'EARLIER'], [1, after, 'LATER']] as const) {
       for (let offset = 1; offset <= limit; offset++) {
         const date = addCalendarDays(first.dueAt, sign * offset, timezone)
-        if (date < today || isQuietDate(date, config.quietDays, timezone) || group.some(item => item.notBeforeDate && dateInputValue(date, timezone) < item.notBeforeDate)) continue
+        if (date < today || group.some(item => isQuietDate(date, effectiveQuietRules(config.quietDays, item.locationId), timezone)) || group.some(item => item.notBeforeDate && dateInputValue(date, timezone) < item.notBeforeDate)) continue
         if (first.taskType === 'WATER' && preferred === 'EARLIER' && label !== 'EARLIER') continue
         // Watering preference outranks load. Other categories stay together on the lighter day.
         const load = dates.get(dateInputValue(date, timezone)) || 0
@@ -74,7 +81,7 @@ export function calendarSchedule(items: CareQueueItem[], config: CalendarConfig,
     candidates.sort((a, b) => a.score - b.score || a.date.getTime() - b.date.getTime())
     const chosen = candidates[0]
     for (const item of group) {
-      const quiet = isQuietDate(item.dueAt, config.quietDays, timezone)!
+      const quiet = isQuietDate(item.dueAt, effectiveQuietRules(config.quietDays, item.locationId), timezone)!
       if (chosen) {
         item.originalDueAt = item.dueAt
         item.dueAt = chosen.date
@@ -116,6 +123,6 @@ export function careForecast(items: CareQueueItem[], config: CalendarConfig, now
     const tasks = projected.filter(item => !item.completedAt && (dateInputValue(item.dueAt, config.timezone) === key || offset === 0 && item.dueAt < today))
     const categories: Record<string, number> = {}
     tasks.forEach(item => { categories[item.taskType] = (categories[item.taskType] || 0) + 1 })
-    return { date: key, total: tasks.length, categories, overdue: tasks.filter(item => item.dueAt < today).length, quietDay: isQuietDate(date, config.quietDays, config.timezone), tasks: tasks.map(({ key, title, taskType, href, dueAt, originalDueAt, quietDayReason, projected, manualSchedule }) => ({ key, title, taskType, href, dueAt, originalDueAt, quietDayReason, projected, manualSchedule })) }
+    return { date: key, total: tasks.length, categories, overdue: tasks.filter(item => item.dueAt < today).length, quietDay: isQuietDate(date, effectiveQuietRules(config.quietDays), config.timezone), restrictions: config.quietDays.filter(rule => isQuietDate(date, [rule], config.timezone)), tasks: tasks.map(({ key, title, taskType, href, dueAt, originalDueAt, quietDayReason, projected, manualSchedule, locationId, locationName }) => ({ key, title, taskType, href, dueAt, originalDueAt, quietDayReason, projected, manualSchedule, locationId, locationName })) }
   })
 }

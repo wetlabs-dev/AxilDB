@@ -33,9 +33,9 @@ export async function POST(req: NextRequest) {
       if (preview.hash !== input.hash) return { stale: true, preview }
       const existing = await forecastConfiguration(tx, scope)
       const nextIds = preview.quietDays.map(day => day.id)
-      await tx.collectionQuietDay.deleteMany({ where: { collectionId: scope.collectionId, active: true, id: { notIn: nextIds } } })
+      await tx.collectionQuietDay.deleteMany({ where: { collectionId: scope.collectionId, id: { notIn: nextIds } } })
       for (const day of preview.quietDays) {
-        if (existing.quietDays.some(old => old.id === day.id && JSON.stringify(old.date) === JSON.stringify(day.date))) continue
+        if (existing.quietDays.some(old => old.id === day.id && JSON.stringify(old) === JSON.stringify(day))) continue
         await tx.collectionQuietDay.upsert({ where: { id: day.id }, create: { ...day, collectionId: scope.collectionId, createdByUserId: context.user.id, timezone: scope.timezone }, update: { ...day, timezone: scope.timezone } })
       }
       if (input.draft.kind === 'rule') {

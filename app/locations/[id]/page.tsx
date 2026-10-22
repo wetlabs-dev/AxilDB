@@ -1,3 +1,4 @@
+import { QuietDaysManager } from '@/components/QuietDaysManager'
 import Link from 'next/link'
 import { RefreshCw } from 'lucide-react'
 import { archiveLocation, regenerateLocationCode, updateLocation } from '@/app/actions'
@@ -150,6 +151,7 @@ export default async function LocationDetail({ params }: { params: Promise<{ id:
         </div>
       </div>
 
+      <Card><QuietDaysManager collectionSlug={collection.slug} locationId={location.id} readOnly={!canManage} /></Card>
       <div className="grid gap-3 sm:grid-cols-3">
         <Card>
           <p className="text-sm text-stone-600">Direct plants</p>
