@@ -278,7 +278,7 @@ export default async function Plants({
                 {identificationPrefill.uploadedPhoto && (
                   <label className="mt-2 flex items-center gap-2">
                     <input type="checkbox" name="attachIdentificationImage" defaultChecked />
-                    <span>Attach the uploaded ID image as this definition's type image.</span>
+                    <span>Attach the uploaded ID image as this definition&apos;s type image.</span>
                   </label>
                 )}
               </div>
@@ -372,111 +372,110 @@ export default async function Plants({
         </Card>
       )}
 
-      <div className="grid auto-rows-fr gap-4 [grid-template-columns:repeat(auto-fill,minmax(min(100%,24rem),1fr))]">
+      <div data-plant-definition-grid className="grid auto-rows-auto items-stretch gap-4 [grid-template-columns:repeat(auto-fill,minmax(min(100%,24rem),1fr))]">
         {sortedPlants.map((plant) => {
           const typePhoto = typePhotoByDefinition[plant.id] || plant.instances.map((instance) => typePhotoByInstance[instance.id]).find(Boolean)
           const completeness = completenessByDefinition.get(plant.id)!
           return (
-            <Card key={plant.id} className="flex h-full flex-col overflow-hidden p-0">
+            <Card key={plant.id} data-plant-definition-card={plant.id} className="flex h-full min-h-0 flex-col overflow-hidden p-0">
               <div className="aspect-[4/3] overflow-hidden">
                 <PlantImage src={typePhoto} alt={plantName(plant)} />
               </div>
               <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-3">
-                <div className="flex flex-1 items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <span className="line-clamp-2 text-sm font-bold leading-tight">{plantName(plant)}</span>
-                    <p className="truncate text-sm">
-                      {plant.taxonomicAuthority?.abbreviation || 'No matching Taxonomic Authority'} · {plant._count.instances} instance(s) ·{' '}
-                      {taxonomyLabel(plant.confidence)}
-                    </p>
-                    {(plantNeedsIdentification(plant) || plant.authority) && (
-                      <p className="line-clamp-2 text-sm text-stone-600">
-                        {plantNeedsIdentification(plant) && <>Needs identification review. Working placement: {acceptedPlantName(plant)}. </>}
-                        {plant.authority && <>Author citation: {plant.authority}.</>}
-                      </p>
+                {(canEdit || canCreate) && (
+                  <div role="group" aria-label={`Actions for ${plantName(plant)}`} data-plant-definition-toolbar className="mb-3 flex flex-wrap items-center gap-2">
+                    {canEdit && (
+                      <Link className="plant-card-action inline-flex min-h-8 items-center justify-center rounded-md border px-2.5 py-1.5 text-center text-xs" href={collectionPath(collection.slug, `/plants/${plant.id}/edit`)}>
+                        Edit
+                      </Link>
                     )}
-                    {plant.aliases.length > 0 && (
-                      <p className="line-clamp-2 text-sm text-stone-600">
-                        Aliases: {plant.aliases.slice(0, 4).map((alias) => alias.name).join(', ')}
-                        {plant.aliases.length > 4 ? `, +${plant.aliases.length - 4} more` : ''}
-                      </p>
+                    {canEdit && collection.aiFeaturesEnabled && collection.aiCuratorEnabled && (
+                      <form action={requestAiCuratorResearchNow}>
+                        <input type="hidden" name="plantDefinitionId" value={plant.id} />
+                        <input type="hidden" name="collectionSlug" value={collection.slug} />
+                        <input type="hidden" name="back" value={collectionPath(collection.slug, '/plants')} />
+                        <button type="submit" className="plant-card-action inline-flex min-h-8 items-center justify-center rounded-md border px-2.5 py-1.5 text-center text-xs">
+                          Research Now
+                        </button>
+                      </form>
                     )}
-                    {(plant.wikipediaUrl || plant.inaturalistUrl || plant.powoUrl || plant.gbifUrl) && (
-                      <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                        {plant.wikipediaUrl && <a className="rounded-md border border-stone-300 bg-white/60 px-2 py-1 underline" href={plant.wikipediaUrl}>Wikipedia</a>}
-                        {plant.inaturalistUrl && <a className="rounded-md border border-stone-300 bg-white/60 px-2 py-1 underline" href={plant.inaturalistUrl}>iNaturalist</a>}
-                        {plant.powoUrl && <a className="rounded-md border border-stone-300 bg-white/60 px-2 py-1 underline" href={plant.powoUrl}>POWO</a>}
-                        {plant.gbifUrl && <a className="rounded-md border border-stone-300 bg-white/60 px-2 py-1 underline" href={plant.gbifUrl}>GBIF</a>}
-                      </div>
+                    {canCreate && (
+                      <form action={copyPlantDefinition}>
+                        <input type="hidden" name="id" value={plant.id} />
+                        <input type="hidden" name="collectionSlug" value={collection.slug} />
+                        <button type="submit" className="plant-card-action inline-flex min-h-8 items-center justify-center rounded-md border px-2.5 py-1.5 text-center text-xs">
+                          Copy
+                        </button>
+                      </form>
                     )}
-                    <p className="line-clamp-2 text-sm text-stone-600">{plant.description}</p>
-                    <div className="mt-2"><PlantTagRow tags={plant.tags.map((item) => item.plantTag)} limit={3} /></div>
-                    <HusbandryBadges
-                      values={(plant.husbandryGuide?.sourcePlantDefinitionId
-                        ? husbandryGuideByDefinitionId.get(plant.husbandryGuide.sourcePlantDefinitionId)
-                        : plant.husbandryGuide) as any}
-                      href={collectionPath(collection.slug, `/plants/${plant.id}/husbandry`)}
-                    />
-                    <p className="mt-2 text-xs font-medium text-stone-500">
-                      {followCountByDefinitionId.get(plant.id) || 0} follower{(followCountByDefinitionId.get(plant.id) || 0) === 1 ? '' : 's'}
-                    </p>
-                    <PlantDefinitionCompletenessBar result={completeness} className="mt-3" />
-                    {(curatorSuggestionsByDefinitionId.get(plant.id) || 0) > 0 && (
-                      <p className="mt-2 rounded-md border border-green-200 bg-green-50 px-2 py-1 text-xs font-semibold text-green-900">AI has prepared suggestions</p>
-                    )}
-                    {(curatorWaitingByDefinitionId.get(plant.id) || 0) > 0 && (
-                      <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-900">AI Curator is waiting for human input</p>
+                    {canEdit && outgoingTransferConnections.length > 0 && (
+                      <form action={createPlantDefinitionShareRequest} className="flex min-w-0 flex-wrap items-center gap-1">
+                        <input type="hidden" name="sourcePlantDefinitionId" value={plant.id} />
+                        <input type="hidden" name="collectionSlug" value={collection.slug} />
+                        <input type="hidden" name="back" value={collectionPath(collection.slug, '/plants')} />
+                        {outgoingTransferConnections.length === 1 ? (
+                          <input type="hidden" name="connectionId" value={outgoingTransferConnections[0].id} />
+                        ) : (
+                          <select name="connectionId" aria-label="Share target collection" className="max-w-full rounded-md border border-stone-300 bg-white/80 px-1 py-1 text-xs">
+                            {outgoingTransferConnections.map((connection) => (
+                              <option key={connection.id} value={connection.id}>{connection.targetCollection.name}</option>
+                            ))}
+                          </select>
+                        )}
+                        <button type="submit" className="inline-flex min-h-8 items-center justify-center rounded-md border px-2.5 py-1.5 text-center text-xs">
+                          Share definition
+                        </button>
+                      </form>
                     )}
                   </div>
-                  {(canEdit || canCreate) && (
-                    <div className="flex shrink-0 flex-col gap-1">
-                      {canEdit && (
-                        <Link className="plant-card-action rounded-md border px-2 py-1 text-center text-xs" href={collectionPath(collection.slug, `/plants/${plant.id}/edit`)}>
-                          Edit
-                        </Link>
-                      )}
-                      {canEdit && collection.aiFeaturesEnabled && collection.aiCuratorEnabled && (
-                        <form action={requestAiCuratorResearchNow}>
-                          <input type="hidden" name="plantDefinitionId" value={plant.id} />
-                          <input type="hidden" name="collectionSlug" value={collection.slug} />
-                          <input type="hidden" name="back" value={collectionPath(collection.slug, '/plants')} />
-                          <button type="submit" className="plant-card-action w-full rounded-md border px-2 py-1 text-center text-xs">
-                            Research Now
-                          </button>
-                        </form>
-                      )}
-                      {canCreate && (
-                        <form action={copyPlantDefinition}>
-                          <input type="hidden" name="id" value={plant.id} />
-                          <input type="hidden" name="collectionSlug" value={collection.slug} />
-                          <button type="submit" className="plant-card-action w-full rounded-md border px-2 py-1 text-center text-xs">
-                            Copy
-                          </button>
-                        </form>
-                      )}
-                      {canEdit && outgoingTransferConnections.length > 0 && (
-                        <form action={createPlantDefinitionShareRequest} className="grid gap-1">
-                          <input type="hidden" name="sourcePlantDefinitionId" value={plant.id} />
-                          <input type="hidden" name="collectionSlug" value={collection.slug} />
-                          <input type="hidden" name="back" value={collectionPath(collection.slug, '/plants')} />
-                          {outgoingTransferConnections.length === 1 ? (
-                            <input type="hidden" name="connectionId" value={outgoingTransferConnections[0].id} />
-                          ) : (
-                            <select name="connectionId" aria-label="Share target collection" className="max-w-24 rounded-md border border-stone-300 bg-white/80 px-1 py-1 text-xs">
-                              {outgoingTransferConnections.map((connection) => (
-                                <option key={connection.id} value={connection.id}>{connection.targetCollection.name}</option>
-                              ))}
-                            </select>
-                          )}
-                          <button type="submit" className="w-full rounded-md border px-2 py-1 text-center text-xs">
-                            Share definition
-                          </button>
-                        </form>
-                      )}
+                )}
+
+                <div data-plant-definition-content className="min-w-0">
+                  <span className="line-clamp-2 text-sm font-bold leading-tight">{plantName(plant)}</span>
+                  <p className="truncate text-sm">
+                    {plant.taxonomicAuthority?.abbreviation || 'No matching Taxonomic Authority'} · {plant._count.instances} instance(s) ·{' '}
+                    {taxonomyLabel(plant.confidence)}
+                  </p>
+                  {(plantNeedsIdentification(plant) || plant.authority) && (
+                    <p className="line-clamp-2 text-sm text-stone-600">
+                      {plantNeedsIdentification(plant) && <>Needs identification review. Working placement: {acceptedPlantName(plant)}. </>}
+                      {plant.authority && <>Author citation: {plant.authority}.</>}
+                    </p>
+                  )}
+                  {plant.aliases.length > 0 && (
+                    <p className="line-clamp-2 text-sm text-stone-600">
+                      Aliases: {plant.aliases.slice(0, 4).map((alias) => alias.name).join(', ')}
+                      {plant.aliases.length > 4 ? `, +${plant.aliases.length - 4} more` : ''}
+                    </p>
+                  )}
+                  {(plant.wikipediaUrl || plant.inaturalistUrl || plant.powoUrl || plant.gbifUrl) && (
+                    <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                      {plant.wikipediaUrl && <a className="rounded-md border border-stone-300 bg-white/60 px-2 py-1 underline" href={plant.wikipediaUrl}>Wikipedia</a>}
+                      {plant.inaturalistUrl && <a className="rounded-md border border-stone-300 bg-white/60 px-2 py-1 underline" href={plant.inaturalistUrl}>iNaturalist</a>}
+                      {plant.powoUrl && <a className="rounded-md border border-stone-300 bg-white/60 px-2 py-1 underline" href={plant.powoUrl}>POWO</a>}
+                      {plant.gbifUrl && <a className="rounded-md border border-stone-300 bg-white/60 px-2 py-1 underline" href={plant.gbifUrl}>GBIF</a>}
                     </div>
                   )}
+                  {plant.description && <p className="line-clamp-2 text-sm text-stone-600">{plant.description}</p>}
+                  {plant.tags.length > 0 && <div className="mt-2"><PlantTagRow tags={plant.tags.map((item) => item.plantTag)} limit={3} /></div>}
+                  <HusbandryBadges
+                    values={(plant.husbandryGuide?.sourcePlantDefinitionId
+                      ? husbandryGuideByDefinitionId.get(plant.husbandryGuide.sourcePlantDefinitionId)
+                      : plant.husbandryGuide) as any}
+                    href={collectionPath(collection.slug, `/plants/${plant.id}/husbandry`)}
+                  />
+                  <p className="mt-2 text-xs font-medium text-stone-500">
+                    {followCountByDefinitionId.get(plant.id) || 0} follower{(followCountByDefinitionId.get(plant.id) || 0) === 1 ? '' : 's'}
+                  </p>
+                  <PlantDefinitionCompletenessBar result={completeness} className="mt-3" />
+                  {(curatorSuggestionsByDefinitionId.get(plant.id) || 0) > 0 && (
+                    <p className="mt-2 rounded-md border border-green-200 bg-green-50 px-2 py-1 text-xs font-semibold text-green-900">AI has prepared suggestions</p>
+                  )}
+                  {(curatorWaitingByDefinitionId.get(plant.id) || 0) > 0 && (
+                    <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-900">AI Curator is waiting for human input</p>
+                  )}
                 </div>
-                <div className="mt-auto grid gap-2 pt-3">
+                <div data-plant-definition-footer className="mt-auto grid gap-2 pt-3">
                   {plant._count.instances > 0 ? (
                     <Link
                       className="plant-card-action rounded-md border px-3 py-1.5 text-center text-xs"
