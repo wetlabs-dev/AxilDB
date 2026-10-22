@@ -1,3 +1,5 @@
+import { PlantDefinitionEditorHeader } from '@/components/PlantDefinitionEditorHeader'
+import type { Metadata } from 'next'
 import { repottingCadenceLabel } from '@/lib/repotting-label'
 import { DefinitionRepotting } from '@/components/Repotting'
 import { actionableCadenceWhere } from '@/lib/cadence-review'
@@ -53,6 +55,13 @@ const uploadErrorMessages: Record<string, string> = {
   unsupported_format: 'That image format is not supported by this server. Try exporting it as JPEG, PNG, WebP, TIFF, or AVIF first.',
   processing_failed: 'That image could not be processed. If it came from an iPhone photo library, try exporting it as a JPEG and uploading that version.',
   upload_failed: 'The image was processed, but AxilDB could not save it. Please try again.',
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { collection } = await requireCollectionAdmin()
+  const { id } = await params
+  const identity = await prisma.plantDefinition.findFirstOrThrow({ where: { id, collectionId: collection.id }, select: { genus: true, species: true, hybridNotation: true, cultivarName: true, provisionalTaxon: true, identificationStatus: true } })
+  return { title: `${plantName(identity) || 'Untitled Plant Definition'} — Edit | AxilDB` }
 }
 
 export default async function EditPlant({
@@ -176,14 +185,11 @@ export default async function EditPlant({
   const magicFillOpportunityCount = completeness.criticalMissing.length + completeness.recommendedNextActions.length
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-3xl font-bold">Edit Plant Definition</h2>
-      <DefinitionRepotting id={plant.id} slug={collection.slug} canEdit={true}/>
-      <CareCadences collectionSlug={collection.slug} definitionId={plant.id} defaults={plant.careCadences} canEdit={true} hasRecipe={Boolean(plant.husbandryGuide?.fertilizerRecipe?.active)} recipeHref={collectionPath(collection.slug, `/plants/${plant.id}/edit#husbandry`)} />
-      {plant.cadenceProposals.length > 0 && <p className="text-sm text-stone-600">{plant.cadenceProposals.length} care cadence recommendation(s) awaiting review: {plant.cadenceProposals.map(p => p.activity.toLowerCase().replaceAll('_',' ')).join(', ')}. {user?.role === 'SERVER_ADMIN' && <Link className="underline" href={`/server/care-cadence-research?tab=review&definition=${plant.id}`}>Review recommendations</Link>}</p>}
-      <PlantDefinitionReadinessPanel result={completeness} baseHref={collectionPath(collection.slug, `/plants/${plant.id}/edit`)} />
+    <div data-definition-editor className="definition-editor space-y-6">
+      <PlantDefinitionEditorHeader formId="plant-definition-form" identity={{ genus: plant.genus, species: plant.species, hybridNotation: plant.hybridNotation, cultivarName: plant.cultivarName, provisionalTaxon: plant.provisionalTaxon, identificationStatus: plant.identificationStatus }} />
       <Card id="definition-fields">
-        <form action={updatePlantDefinition} className="grid max-w-6xl gap-x-3 gap-y-2 lg:grid-cols-4">
+        <h2 className="mb-4 font-serif text-2xl font-semibold">Plant Definition</h2>
+        <form id="plant-definition-form" action={updatePlantDefinition} className="grid max-w-6xl gap-x-3 gap-y-2 lg:grid-cols-4">
           <SuggestionDatalist id="definition-genus-suggestions" suggestions={definitionSuggestions.genus} />
           <SuggestionDatalist id="definition-species-suggestions" suggestions={definitionSuggestions.species} />
           <SuggestionDatalist id="definition-hybrid-notation-suggestions" suggestions={definitionSuggestions.hybridNotation} />
@@ -198,6 +204,7 @@ export default async function EditPlant({
               <p className="mt-1">{plantName(plant)} is the displayed provisional identity. Its working placement is {acceptedPlantName(plant)}. Replace the provisional taxon or sp. only after identifying the species.</p>
             </div>
           )}
+          <h3 className="font-serif text-lg font-semibold lg:col-span-4">Identity and nomenclature</h3>
           <Field label="Genus" help="Required when the provisional taxon is cleared. This working placement is also used for plant ID generation." name="genus" defaultValue={plant.genus} list="definition-genus-suggestions" />
           <Field label="Species" help="Species epithet. Leave blank when the accepted horticultural name intentionally omits species (for example, Begonia 'Looking Glass'). Use sp. only when the species is genuinely unknown." name="species" defaultValue={plant.species || ''} list="definition-species-suggestions" autoCapitalize="none" />
           <Field label="Hybrid notation" help="Use for botanical hybrid markers or formula context, such as x, grex, or parentage notation that belongs with the name." name="hybridNotation" defaultValue={plant.hybridNotation} list="definition-hybrid-notation-suggestions" />
@@ -210,6 +217,7 @@ export default async function EditPlant({
             {magicFillOpportunityCount > 0 && <p className="mt-1 text-xs text-stone-500">Magic Fill may help draft up to {magicFillOpportunityCount} missing or partial readiness item{magicFillOpportunityCount === 1 ? '' : 's'}. Suggestions do not count until you review and save them.</p>}
             <PlantIdentificationAssistant collectionSlug={collection.slug} plantDefinitionId={plant.id} className="mt-3" />
           </div>
+          <h3 className="mt-3 font-serif text-lg font-semibold lg:col-span-4">Taxonomic metadata</h3>
           <Field label="Author citation" help="The author citation for the scientific name, such as (L.f.) R.Br. It records who validly published the name or combination." name="authority" defaultValue={plant.authority} list="definition-authority-suggestions" />
           <Field label="Cultivar registration number" help="Use when a formal registry or Taxonomic Authority assigns a registration number to the cultivar." name="cultivarRegistrationNumber" defaultValue={plant.cultivarRegistrationNumber} />
           <Field label="Order" name="taxonomicOrder" defaultValue={taxonomicPlacementValue(plant.taxonomicPlacementJson, 'ORDER')} />
@@ -242,6 +250,7 @@ export default async function EditPlant({
             {plant.taxonomicAuthority?.publications.length ? <div className="mt-2 flex flex-wrap items-center gap-x-2 text-xs text-stone-600"><span>Publications:</span>{plant.taxonomicAuthority.publications.map((publication) => publication.url ? <a key={publication.id} href={publication.url} target="_blank" rel="noreferrer" className="text-[#2f6b45] underline">{publication.name}</a> : <span key={publication.id}>{publication.name}</span>)}</div> : null}
           </div>
           <Field label="Provisional / working taxon" help="When present, this takes precedence as the displayed name and marks the definition as needing identification review." name="provisionalTaxon" defaultValue={plant.provisionalTaxon} list="definition-provisional-taxon-suggestions" wrapperClassName="lg:col-span-4" />
+          <h3 className="mt-3 font-serif text-lg font-semibold lg:col-span-4">References and description</h3>
           <Field label="Wikipedia URL" help="Optional quick reference link for the species or genus entry." name="wikipediaUrl" type="url" defaultValue={plant.wikipediaUrl} />
           <Field label="iNaturalist URL" help="Optional link to an iNaturalist taxon page for observations, common names, and community references." name="inaturalistUrl" type="url" defaultValue={plant.inaturalistUrl} />
           <Field label="POWO URL" help="Optional Plants of the World Online link for accepted names, synonyms, and distribution data." name="powoUrl" type="url" defaultValue={plant.powoUrl} />
@@ -249,88 +258,64 @@ export default async function EditPlant({
           <AIDescriptionField defaultValue={plant.description} wrapperClassName="lg:col-span-2" />
           <TextArea label="Notes" name="notes" defaultValue={plant.notes} wrapperClassName="lg:col-span-2" />
           <div id="plant-tags" className="lg:col-span-4"><PlantTagPicker tags={activeTags} selectedIds={plant.tags.filter((item) => item.plantTag.active).map((item) => item.plantTagId)} />{plant.tags.some((item) => !item.plantTag.active) && <div className="mt-2"><p className="mb-1 text-xs font-semibold text-stone-600">Archived historical tags</p><PlantTagRow tags={plant.tags.filter((item) => !item.plantTag.active).map((item) => item.plantTag)} /></div>}</div>
-          <div className="rounded-lg border border-[#d6dfc9] bg-[#f7f4e8]/80 p-3 lg:col-span-4">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h3 className="font-serif text-xl font-semibold">Acquisition pipeline</h3>
-                <p className="mt-1 text-sm text-stone-600">Track pre-accession intent separately from owned specimens.</p>
-              </div>
-              <a className="text-sm font-semibold text-[#2f6b45] underline" href={collectionPath(collection.slug, `/acquisitions?definition=${plant.id}`)}>Open pipeline</a>
-            </div>
-            <div className="mt-3 grid gap-3 lg:grid-cols-4">
-              <label className="grid gap-1 text-sm font-medium text-stone-800">
-                Acquisition status
-                <select className={selectClass} name="acquisitionStatus" defaultValue={plant.acquisitionStatus || ''}>
-                  <option value="">No acquisition intent</option>
-                  {acquisitionStatuses.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                </select>
-              </label>
-              <label className="grid gap-1 text-sm font-medium text-stone-800">
-                Priority
-                <select className={selectClass} name="acquisitionPriority" defaultValue={String(plant.acquisitionPriority || '')}>
-                  <option value="">—</option>
-                  {[5, 4, 3, 2, 1].map((value) => <option key={value} value={value}>{'★'.repeat(value)}{'☆'.repeat(5 - value)} {value}</option>)}
-                </select>
-              </label>
-              <Field label="Desired specimen size" name="desiredSpecimenSize" defaultValue={plant.desiredSpecimenSize} />
-              <Field label="Ideal purchase price" name="idealPurchasePrice" type="number" step="0.01" defaultValue={plant.idealPurchasePrice ? String(plant.idealPurchasePrice) : ''} />
-              <Field label="Maximum purchase price" name="maximumPurchasePrice" type="number" step="0.01" defaultValue={plant.maximumPurchasePrice ? String(plant.maximumPurchasePrice) : ''} />
-              <label className="grid gap-1 text-sm font-medium text-stone-800 lg:col-span-2">
-                Desired location
-                <select className={selectClass} name="desiredLocationId" defaultValue={plant.desiredLocationId || ''}>
-                  <option value="">No desired location</option>
-                  {locationNodes.map((location) => (
-                    <option key={location.id} value={location.id}>{location.code} · {locationPath(location.id, locationNodes)}</option>
-                  ))}
-                </select>
-              </label>
-              <TextArea label="Preferred vendors" name="preferredVendors" defaultValue={preferredVendors(plant.preferredVendorsJson)} wrapperClassName="lg:col-span-2" />
-              <TextArea label="Personal interest notes" name="acquisitionInterestNotes" defaultValue={plant.acquisitionInterestNotes} wrapperClassName="lg:col-span-2" />
-              <TextArea label="Research summary" name="acquisitionResearchSummary" defaultValue={plant.acquisitionResearchSummary} wrapperClassName="lg:col-span-4" />
-            </div>
-          </div>
           <PlantAliasFields aliases={plant.aliases} submitLabel="Save changes" sourceSuggestions={definitionSuggestions.aliasSource} />
         </form>
       </Card>
-      <Card id="validation">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h3 className="font-serif text-2xl font-semibold">Validation</h3>
-            <p className="mt-1 text-sm text-stone-600">Nominate high-quality definitions for site-level validation so other collections can use the curated definition.</p>
+      <section id="definition-readiness">
+        <PlantDefinitionReadinessPanel headingLevel={2} result={completeness} baseHref={collectionPath(collection.slug, `/plants/${plant.id}/edit`)} />
+      </section>
+      <CareCadences headingLevel={2} collectionSlug={collection.slug} definitionId={plant.id} defaults={plant.careCadences} canEdit={true} hasRecipe={Boolean(plant.husbandryGuide?.fertilizerRecipe?.active)} recipeHref={collectionPath(collection.slug, `/plants/${plant.id}/edit#husbandry`)} />
+      {plant.cadenceProposals.length > 0 && <p className="text-sm text-stone-600">{plant.cadenceProposals.length} care cadence recommendation(s) awaiting review: {plant.cadenceProposals.map(p => p.activity.toLowerCase().replaceAll('_',' ')).join(', ')}. {user?.role === 'SERVER_ADMIN' && <Link className="underline" href={`/server/care-cadence-research?tab=review&definition=${plant.id}`}>Review recommendations</Link>}</p>}
+      <section id="repotting-windows">
+        <DefinitionRepotting id={plant.id} slug={collection.slug} canEdit={true} headingLevel={2}/>
+      </section>
+      <Card id="acquisition-information">
+        <div className="max-w-6xl">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="font-serif text-xl font-semibold">Acquisition pipeline</h2>
+              <p className="mt-1 text-sm text-stone-600">Track pre-accession intent separately from owned specimens.</p>
+            </div>
+            <a className="text-sm font-semibold text-[#2f6b45] underline" href={collectionPath(collection.slug, `/acquisitions?definition=${plant.id}`)}>Open pipeline</a>
           </div>
-          {plant.validatedPlantDefinitionId && <span className="rounded-full bg-[#edf3e6] px-3 py-1 text-xs font-semibold text-[#2f6b45]">Linked to validated</span>}
+          <div className="mt-3 grid gap-3 lg:grid-cols-4">
+            <label className="grid gap-1 text-sm font-medium text-stone-800">
+              Acquisition status
+              <select form="plant-definition-form" className={selectClass} name="acquisitionStatus" defaultValue={plant.acquisitionStatus || ''}>
+                <option value="">No acquisition intent</option>
+                {acquisitionStatuses.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              </select>
+            </label>
+            <label className="grid gap-1 text-sm font-medium text-stone-800">
+              Priority
+              <select form="plant-definition-form" className={selectClass} name="acquisitionPriority" defaultValue={String(plant.acquisitionPriority || '')}>
+                <option value="">—</option>
+                {[5, 4, 3, 2, 1].map((value) => <option key={value} value={value}>{'★'.repeat(value)}{'☆'.repeat(5 - value)} {value}</option>)}
+              </select>
+            </label>
+            <Field form="plant-definition-form" label="Desired specimen size" name="desiredSpecimenSize" defaultValue={plant.desiredSpecimenSize} />
+            <Field form="plant-definition-form" label="Ideal purchase price" name="idealPurchasePrice" type="number" step="0.01" defaultValue={plant.idealPurchasePrice ? String(plant.idealPurchasePrice) : ''} />
+            <Field form="plant-definition-form" label="Maximum purchase price" name="maximumPurchasePrice" type="number" step="0.01" defaultValue={plant.maximumPurchasePrice ? String(plant.maximumPurchasePrice) : ''} />
+            <label className="grid gap-1 text-sm font-medium text-stone-800 lg:col-span-2">
+              Desired location
+              <select form="plant-definition-form" className={selectClass} name="desiredLocationId" defaultValue={plant.desiredLocationId || ''}>
+                <option value="">No desired location</option>
+                {locationNodes.map((location) => (
+                  <option key={location.id} value={location.id}>{location.code} · {locationPath(location.id, locationNodes)}</option>
+                ))}
+              </select>
+            </label>
+            <TextArea form="plant-definition-form" label="Preferred vendors" name="preferredVendors" defaultValue={preferredVendors(plant.preferredVendorsJson)} wrapperClassName="lg:col-span-2" />
+            <TextArea form="plant-definition-form" label="Personal interest notes" name="acquisitionInterestNotes" defaultValue={plant.acquisitionInterestNotes} wrapperClassName="lg:col-span-2" />
+            <TextArea form="plant-definition-form" label="Research summary" name="acquisitionResearchSummary" defaultValue={plant.acquisitionResearchSummary} wrapperClassName="lg:col-span-4" />
+          </div>
         </div>
-        {matchingValidatedDefinition ? (
-          <p className="mt-3 rounded-lg border border-[#d6dfc9] bg-[#f7f4e8]/80 p-3 text-sm text-stone-700">
-            A matching validated definition already exists: <strong>{plantName(matchingValidatedDefinition)}</strong>. Use the validated definition for new instances, or keep this local definition independent.
-          </p>
-        ) : pendingValidationCandidate ? (
-          <p className="mt-3 rounded-lg border border-[#dfcc87] bg-[#fff8dc] p-3 text-sm text-[#6f541f]">
-            Validation nomination pending review.
-          </p>
-        ) : (
-          <form action={nominatePlantDefinitionForValidation} className="mt-3 grid gap-2">
-            <input type="hidden" name="id" value={plant.id} />
-            <input type="hidden" name="collectionSlug" value={collection.slug} />
-            <TextArea label="Nomination notes" name="notes" help="Summarize why this definition is ready for site-level validation." />
-            <Button className="w-fit">Nominate for Validation</Button>
-          </form>
-        )}
-        {plant.validationCandidates.length > 0 && (
-          <div className="mt-4 grid gap-2 text-sm">
-            {plant.validationCandidates.map((candidate) => (
-              <div key={candidate.id} className="rounded-md border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] px-3 py-2">
-                <span className="font-semibold">{candidate.status.replace('_', ' ')}</span>
-                {candidate.reviewNotes ? ` · ${candidate.reviewNotes}` : ''}
-              </div>
-            ))}
-          </div>
-        )}
+        <Button className="mt-3" type="submit" form="plant-definition-form">Save changes</Button>
       </Card>
       <Card id="husbandry">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h3 className="font-serif text-2xl font-semibold">Plant husbandry</h3>
+            <h2 className="font-serif text-2xl font-semibold">Plant husbandry</h2>
             <p className="mt-1 text-sm text-stone-600">Create a care guide, link to a similar definition&apos;s guide, or fork linked care into a local guide.</p>
             <HusbandryBadges values={effectiveGuide as any} />
           </div>
@@ -521,7 +506,8 @@ export default async function EditPlant({
         </div>
       </Card>
       <Card id="definition-photos">
-        <h3 className="font-bold">Plant definition type image</h3>
+        <h2 className="font-serif text-2xl font-semibold">Images</h2>
+        <h3 className="mt-3 font-bold">Plant definition type image</h3>
         <p className="mt-1 text-sm text-stone-600">
           Use this when the best representative image is from a reference source rather than your own collection. Uploads are resized automatically.
         </p>
@@ -660,56 +646,94 @@ export default async function EditPlant({
           </section>
         </div>
       </Card>
-      <Card>
-        <h3 className="font-bold">Merge duplicate definition</h3>
-        <p className="mt-1 max-w-3xl text-sm leading-6 text-stone-700">
-          Move this definition&apos;s specimens, aliases, definition photos, notes, reminders, follows, and husbandry links into another definition,
-          then delete this duplicate definition. The target definition&apos;s taxonomy fields are kept.
-        </p>
-        {mergeTargetOptions.length === 0 ? (
-          <p className="mt-3 text-sm text-stone-600">No other plant definitions are available as merge targets.</p>
-        ) : (
-          <form action={mergePlantDefinition} className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
-            <input type="hidden" name="collectionSlug" value={collection.slug} />
-            <input type="hidden" name="sourcePlantDefinitionId" value={plant.id} />
-            <label className="grid gap-1 text-sm font-medium text-stone-800">
-              Merge into
-              <select className={selectClass} name="targetPlantDefinitionId" required defaultValue="">
-                <option value="">Choose the definition to keep...</option>
-                {mergeTargetOptions.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {plantName(option)} · {option._count.instances} instance{option._count.instances === 1 ? '' : 's'}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div className="self-end">
-              <ConfirmDeleteButton
-                title="Merge this duplicate definition?"
-                message={`This will move records from ${plantName(plant)} into the selected target definition and permanently delete this definition. The target taxonomy fields will not be overwritten.`}
-                confirmLabel="Merge definition"
-              >
-                Merge duplicate
-              </ConfirmDeleteButton>
+      <section id="validation-administration" className="space-y-6">
+        <h2 className="font-serif text-2xl font-semibold">Validation and Administration</h2>
+        <Card id="validation">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="font-serif text-2xl font-semibold">Validation</h3>
+              <p className="mt-1 text-sm text-stone-600">Nominate high-quality definitions for site-level validation so other collections can use the curated definition.</p>
             </div>
+            {plant.validatedPlantDefinitionId && <span className="rounded-full bg-[#edf3e6] px-3 py-1 text-xs font-semibold text-[#2f6b45]">Linked to validated</span>}
+          </div>
+          {matchingValidatedDefinition ? (
+            <p className="mt-3 rounded-lg border border-[#d6dfc9] bg-[#f7f4e8]/80 p-3 text-sm text-stone-700">
+              A matching validated definition already exists: <strong>{plantName(matchingValidatedDefinition)}</strong>. Use the validated definition for new instances, or keep this local definition independent.
+            </p>
+          ) : pendingValidationCandidate ? (
+            <p className="mt-3 rounded-lg border border-[#dfcc87] bg-[#fff8dc] p-3 text-sm text-[#6f541f]">
+              Validation nomination pending review.
+            </p>
+          ) : (
+            <form action={nominatePlantDefinitionForValidation} className="mt-3 grid gap-2">
+              <input type="hidden" name="id" value={plant.id} />
+              <input type="hidden" name="collectionSlug" value={collection.slug} />
+              <TextArea label="Nomination notes" name="notes" help="Summarize why this definition is ready for site-level validation." />
+              <Button className="w-fit">Nominate for Validation</Button>
+            </form>
+          )}
+          {plant.validationCandidates.length > 0 && (
+            <div className="mt-4 grid gap-2 text-sm">
+              {plant.validationCandidates.map((candidate) => (
+                <div key={candidate.id} className="rounded-md border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] px-3 py-2">
+                  <span className="font-semibold">{candidate.status.replace('_', ' ')}</span>
+                  {candidate.reviewNotes ? ` · ${candidate.reviewNotes}` : ''}
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+        <Card className="border-[#9a3f35]/30">
+          <h3 className="font-bold">Merge duplicate definition</h3>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-stone-700">
+            Move this definition&apos;s specimens, aliases, definition photos, notes, reminders, follows, and husbandry links into another definition,
+            then delete this duplicate definition. The target definition&apos;s taxonomy fields are kept.
+          </p>
+          {mergeTargetOptions.length === 0 ? (
+            <p className="mt-3 text-sm text-stone-600">No other plant definitions are available as merge targets.</p>
+          ) : (
+            <form action={mergePlantDefinition} className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+              <input type="hidden" name="collectionSlug" value={collection.slug} />
+              <input type="hidden" name="sourcePlantDefinitionId" value={plant.id} />
+              <label className="grid gap-1 text-sm font-medium text-stone-800">
+                Merge into
+                <select className={selectClass} name="targetPlantDefinitionId" required defaultValue="">
+                  <option value="">Choose the definition to keep...</option>
+                  {mergeTargetOptions.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {plantName(option)} · {option._count.instances} instance{option._count.instances === 1 ? '' : 's'}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="self-end">
+                <ConfirmDeleteButton
+                  title="Merge this duplicate definition?"
+                  message={`This will move records from ${plantName(plant)} into the selected target definition and permanently delete this definition. The target taxonomy fields will not be overwritten.`}
+                  confirmLabel="Merge definition"
+                >
+                  Merge duplicate
+                </ConfirmDeleteButton>
+              </div>
+            </form>
+          )}
+        </Card>
+        <Card className="border-[#9a3f35]/30">
+          <h3 className="font-bold">Delete</h3>
+          <p className="mb-3 text-sm">Delete is only safe when no instances use this definition. Current instances: {plant._count.instances}</p>
+          <form action={deletePlantDefinition}>
+            <input type="hidden" name="id" value={id} />
+            <input type="hidden" name="collectionSlug" value={collection.slug} />
+            <ConfirmDeleteButton
+              title="Delete plant definition?"
+              message={`This will permanently delete ${plantName(plant)}. Related instances may also be affected.`}
+              confirmLabel="Delete definition"
+            >
+              Delete plant definition
+            </ConfirmDeleteButton>
           </form>
-        )}
-      </Card>
-      <Card>
-        <h3 className="font-bold">Delete</h3>
-        <p className="mb-3 text-sm">Delete is only safe when no instances use this definition. Current instances: {plant._count.instances}</p>
-        <form action={deletePlantDefinition}>
-          <input type="hidden" name="id" value={id} />
-          <input type="hidden" name="collectionSlug" value={collection.slug} />
-          <ConfirmDeleteButton
-            title="Delete plant definition?"
-            message={`This will permanently delete ${plantName(plant)}. Related instances may also be affected.`}
-            confirmLabel="Delete definition"
-          >
-            Delete plant definition
-          </ConfirmDeleteButton>
-        </form>
-      </Card>
+        </Card>
+      </section>
     </div>
   )
 }

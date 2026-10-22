@@ -1231,3 +1231,10 @@ section {
 @media (prefers-reduced-motion: reduce) {
   .deployment-meter-indeterminate > div { animation: none; }
 }
+
+/* The editor measures the actual mobile app header, including responsive changes. */
+.definition-editor { --definition-header-offset: 0px; }
+.definition-editor [id] { scroll-margin-top: calc(var(--definition-header-offset) + 4rem); }
+.definition-editor-sticky { position: sticky; top: var(--definition-header-offset); z-index: 30; height: 0; margin-top: 0 !important; }
+.definition-editor-sticky > div { position: absolute; top: 0; left: 0; right: 0; }
+.definition-editor-sticky > [hidden] { display: none; }

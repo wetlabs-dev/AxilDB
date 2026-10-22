@@ -33,6 +33,7 @@ import {
 } from '@/lib/care-cadences'
 
 type Props = {
+  headingLevel?: 2 | 3
   collectionSlug: string
   definitionId: string
   instanceId?: string
@@ -55,6 +56,7 @@ const control =
   'min-h-11 min-w-0 max-w-full rounded-md border border-stone-300 bg-white px-2 py-2 text-sm text-stone-900'
 
 export function CareCadences(props: Props) {
+  const Heading = props.headingLevel === 2 ? 'h2' : 'h3'
   const [editing, setEditing] = useState<string | null>(null)
   const [saved, setSaved] = useState('')
   const opener = useRef<HTMLButtonElement | null>(null)
@@ -81,9 +83,9 @@ export function CareCadences(props: Props) {
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 id={titleId} className="text-xl font-bold">
+          <Heading id={titleId} className="text-xl font-bold">
             Care Cadences
-          </h3>
+          </Heading>
           <p className="care-cadences-description">
             {props.instanceId
               ? 'Live definition defaults with your instance care settings.'

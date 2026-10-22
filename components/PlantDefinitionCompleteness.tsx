@@ -65,7 +65,8 @@ function ChecklistGroup({
   )
 }
 
-export function PlantDefinitionReadinessPanel({ result, baseHref }: { result: PlantDefinitionCompleteness; baseHref: string }) {
+export function PlantDefinitionReadinessPanel({ result, baseHref, headingLevel = 3 }: { result: PlantDefinitionCompleteness; baseHref: string; headingLevel?: 2 | 3 }) {
+  const Heading = headingLevel === 2 ? "h2" : "h3"
   const needsAttention = result.checklist.filter((entry) => entry.level === 'NEEDS_ATTENTION' && !['COMPLETE', 'INHERITED', 'NOT_APPLICABLE'].includes(entry.state))
   const recommended = result.checklist.filter((entry) => entry.level === 'RECOMMENDED' && !['COMPLETE', 'INHERITED', 'NOT_APPLICABLE'].includes(entry.state))
   const optional = result.checklist.filter((entry) => entry.level === 'OPTIONAL' && !['COMPLETE', 'INHERITED', 'NOT_APPLICABLE'].includes(entry.state))
@@ -74,7 +75,7 @@ export function PlantDefinitionReadinessPanel({ result, baseHref }: { result: Pl
     <section className="rounded-lg border border-[#cdd8c3] bg-[#f7f4e8]/80 p-4" aria-labelledby="definition-readiness-title">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 id="definition-readiness-title" className="font-serif text-xl font-semibold">Definition Readiness</h3>
+          <Heading id="definition-readiness-title" className="font-serif text-xl font-semibold">Definition Readiness</Heading>
           <p className="mt-1 text-xs text-stone-600">Completeness measures populated, applicable AxilDB metadata. It does not guarantee taxonomic correctness.</p>
         </div>
         <div className="text-right">

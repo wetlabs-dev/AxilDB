@@ -318,12 +318,12 @@ export function SidebarClient({
 
   return (
     <>
-      <header className="no-print sticky top-0 z-40 border-b border-stone-200/80 bg-[#fffaf0]/95 px-4 py-3 shadow-sm backdrop-blur md:hidden">
+      <header data-app-mobile-header className="no-print sticky top-0 z-40 border-b border-stone-200/80 bg-[#fffaf0]/95 px-4 py-3 shadow-sm backdrop-blur md:hidden">
         <div className="flex items-center justify-between gap-3">
           <Link href={collectionPath(slug)} className="flex items-center gap-2 rounded-md outline-none transition hover:text-[#1f472f] focus:ring-2 focus:ring-[#8fa58f]/30">
             <img src="/axildb-logo.png" alt="" className="h-9 w-9 shrink-0 object-contain" />
             <div>
-              <h1 className="font-serif text-xl font-semibold leading-none">AxilDB</h1>
+              <span className="block font-serif text-xl font-semibold leading-none">AxilDB</span>
               <p className="text-xs text-stone-600">Botanical Accession</p>
             </div>
           </Link>
@@ -345,7 +345,7 @@ export function SidebarClient({
         <Link href={collectionPath(slug)} className="mb-3 flex items-center gap-3 rounded-md outline-none transition hover:text-[#1f472f] focus:ring-2 focus:ring-[#8fa58f]/30">
           <img src="/axildb-logo.png" alt="" className="h-11 w-11 shrink-0 object-contain" />
           <div>
-            <h1 className="font-serif text-2xl font-semibold leading-none">AxilDB</h1>
+            <span className="block font-serif text-2xl font-semibold leading-none">AxilDB</span>
             <p className="text-xs text-stone-600">Botanical Accession</p>
           </div>
         </Link>

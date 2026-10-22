@@ -18,11 +18,14 @@ export async function DefinitionRepotting({
   id,
   slug,
   canEdit,
+  headingLevel = 3,
 }: {
   id: string
   slug: string
   canEdit: boolean
+  headingLevel?: 2 | 3
 }) {
+  const Heading = headingLevel === 2 ? "h2" : "h3"
   const [d, windows] = await Promise.all([
     prisma.plantDefinition.findUniqueOrThrow({
       where: { id },
@@ -32,18 +35,18 @@ export async function DefinitionRepotting({
   ])
   return (
     <Card>
-      <h3 className="font-serif text-xl">Repotting Windows</h3>
+      <Heading className="font-serif text-xl font-semibold">Repotting Windows</Heading>
       <p>
         Optional seasonal enrichment ·{' '}
         {d.primaryRepottingWindow ? 'Assigned' : 'Unresolved'}
       </p>
-      <p>
+      <p className="mt-2 text-sm sm:mr-6 sm:inline-block">
         Primary:{' '}
         {d.primaryRepottingWindow
           ? `${d.primaryRepottingWindow.name} · ${windowRange(d.primaryRepottingWindow)}`
           : 'Not assigned'}
       </p>
-      <p>
+      <p className="text-sm sm:inline-block">
         Alternate:{' '}
         {d.alternateRepottingWindow
           ? `${d.alternateRepottingWindow.name} · ${windowRange(d.alternateRepottingWindow)}`
