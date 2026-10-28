@@ -1,5 +1,5 @@
 import { execFile } from 'child_process'
-import { readdir, readFile, rm, stat } from 'fs/promises'
+import { readdir, readFile, rm, stat, lstat } from 'fs/promises'
 import path from 'path'
 import { promisify } from 'util'
 import type { PrismaClient } from '@prisma/client'
@@ -72,7 +72,7 @@ export function backupRootAbsolutePath() {
 }
 
 function safeName(name: string) {
-  return path.basename(name) === name && !name.includes('..') && name.length > 0
+  return path.basename(name) === name && !name.includes('..') && name !== '.migration' && name.length > 0
 }
 
 export function resolveBackupFolder(nameOrPath: string) {
@@ -281,6 +281,12 @@ export async function deleteBackupFolder(prisma: PrismaClient, nameOrPath: strin
 
   const deletedAt = new Date()
   await rm(resolved.absolutePath, { recursive: true, force: false })
+  try {
+    await lstat(resolved.absolutePath)
+    throw new Error('Backup folder is still present after deletion. Refresh and check server storage permissions.')
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+  }
   await markBackupRunDeleted(prisma, detail.relativePath, userId, deletedAt, detail.linkedRun?.id)
   return { name: detail.name, relativePath: detail.relativePath, sizeBytes: detail.sizeBytes }
 }
@@ -304,10 +310,40 @@ export async function deleteOldBackupFolders(prisma: PrismaClient, monthsInput: 
   return result
 }
 
-export async function backupDetail(prisma: PrismaClient, nameOrPath: string) {
+export async function backupDetail(prisma: PrismaClient, nameOrPath: string): Promise<BackupFolder | null> {
   const backup = resolveBackupFolder(nameOrPath)
-  const folders = await listBackupFolders(prisma)
-  return folders.find((folder) => folder.name === backup.name) || null
+  try {
+    const info = await lstat(backup.absolutePath)
+    if (!info.isDirectory() || info.isSymbolicLink()) throw new Error('Backup must be a real directory under the configured backup root.')
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null
+    throw error
+  }
+  // Inspect only the selected folder. An unreadable or changing sibling must not
+  // prevent deletion, and deploy/manual folders do not require a BackupRun row.
+  const [manifestResult, artifacts, sizeBytes, run] = await Promise.all([
+    readManifest(backup.absolutePath),
+    Promise.all(requiredFiles.map(file => fileArtifact(backup.absolutePath, file))),
+    directorySize(backup.absolutePath),
+    prisma.backupRun.findFirst({ where: { OR: [
+      { backupPath: backup.relativePath },
+      { backupPath: backup.absolutePath },
+      { backupPath: { endsWith: `/${backup.name}` } },
+    ] }, orderBy: { requestedAt: 'desc' }, include: { requestedBy: { select: { email: true } } } }),
+  ])
+  const warnings: string[] = []
+  if (manifestResult.status !== 'present') warnings.push(manifestResult.status === 'invalid' ? 'Manifest could not be parsed.' : 'Manifest is missing.')
+  for (const artifact of artifacts) {
+    if (!artifact.present) warnings.push(`${artifact.name} is missing.`)
+    else if (!artifact.sizeBytes) warnings.push(`${artifact.name} is empty.`)
+  }
+  return {
+    name: backup.name, relativePath: backup.relativePath, createdAt: backupCreatedAt(backup.name, manifestResult.manifest), sizeBytes,
+    manifestStatus: manifestResult.status, manifest: manifestResult.manifest, artifacts,
+    linkedRunStatus: run?.status || null,
+    linkedRun: run ? { id: run.id, status: run.status, requestedAt: run.requestedAt, startedAt: run.startedAt, finishedAt: run.finishedAt, requestedByEmail: run.requestedBy?.email || null, notes: run.notes } : null,
+    quickStatus: quickStatus(artifacts, manifestResult.status), warnings,
+  }
 }
 
 async function commandAvailable(command: string) {

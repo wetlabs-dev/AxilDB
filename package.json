@@ -19,6 +19,7 @@
     "ai-curator:process": "tsx scripts/process-ai-curator.ts",
     "events:process": "tsx scripts/process-domain-events.ts",
     "events:backfill": "tsx scripts/backfill-domain-events.ts",
+    "check:backup-deletion": "tsx scripts/check-backup-deletion.ts",
     "check:events": "tsx scripts/check-domain-events.ts",
     "metrics:collect": "tsx scripts/collect-server-metrics.ts",
     "backup": "sh scripts/backup.sh",

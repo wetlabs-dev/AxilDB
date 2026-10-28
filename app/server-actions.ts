@@ -1,6 +1,7 @@
 'use server'
 
 import { RestoreRequestStatus, ServerIncidentCategory, ServerIncidentSeverity, ServerIncidentStatus } from '@prisma/client'
+import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { audit, requireServerAdmin } from '@/lib/auth'
 import { deleteSelectedOrphanedImages, selectedOrphanedImagePaths } from '@/lib/admin/orphanedImages'
@@ -117,35 +118,29 @@ export async function createRestoreRequest(formData: FormData) {
   redirect('/server?restore=requested')
 }
 
-export async function deleteSelectedBackup(formData: FormData) {
+export async function deleteSelectedBackup(formData: FormData): Promise<{ deleted: string } | { error: string }> {
   const user = await requireServerAdmin()
   const backupPath = value(formData, 'backupPath')
   const expectedName = value(formData, 'expectedName')
   const confirmation = value(formData, 'confirmation')
   let backup
+  try { backup = resolveBackupFolder(backupPath) }
+  catch { return { error: 'That backup folder is not valid under the configured backup root.' } }
+  if (confirmation !== backup.name || expectedName !== backup.name) return { error: 'Type the exact backup folder name before deleting.' }
   try {
-    backup = resolveBackupFolder(backupPath)
-  } catch {
-    redirect('/server?backup=invalid-delete')
-  }
-  if (confirmation !== expectedName || expectedName !== backup.name) redirect(`/server?selectedBackup=${encodeURIComponent(backup.name)}&backup=delete-confirmation-required`)
-
-  let deleted
-  try {
-    deleted = await deleteBackupFolder(prisma, backup.relativePath, user.id)
+    const deleted = await deleteBackupFolder(prisma, backup.relativePath, user.id)
+    await audit(user, 'DELETE', 'BACKUP_FOLDER', deleted.relativePath, `Deleted backup folder ${deleted.name}`, { backupPath: deleted.relativePath, sizeBytes: deleted.sizeBytes })
+    revalidatePath('/server')
+    return { deleted: deleted.name }
   } catch (error) {
-    const params = new URLSearchParams({
-      selectedBackup: backup.name,
-      backup: 'delete-failed',
-      reason: error instanceof Error ? error.message : 'unknown',
-    })
-    redirect(`/server?${params.toString()}`)
+    const code = (error as NodeJS.ErrnoException)?.code
+    console.warn('backup_deletion_failed', { name: backup.name, code: code || 'application' })
+    if (code === 'EACCES' || code === 'EPERM') return { error: `The app cannot remove this backup because of its filesystem permissions (${code}). Check the selected backup folder's ownership and write permissions on the host.` }
+    if (code === 'EROFS') return { error: 'The backup storage is read-only. Check the app container backup mount on the host.' }
+    if (code === 'EBUSY') return { error: 'This backup folder is in use or is a mount point. It has not been removed.' }
+    if (error instanceof Error && /Cannot delete|was not found|still present|real directory/.test(error.message)) return { error: error.message }
+    return { error: 'Could not confirm backup deletion. Refresh the backup list before trying again; check server logs if the folder remains.' }
   }
-  await audit(user, 'DELETE', 'BACKUP_FOLDER', deleted.relativePath, `Deleted backup folder ${deleted.name}`, {
-    backupPath: deleted.relativePath,
-    sizeBytes: deleted.sizeBytes,
-  })
-  redirect('/server?backup=deleted')
 }
 
 export async function deleteOldBackups(formData: FormData) {

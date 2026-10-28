@@ -1,3 +1,4 @@
+import { DeleteBackupForm } from '@/components/DeleteBackupForm'
 import { runtimeDiagnostics } from '@/lib/runtime-diagnostics'
 import { availableMemory, processMemory } from '@/lib/process-memory'
 import Link from 'next/link'
@@ -5,7 +6,6 @@ import { approveAiAccessRequest, approveCollectionRequest, rejectAiAccessRequest
 import {
   createRestoreRequest,
   deleteOldBackups,
-  deleteSelectedBackup,
   generateRestoreCommand,
   requestSitewideBackup,
   updateMaintenanceMode,
@@ -697,7 +697,7 @@ export default async function ServerDashboard({
         <div className="mt-6 border-t border-stone-200 pt-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h4 className="text-sm font-semibold uppercase tracking-wide text-stone-500">Backup management</h4>
+              <h4 id="backup-management" className="text-sm font-semibold uppercase tracking-wide text-stone-500">Backup management</h4>
               <p className="mt-1 text-xs text-stone-600">Browsing and cleanup are limited to <code>{backupRootRelativePath()}</code>.</p>
             </div>
             <span className="rounded-full border border-stone-200 bg-white/70 px-3 py-1 text-xs font-semibold text-stone-700">
@@ -880,15 +880,7 @@ export default async function ServerDashboard({
                         <div><dt className="font-semibold">Manifest</dt><dd>{selectedBackup.manifestStatus}</dd></div>
                         <div><dt className="font-semibold">Linked run</dt><dd>{selectedBackup.linkedRunStatus?.toLowerCase() || 'none'}</dd></div>
                       </dl>
-                      <form action={deleteSelectedBackup} className="flex flex-wrap items-end gap-2">
-                        <input type="hidden" name="backupPath" value={selectedBackup.relativePath} />
-                        <input type="hidden" name="expectedName" value={selectedBackup.name} />
-                        <label className="grid gap-1 font-semibold">
-                          Type {selectedBackup.name} to confirm
-                          <input name="confirmation" className="min-w-72 rounded-md border border-red-300 bg-white px-3 py-2 text-sm font-normal text-stone-900" />
-                        </label>
-                        <button type="submit" className="rounded-md border border-red-300 bg-red-100 px-3 py-2 text-sm font-semibold text-red-950">Delete backup</button>
-                      </form>
+                      <DeleteBackupForm key={selectedBackup.name} backupPath={selectedBackup.relativePath} name={selectedBackup.name} active={selectedBackup.linkedRunStatus === 'REQUESTED' || selectedBackup.linkedRunStatus === 'RUNNING'} />
                     </div>
                   </details>
                 </div>
