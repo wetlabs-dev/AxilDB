@@ -1,3 +1,4 @@
+import { BackupStoragePanel } from '@/components/BackupStoragePanel'
 import { DeleteBackupForm } from '@/components/DeleteBackupForm'
 import { runtimeDiagnostics } from '@/lib/runtime-diagnostics'
 import { availableMemory, processMemory } from '@/lib/process-memory'
@@ -140,6 +141,7 @@ export default async function ServerDashboard({
     selectedBackup?: string
     cleanupPreview?: string
     cleanupMonths?: string
+    queued?: string
     deleted?: string
     failed?: string
     bytes?: string
@@ -157,6 +159,7 @@ export default async function ServerDashboard({
     prisma.photo.count(),
     ensureRecentServerMetricSnapshot(),
     prisma.backupRun.findMany({
+      where: { scope: { notIn: ['BACKUP_DELETE', 'BACKUP_GC'] } },
       orderBy: { requestedAt: 'desc' },
       take: 10,
       include: { requestedBy: { select: { email: true } } },
@@ -559,7 +562,7 @@ export default async function ServerDashboard({
       <Card>
         <h3 className="font-serif text-xl font-semibold">Storage Breakdown</h3>
         <p className="mt-1 text-sm text-stone-600">
-          Estimated categories are compared against total disk usage visible to the uploads mount. Database size is logical PostgreSQL database size.
+          Historical estimates (sampled up to five minutes apart) use the uploads mount. For current backup filesystem usage, use Backup storage below. These mounts may differ. Database size is logical PostgreSQL database size.
         </p>
         <div className="mt-4 overflow-hidden rounded-full border border-stone-200 bg-white/60">
           <div className="flex h-5 w-full">
@@ -665,12 +668,15 @@ export default async function ServerDashboard({
       <Card>
         <h3 className="font-serif text-xl font-semibold">Backup &amp; Restore</h3>
         <p className="mt-2 text-sm"><a className="font-semibold underline" href="/server/migrations">Full Instance Migration →</a> · Portable exports, verification, and fresh-install restore</p>
+        <BackupStoragePanel />
         <h4 className="mt-4 font-semibold">Routine backups</h4>
         <p className="mt-2 text-sm text-stone-700">
           Sitewide backups include the Postgres database, uploaded images, generated labels, and a manifest. Collection-specific import/export is intentionally separate future work.
         </p>
         {sp.backup === 'requested' && <p className="mt-3 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900">Backup requested. The backup worker should pick it up shortly.</p>}
         {sp.backup === 'already-queued' && <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">A sitewide backup is already requested or running.</p>}
+        {sp.backup === 'deletion-requested' && <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm">Deletion requested. The backup worker will remove the artifact and measure filesystem space; follow Backup storage progress above.</p>}
+        {sp.backup === 'cleanup-queued' && <p className="mt-3 text-sm">{sp.queued} deletion requests queued; {sp.failed} protected or failed validation. No reclaimed space is claimed until worker measurements complete.</p>}
         {sp.backup === 'deleted' && <p className="mt-3 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900">Backup folder deleted.</p>}
         {sp.backup === 'delete-confirmation-required' && <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">Type the exact backup folder name before deleting.</p>}
         {sp.backup === 'delete-failed' && <p className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">Backup deletion failed{sp.reason ? `: ${sp.reason}` : '.'}</p>}
@@ -678,7 +684,7 @@ export default async function ServerDashboard({
         {sp.backup === 'cleanup-confirmation-required' && <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">Preview old backups first, then type the confirmation phrase to delete.</p>}
         {sp.backup === 'cleanup-done' && (
           <p className="mt-3 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900">
-            Old-backup cleanup finished: {sp.deleted || '0'} deleted, {sp.failed || '0'} failed, {formatBytes(Number(sp.bytes || 0))} reclaimed.
+            Old-backup cleanup finished: {sp.deleted || '0'} deleted, {sp.failed || '0'} failed, {formatBytes(Number(sp.bytes || 0))} nominal archive bytes removed (not measured filesystem reclamation).
           </p>
         )}
         <form action={requestSitewideBackup} className="mt-4 grid gap-3 rounded-lg border border-stone-200 bg-white/50 p-3">

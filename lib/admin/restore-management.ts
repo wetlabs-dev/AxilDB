@@ -1,5 +1,5 @@
 import { execFile } from 'child_process'
-import { readdir, readFile, rm, stat, lstat } from 'fs/promises'
+import { readdir, readFile, stat, lstat } from 'fs/promises'
 import path from 'path'
 import { promisify } from 'util'
 import type { PrismaClient } from '@prisma/client'
@@ -47,12 +47,6 @@ export type BackupCleanupPreview = {
   newest: Date | null
 }
 
-export type BackupDeletionResult = {
-  deleted: { name: string; relativePath: string; sizeBytes: number }[]
-  failed: { name: string; relativePath: string; error: string }[]
-  bytesReclaimed: number
-}
-
 export type RestoreValidationResult = {
   readiness: 'Ready' | 'Ready with warnings' | 'Not ready'
   passed: string[]
@@ -72,7 +66,7 @@ export function backupRootAbsolutePath() {
 }
 
 function safeName(name: string) {
-  return path.basename(name) === name && !name.includes('..') && name !== '.migration' && name.length > 0
+  return path.basename(name) === name && !name.includes('..') && name !== '.migration' && !name.startsWith('.gc-') && name.length > 0
 }
 
 export function resolveBackupFolder(nameOrPath: string) {
@@ -198,7 +192,7 @@ export async function listBackupFolders(prisma: PrismaClient): Promise<BackupFol
     // Historical paths belong to the source host; folder names are portable.
     if (run.backupPath && !runByName.has(path.basename(run.backupPath))) runByName.set(path.basename(run.backupPath), run)
   }
-  const folders = await Promise.all(entries.filter((entry) => entry.isDirectory() && entry.name !== '.migration').map(async (entry) => {
+  const folders = await Promise.all(entries.filter((entry) => entry.isDirectory() && safeName(entry.name) && entry.name !== '.migration' && !entry.name.startsWith('.gc-')).map(async (entry) => {
     const backup = resolveBackupFolder(entry.name)
     const manifestResult = await readManifest(backup.absolutePath)
     const artifacts = await Promise.all(requiredFiles.map((file) => fileArtifact(backup.absolutePath, file)))
@@ -214,7 +208,7 @@ export async function listBackupFolders(prisma: PrismaClient): Promise<BackupFol
       name: entry.name,
       relativePath: backup.relativePath,
       createdAt: backupCreatedAt(entry.name, manifestResult.manifest),
-      sizeBytes: await directorySize(backup.absolutePath),
+      sizeBytes: await directorySize(backup.absolutePath).catch(() => { warnings.push('Size unavailable; inspect storage diagnostics.'); return 0 }),
       manifestStatus: manifestResult.status,
       manifest: manifestResult.manifest,
       artifacts,
@@ -257,57 +251,6 @@ export async function backupCleanupPreview(prisma: PrismaClient, monthsInput: nu
     oldest: dates.length ? new Date(Math.min(...dates.map((date) => date.getTime()))) : null,
     newest: dates.length ? new Date(Math.max(...dates.map((date) => date.getTime()))) : null,
   }
-}
-
-async function markBackupRunDeleted(prisma: PrismaClient, backupPath: string, userId: string, deletedAt: Date, linkedRunId?: string) {
-  const run = await prisma.backupRun.findFirst({ where: linkedRunId ? { id: linkedRunId } : { backupPath }, orderBy: { requestedAt: 'desc' } })
-  if (!run) return null
-  await prisma.backupRun.update({
-    where: { id: run.id },
-    data: {
-      status: 'DELETED',
-      log: [run.log, `Backup folder deleted by ${userId} at ${deletedAt.toISOString()}.`].filter(Boolean).join('\n'),
-      updatedAt: deletedAt,
-    },
-  })
-  return run
-}
-
-export async function deleteBackupFolder(prisma: PrismaClient, nameOrPath: string, userId: string) {
-  const resolved = resolveBackupFolder(nameOrPath)
-  const detail = await backupDetail(prisma, resolved.name)
-  if (!detail) throw new Error('Backup folder was not found under the configured backup root.')
-  if (isActiveRun(detail.linkedRunStatus)) throw new Error('Cannot delete a backup while its linked run is active.')
-
-  const deletedAt = new Date()
-  await rm(resolved.absolutePath, { recursive: true, force: false })
-  try {
-    await lstat(resolved.absolutePath)
-    throw new Error('Backup folder is still present after deletion. Refresh and check server storage permissions.')
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
-  }
-  await markBackupRunDeleted(prisma, detail.relativePath, userId, deletedAt, detail.linkedRun?.id)
-  return { name: detail.name, relativePath: detail.relativePath, sizeBytes: detail.sizeBytes }
-}
-
-export async function deleteOldBackupFolders(prisma: PrismaClient, monthsInput: number, userId: string): Promise<BackupDeletionResult> {
-  const preview = await backupCleanupPreview(prisma, monthsInput)
-  const result: BackupDeletionResult = { deleted: [], failed: [], bytesReclaimed: 0 }
-  for (const folder of preview.matched) {
-    try {
-      const deleted = await deleteBackupFolder(prisma, folder.relativePath, userId)
-      result.deleted.push(deleted)
-      result.bytesReclaimed += deleted.sizeBytes
-    } catch (error) {
-      result.failed.push({
-        name: folder.name,
-        relativePath: folder.relativePath,
-        error: error instanceof Error ? error.message : 'Unknown deletion error',
-      })
-    }
-  }
-  return result
 }
 
 export async function backupDetail(prisma: PrismaClient, nameOrPath: string): Promise<BackupFolder | null> {

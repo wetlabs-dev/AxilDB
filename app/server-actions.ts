@@ -5,7 +5,8 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { audit, requireServerAdmin } from '@/lib/auth'
 import { deleteSelectedOrphanedImages, selectedOrphanedImagePaths } from '@/lib/admin/orphanedImages'
-import { deleteBackupFolder, deleteOldBackupFolders, restoreCommandForBackup, resolveBackupFolder, validateBackupForRestore } from '@/lib/admin/restore-management'
+import { backupCleanupPreview, restoreCommandForBackup, resolveBackupFolder, validateBackupForRestore } from '@/lib/admin/restore-management'
+import { requestBackupDeletion, requestBackupGc, scanBackupStorage } from '@/lib/admin/backup-storage'
 import { prisma } from '@/lib/prisma'
 
 const incidentCategories = new Set(Object.values(ServerIncidentCategory))
@@ -118,7 +119,7 @@ export async function createRestoreRequest(formData: FormData) {
   redirect('/server?restore=requested')
 }
 
-export async function deleteSelectedBackup(formData: FormData): Promise<{ deleted: string } | { error: string }> {
+export async function deleteSelectedBackup(formData: FormData): Promise<{ queued: string } | { removed: string } | { error: string }> {
   const user = await requireServerAdmin()
   const backupPath = value(formData, 'backupPath')
   const expectedName = value(formData, 'expectedName')
@@ -128,17 +129,19 @@ export async function deleteSelectedBackup(formData: FormData): Promise<{ delete
   catch { return { error: 'That backup folder is not valid under the configured backup root.' } }
   if (confirmation !== backup.name || expectedName !== backup.name) return { error: 'Type the exact backup folder name before deleting.' }
   try {
-    const deleted = await deleteBackupFolder(prisma, backup.relativePath, user.id)
-    await audit(user, 'DELETE', 'BACKUP_FOLDER', deleted.relativePath, `Deleted backup folder ${deleted.name}`, { backupPath: deleted.relativePath, sizeBytes: deleted.sizeBytes })
+    const id = await requestBackupDeletion(prisma, backup.name, user.id)
+    await audit(user, 'DELETE', 'BACKUP_FOLDER', id, `Requested deletion of ${backup.name}`)
     revalidatePath('/server')
-    return { deleted: deleted.name }
+    const receipt = await prisma.backupRun.findUnique({ where: { id }, select: { status: true } })
+    return receipt?.status === 'DELETED' ? { removed: backup.name } : { queued: id }
   } catch (error) {
     const code = (error as NodeJS.ErrnoException)?.code
     console.warn('backup_deletion_failed', { name: backup.name, code: code || 'application' })
+    if (code === 'ENOENT') return { error: 'Backup folder was not found under the configured backup root.' }
     if (code === 'EACCES' || code === 'EPERM') return { error: `The app cannot remove this backup because of its filesystem permissions (${code}). Check the selected backup folder's ownership and write permissions on the host.` }
     if (code === 'EROFS') return { error: 'The backup storage is read-only. Check the app container backup mount on the host.' }
     if (code === 'EBUSY') return { error: 'This backup folder is in use or is a mount point. It has not been removed.' }
-    if (error instanceof Error && /Cannot delete|was not found|still present|real directory/.test(error.message)) return { error: error.message }
+    if (error instanceof Error && /Cannot delete|was not found|still present|real directory|protected|active|Backup|backup|Deployment|restore|recognized/.test(error.message)) return { error: error.message }
     return { error: 'Could not confirm backup deletion. Refresh the backup list before trying again; check server logs if the folder remains.' }
   }
 }
@@ -149,22 +152,14 @@ export async function deleteOldBackups(formData: FormData) {
   const confirmation = value(formData, 'confirmation')
   if (confirmation !== 'DELETE OLD BACKUPS') redirect(`/server?cleanupPreview=1&cleanupMonths=${Number.isFinite(months) ? months : 6}&backup=cleanup-confirmation-required`)
 
-  const result = await deleteOldBackupFolders(prisma, months, user.id)
-  await audit(user, 'CLEANUP', 'BACKUP_FOLDER', null, `Deleted ${result.deleted.length} old backup folder(s)`, {
-    months,
-    deletedCount: result.deleted.length,
-    failedCount: result.failed.length,
-    bytesReclaimed: result.bytesReclaimed,
-    deleted: result.deleted.map((folder) => folder.relativePath),
-    failed: result.failed,
-  })
-  const params = new URLSearchParams({
-    backup: 'cleanup-done',
-    deleted: String(result.deleted.length),
-    failed: String(result.failed.length),
-    bytes: String(result.bytesReclaimed),
-  })
-  redirect(`/server?${params.toString()}`)
+  const preview = await backupCleanupPreview(prisma, months)
+  let queued = 0, failed = 0
+  for (const folder of preview.matched) {
+    try { await requestBackupDeletion(prisma, folder.name, user.id); queued++ } catch { failed++ }
+  }
+  await audit(user, 'CLEANUP', 'BACKUP_FOLDER', null, `Requested ${queued} old backup deletions; ${failed} protected or failed validation`)
+  redirect(`/server?backup=cleanup-queued&queued=${queued}&failed=${failed}#backup-storage`)
+
 }
 
 export async function validateRestoreRequest(formData: FormData) {
@@ -351,4 +346,17 @@ export async function addServerIncidentNote(formData: FormData) {
   })
   await audit(user, 'CREATE', 'SERVER_INCIDENT_NOTE', note.id, 'Added server incident note', { incidentId })
   redirect(`/server/incidents/${incidentId}`)
+}
+
+export async function refreshBackupStorage() {
+  await requireServerAdmin()
+  return scanBackupStorage(prisma)
+}
+export async function cleanBackupGarbage(digest: string, confirmation: string) {
+  const user = await requireServerAdmin()
+  if (confirmation !== 'PURGE DELETED BACKUPS') throw new Error('Type PURGE DELETED BACKUPS to confirm the preview.')
+  const id = await requestBackupGc(prisma, digest, user.id)
+  await audit(user, 'CLEANUP', 'BACKUP_GC', id, 'Confirmed eligible backup garbage collection')
+  revalidatePath('/server')
+  return { id }
 }

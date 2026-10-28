@@ -1,3 +1,4 @@
+import { processBackupStorage } from '../lib/admin/backup-storage'
 import { migrationOutboundHeld } from '../lib/migration-hold'
 import { spawn } from 'child_process'
 import { readFile } from 'fs/promises'
@@ -111,7 +112,7 @@ async function main() {
   if (await migrationOutboundHeld()) { console.info('Migration hold: worker paused.'); return }
   const once = process.argv.includes('--once')
   do {
-    const didWork = await processNextBackup()
+    const didWork = await processBackupStorage(prisma, processNextBackup)
     if (once || !didWork) break
   } while (true)
 }
