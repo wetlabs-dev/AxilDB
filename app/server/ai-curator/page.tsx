@@ -327,7 +327,7 @@ function prettyChangedCount(targetField: string | null | undefined, value: unkno
   return changedFields.size
 }
 
-function PrettyValue({ value, changedFields, targetField, contextValue }: { value: unknown; changedFields?: Set<string>; targetField?: string | null; contextValue?: unknown }) {
+function PrettyValue({ value, changedFields, targetField, contextValue, recipeNames }: { value: unknown; changedFields?: Set<string>; targetField?: string | null; contextValue?: unknown; recipeNames?: ReadonlyMap<string, string> }) {
   if (value === null || value === undefined || value === '') {
     const changed = Boolean(changedFields?.size)
     return <p className={`rounded-md border p-3 text-sm italic ${changed ? 'border-green-300 bg-green-50 text-green-950' : 'border-dashed border-stone-300 bg-white/45 text-stone-500'}`}>No value recorded.</p>
@@ -365,10 +365,10 @@ function PrettyValue({ value, changedFields, targetField, contextValue }: { valu
         return (
         <div key={key} className={`min-w-0 rounded-md border p-3 ${changed ? 'border-green-300 bg-green-50 shadow-sm shadow-green-900/5' : 'border-stone-200 bg-white/60'}`}>
           <dt className={`flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] ${changed ? 'text-green-900' : 'text-stone-500'}`}>
-            <span>{fieldLabel(key)}</span>
+            <span>{key === 'fertilizerRecipeId' ? 'Fertilizer recipe' : fieldLabel(key)}</span>
             {changed && <span className="rounded-full bg-green-100 px-2 py-0.5 text-[0.65rem] normal-case tracking-normal text-green-900">Changed</span>}
           </dt>
-          <dd className="mt-1 min-w-0 break-words text-sm text-stone-900">{compactValue(entryValue)}</dd>
+          <dd className="mt-1 min-w-0 break-words text-sm text-stone-900">{key === 'fertilizerRecipeId' && typeof entryValue === 'string' && entryValue.trim() ? recipeNames?.get(entryValue) || 'Unavailable fertilizer recipe' : compactValue(entryValue)}</dd>
         </div>
         )
       })}
@@ -376,7 +376,7 @@ function PrettyValue({ value, changedFields, targetField, contextValue }: { valu
   )
 }
 
-function ReviewSuggestionCard({ suggestion }: { suggestion: any }) {
+function ReviewSuggestionCard({ suggestion, recipeNames }: { suggestion: any; recipeNames?: ReadonlyMap<string, string> }) {
   const currentValue = aiCuratorCurrentFocusValue(suggestion.currentValue, suggestion.targetField)
   const changedFields = new Set(aiCuratorChangedFields(suggestion.currentValue, suggestion.suggestedValue, suggestion.targetField))
   const changedCount = prettyChangedCount(suggestion.targetField, suggestion.suggestedValue, changedFields)
@@ -415,7 +415,7 @@ function ReviewSuggestionCard({ suggestion }: { suggestion: any }) {
           <section className="rounded-lg border border-stone-200 bg-white/35 p-3">
             <h5 className="font-semibold">Current focus</h5>
             <div className="mt-2">
-              <PrettyValue value={currentValue} targetField={suggestion.targetField} contextValue={suggestion.currentValue} />
+              <PrettyValue value={currentValue} targetField={suggestion.targetField} contextValue={suggestion.currentValue} recipeNames={recipeNames} />
             </div>
             {highlights.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-2">
@@ -434,7 +434,7 @@ function ReviewSuggestionCard({ suggestion }: { suggestion: any }) {
             </div>
             {!changedFields.size && <p className="mt-2 rounded-md border border-amber-200 bg-amber-50/70 p-2 text-xs text-amber-950">This suggestion restates the current value. New no-change suggestions are skipped automatically.</p>}
             <div className="mt-2">
-              <PrettyValue value={suggestion.suggestedValue} changedFields={changedFields} targetField={suggestion.targetField} contextValue={suggestion.currentValue} />
+              <PrettyValue value={suggestion.suggestedValue} changedFields={changedFields} targetField={suggestion.targetField} contextValue={suggestion.currentValue} recipeNames={recipeNames} />
             </div>
           </section>
         </div>
@@ -476,6 +476,22 @@ export default async function AiCuratorPage({
       select: { id: true, name: true, slug: true, aiFeaturesEnabled: true, aiCuratorEnabled: true },
     }),
   ])
+  // Resolve live names once for the review, scoped to each suggestion's collection.
+  // Keep original IDs in suggestions/advanced JSON so comparisons and approval are unchanged.
+  const recipeReferences = new Map<string, { collectionId: string; id: string }>()
+  for (const group of reviewGroups) for (const suggestion of group.suggestions) {
+    const values = [aiCuratorCurrentFocusValue(suggestion.currentValue, suggestion.targetField), suggestion.suggestedValue]
+    for (const value of values) if (isRecord(value) && typeof value.fertilizerRecipeId === 'string' && value.fertilizerRecipeId.trim()) {
+      recipeReferences.set(`${suggestion.collectionId}:${value.fertilizerRecipeId}`, { collectionId: suggestion.collectionId, id: value.fertilizerRecipeId })
+    }
+  }
+  const recipes = recipeReferences.size ? await prisma.fertilizerRecipe.findMany({ where: { OR: [...recipeReferences.values()] }, select: { id: true, name: true, collectionId: true } }) : []
+  const recipeNamesByCollection = new Map<string, Map<string, string>>()
+  for (const recipe of recipes) {
+    const names = recipeNamesByCollection.get(recipe.collectionId) || new Map<string, string>()
+    names.set(recipe.id, recipe.name)
+    recipeNamesByCollection.set(recipe.collectionId, names)
+  }
   const timezone = preferences?.timezone
   const status = dashboard.currentJob ? 'Running' : !dashboard.settings.enabled ? 'Stopped' : dashboard.budget.hardStop ? 'Paused' : 'Waiting'
   const queuedJobs = queueCount(dashboard.queueStats, 'QUEUED')
@@ -654,7 +670,7 @@ export default async function AiCuratorPage({
                 {group.plantDefinitionId && <LinkButton href={`/c/${group.collectionSlug}/plants/${group.plantDefinitionId}/edit`} className="px-3 py-1.5 text-xs">Open definition</LinkButton>}
               </div>
               <div className="mt-3 grid gap-3">
-                {group.suggestions.map((suggestion) => <ReviewSuggestionCard key={suggestion.id} suggestion={suggestion} />)}
+                {group.suggestions.map((suggestion) => <ReviewSuggestionCard key={suggestion.id} suggestion={suggestion} recipeNames={recipeNamesByCollection.get(suggestion.collectionId)} />)}
               </div>
             </div>
           ))}
