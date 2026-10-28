@@ -1,3 +1,4 @@
+import { PlantPhotoUploadForm } from '@/components/PlantPhotoUploadForm'
 import { repottingCadenceLabel } from '@/lib/repotting-label'
 import { InstanceRepotting } from '@/components/Repotting'
 import { CareCadences } from '@/components/CareCadences'
@@ -472,20 +473,7 @@ export default async function InstanceDetail({
             <span className="rounded-md border border-stone-300 bg-white/70 px-2 py-1 text-xs group-open:hidden">Open</span>
             <span className="hidden rounded-md border border-stone-300 bg-white/70 px-2 py-1 text-xs group-open:inline-block">Hide</span>
           </summary>
-          <form
-            action="/api/photos"
-            method="post"
-            encType="multipart/form-data"
-            className="grid gap-2 border-t border-stone-200 p-3"
-          >
-            <input type="hidden" name="entityType" value="PLANT_INSTANCE" />
-            <input type="hidden" name="entityId" value={id} />
-            <input type="hidden" name="collectionSlug" value={collection.slug} />
-            <input type="hidden" name="back" value={collectionPath(collection.slug, `/instances/${id}`)} />
-            <PhotoFramingEditor fileInputName="photo" />
-            <Field label="Caption" name="caption" />
-            <Button>Upload photo</Button>
-          </form>
+          <div className="border-t border-stone-200 p-3"><PlantPhotoUploadForm collectionSlug={collection.slug} plantInstanceId={id} back={collectionPath(collection.slug, `/instances/${id}`)} canSetRepresentative={canEditRecords} /></div>
         </details>
       )}
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { PHOTO_ACCEPT, MAX_PHOTO_BYTES, SUPPORTED_PHOTO_TYPES } from '@/lib/photo-upload'
 import { Crosshair } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { PlantImageFrame } from '@/components/PlantImage'
@@ -11,6 +12,7 @@ type PhotoFramingEditorProps = {
   fileInputName?: string
   fileInputClassName?: string
   className?: string
+  cameraCapture?: boolean
 }
 
 function clamp(value: number, min = 0, max = 100) {
@@ -30,8 +32,17 @@ export function PhotoFramingEditor({
   fileInputName,
   fileInputClassName = '',
   className = '',
+  cameraCapture = false,
 }: PhotoFramingEditorProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [photoChoice, setPhotoChoice] = useState('photo')
+  const [fileError, setFileError] = useState('')
+  function previewFile(file?: File) {
+    if (file && (file.size > MAX_PHOTO_BYTES || file.type && !SUPPORTED_PHOTO_TYPES.has(file.type))) {
+      setFileError('Choose a supported image up to 25 MB.'); setPreviewUrl(null); return
+    }
+    setFileError(''); setPreviewUrl(file ? URL.createObjectURL(file) : null)
+  }
   const [focalX, setFocalX] = useState(() => clamp(initial?.focalX ?? (initial?.cropX != null && initial?.cropWidth != null ? initial.cropX + initial.cropWidth / 2 : 50)))
   const [focalY, setFocalY] = useState(() => clamp(initial?.focalY ?? (initial?.cropY != null && initial?.cropHeight != null ? initial.cropY + initial.cropHeight / 2 : 50)))
   const [zoom, setZoom] = useState(() => initialZoom(initial))
@@ -59,17 +70,28 @@ export function PhotoFramingEditor({
           <input
             name={fileInputName}
             type="file"
-            accept="image/*"
+            accept={PHOTO_ACCEPT}
             className={cn('min-w-0 rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm', fileInputClassName)}
             onChange={(event) => {
               const file = event.currentTarget.files?.[0]
-              if (previewUrl) URL.revokeObjectURL(previewUrl)
-              setPreviewUrl(file ? URL.createObjectURL(file) : null)
+              setPhotoChoice('photo')
+              previewFile(file)
             }}
           />
         </label>
       )}
 
+      {fileInputName && cameraCapture && <label className="grid gap-1 text-sm font-medium text-stone-800">
+        Take a photo (optional)
+        <input type="file" name="photoCapture" accept={PHOTO_ACCEPT} capture="environment" className="min-w-0 max-w-full text-sm" onChange={event => {
+          const file = event.currentTarget.files?.[0]
+          setPhotoChoice('photoCapture')
+          previewFile(file)
+        }} />
+      </label>}
+
+      {fileInputName && cameraCapture && <input type="hidden" name="photoChoice" value={photoChoice} />}
+      {fileError && <p role="alert" className="text-sm text-red-800">{fileError}</p>}
       <input type="hidden" name="cropX" value={crop.cropX.toFixed(3)} />
       <input type="hidden" name="cropY" value={crop.cropY.toFixed(3)} />
       <input type="hidden" name="cropWidth" value={crop.cropWidth.toFixed(3)} />

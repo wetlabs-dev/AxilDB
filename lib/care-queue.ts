@@ -207,9 +207,11 @@ async function latestInstancePhotos(prisma: PrismaClient | Prisma.TransactionCli
       collectionId,
       OR: latestKeys,
     },
-    orderBy: [{ isCover: 'desc' }, { createdAt: 'desc' }],
+    orderBy: [{ isCover: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }],
     select: {
       entityId: true,
+      moderationStatus: true,
+      nsfwFlagged: true,
       path: true,
       cropX: true,
       cropY: true,

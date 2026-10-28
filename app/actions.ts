@@ -1,5 +1,7 @@
 'use server'
 
+import { selectSpecimenCover } from '@/lib/specimen-photos'
+
 import { redirect } from 'next/navigation'
 import { isRedirectError } from 'next/dist/client/components/redirect-error'
 import { revalidatePath } from 'next/cache'
@@ -3252,22 +3254,7 @@ export async function deleteNote(fd: FormData) {
 export async function setCoverPhoto(fd: FormData) {
   const { user, collection } = await requireCollectionAdmin(await collectionSlug(fd))
   const id = val(fd, 'id')!
-  const photo = await prisma.photo.findFirstOrThrow({ where: { id, collectionId: collection.id } })
-
-  if (photo.entityType !== 'PLANT_INSTANCE') {
-    throw new Error('Only plant instance photos can be selected as cover photos.')
-  }
-
-  await prisma.$transaction([
-    prisma.photo.updateMany({
-      where: { collectionId: collection.id, entityType: 'PLANT_INSTANCE', entityId: photo.entityId },
-      data: { isCover: false },
-    }),
-    prisma.photo.update({
-      where: { id },
-      data: { isCover: true },
-    }),
-  ])
+  const photo = await selectSpecimenCover(prisma, collection.id, id)
 
   await audit(user, 'UPDATE', 'PHOTO', id, `Selected cover photo for plant instance ${photo.entityId}`, undefined, collection.id)
   revalidateDestination(back(fd))

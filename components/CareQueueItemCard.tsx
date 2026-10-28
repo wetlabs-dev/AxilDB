@@ -14,7 +14,7 @@ import {
   updateConditionFromCareQueue,
 } from '@/app/actions'
 import { PlantIdPreviewLink } from '@/components/PlantIdPreviewLink'
-import { PlantImage } from '@/components/PlantImage'
+import { CareQueuePhoto } from '@/components/CareQueuePhoto'
 import { Button, Card, Field, Select, TextArea } from '@/components/ui'
 import type { CareQueueItem } from '@/lib/care-queue'
 import { dateInputValue, formatDate } from '@/lib/time'
@@ -394,8 +394,8 @@ export function CareQueueItemCard({
   return (
     <Card className="p-0">
       <div className="grid gap-3 p-0 md:hidden sm:grid-cols-[8.5rem_1fr]">
-        <div className="h-40 min-w-0 overflow-hidden bg-[#d6dfc9]/35 sm:h-full">
-          <PlantImage src={item.image} alt={item.plantName || item.title} />
+        <div className="h-32 min-w-0 overflow-hidden bg-[#d6dfc9]/35 sm:h-full">
+          <CareQueuePhoto item={item} collectionSlug={collectionSlug} canUpload={canAct} />
         </div>
         <div className="grid gap-2 p-4">
           <MetaRow item={item} timezone={timezone} />
@@ -410,7 +410,7 @@ export function CareQueueItemCard({
       <div className="hidden md:block">
         <div className="grid gap-4 p-3 md:grid-cols-[5.5rem_1fr_auto] md:items-center">
           <div className="h-20 overflow-hidden rounded-md border border-[#d6dfc9] bg-[#d6dfc9]/35">
-            <PlantImage src={item.image} alt={item.plantName || item.title} />
+            <CareQueuePhoto item={item} collectionSlug={collectionSlug} canUpload={canAct} />
           </div>
           <div className="min-w-0 space-y-1.5">
             <MetaRow item={item} timezone={timezone} />
