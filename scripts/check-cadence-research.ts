@@ -13,12 +13,15 @@ import {
   persistCadenceRecommendations,
   recoverLegacyCadences,
   researchDefinitionInclude,
+  cadenceActivityState,
+  eligibleCadenceProposals,
 } from '../lib/cadence-research'
 import {
   enqueueCadenceResearch,
   processAiCuratorWake,
   recoverCadenceResearchLeases,
 } from '../lib/ai-curator'
+import { needsCadenceAttention } from '../lib/cadence-review'
 import { getCareQueue } from '../lib/care-queue'
 
 const recommendation = {
@@ -262,7 +265,7 @@ async function main() {
       where: { id: d.id },
       include: researchDefinitionInclude,
     })
-    assert.deepEqual(missingActivities(full), [])
+    assert.deepEqual(missingActivities(full), ['GENERAL_INSPECTION'])
     assert.deepEqual(missingActivities(full, true), ['GENERAL_INSPECTION'])
     await db.careCadenceProposal.update({
       where: { id: uncertain.id },
@@ -465,6 +468,57 @@ async function main() {
       }),
       1
     )
+    // Six researched outcomes are not six configured care decisions: reproduce
+    // a Lemon Lime definition with watering withheld for insufficient context.
+    const gap = await db.plantDefinition.create({ data: { collectionId: c.id, genus: 'Monstera', species: 'deliciosa', cultivarName: 'Lemon Lime' } })
+    const insufficient = { ...recommendation, applicability: 'INSUFFICIENT_INFORMATION', recommendedInterval: null, recommendedUnit: null }
+    const gapSave = (recommendations: unknown) => persistCadenceRecommendations(db, { definitionId: gap.id, collectionId: c.id, source: 'BULK_RESEARCH', recommendations })
+    const six = await gapSave([
+      insufficient,
+      { ...insufficient, activity: 'FERTILIZING', applicability: 'BLOCKED_BY_DEPENDENCY' },
+      ...['REPOTTING', 'PEST_INSPECTION', 'GENERAL_INSPECTION', 'PRUNING'].map(activity => ({ ...recommendation, activity })),
+    ])
+    assert.equal(six.length, 6)
+    for (const p of six.slice(2)) assert.equal(await approveCadenceProposal(db, p.id, user.id), 'APPROVED')
+    const gapFull = () => db.plantDefinition.findUniqueOrThrow({ where: { id: gap.id }, include: researchDefinitionInclude })
+    let unresolved = await gapFull()
+    assert.equal(unresolved.careCadences.length, 4)
+    assert.deepEqual(missingActivities(unresolved), ['WATERING'])
+    assert.ok(needsCadenceAttention(unresolved.cadenceProposals.find(p => p.activity === 'WATERING')!, unresolved))
+    assert.ok(!(await eligibleCadenceProposals(db, c.id)).some(p => p.plantDefinitionId === gap.id))
+    assert.equal(await approveCadenceProposal(db, six[0].id, user.id), 'No actionable recommendation')
+    const gapsQueued = await Promise.all([enqueueCadenceResearch(db, { definitionId: gap.id }), enqueueCadenceResearch(db, { definitionId: gap.id })])
+    assert.equal(gapsQueued.reduce((a, b) => a + b, 0), 1)
+    let returnInsufficient = true
+    globalThis.fetch = async (_url, init) => {
+      const payload = JSON.parse(String(init?.body))
+      assert.ok(JSON.stringify(payload).includes('WATERING'))
+      return new Response(JSON.stringify({ output_text: JSON.stringify({ suggestedValue: { careCadenceRecommendations: [returnInsufficient ? insufficient : recommendation] } }), usage: { input_tokens: 100, output_tokens: 100 } }), { status: 200 })
+    }
+    // Prior fixture work and normal readiness seeding share this worker. Select this scenario deterministically.
+    await db.aiCuratorJob.updateMany({ where: { plantDefinitionId: gap.id, targetField: 'careCadences', status: 'QUEUED' }, data: { priority: 100000 } })
+    const gapWake = await processAiCuratorWake(db)
+    let gapJob = await db.aiCuratorJob.findFirstOrThrow({ where: { plantDefinitionId: gap.id, targetField: 'careCadences' }, orderBy: { createdAt: 'desc' } })
+    assert.equal(gapJob.status, 'COMPLETED', JSON.stringify(gapWake))
+    assert.match(gapJob.resultSummary!, /0 recommendations for review; 1 unresolved/)
+    assert.equal((await db.careCadenceProposal.findUniqueOrThrow({ where: { id: six[0].id } })).status, 'SUPERSEDED')
+    assert.deepEqual(missingActivities(await gapFull()), ['WATERING'])
+    returnInsufficient = false
+    assert.equal(await enqueueCadenceResearch(db, { definitionId: gap.id }), 1)
+    await db.aiCuratorJob.updateMany({ where: { plantDefinitionId: gap.id, targetField: 'careCadences', status: 'QUEUED' }, data: { priority: 100000 } })
+    await processAiCuratorWake(db)
+    const waterReview = (await eligibleCadenceProposals(db, c.id)).find(p => p.plantDefinitionId === gap.id)!
+    assert.ok(waterReview, 'Replacement watering proposal reaches single and bulk review')
+    assert.equal(await enqueueCadenceResearch(db, { definitionId: gap.id }), 0, 'Do not research over an actionable pending interval')
+    assert.equal(await approveCadenceProposal(db, waterReview.id, user.id), 'APPROVED')
+    unresolved = await gapFull()
+    assert.equal(unresolved.careCadences.length, 5)
+    assert.deepEqual(missingActivities(unresolved), [])
+    await db.plantHusbandryGuide.create({ data: { collectionId: c.id, plantDefinitionId: gap.id, fertilizerRecipeId: recipe.id } })
+    assert.deepEqual(missingActivities(await gapFull()), ['FERTILIZING'], 'A resolved recipe dependency unblocks research')
+    await db.plantDefinitionCareCadence.deleteMany({ where: { plantDefinitionId: gap.id, activity: 'WATERING' } })
+    assert.equal(cadenceActivityState(await gapFull(), 'WATERING'), 'MISSING', 'Approved history cannot stand in for a removed cadence')
+    console.log('Lemon Lime gap: unresolved review, ordinary research retry, deduplication, truthful result summary, supersession, approval and recipe recovery passed.')
     console.log(
       'Cadence research: validation, recovery, missing-only persistence, edited/concurrent/partial approval, dependency changes, inheritance, priority, duplicate jobs, restart recovery, provider contract, usage and bounded retries passed.'
     )

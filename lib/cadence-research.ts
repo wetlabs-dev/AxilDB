@@ -14,7 +14,7 @@ import {
 
 export const researchDefinitionInclude = {
   careCadences: true,
-  cadenceProposals: true,
+  cadenceProposals: { include: { job: { select: { status: true } } } },
   husbandryGuide: { include: { fertilizerRecipe: true } },
 } satisfies Prisma.PlantDefinitionInclude
 export type ResearchDefinition = Prisma.PlantDefinitionGetPayload<{
@@ -35,7 +35,14 @@ export function cadenceActivityState(d: ResearchDefinition, activity: string) {
   const prior = d.cadenceProposals
     .filter((p) => p.activity === activity)
     .sort((a, b) => b.researchedAt.getTime() - a.researchedAt.getTime())[0]
-  if (!prior || prior.status === 'FAILED') return 'MISSING'
+  if (!prior || ['FAILED', 'SUPERSEDED', 'APPROVED'].includes(prior.status)) return 'MISSING'
+  if (prior.status === 'REJECTED') return 'REJECTED'
+  if (prior.activity === 'FERTILIZING') {
+    if (prior.applicability === 'BLOCKED_BY_DEPENDENCY' && definitionHasRecipe(d)) return 'MISSING'
+    if (prior.applicability === 'RECOMMENDED' && !definitionHasRecipe(d)) return 'BLOCKED_BY_DEPENDENCY'
+  }
+  if (prior.jobId && prior.job?.status !== 'COMPLETED') return ['QUEUED', 'RUNNING', 'DEFERRED', 'WAITING_FOR_HUMAN'].includes(prior.job?.status || '') ? 'PENDING' : 'MISSING'
+  if (['RECOMMENDED', 'NOT_APPLICABLE'].includes(prior.applicability) && !isActionableCadenceProposal(prior, d)) return 'MISSING'
   if (!['RECOMMENDED', 'NOT_APPLICABLE'].includes(prior.applicability))
     return prior.applicability
   return prior.status
@@ -46,6 +53,7 @@ export function missingActivities(d: ResearchDefinition, explicit = false) {
       const state = cadenceActivityState(d, activity)
       return (
         state === 'MISSING' ||
+        state === 'INSUFFICIENT_INFORMATION' ||
         (explicit &&
           ![
             'CONFIGURED',
@@ -149,15 +157,14 @@ export async function persistCadenceRecommendations(
       definitionHasRecipe(d)
     ).filter((r) => allowed.has(r.activity))
     const saved = []
-    if (input.explicit)
+    if (!input.reviewConfigured)
       await tx.careCadenceProposal.updateMany({
         where: {
           plantDefinitionId: d.id,
           activity: { in: rows.map((r) => r.activity) },
           status: 'PENDING',
-          applicability: { not: 'RECOMMENDED' },
         },
-        data: { status: 'SUPERSEDED', reviewNote: 'Explicitly re-researched.' },
+        data: { status: 'SUPERSEDED', reviewNote: 'Superseded by new research for an unresolved activity.' },
       })
     for (const r of rows) {
       const current = d.careCadences.find(c => c.activity === r.activity)

@@ -1,4 +1,4 @@
-import { isActionableCadenceProposal } from '@/lib/cadence-review'
+import { isActionableCadenceProposal, needsCadenceAttention } from '@/lib/cadence-review'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
@@ -106,6 +106,7 @@ export default async function CadenceResearchPage({
       'Recommendations awaiting review',
       all.filter((p) => isActionableCadenceProposal(p, p.definition)).length,
     ],
+    ['Unresolved findings needing attention', all.filter(p => needsCadenceAttention(p, p.definition)).length],
     ['Previously approved', all.filter((p) => p.status === 'APPROVED').length],
     [
       'Research failures',
@@ -128,8 +129,8 @@ export default async function CadenceResearchPage({
   const rows = all.filter(
     (p) =>
       (tab === 'history'
-        ? !isActionableCadenceProposal(p, p.definition)
-        : isActionableCadenceProposal(p, p.definition)) &&
+        ? !isActionableCadenceProposal(p, p.definition) && !needsCadenceAttention(p, p.definition)
+        : isActionableCadenceProposal(p, p.definition) || needsCadenceAttention(p, p.definition)) &&
       (!q.definition || p.plantDefinitionId === q.definition) &&
       (!q.activity || p.activity === q.activity) &&
       (!q.confidence || p.confidence === q.confidence) &&
@@ -194,6 +195,14 @@ export default async function CadenceResearchPage({
           </p>
         )}
         {p.reviewNote && <p>{p.reviewNote}</p>}
+        {needsCadenceAttention(p, p.definition) && (
+          <div className="space-y-2 rounded-md border border-amber-200 bg-amber-50 p-3">
+            <p>No cadence has been configured from this finding. Review the rationale, add care context, and research again or set a cadence in the definition editor.</p>
+            <p>{p.activity === 'FERTILIZING' && !definitionHasRecipe(p.definition) ? 'Assign an active fertilizer recipe before researching a scheduled fertilizing cadence.' : 'Research Missing Cadences will revisit this unresolved activity. Rejected findings require explicit re-research.'}</p>
+            <Link className="underline" href={`/server/care-cadence-research?tab=research${collectionQuery}`}>Research unresolved cadences</Link>
+            {p.definition.collection && <Link className="ml-3 underline" href={collectionPath(p.definition.collection.slug, `/plants/${p.plantDefinitionId}/edit`)}>Edit definition care</Link>}
+          </div>
+        )}
         {p.status === 'PENDING' && (
           <>
             <CadenceProposalReview
@@ -280,7 +289,7 @@ export default async function CadenceResearchPage({
             waiting ·{' '}
             {jobs.filter((j) => j.status === 'WAITING_FOR_HUMAN').length} failed
             · {jobs.reduce((sum, j) => sum + j._count.cadenceProposals, 0)}{' '}
-            proposals generated
+            research outcomes generated (including unresolved findings)
           </p>
           <div className="space-y-3">
             {jobs.map((j) => (
@@ -296,7 +305,9 @@ export default async function CadenceResearchPage({
                   )}{' '}
                   · {j.status} · attempt {j.attempts}/{j.maxAttempts}
                 </span>
-                <span>{j.resultSummary || j.blockingReason}</span>
+                <span>{j.status === 'COMPLETED' && all.some(p => p.jobId === j.id)
+                  ? `${all.filter(p => p.jobId === j.id).length} research outcomes: ${all.filter(p => p.jobId === j.id && ['RECOMMENDED', 'NOT_APPLICABLE'].includes(p.applicability)).length} interval/N/A recommendations; ${all.filter(p => p.jobId === j.id && !['RECOMMENDED', 'NOT_APPLICABLE'].includes(p.applicability)).length} unresolved findings. See Review for current items and History for previous outcomes.`
+                  : j.resultSummary || j.blockingReason}</span>
                 <form action={manageCadenceJob}>
                   <input type="hidden" name="id" value={j.id} />
                   {['WAITING_FOR_HUMAN', 'CANCELLED', 'EXPIRED'].includes(
@@ -396,8 +407,7 @@ export default async function CadenceResearchPage({
           <p>{rows.length} recommendations</p>
           {tab === 'review' && (
             <p>
-              Only currently actionable schedules and N/A decisions are shown.
-              Blocked and resolved proposals remain in History.
+              Actionable schedules and N/A decisions can be approved. Unresolved findings are shown for attention and cannot be bulk approved. Resolved and superseded proposals remain in History.
             </p>
           )}
           {q.view === 'table' ? (

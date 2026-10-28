@@ -79,6 +79,11 @@ try {
   const pest = await proposal(a.id, 'PEST_INSPECTION')
   const pruning = await proposal(b.id, 'PRUNING')
   const fert = await proposal(b.id, 'FERTILIZING')
+  const unresolved = await db.careCadenceProposal.create({ data: {
+    plantDefinitionId: b.id, activity: 'WATERING', confidence: 'LOW',
+    rationale: 'Watering interval withheld: inspect moisture and add substrate context.',
+    applicability: 'INSUFFICIENT_INFORMATION', sourceReferences: [], source: 'BULK_RESEARCH',
+  } })
   async function signedContext(id, admin) {
     const token = randomBytes(32).toString('hex')
     await db.session.create({
@@ -107,6 +112,11 @@ try {
   await expect(
     page.getByRole('heading', { name: 'Care Cadence Research' })
   ).toBeVisible()
+  const unresolvedForm = page.locator('form').filter({ has: page.locator(`input[name="id"][value="${unresolved.id}"]`) })
+  await expect(unresolvedForm).toBeVisible()
+  await expect(unresolvedForm.getByRole('button', { name: 'Approve', exact: true })).toHaveCount(0)
+  await expect(page.getByText('Watering interval withheld: inspect moisture and add substrate context.', { exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Edit definition care', exact: true })).toBeVisible()
   const waterForm = page
     .locator('form')
     .filter({ has: page.locator(`input[name="id"][value="${water.id}"]`) })

@@ -102,3 +102,11 @@ export function isActionableCadenceProposal(
     Boolean(recipe?.active && recipe.collectionId === d.collectionId)
   )
 }
+
+/** Unresolved findings belong in Review too, but must never enter bulk approval. */
+export function needsCadenceAttention(p: ReviewProposal, d: ReviewDefinition) {
+  return p.status === 'PENDING' &&
+    (!p.jobId || p.job?.status === 'COMPLETED') &&
+    !d.careCadences.some(c => c.activity === p.activity) &&
+    !isActionableCadenceProposal(p, d)
+}
