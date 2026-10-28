@@ -46,7 +46,7 @@ export default async function BulkLabels({
 
   return (
     <div className="space-y-6">
-      <h2 className="text-3xl font-bold">Plant Label PDFs</h2>
+      <h2 className="text-3xl font-bold">Plant Labels</h2>
       <p className="max-w-2xl text-sm text-stone-600">
         Export labels for single-label rolls, printable sheets, or Brother DK-2210 continuous tape.
       </p>

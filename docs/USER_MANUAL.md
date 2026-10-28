@@ -30,7 +30,7 @@ AXILDB_DOCS_BASE_URL=https://app.axildb.com AXILDB_DOCS_COLLECTION_SLUG=axildb n
 - [Bloom Tracker](#blooms)
 - [Sport Review](#sports)
 - [Search, Follows, and Reminders](#search-follows-reminders)
-- [QR Labels and Bulk Tags](#labels)
+- [Plant Labels](#labels)
 - [Collection Transfers and Definition Sharing](#transfers)
 - [Taxonomic Authorities, Collection Tools, and Audit Log](#collection-tools)
 - [Collection Activity and Historical Events](#collection-activity)
@@ -662,17 +662,17 @@ App route: `/following`
 - Following requires active membership in the collection, even for public collections.
 - Email links route back into the relevant collection and record after login.
 
-## QR Labels and Bulk Tags
+## Plant Labels
 
 Labels generate printable QR codes and plant IDs for specimen tags.
 
 App route: `/labels`
 
-![QR Labels and Bulk Tags](../public/manual/screenshots/labels.png)
+![Plant Labels](../public/manual/screenshots/labels.png)
 
 ### How It Is Used
 
-- Open Bulk Tags to choose plants, locations, or both for label export.
+- Open Plant Labels to choose plants, locations, or both for label export.
 - The bulk label page automatically remembers your last category and keeps separate print format/orientation settings for Plants, Locations, and Plants + Locations. Plant sorting is remembered only after you press Sort. These preferences are specific to your account in this browser; clearing site storage resets them, and outdated options fall back safely. Label selections are not saved.
 - Choose a label format: 2.25 × 1.25 inch single labels, a legacy ganged print sheet, or Brother DK-2210 continuous labels.
 - Choose portrait or landscape orientation independently of the label format.

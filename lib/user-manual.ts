@@ -573,12 +573,12 @@ export const manualSections: ManualSection[] = [
   },
   {
     id: 'labels',
-    title: 'QR Labels and Bulk Tags',
+    title: 'Plant Labels',
     route: '/labels',
     screenshot: 'labels.png',
     purpose: 'Labels generate printable QR codes and plant IDs for specimen tags.',
     howTo: [
-      'Open Bulk Tags to choose plants, locations, or both for label export.',
+      'Open Plant Labels to choose plants, locations, or both for label export.',
       'Choose a label format: 2.25 × 1.25 inch single labels, a legacy ganged print sheet, or Brother DK-2210 continuous labels.',
       'Choose portrait or landscape orientation independently of the label format.',
       'Scan a plant label QR code to open the specimen detail page, or a location label QR code to open the location detail page.',
