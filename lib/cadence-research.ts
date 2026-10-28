@@ -1,3 +1,4 @@
+import { husbandryFieldNames } from '@/lib/husbandry'
 import {
   actionableCadenceWhere,
   isActionableCadenceProposal,
@@ -68,7 +69,9 @@ export async function cadenceResearchContext(
   })
   // Deliberate allowlist: no acquisition, instance, user or collection-private records.
   const g = d.husbandryGuide
+  const linkedGuide = g?.sourcePlantDefinitionId ? await db.plantHusbandryGuide.findFirst({ where: { plantDefinitionId: g.sourcePlantDefinitionId, collectionId, sourcePlantDefinitionId: null } }) : null
   return {
+    linkedHusbandryContext: linkedGuide ? Object.fromEntries(husbandryFieldNames.map(field => [field, linkedGuide[field]])) : null,
     plantDefinition: {
       genus: d.genus,
       species: d.species,
@@ -106,6 +109,13 @@ export async function cadenceResearchContext(
   }
 }
 
+export function cadenceDecisionSignature(value?: { id: string; status: string; interval: number | null; unit: string | null } | null) {
+  return value ? JSON.stringify([value.id, value.status, value.interval, value.unit]) : 'unresolved'
+}
+export function magicFillReplacementBaseline(note?: string | null): string | undefined {
+  try { const value = JSON.parse(note || ''); return value.magicFillBaseline && typeof value.magicFillBaseline === 'string' ? value.magicFillBaseline : undefined } catch { return undefined }
+}
+
 export async function persistCadenceRecommendations(
   db: PrismaClient,
   input: {
@@ -116,6 +126,7 @@ export async function persistCadenceRecommendations(
     model?: string
     jobId?: string
     explicit?: boolean
+    reviewConfigured?: boolean
   }
 ) {
   return db.$transaction(async (tx) => {
@@ -132,7 +143,7 @@ export async function persistCadenceRecommendations(
       where: { id: input.definitionId, collectionId: input.collectionId },
       include: researchDefinitionInclude,
     })
-    const allowed = new Set<string>(missingActivities(d, input.explicit))
+    const allowed = new Set<string>(input.reviewConfigured ? cadenceActivities.map(a => a.activity) : missingActivities(d, input.explicit))
     const rows = validateRecommendations(
       input.recommendations,
       definitionHasRecipe(d)
@@ -148,7 +159,15 @@ export async function persistCadenceRecommendations(
         },
         data: { status: 'SUPERSEDED', reviewNote: 'Explicitly re-researched.' },
       })
-    for (const r of rows)
+    for (const r of rows) {
+      const current = d.careCadences.find(c => c.activity === r.activity)
+      if (input.reviewConfigured) {
+        const pending = await tx.careCadenceProposal.findFirst({ where: { plantDefinitionId: d.id, activity: r.activity, status: 'PENDING' }, orderBy: { researchedAt: 'desc' } })
+        if (pending && !(pending.activity === 'FERTILIZING' && pending.applicability === 'RECOMMENDED' && !definitionHasRecipe(d)) && (['RECOMMENDED', 'NOT_APPLICABLE'].includes(pending.applicability)) && (!current || magicFillReplacementBaseline(pending.reviewNote) === cadenceDecisionSignature(current))) {
+          saved.push(pending); continue
+        }
+        await tx.careCadenceProposal.updateMany({ where: { plantDefinitionId: d.id, activity: r.activity, status: 'PENDING' }, data: { status: 'SUPERSEDED', reviewNote: 'Superseded by explicit Magic Fill review.' } })
+      }
       saved.push(
         await tx.careCadenceProposal.create({
           data: {
@@ -161,12 +180,14 @@ export async function persistCadenceRecommendations(
             applicability: r.applicability,
             sourceReferences: r.sourceReferences,
             source: input.source,
+            ...(input.reviewConfigured ? { reviewNote: JSON.stringify({ magicFillBaseline: cadenceDecisionSignature(current) }) } : {}),
             provider: 'OPENAI',
             model: input.model,
             jobId: input.jobId,
           },
         })
       )
+    }
     return saved
   })
 }
@@ -175,7 +196,8 @@ export async function approveCadenceProposal(
   db: PrismaClient,
   id: string,
   reviewerId: string,
-  edit?: { interval: number; unit: string }
+  edit?: { interval: number; unit: string },
+  replacement?: { expected: string }
 ) {
   return db.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(186104, 1)`
@@ -191,7 +213,9 @@ export async function approveCadenceProposal(
       return 'No actionable recommendation'
     if (p.applicability === 'NOT_APPLICABLE' && edit)
       throw new Error('N/A recommendations cannot include an interval.')
-    if (p.plantDefinition.careCadences.some((c) => c.activity === p.activity)) {
+    const current = p.plantDefinition.careCadences.find(c => c.activity === p.activity)
+    if (replacement && (!current || cadenceDecisionSignature(current) !== replacement.expected || magicFillReplacementBaseline(p.reviewNote) !== replacement.expected)) return 'Care decision changed; research and review again'
+    if (current && !replacement) {
       await tx.careCadenceProposal.update({
         where: { id },
         data: { status: 'SUPERSEDED', reviewNote: 'Already configured.' },
@@ -204,7 +228,7 @@ export async function approveCadenceProposal(
       !definitionHasRecipe(p.plantDefinition)
     )
       return 'Fertilizer recipe is no longer assigned or active'
-    if (!isActionableCadenceProposal(p, p.plantDefinition))
+    if (!isActionableCadenceProposal(p, { ...p.plantDefinition, careCadences: replacement ? p.plantDefinition.careCadences.filter(c => c.activity !== p.activity) : p.plantDefinition.careCadences }))
       return 'Recommendation is no longer actionable'
     const interval =
       p.applicability === 'NOT_APPLICABLE'
@@ -220,9 +244,10 @@ export async function approveCadenceProposal(
       unit,
       status:
         p.applicability === 'NOT_APPLICABLE' ? 'NOT_APPLICABLE' : 'SCHEDULED',
-      missingOnly: true,
+      missingOnly: !replacement,
     })
     if (!created.count) return 'Already configured'
+    await tx.careCadenceProposal.updateMany({ where: { plantDefinitionId: p.plantDefinitionId, activity: p.activity, status: 'PENDING', id: { not: p.id } }, data: { status: 'SUPERSEDED', reviewNote: 'Another reviewed recommendation was approved.' } })
     // The cadence insert supersedes conflicts. Promote exactly this reviewed result afterward.
     await tx.careCadenceProposal.update({
       where: { id },

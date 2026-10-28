@@ -5,7 +5,8 @@ import { redirect } from 'next/navigation'
 import { audit } from '@/lib/auth'
 import { collectionPath, requireCollectionGardener } from '@/lib/collections'
 import { emitDomainEvent } from '@/lib/events/emit'
-import { acceptedPlantTagColors, plantTagCategories, plantTagIcons, normalizePlantTagName, parseTagIds, plantTagSlug } from '@/lib/plant-tags'
+import { TagReviewError, acceptedPlantTagColors, plantTagCategories, plantTagIcons, normalizePlantTagName, parseTagIds, plantTagSlug } from '@/lib/plant-tags'
+import { applyMagicFillTags } from '@/lib/magic-fill-tags'
 import { prisma } from '@/lib/prisma'
 
 const value = (fd: FormData, key: string) => String(fd.get(key) || '').trim()
@@ -94,52 +95,21 @@ export async function savePlantDefinitionTags(fd: FormData) {
 
 export async function createMagicFillPlantTags(fd: FormData) {
   const { user, collection } = await requireCollectionGardener(value(fd, 'collectionSlug'))
-  let suggestions: Array<{ name?: unknown; category?: unknown; description?: unknown }> = []
   try {
-    const parsed = JSON.parse(value(fd, 'suggestions'))
-    if (Array.isArray(parsed)) suggestions = parsed.slice(0, 5)
-  } catch {
-    throw new Error('The proposed tags could not be read.')
-  }
-  if (!suggestions.length) throw new Error('Select at least one proposed tag.')
-
-  const tags = await prisma.$transaction(async (tx) => {
-    const saved = []
-    for (const suggestion of suggestions) {
-      const name = normalizePlantTagName(suggestion.name)
-      const slug = plantTagSlug(name)
-      if (!name || !slug) continue
-      const existing = await tx.plantTag.findUnique({ where: { collectionId_slug: { collectionId: collection.id, slug } } })
-      if (existing) {
-        if (!existing.active) throw new Error(`${existing.name} is archived. Restore it from Plant Tags before assigning it.`)
-        saved.push(existing)
-        continue
-      }
-      const category = allowed(String(suggestion.category || ''), plantTagCategories)
-      const tag = await tx.plantTag.create({
-        data: {
-          collectionId: collection.id,
-          createdByUserId: user.id,
-          name,
-          slug,
-          category,
-          icon: 'tag',
-          colorToken: 'fern',
-          description: String(suggestion.description || '').trim().slice(0, 500) || null,
-          publicVisible: false,
-        },
-      })
-      await emitDomainEvent(tx, {
-        eventType: 'tag.created', collectionId: collection.id, aggregateId: tag.id,
-        actor: { id: user.id, role: user.role }, idempotencyKey: `plant-tag:${tag.id}:${tag.updatedAt.toISOString()}`,
-        payload: { subjectId: tag.id, displayName: tag.name, publicVisible: false, source: 'MAGIC_FILL' },
-      })
-      saved.push(tag)
-    }
-    return saved
-  })
-  if (!tags.length) throw new Error('No valid proposed tags were selected.')
-  await audit(user, 'CREATE', 'PLANT_TAG', tags.map((tag) => tag.id).join(','), `Created ${tags.length} plant tag draft${tags.length === 1 ? '' : 's'} from Magic Fill review`, { tagIds: tags.map((tag) => tag.id) }, collection.id)
+  const definitionId = value(fd, 'plantDefinitionId')
+  if (!definitionId) throw new TagReviewError('Save the Plant Definition before creating or assigning tag suggestions.')
+  let suggestions: Array<Record<string, unknown>>, existingIds: string[]
+  try {
+    suggestions = JSON.parse(value(fd, 'suggestions') || '[]')
+    existingIds = JSON.parse(value(fd, 'existingTagIds') || '[]')
+    if (!Array.isArray(suggestions) || !Array.isArray(existingIds) || suggestions.some(x => !x || typeof x !== 'object' || Array.isArray(x)) || existingIds.some(id => typeof id !== 'string' || id.length > 200)) throw new TagReviewError()
+  } catch { throw new TagReviewError('The selected tag suggestions could not be read.') }
+  if (!suggestions.length && !existingIds.length) throw new TagReviewError('Select at least one tag suggestion.')
+  const tags = await applyMagicFillTags(prisma, { collectionId: collection.id, definitionId, userId: user.id, userRole: user.role, suggestions, existingIds })
+  await audit(user, 'UPDATE', 'PLANT_DEFINITION', definitionId, 'Applied Magic Fill tag suggestions', { tagIds: tags.map(tag => tag.id) }, collection.id)
   revalidatePath(collectionPath(collection.slug, '/plant-tags'))
-  return tags.map((tag) => ({ id: tag.id, name: tag.name, icon: tag.icon, colorToken: tag.colorToken, category: tag.category, description: tag.description, active: tag.active }))
+  revalidatePath(collectionPath(collection.slug, '/plants'))
+  revalidatePath(collectionPath(collection.slug, `/plants/${definitionId}/edit`))
+  return tags.map(tag => ({ id: tag.id, name: tag.name, icon: tag.icon, colorToken: tag.colorToken, category: tag.category, description: tag.description, active: tag.active, publicVisible: tag.publicVisible }))
+  } catch (error) { return { error: error instanceof TagReviewError ? error.message : 'Could not confirm tag approval. Your edits are preserved; retry to reconcile the same tags.' } }
 }

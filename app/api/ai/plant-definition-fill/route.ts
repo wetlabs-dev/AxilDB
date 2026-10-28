@@ -1,3 +1,9 @@
+import { ResourceSlots } from '@/lib/image-processing'
+import { canEditInCollection } from '@/lib/collections'
+import { cadenceResearchContext, persistCadenceRecommendations } from '@/lib/cadence-research'
+import { magicFillCadenceInstructions, cadenceRecommendationShape, validateRecommendations } from '@/lib/cadence-recommendations'
+import { cadenceActivities } from '@/lib/care-cadences'
+import { plantTagConfiguration, plantTagCategories, plantTagColors, plantTagIcons, plantTagSlug } from '@/lib/plant-tags'
 import { RequestLimiter } from '@/lib/request-limiter'
 import { NextResponse } from 'next/server'
 import { audit } from '@/lib/auth'
@@ -8,6 +14,7 @@ import { acceptedPlantName } from '@/lib/utils'
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses'
 const DEFAULT_MODEL = 'gpt-5.4-mini'
 const requestLimiter = new RequestLimiter()
+const researchSlots = new ResourceSlots(2)
 
 const aliasTypes = new Set(['SYNONYM', 'TRADE_NAME', 'OBSOLETE_TAXONOMY', 'COMMON_NAME', 'MISAPPLIED_NAME', 'SHORTHAND'])
 const confidenceLevels = new Set(['CONFIRMED', 'PROBABLE', 'AI_DETERMINED', 'UNCERTAIN', 'TRADE_ASSUMED', 'DISPUTED'])
@@ -109,10 +116,11 @@ function normalizeFields(raw: any, originalName: string) {
     acquisitionPlan: recommendation,
     suggestedTags: Array.isArray(raw.suggestedTags) ? raw.suggestedTags.slice(0, 8) : [],
     newTagSuggestions: Array.isArray(raw.newTagSuggestions) ? raw.newTagSuggestions.slice(0, 5) : [],
+    careCadenceRecommendations: Array.isArray(raw.careCadenceRecommendations) ? raw.careCadenceRecommendations : [],
   }
 }
 
-export async function POST(req: Request) {
+async function generate(req: Request) {
   const body = await req.json().catch(() => ({}))
   const access = await requireAiFeatureAccess(trimmedString(body.collectionSlug, 80))
   if (access.error) return access.error
@@ -142,12 +150,18 @@ export async function POST(req: Request) {
       })).filter((rule: any) => rule.rank && rule.taxonName).slice(0, 30) : [],
       })).filter((item: any) => item.id && item.name)
     : []
+  const definitionId = trimmedString(body.plantDefinitionId, 100)
+  let cadenceContext = null
+  if (definitionId) {
+    try { cadenceContext = await cadenceResearchContext(prisma, collection.id, definitionId, true) }
+    catch { return NextResponse.json({ error: 'Plant Definition is unavailable in this collection.' }, { status: 403 }) }
+  }
   const [locations, plantTags] = await Promise.all([prisma.location.findMany({
     where: { collectionId: collection.id, status: 'ACTIVE', environmentProfile: { isNot: null } },
     include: { locationType: true, environmentProfile: true },
     orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     take: 40,
-  }), prisma.plantTag.findMany({ where: { collectionId: collection.id, active: true }, select: { id: true, name: true, category: true, description: true }, orderBy: { name: 'asc' }, take: 120 })])
+  }), prisma.plantTag.findMany({ where: { collectionId: collection.id, active: true }, select: { id: true, name: true, category: true, description: true, icon: true, colorToken: true, publicVisible: true, active: true }, orderBy: { name: 'asc' }, take: 120 })])
   const locationProfiles = locations.map((location) => ({
     id: location.id,
     category: location.locationType.name,
@@ -171,8 +185,12 @@ export async function POST(req: Request) {
     taxonomicAuthorities,
     collectionLocationProfiles: locationProfiles,
     collectionPlantTags: plantTags,
+    tagOptions: { categories: plantTagCategories, icons: plantTagIcons, colors: plantTagColors },
+    careContext: cadenceContext ? { ...cadenceContext, missingEligibleActivities: cadenceActivities.map(a => a.activity) } : { hasAssignedRecipe: false, configuredCadences: [], missingEligibleActivities: cadenceActivities.map(a => a.activity) },
     rules: [
       'Return only valid JSON, with no markdown.',
+      magicFillCadenceInstructions,
+      'New tag cosmetics must use the supplied tagOptions. Public visibility is a user setting, not an AI determination. Do not set publicVisible.',
       'If the supplied genus/species is outdated, return the currently accepted genus/species and include the supplied name as an alias with aliasType OBSOLETE_TAXONOMY or SYNONYM.',
       'Use lowercase for species.',
       'An accepted horticultural cultivar name may intentionally omit a species epithet. In that case return species as null; do not fill in sp. or infer an epithet merely to complete the binomial.',
@@ -218,7 +236,8 @@ export async function POST(req: Request) {
         suggestedLocationId: 'string|null', locationCompatibility: 'string|null', sources: ['https://example.org/source'],
       },
       suggestedTags: [{ tagId: 'existing tag ID', tagName: 'string', confidence: 0.8, reason: 'string' }],
-      newTagSuggestions: [{ name: 'string', icon: 'stable concept or null', category: 'string', description: 'string', confidence: 0.8, reason: 'string' }],
+      newTagSuggestions: [{ name: 'string', icon: 'canonical icon', colorToken: 'canonical color', category: 'canonical category', description: 'string', confidence: 0.8, reason: 'string' }],
+      careCadenceRecommendations: cadenceRecommendationShape,
     },
   }
 
@@ -234,7 +253,7 @@ export async function POST(req: Request) {
         model,
         instructions: 'You are careful botanical taxonomy assistant. Return only machine-parseable JSON. Use null when you are not confident.',
         input: JSON.stringify(prompt),
-        max_output_tokens: 2200,
+        max_output_tokens: 4500,
         tools: [{ type: 'web_search_preview' }],
         store: false,
       }),
@@ -251,8 +270,23 @@ export async function POST(req: Request) {
     await recordAiUsage({ collectionId: collection.id, userId: user.id, feature: 'AI_MAGIC_FILL', model, usage: tokenUsage(payload, { webSearchPreviewRequested: true }) })
     const fields = normalizeFields(extractJson(outputText(payload)), originalName)
     const catalogIds = new Set(plantTags.map((tag) => tag.id))
-    fields.suggestedTags = fields.suggestedTags.map((suggestion: any) => ({ tagId: trimmedString(suggestion?.tagId, 100), tagName: trimmedString(suggestion?.tagName, 60), confidence: Math.max(0, Math.min(1, Number(suggestion?.confidence || 0))), reason: trimmedString(suggestion?.reason, 240) })).filter((suggestion: any) => catalogIds.has(suggestion.tagId) && suggestion.confidence >= 0.6)
-    fields.newTagSuggestions = fields.newTagSuggestions.map((suggestion: any) => ({ name: trimmedString(suggestion?.name, 60), category: trimmedString(suggestion?.category, 40), description: trimmedString(suggestion?.description, 300), confidence: Math.max(0, Math.min(1, Number(suggestion?.confidence || 0))), reason: trimmedString(suggestion?.reason, 240) })).filter((suggestion: any) => suggestion.name && suggestion.confidence >= 0.7)
+    fields.suggestedTags = fields.suggestedTags.map((suggestion: any) => ({ ...plantTags.find(tag => tag.id === suggestion?.tagId), tagId: trimmedString(suggestion?.tagId, 100), tagName: plantTags.find(tag => tag.id === suggestion?.tagId)?.name, confidence: Math.max(0, Math.min(1, Number(suggestion?.confidence || 0))), reason: trimmedString(suggestion?.reason, 240) })).filter((suggestion: any) => catalogIds.has(suggestion.tagId) && suggestion.confidence >= 0.6)
+    fields.newTagSuggestions = fields.newTagSuggestions.map((suggestion: any) => ({ ...plantTagConfiguration({ ...suggestion, publicVisible: true }), confidence: Math.max(0, Math.min(1, Number(suggestion?.confidence || 0))), reason: trimmedString(suggestion?.reason, 240) })).filter((suggestion: any) => suggestion.name && suggestion.confidence >= 0.7)
+    fields.newTagSuggestions = fields.newTagSuggestions.filter((suggestion: any) => {
+      const existing = plantTags.find(tag => plantTagSlug(tag.name) === plantTagSlug(suggestion.name))
+      if (!existing) return true
+      if (!fields.suggestedTags.some((tag: any) => tag.tagId === existing.id)) fields.suggestedTags.push({ ...existing, tagId: existing.id, tagName: existing.name, confidence: suggestion.confidence, reason: suggestion.reason })
+      return false
+    })
+    let cadenceWarning: string | undefined
+    let cadenceProposals: unknown[] = []
+    try {
+      fields.careCadenceRecommendations = validateRecommendations(fields.careCadenceRecommendations, cadenceContext?.hasAssignedRecipe || false)
+      if (definitionId && fields.careCadenceRecommendations.length) cadenceProposals = await persistCadenceRecommendations(prisma, { definitionId, collectionId: collection.id, recommendations: fields.careCadenceRecommendations, source: 'MAGIC_FILL', model, reviewConfigured: true })
+    } catch { fields.careCadenceRecommendations = []; cadenceWarning = 'Care cadence research could not be validated or saved. Existing decisions are unchanged; retry research to review cadences.' }
+    if (!definitionId) cadenceProposals = fields.careCadenceRecommendations.map((r: any) => ({ id: `draft-${r.activity}`, activity: r.activity, interval: r.recommendedInterval, unit: r.recommendedUnit, applicability: r.applicability, confidence: r.confidence, rationale: r.rationale, sourceReferences: r.sourceReferences, status: 'DRAFT', model, researchedAt: new Date().toISOString() }))
+    if (definitionId && cadenceProposals.length) cadenceProposals = await prisma.careCadenceProposal.findMany({ where: { id: { in: (cadenceProposals as Array<{ id: string }>).map(p => p.id) } }, include: { job: { select: { status: true } } } })
+    const currentCadences = definitionId ? await prisma.plantDefinitionCareCadence.findMany({ where: { plantDefinitionId: definitionId } }) : []
     const acceptedIdentity = acceptedPlantName({ genus: fields.genus || genus, species: fields.species, hybridNotation: fields.hybridNotation, cultivarName: fields.cultivarName }).toLowerCase()
     const originalIdentity = originalName.toLowerCase()
     if (acceptedIdentity !== originalIdentity && !fields.aliases.some((alias: { name: string }) => alias.name.toLowerCase() === originalIdentity)) {
@@ -266,11 +300,17 @@ export async function POST(req: Request) {
       fields.aliases = fields.aliases.slice(0, 8)
     }
     await audit(user, 'GENERATE', 'AI_MAGIC_FILL', null, `Generated magic fill for ${originalName}`, { model, applyMode, reviewNote: fields.reviewNote }, collection.id)
-    return NextResponse.json({ fields })
+    return NextResponse.json({ fields, cadenceReview: { definitionId, proposals: cadenceProposals, current: currentCadences, hasRecipe: cadenceContext?.hasAssignedRecipe || false, warning: cadenceWarning }, tagCatalog: plantTags, canApprove: canEditInCollection(user, access.context) })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'OpenAI magic fill request failed.'
     await recordAiUsage({ collectionId: collection.id, userId: user.id, feature: 'AI_MAGIC_FILL', model, success: false, error: message })
     await audit(user, 'ERROR', 'AI_MAGIC_FILL', null, `Failed magic fill for ${originalName}`, { model, applyMode, error: message }, collection.id)
     return NextResponse.json({ error: message }, { status: 500 })
   }
+}
+
+export async function POST(req: Request) {
+  const release = researchSlots.acquire()
+  if (!release) return NextResponse.json({ error: 'Magic Fill research is busy. Try again shortly.' }, { status: 429 })
+  try { return await generate(req) } finally { release() }
 }

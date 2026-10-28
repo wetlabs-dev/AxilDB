@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { PlantTagChip, PlantTagIcon, plantTagColorSwatches } from '@/components/PlantTagChip'
-import { plantTagCategories, plantTagColors, plantTagIcons, tagCategoryLabel } from '@/lib/plant-tags'
+import { plantTagConfiguration, type PlantTagConfiguration, plantTagCategories, plantTagColors, plantTagIcons, tagCategoryLabel } from '@/lib/plant-tags'
 
 const control = 'min-w-0 w-full rounded-md border border-[color:var(--ax-border)] bg-[var(--ax-input-bg)] px-2.5 py-2 text-left text-sm outline-none transition focus:border-[var(--ax-primary)] focus:ring-2 focus:ring-[var(--ax-focus)]'
 
@@ -11,11 +11,11 @@ function optionLabel(value: string) {
   return value.replaceAll('-', ' ').replace(/(^|\s)\S/g, (letter) => letter.toUpperCase())
 }
 
-function IconPicker({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+function IconPicker({ value, onChange, inputName = 'icon' }: { value: string; onChange: (value: string) => void; inputName?: string }) {
   const detailsRef = useRef<HTMLDetailsElement>(null)
   return <div className="grid min-w-0 gap-1 text-sm font-medium text-[var(--ax-heading)]">
     <span>Themed icon</span>
-    <input type="hidden" name="icon" value={value} />
+    <input type="hidden" name={inputName} value={value} />
     <details ref={detailsRef} className="group relative min-w-0">
       <summary className={`${control} flex cursor-pointer list-none items-center justify-between gap-2`}>
         <span className="flex min-w-0 items-center gap-2"><PlantTagIcon icon={value} /><span>{optionLabel(value)}</span></span>
@@ -30,11 +30,11 @@ function IconPicker({ value, onChange }: { value: string; onChange: (value: stri
   </div>
 }
 
-function ColorPicker({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+function ColorPicker({ value, onChange, inputName = 'colorToken' }: { value: string; onChange: (value: string) => void; inputName?: string }) {
   const detailsRef = useRef<HTMLDetailsElement>(null)
   return <div className="grid min-w-0 gap-1 text-sm font-medium text-[var(--ax-heading)]">
     <span>Color</span>
-    <input type="hidden" name="colorToken" value={value} />
+    <input type="hidden" name={inputName} value={value} />
     <details ref={detailsRef} className="group relative min-w-0">
       <summary className={`${control} flex cursor-pointer list-none items-center justify-between gap-2`}>
         <span className="flex min-w-0 items-center gap-2"><span className="h-4 w-4 shrink-0 rounded-full border border-black/15" style={{ backgroundColor: plantTagColorSwatches[value] }} /><span>{optionLabel(value)}</span></span>
@@ -49,20 +49,26 @@ function ColorPicker({ value, onChange }: { value: string; onChange: (value: str
   </div>
 }
 
-export function PlantTagFields({ tag }: { tag?: { id?: string; name?: string | null; category?: string | null; icon?: string | null; colorToken?: string | null; description?: string | null; publicVisible?: boolean } }) {
-  const [name, setName] = useState(tag?.name || '')
-  const [icon, setIcon] = useState(tag?.icon || 'tag')
-  const [color, setColor] = useState(tag?.colorToken || 'fern')
+export function PlantTagFields({ tag, onChange, namePrefix = '', compact = false }: {
+  tag?: { id?: string; name?: string | null; category?: string | null; icon?: string | null; colorToken?: string | null; description?: string | null; publicVisible?: boolean }
+  onChange?: (value: PlantTagConfiguration) => void; namePrefix?: string; compact?: boolean
+}) {
+  const [config, setConfig] = useState(() => plantTagConfiguration({ ...tag, publicVisible: tag?.publicVisible ?? false }))
+  const field = (name: string) => `${namePrefix}${name}`
+  function update(change: Partial<PlantTagConfiguration>) {
+    const next = { ...config, ...change }; setConfig(next); onChange?.(next)
+  }
   return <>
-    <label className="grid min-w-0 gap-1 text-sm font-medium text-[var(--ax-heading)]">Name<input className={control} name="name" value={name} onChange={(event) => setName(event.target.value)} required /></label>
-    <label className="grid min-w-0 gap-1 text-sm font-medium text-[var(--ax-heading)]">Category<select className={control} name="category" defaultValue={tag?.category || 'OTHER'}>{plantTagCategories.map((item) => <option key={item} value={item}>{tagCategoryLabel(item)}</option>)}</select></label>
-    <IconPicker value={icon} onChange={setIcon} />
-    <ColorPicker value={color} onChange={setColor} />
-    <label className="grid min-w-0 gap-1 text-sm font-medium text-[var(--ax-heading)] md:col-span-4">Description<textarea className={`${control} min-h-20`} name="description" defaultValue={tag?.description || ''} /></label>
-    <div className="grid gap-1 rounded-md border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] p-3 md:col-span-4">
+    <label className="grid min-w-0 gap-1 text-sm font-medium text-[var(--ax-heading)]">Name<input className={control} name={field('name')} value={config.name} onChange={event => update({ name: event.target.value })} required={!namePrefix} maxLength={60} /></label>
+    <label className="grid min-w-0 gap-1 text-sm font-medium text-[var(--ax-heading)]">Category<select className={control} name={field('category')} value={config.category} onChange={event => update({ category: event.target.value })}>{plantTagCategories.map(item => <option key={item} value={item}>{tagCategoryLabel(item)}</option>)}</select></label>
+    <IconPicker inputName={field('icon')} value={config.icon} onChange={icon => update({ icon })} />
+    <ColorPicker inputName={field('colorToken')} value={config.colorToken} onChange={colorToken => update({ colorToken })} />
+    <label className="grid min-w-0 gap-1 text-sm font-medium text-[var(--ax-heading)] md:col-span-4">Description<textarea className={`${control} ${compact ? 'min-h-14' : 'min-h-20'}`} name={field('description')} value={config.description} maxLength={500} onChange={event => update({ description: event.target.value })} /></label>
+    <div className={`grid gap-1 rounded-md border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] ${compact ? 'p-2' : 'p-3'} md:col-span-4`}>
       <span className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--ax-muted)]">Preview</span>
-      <div><PlantTagChip tag={{ id: tag?.id || 'preview', name: name.trim() || 'Tag name', icon, colorToken: color, active: true }} compact={false} /></div>
+      <div><PlantTagChip tag={{ id: tag?.id || 'preview', name: config.name.trim() || 'Tag name', icon: config.icon, colorToken: config.colorToken, active: true }} compact={compact} /></div>
     </div>
-    <label className="flex items-center gap-2 text-sm font-medium text-[var(--ax-heading)] md:col-span-4"><input type="checkbox" name="publicVisible" defaultChecked={tag?.publicVisible} /> Visible on enabled public pages and exhibits</label>
+    <label className="flex items-center gap-2 text-sm font-medium text-[var(--ax-heading)] md:col-span-4"><input type="checkbox" name={field('publicVisible')} checked={config.publicVisible} onChange={event => update({ publicVisible: event.target.checked })} />{compact ? 'Public' : 'Visible on enabled public pages and exhibits'}</label>
+    {compact && <p className="text-xs text-[var(--ax-muted)] md:col-span-4">Show this tag on enabled public pages and exhibits.</p>}
   </>
 }

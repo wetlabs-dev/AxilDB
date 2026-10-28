@@ -130,7 +130,7 @@ App route: `/plants`
 - Use Copy on an existing definition to start a similar definition without copying cultivar-specific fields or images.
 - Use Share Definition when you have an active collection connection and want another collection to review and copy the definition.
 - Use Plant Tags to maintain reusable collection traits, then select multiple active tags in a Plant Definition form. Search can match any or all selected tags.
-- Review Magic Fill tag suggestions separately from taxonomy fields. Existing tags and proposed private tags require explicit selection, and proposed tags require a second creation confirmation.
+- Review Magic Fill cadence and Plant Tag suggestions independently. Existing care decisions require explicit replacement selection. Expand a new tag to configure its name, category, icon, color, description and Public visibility before applying; new suggestions default to Public. Matching tags are reused without changing their global configuration. Save a new definition before applying cadences or creating tags.
 - Use the search, genus, species, authority, readiness, missing-data, tag, and Curator filters to narrow Plant Definitions in place. Species choices are limited to the selected genus, and a blank Species remains distinct from sp.
 - When AI Curator is enabled for the collection, use Research Now on a plant definition card to queue high-priority background research for that definition.
 - Filter by AI Suggested or Waiting for Human to find definitions with prepared Curator suggestions or blocked Curator jobs.

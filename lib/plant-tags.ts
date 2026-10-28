@@ -30,3 +30,18 @@ export function parseTagIds(fd: FormData) {
 export function tagCategoryLabel(value?: string | null) {
   return value ? value.replaceAll('_', ' ').toLowerCase().replace(/(^|\s)\S/g, (letter) => letter.toUpperCase()) : 'Other'
 }
+
+export class TagReviewError extends Error {}
+
+export type PlantTagConfiguration = { name: string; category: string; icon: string; colorToken: string; description: string; publicVisible: boolean }
+/** AI cosmetics get safe defaults; approval rejects unsupported explicit configuration. */
+export function plantTagConfiguration(raw: Record<string, unknown>, strict = false): PlantTagConfiguration {
+  function option(value: unknown, options: readonly string[], fallback: string) {
+    if (value == null || value === '') return fallback
+    if (typeof value === 'string' && options.includes(value)) return value
+    if (strict) throw new TagReviewError('Unsupported tag category, icon or color. Review the tag configuration.')
+    return fallback
+  }
+  if (strict && raw.publicVisible != null && typeof raw.publicVisible !== 'boolean') throw new TagReviewError('Choose Public or Private for this tag.')
+  return { name: normalizePlantTagName(raw.name), category: option(raw.category, plantTagCategories, 'OTHER'), icon: option(raw.icon, plantTagIcons, 'tag'), colorToken: option(raw.colorToken, acceptedPlantTagColors, 'fern'), description: String(raw.description || '').trim().slice(0, 500), publicVisible: typeof raw.publicVisible === 'boolean' ? raw.publicVisible : true }
+}

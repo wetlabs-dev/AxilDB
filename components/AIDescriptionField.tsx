@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Sparkles } from 'lucide-react'
 import { HelpTooltip } from '@/components/ui'
 import { MagicFillConflictDialog } from '@/components/MagicFillConflictDialog'
@@ -12,7 +12,7 @@ import {
   type MagicFillApplyMode,
 } from '@/lib/magic-fill'
 import { cn } from '@/lib/utils'
-import { createMagicFillPlantTags } from '@/app/plant-tag-actions'
+import { MagicFillReview, type MagicFillReviewData } from '@/components/MagicFillReview'
 
 const control = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
 
@@ -153,12 +153,14 @@ export function AIMagicFillButton({
   className?: string
 }) {
   const buttonRef = useRef<HTMLButtonElement>(null)
+  const researchController = useRef<AbortController | null>(null)
+  useEffect(() => () => researchController.current?.abort(), [])
   const [status, setStatus] = useState('')
   const [loading, setLoading] = useState(false)
   const [acquisitionDraft, setAcquisitionDraft] = useState<any>(null)
-  const [tagDraft, setTagDraft] = useState<any>(null)
-  const [selectedProposedTags, setSelectedProposedTags] = useState<Set<string>>(new Set())
-  const [confirmProposedTags, setConfirmProposedTags] = useState(false)
+  const [review, setReview] = useState<MagicFillReviewData | null>(null)
+  const [reviewVersion, setReviewVersion] = useState(0)
+  const [reviewBusy, setReviewBusy] = useState(0)
   const [selectedAcquisitionFields, setSelectedAcquisitionFields] = useState<Record<string, boolean>>({
     desiredSpecimenSize: true, acquisitionResearchSummary: true, desiredLocationId: false,
   })
@@ -173,6 +175,7 @@ export function AIMagicFillButton({
   }
 
   function requestMagicFillDefinition() {
+    if (review && !window.confirm('Research again? This will replace the current review, including any unapproved tag configuration edits. Saved changes remain.')) return
     requestMode(definitionMagicFillFields, magicFillDefinition)
   }
 
@@ -193,15 +196,20 @@ export function AIMagicFillButton({
       return
     }
 
+    researchController.current?.abort()
+    const controller = new AbortController()
+    researchController.current = controller
     setLoading(true)
     setStatus('Researching plant definition...')
     try {
       const response = await fetch('/api/ai/plant-definition-fill', {
+        signal: controller.signal,
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ collectionSlug, genus, species, hybridNotation, cultivarName, taxonomicAuthorities, applyMode: mode }),
+        body: JSON.stringify({ collectionSlug, plantDefinitionId: String(formData.get('id') || ''), genus, species, hybridNotation, cultivarName, taxonomicAuthorities, applyMode: mode }),
       })
       const result = await response.json()
+      if (controller.signal.aborted || !form.isConnected) return
       if (!response.ok) throw new Error(result.error || 'Magic fill failed.')
 
       const fields = result.fields || {}
@@ -228,9 +236,8 @@ export function AIMagicFillButton({
       const shouldApplyAliases = mode === 'REPLACE_ALL' || isMagicFillValueEmpty(currentAliases)
       if (shouldApplyAliases && Array.isArray(fields.aliases)) window.dispatchEvent(new CustomEvent('axildb:replace-aliases', { detail: { form, aliases } }))
       setAcquisitionDraft(fields.acquisitionPlan || null)
-      setTagDraft({ existing: fields.suggestedTags || [], proposed: fields.newTagSuggestions || [] })
-      setSelectedProposedTags(new Set())
-      setConfirmProposedTags(false)
+      setReview({ fields, cadenceReview: result.cadenceReview, tagCatalog: result.tagCatalog || [], canApprove: Boolean(result.canApprove) })
+      setReviewVersion(value => value + 1)
       const aliasStatus = shouldApplyAliases && aliases.length ? ` and ${aliases.length} alias${aliases.length === 1 ? '' : 'es'}` : ''
       const acceptedGenus = String(fields.genus || genus).trim().toLowerCase()
       const placement: Record<string, string> = {
@@ -262,37 +269,6 @@ export function AIMagicFillButton({
     requestMode(selectedFields, applyAcquisitionDraft)
   }
 
-  function applySuggestedTags() {
-    const form = buttonRef.current?.form
-    if (!form || !tagDraft?.existing?.length) return
-    window.dispatchEvent(new CustomEvent('axildb:add-plant-tags', { detail: { form, tagIds: tagDraft.existing.map((item: any) => item.tagId), source: 'MAGIC_FILL' } }))
-    setStatus(`${tagDraft.existing.length} suggested tag${tagDraft.existing.length === 1 ? '' : 's'} selected. Review before saving.`)
-  }
-
-  async function createProposedTags() {
-    const form = buttonRef.current?.form
-    if (!form) return
-    const selected = tagDraft.proposed.filter((item: any) => selectedProposedTags.has(item.name))
-    if (!selected.length) return
-    setLoading(true)
-    setStatus('Creating private tag drafts...')
-    try {
-      const fd = new FormData()
-      fd.set('collectionSlug', String(new FormData(form).get('collectionSlug') || ''))
-      fd.set('suggestions', JSON.stringify(selected))
-      const created = await createMagicFillPlantTags(fd)
-      window.dispatchEvent(new CustomEvent('axildb:add-plant-tags', { detail: { form, tagIds: created.map((tag) => tag.id), tags: created, source: 'MAGIC_FILL' } }))
-      setTagDraft((current: any) => ({ ...current, proposed: current.proposed.filter((item: any) => !selectedProposedTags.has(item.name)) }))
-      setSelectedProposedTags(new Set())
-      setConfirmProposedTags(false)
-      setStatus(`${created.length} private tag draft${created.length === 1 ? '' : 's'} created and selected. Review the definition before saving.`)
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'The proposed tags could not be created.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   function applyAcquisitionDraft(mode: MagicFillApplyMode) {
     setConflict(null)
     const form = buttonRef.current?.form
@@ -314,24 +290,14 @@ export function AIMagicFillButton({
         ref={buttonRef}
         type="button"
         onClick={requestMagicFillDefinition}
-        disabled={loading}
+        disabled={loading || reviewBusy > 0}
         className="inline-flex items-center gap-1.5 rounded-md border border-[#c4a86a]/60 bg-[#fff5d6] px-2.5 py-1.5 text-sm font-semibold text-[#6f541f] shadow-sm transition hover:bg-[#f7e6ae] disabled:cursor-wait disabled:opacity-70"
       >
         <Sparkles className="h-4 w-4" />
         {loading ? 'Filling...' : 'Magic fill'}
         </button>
       </div>
-      {tagDraft && (tagDraft.existing.length > 0 || tagDraft.proposed.length > 0) && <div className="mt-2 rounded-md border border-[#b7caa9] bg-[#f5f8ef] p-3 text-xs text-stone-700">
-        <p className="font-bold text-[#2f6b45]">Suggested tags</p>
-        {tagDraft.existing.map((item: any) => <p key={item.tagId} className="mt-1"><strong>{item.tagName}</strong> · {Math.round(item.confidence * 100)}% · {item.reason}</p>)}
-        {tagDraft.proposed.map((item: any) => <label key={item.name} className="mt-2 flex items-start gap-2 rounded border border-[#c7d8bd] bg-white/60 p-2">
-          <input type="checkbox" className="mt-0.5" checked={selectedProposedTags.has(item.name)} onChange={(event) => setSelectedProposedTags((current) => { const next = new Set(current); event.target.checked ? next.add(item.name) : next.delete(item.name); return next })} />
-          <span><strong>Proposed: {item.name}</strong> · {Math.round(item.confidence * 100)}% · {item.reason}<span className="mt-0.5 block text-stone-500">Creates a private collection tag; it will not be public unless you enable that later.</span></span>
-        </label>)}
-        {tagDraft.existing.length > 0 && <button type="button" onClick={applySuggestedTags} className="mt-2 rounded-md bg-[#2f6b45] px-3 py-1.5 font-semibold text-white">Apply existing tag suggestions</button>}
-        {selectedProposedTags.size > 0 && !confirmProposedTags && <button type="button" onClick={() => setConfirmProposedTags(true)} className="ml-2 mt-2 rounded-md border border-[#2f6b45] px-3 py-1.5 font-semibold text-[#2f6b45]">Review new tag creation</button>}
-        {confirmProposedTags && <div className="mt-2 rounded-md border border-[#c4a86a] bg-[#fff9e8] p-2"><p className="font-semibold">Create {selectedProposedTags.size} private collection tag{selectedProposedTags.size === 1 ? '' : 's'} and select them for this definition?</p><div className="mt-2 flex gap-2"><button type="button" disabled={loading} onClick={createProposedTags} className="rounded-md bg-[#2f6b45] px-3 py-1.5 font-semibold text-white">Confirm create and select</button><button type="button" onClick={() => setConfirmProposedTags(false)} className="rounded-md border border-stone-300 px-3 py-1.5 font-semibold">Cancel</button></div></div>}
-      </div>}
+      {review && <fieldset disabled={loading} className="min-w-0"><MagicFillReview key={reviewVersion} data={review} form={buttonRef.current?.form || null} onBusy={busy => setReviewBusy(value => busy ? value + 1 : Math.max(0, value - 1))} /></fieldset>}
       {acquisitionDraft && (
         <section className="rounded-lg border border-[#c7d8bd] bg-[#f7f8ee] p-3 text-left text-sm text-stone-700">
           <div className="flex flex-wrap items-start justify-between gap-2"><div><p className="text-xs font-bold uppercase tracking-[0.14em] text-[#2f6b45]">Acquisition planning draft</p><p className="mt-1 text-xs text-stone-600">{acquisitionDraft.confidence || 'Uncertain'} · review only · wishlist status and priority are never changed</p></div></div>
