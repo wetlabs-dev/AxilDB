@@ -10,7 +10,7 @@ export const deploymentStages = [
   { id: 'VERIFYING', label: 'Verifying', description: 'Checking application health', done: 'Application health verified' },
 ] as const
 export type StageStatus = 'pending' | 'active' | 'completed' | 'failed' | 'skipped'
-export const terminalDeployment = (status?: string) => ['COMPLETED', 'FAILED', 'RECOVERY_REQUIRED', 'RECOVERED'].includes(status || '')
+export const terminalDeployment = (status?: string) => ['COMPLETED', 'FAILED', 'RECOVERY_REQUIRED', 'RECOVERED', 'CLEANED', 'CLEANUP_FAILED'].includes(status || '')
 export const deploymentStatusLabel = (status: string) => ({ QUEUED: 'Queued', RUNNING: 'Running', COMPLETED: 'Completed', FAILED: 'Failed', RECOVERY_REQUIRED: 'Recovery required', RECOVERED: 'Recovered' }[status] || 'Status unknown')
 export function deploymentProgress(job: DeploymentJob) {
   const failed = ['FAILED', 'RECOVERY_REQUIRED', 'RECOVERED'].includes(job.status)

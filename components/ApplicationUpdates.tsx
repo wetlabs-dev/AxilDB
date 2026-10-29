@@ -38,7 +38,7 @@ export function ApplicationUpdates({ configured, initialJobId = '' }: { configur
   const [recovery, setRecovery] = useState<RecoveryOptions | null>(null)
   const [autoScroll, setAutoScroll] = useState(true)
   const [confirmation, setConfirmation] = useState<{
-    operation: 'START_UPGRADE' | 'ROLLBACK' | 'RECONCILE'
+    operation: 'START_UPGRADE' | 'ROLLBACK' | 'RECONCILE' | 'CLEAN_BUILD_CACHE'
     revision?: string
     jobId?: string
   } | null>(null)
@@ -231,6 +231,13 @@ export function ApplicationUpdates({ configured, initialJobId = '' }: { configur
         setMigrationConsent(false)
         setTypedRevision('')
       }
+      if (operation === 'CLEAN_BUILD_CACHE') {
+        setJobId(result.id)
+        localStorage.setItem('axildb-deployment-job', result.id)
+        localStorage.removeItem('axildb-cache-cleanup-request')
+        setPreflight(null)
+        setMessage('Build-cache cleanup queued. The host agent continues independently; rerun preflight after completion.')
+      }
       if (operation === 'START_UPGRADE') {
         setJobId(result.id)
         localStorage.setItem('axildb-deployment-job', result.id)
@@ -266,7 +273,11 @@ export function ApplicationUpdates({ configured, initialJobId = '' }: { configur
     if (!confirmation) return
     const current = confirmation
     setConfirmation(null)
-    if (current.operation === 'START_UPGRADE') {
+    if (current.operation === 'CLEAN_BUILD_CACHE') {
+      const requestId = localStorage.getItem('axildb-cache-cleanup-request') || crypto.randomUUID()
+      localStorage.setItem('axildb-cache-cleanup-request', requestId)
+      await operate('CLEAN_BUILD_CACHE', { requestId, confirmed: true })
+    } else if (current.operation === 'START_UPGRADE') {
       let requestId = crypto.randomUUID()
       try {
         const saved = JSON.parse(
@@ -328,6 +339,12 @@ export function ApplicationUpdates({ configured, initialJobId = '' }: { configur
     )
   return (
     <div className="space-y-5 [&_button]:rounded-md [&_button]:border [&_button]:border-stone-300 [&_button]:px-3 [&_button]:py-2 [&_button]:font-semibold [&_button:disabled]:opacity-50">
+      <section className="space-y-2 rounded-lg border p-4">
+        <h2 className="text-xl font-bold">Docker build-cache cleanup</h2>
+        <p>Remove unused dangling build cache older than 48 hours. Running containers, tagged application and rollback images, volumes and backups are preserved. Future builds may take longer. Do not run a separate manual build during cleanup.</p>
+        <button disabled={busy || !status?.capabilities?.includes('build-cache-cleanup-v1') || Boolean(status?.activeJob)} onClick={() => setConfirmation({ operation: 'CLEAN_BUILD_CACHE' })}>Review build-cache cleanup</button>
+        {status && !status.capabilities?.includes('build-cache-cleanup-v1') && <p>A one-time host-agent update is required to enable cleanup. See docs/APPLICATION_UPDATES.md. Web deployment alone does not update the agent.</p>}
+      </section>
       {status && !status.capabilities?.includes('migration-sql-review-v1') && (
         <p role="status" className="rounded border p-3">
           The host agent needs a one-time update to support migration SQL review
@@ -509,7 +526,11 @@ export function ApplicationUpdates({ configured, initialJobId = '' }: { configur
       )}
       {job && (
         <section className="space-y-3 rounded-lg border p-4">
-          <DeploymentProgress key={job.id} job={job} events={events} reconnecting={reconnecting} connectionLost={connectionLost} />
+          {job.data.kind === 'BUILD_CACHE_CLEANUP' ? <div className="space-y-2" role="status">
+            <h2 className="text-xl font-bold">Build-cache cleanup · {job.status.replaceAll('_', ' ')}</h2>
+            <p>{job.status === 'QUEUED' ? 'Waiting for the independent host worker.' : job.status === 'RUNNING' ? 'Removing older unused build cache…' : job.data.error || 'Cleanup finished. Rerun preflight before upgrading.'}</p>
+            {job.data.cacheCleanup && <p>Docker filesystem available: {(job.data.cacheCleanup.beforeAvailableBytes / 1024 ** 3).toFixed(2)} GiB before → {(job.data.cacheCleanup.afterAvailableBytes / 1024 ** 3).toFixed(2)} GiB after. Observed change: {(job.data.cacheCleanup.availableDeltaBytes / 1024 ** 3).toFixed(2)} GiB. Concurrent writes can affect this measurement.</p>}
+          </div> : <DeploymentProgress key={job.id} job={job} events={events} reconnecting={reconnecting} connectionLost={connectionLost} />}
           {job.data.recoveryResult && <p>{job.data.recoveryResult}</p>}
           {job.status === 'RECOVERY_REQUIRED' && (
             <div className="space-y-2 rounded bg-amber-50 p-3">
@@ -629,7 +650,7 @@ export function ApplicationUpdates({ configured, initialJobId = '' }: { configur
                   <td className="p-2">
                     {new Date(item.created).toLocaleString()}
                   </td>
-                  <td className="p-2 font-mono">{short(item.revision)}</td>
+                  <td className="p-2 font-mono">{item.data.kind === 'BUILD_CACHE_CLEANUP' ? 'Build-cache cleanup' : short(item.revision)}</td>
                   <td className="p-2">{item.actor}</td>
                   <td className="p-2">{item.status.replaceAll('_', ' ')}</td>
                   <td className="p-2">
@@ -650,15 +671,16 @@ export function ApplicationUpdates({ configured, initialJobId = '' }: { configur
           <h2 className="text-xl font-bold">
             {confirmation.operation === 'START_UPGRADE'
               ? 'Upgrade AxilDB'
-              : 'Confirm recovery request'}
+              : confirmation.operation === 'CLEAN_BUILD_CACHE' ? 'Confirm build-cache cleanup' : 'Confirm recovery request'}
           </h2>
-          <p>
+          {confirmation.operation !== 'CLEAN_BUILD_CACHE' && <p>
             Current revision: {short(status?.revision)} · Target:{' '}
             {short(confirmation.revision || job?.previous)}
-          </p>
+          </p>}
           <p>
             {confirmation.operation === 'START_UPGRADE'
               ? 'The host agent will revalidate preflight, create and verify a backup checkpoint, build the exact approved revision, apply required migrations, restart affected application services and verify readiness. AxilDB may be temporarily unavailable.'
+              : confirmation.operation === 'CLEAN_BUILD_CACHE' ? 'Permanently remove unused dangling Docker build cache older than 48 hours. This does not remove tagged application/rollback images, containers, volumes or backups. It does not bypass preflight or start an upgrade. Future builds may be slower; available-space gains are measured after cleanup.'
               : confirmation.operation === 'ROLLBACK'
                 ? 'Restore only the captured previous application images after rechecking unchanged schema history. This does not restore or reverse the database.'
                 : 'Verify the target revision, database and proxy readiness before recording an interrupted deployment as completed. No deployment or migration operation is replayed.'}
@@ -711,7 +733,7 @@ export function ApplicationUpdates({ configured, initialJobId = '' }: { configur
             >
               {confirmation.operation === 'START_UPGRADE'
                 ? 'Start Upgrade'
-                : 'Confirm Recovery'}
+                : confirmation.operation === 'CLEAN_BUILD_CACHE' ? 'Clean older build cache' : 'Confirm Recovery'}
             </button>
           </div>
         </dialog>

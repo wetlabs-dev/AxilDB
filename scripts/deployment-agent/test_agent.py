@@ -12,6 +12,7 @@ import tempfile
 import threading
 import time
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 from core import Agent, Config, Store, now
 from agent import Server, Handler
@@ -43,6 +44,10 @@ class FixtureAgent(Agent):
             return args[-1]
         if args[:2] == ["docker", "inspect"]:
             return "sha256:" + "a" * 64
+        if args[:3] == ["docker", "builder", "prune"]:
+            if self.failure == "cache":
+                raise RuntimeError("Cache cleanup failed")
+            return "Total reclaimed space: fixture"
         if args[:2] == ["docker", "tag"]:
             return ""
         if args[:2] == ["docker", "exec"]:
@@ -221,6 +226,49 @@ class Tests(unittest.TestCase):
         self.git("commit", "-m", "schema")
         self.git("push", "origin", "main")
         self.new = self.git("rev-parse", "HEAD")
+
+    def test_cache_cleanup_confirmation_durable_scope_and_measurement(self):
+        request = {"protocol": 1, "operation": "CLEAN_BUILD_CACHE", "actor": "admin", "requestId": "e" * 32, "confirmed": True}
+        with self.assertRaises(RuntimeError):
+            self.agent.dispatch({**request, "confirmed": False})
+        with self.assertRaises(ValueError):
+            self.agent.dispatch({**request, "filter": "anything"})
+        job = self.agent.dispatch(request)
+        self.assertEqual(job["id"], self.agent.dispatch(request)["id"])
+        self.assertEqual(job["data"]["kind"], "BUILD_CACHE_CLEANUP")
+        with self.assertRaises(ValueError):
+            self.queue()
+        deployed = self.agent.store.meta("deployed")
+        with patch("core.shutil.disk_usage", side_effect=[SimpleNamespace(free=8 * 1024**3), SimpleNamespace(free=20 * 1024**3)]):
+            self.agent.worker_once()
+        done = self.agent.store.job(job["id"])
+        self.assertEqual(done["status"], "CLEANED")
+        self.assertEqual(done["data"]["cacheCleanup"]["availableDeltaBytes"], 12 * 1024**3)
+        self.assertIn(["docker", "builder", "prune", "--filter", "until=48h", "--force"], self.agent.commands)
+        self.assertFalse(any("image" in cmd and "prune" in cmd or "volume" in cmd and "prune" in cmd for cmd in self.agent.commands))
+        self.assertEqual(self.agent.store.meta("deployed"), deployed)
+        self.assertFalse(self.agent.store.notifications()["notifications"])
+        self.assertIsNone(self.agent.store.active())
+
+    def test_cache_cleanup_failure_hold_and_restart(self):
+        id = self.agent.store.claim("0" * 40, "admin", "f" * 32, kind="BUILD_CACHE_CLEANUP")
+        self.agent.failure = "cache"
+        self.agent.worker_once()
+        self.assertEqual(self.agent.store.job(id)["status"], "CLEANUP_FAILED")
+        second = self.agent.store.claim("0" * 40, "admin", "a" * 32, kind="BUILD_CACHE_CLEANUP")
+        hold = self.agent.c.backup_dir / ".migration/outbound-hold.json"
+        hold.parent.mkdir(parents=True, exist_ok=True)
+        hold.write_text("{}")
+        before = len(self.agent.commands)
+        self.agent.worker_once()
+        self.assertEqual(self.agent.store.job(second)["status"], "CLEANUP_FAILED")
+        self.assertEqual(len(self.agent.commands), before)
+        hold.unlink()
+        third = self.agent.store.claim("0" * 40, "admin", "b" * 32, kind="BUILD_CACHE_CLEANUP")
+        self.agent.store.update(third, status="RUNNING")
+        self.agent.store.interrupted()
+        self.assertEqual(self.agent.store.job(third)["status"], "FAILED")
+        self.assertFalse(self.agent.store.notifications()["notifications"])
 
     def test_update_detection_and_success(self):
         result = self.agent.check_updates()

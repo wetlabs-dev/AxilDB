@@ -300,14 +300,14 @@ CREATE TABLE IF NOT EXISTS limits(actor TEXT, operation TEXT, timestamp REAL);
                 )
             ]
 
-    def claim(self, revision, actor, request_id, migration_approval=None):
+    def claim(self, revision, actor, request_id, migration_approval=None, kind=None):
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
             row = db.execute(
                 "SELECT id,revision,actor,data FROM jobs WHERE request_id=?", (request_id,)
             ).fetchone()
             if row:
-                if row["revision"] != revision or row["actor"] != actor or json.loads(row["data"]).get("migrationApproval") != migration_approval:
+                if row["revision"] != revision or row["actor"] != actor or json.loads(row["data"]).get("migrationApproval") != migration_approval or json.loads(row["data"]).get("kind") != kind:
                     raise ValueError("Request identifier already used")
                 return row["id"]
             row = db.execute(
@@ -318,7 +318,7 @@ CREATE TABLE IF NOT EXISTS limits(actor TEXT, operation TEXT, timestamp REAL);
             id = uuid.uuid4().hex
             db.execute(
                 "INSERT INTO jobs(id,request_id,actor,revision,status,stage,created,data) VALUES(?,?,?,?,?,?,?,?)",
-                (id, request_id, actor, revision, "QUEUED", "QUEUED", now(), json.dumps({"migrationApproval": migration_approval})),
+                (id, request_id, actor, revision, "QUEUED", "QUEUED", now(), json.dumps({"migrationApproval": migration_approval, **({"kind": kind} if kind else {})})),
             )
             return id
 
@@ -390,7 +390,7 @@ class Agent:
                 - dt.timedelta(days=self.c.log_retention_days)
             ).isoformat()
             db.execute(
-                "DELETE FROM events WHERE timestamp<? AND job_id IN (SELECT id FROM jobs WHERE status IN ('COMPLETED','FAILED','RECOVERED'))",
+                "DELETE FROM events WHERE timestamp<? AND job_id IN (SELECT id FROM jobs WHERE status IN ('COMPLETED','FAILED','RECOVERED','CLEANED','CLEANUP_FAILED'))",
                 (cutoff,),
             )
             cutoff = (
@@ -403,7 +403,7 @@ class Agent:
                 if j["status"] in ("COMPLETED", "RECOVERED")
             ][: self.c.known_good_image_retention]
             for row in db.execute(
-                "SELECT id FROM jobs WHERE finished<? AND status IN ('COMPLETED','FAILED','RECOVERED')",
+                "SELECT id FROM jobs WHERE finished<? AND status IN ('COMPLETED','FAILED','RECOVERED','CLEANED','CLEANUP_FAILED')",
                 (cutoff,),
             ).fetchall():
                 pending = db.execute("SELECT 1 FROM terminal_notifications WHERE job_id=? AND acknowledged=0 LIMIT 1", (row[0],)).fetchone()
@@ -1384,6 +1384,8 @@ print(hashlib.sha256(r.stdout+schema).hexdigest())
                 for k, v in data.items()
                 if k
                 in (
+                    "kind",
+                    "cacheCleanup",
                     "preflight",
                     "migrationApproval",
                     "backup",
@@ -1417,7 +1419,7 @@ print(hashlib.sha256(r.stdout+schema).hexdigest())
         return {
             "protocol": PROTOCOL,
             "application": "AxilDB",
-            "capabilities": ["migration-sql-review-v1"],
+            "capabilities": ["migration-sql-review-v1", "build-cache-cleanup-v1"],
             "revision": current,
             "branch": self.c.branch,
             "deployedAt": deployed.get("deployedAt") if deployed else None,
@@ -1461,6 +1463,7 @@ print(hashlib.sha256(r.stdout+schema).hexdigest())
             "CHECK_UPDATES": set(),
             "PREFLIGHT": {"revision"},
             "START_UPGRADE": {"revision", "requestId", "migrationApproval"},
+            "CLEAN_BUILD_CACHE": {"requestId", "confirmed"},
             "JOB": {"jobId"},
             "EVENTS": {"jobId", "after"},
             "RECOVERY_OPTIONS": {"jobId"},
@@ -1509,6 +1512,12 @@ print(hashlib.sha256(r.stdout+schema).hexdigest())
         if operation == "PREFLIGHT":
             with self.exclusive():
                 return self.preflight(request.get("revision"))[0]
+        if operation == "CLEAN_BUILD_CACHE":
+            self.ensure(request.get("confirmed") is True, "Explicit administrator confirmation required")
+            request_id = request.get("requestId")
+            self.ensure(isinstance(request_id, str) and re.fullmatch(r"[a-f0-9-]{32,36}", request_id), "Invalid idempotency identifier")
+            id = self.store.claim("0" * 40, actor, request_id, kind="BUILD_CACHE_CLEANUP")
+            return self.public_job(self.store.job(id))
         if operation == "START_UPGRADE":
             if not isinstance(request.get("requestId"), str) or not re.fullmatch(
                 r"[a-f0-9-]{32,36}", request["requestId"]
@@ -1543,6 +1552,31 @@ print(hashlib.sha256(r.stdout+schema).hexdigest())
             return self.public_job(self.store.job(job["id"]))
         raise ValueError("Unknown operation")
 
+    def clean_build_cache(self, id):
+        # Called only by the independent worker under the deployment operation lock.
+        job = self.store.job(id)
+        self.local.job = id
+        self.local.deadline = time.monotonic() + self.c.command_timeout_seconds
+        self.store.update(id, status="RUNNING", stage="CACHE_CLEANUP", started=now())
+        try:
+            self.ensure(not (self.c.backup_dir / ".migration/outbound-hold.json").exists(), "Migration or restore hold is active")
+            context = self.run(["docker", "context", "inspect", "--format", "{{.Endpoints.docker.Host}}"], timeout=15)
+            self.ensure(context.startswith("unix://"), "Only a host-local Docker daemon is supported")
+            directory = self.run(["docker", "info", "--format", "{{.DockerRootDir}}"], timeout=15)
+            self.ensure(Path(directory).is_absolute(), "Invalid Docker storage path")
+            before = shutil.disk_usage(directory).free
+            self.store.event(id, "CACHE_CLEANUP", "Removing unused dangling build cache older than 48 hours; images, volumes and backups are excluded.")
+            self.run(["docker", "builder", "prune", "--filter", "until=48h", "--force"], log=True)
+            after = shutil.disk_usage(directory).free
+            result = {"beforeAvailableBytes": before, "afterAvailableBytes": after, "availableDeltaBytes": after - before, "checkedAt": now(), "policy": "Unused dangling build cache older than 48 hours"}
+            self.store.update(id, status="CLEANED", stage="CACHE_CLEANUP", finished=now(), data={**job["data"], "cacheCleanup": result})
+            self.store.event(id, "CACHE_CLEANUP", "Build-cache cleanup completed; observed filesystem available-space change: " + str(after - before) + " bytes. Rerun preflight before upgrading.")
+        except Exception as error:
+            self.store.update(id, status="CLEANUP_FAILED", stage="CACHE_CLEANUP", finished=now(), data={**job["data"], "error": self.redact(str(error))})
+            self.store.event(id, "CACHE_CLEANUP", self.redact(str(error)), "ERROR")
+        finally:
+            self.local.job = None
+
     def worker_once(self):
         with self.operation_lock:
             job = self.store.active()
@@ -1550,7 +1584,10 @@ print(hashlib.sha256(r.stdout+schema).hexdigest())
                 self.retain()
                 return
             if job["status"] == "QUEUED":
-                self.deploy(job["id"])
+                if job["data"].get("kind") == "BUILD_CACHE_CLEANUP":
+                    self.clean_build_cache(job["id"])
+                else:
+                    self.deploy(job["id"])
             elif job["status"] == "RECOVERY_REQUIRED" and job["data"].get(
                 "requestedRecovery"
             ):

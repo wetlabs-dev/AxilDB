@@ -161,6 +161,7 @@ export async function POST(req: NextRequest) {
     const input = JSON.parse(raw)
     const allowed: Record<string, string[]> = {
       CHECK_UPDATES: [],
+      CLEAN_BUILD_CACHE: ['requestId', 'confirmed'],
       PREFLIGHT: ['revision'],
       START_UPGRADE: [
         'revision',
@@ -193,12 +194,12 @@ export async function POST(req: NextRequest) {
     )
       return json({ error: 'Invalid deployment job.' }, 400)
     if (
-      ['START_UPGRADE', 'ROLLBACK', 'RECONCILE'].includes(input.operation) &&
+      ['START_UPGRADE', 'ROLLBACK', 'RECONCILE', 'CLEAN_BUILD_CACHE'].includes(input.operation) &&
       input.confirmed !== true
     )
       return json({ error: 'Explicit confirmation is required.' }, 400)
     if (
-      input.operation === 'START_UPGRADE' &&
+      ['START_UPGRADE', 'CLEAN_BUILD_CACHE'].includes(input.operation) &&
       !/^[a-f0-9-]{32,36}$/.test(input.requestId || '')
     )
       return json({ error: 'Invalid request identifier.' }, 400)

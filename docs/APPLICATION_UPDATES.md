@@ -198,3 +198,32 @@ The script refuses active jobs, backs up the external connection overlay, preser
 Confirm the events worker is running and opted-in preferences are saved. Inspect `docker compose logs events` using your configured Compose files if delivery is delayed; inspect failed/dead-letter domain events for provider failures. A generic worker warning about the handoff means the agent is old, unreachable or the worker connection is absent; unrelated event processing continues. Update the host agent/connection as above. To disable upgrade alerts, turn off the four preferences; to disable ingestion entirely remove the events connection overlay and recreate that worker. Preserve outbox/history for diagnostics.
 
 Validation: `npm run check:upgrade-notifications` against a disposable PostgreSQL database checks opt-in defaults, independent channels, replay/concurrency, authorization, provider failure, worker processing, safe content and job links. Agent tests verify transactional terminal capture, replay/acknowledgement, restart survival and exclusion of uncertain interrupted operations.
+
+## Build-cache cleanup action
+
+Application Updates offers **Review build-cache cleanup**, followed by explicit confirmation. It queues a durable independent host-agent job using the same exclusive slot as upgrades and recovery. The fixed command is `docker builder prune --filter until=48h --force`: unused dangling build cache older than 48 hours only. `--force` suppresses Docker's interactive prompt **after** authenticated administrator confirmation; no arbitrary arguments or shell commands are accepted. There is no `--all`, image/volume/system prune, backup removal, service restart, automatic cleanup policy or preflight bypass. Future builds may be slower. Avoid running separate manual Docker builds during this operation.
+
+Cleanup can run when the free-space reserve blocks upgrading, but cannot run alongside an agent-managed deployment or recovery, and refuses a migration/restore hold. It records events and before/after free bytes on the actual Docker storage filesystem. The observed availability delta may differ from Docker's printed cache size because of shared layers and concurrent writes. Completion does not claim an upgrade succeeded or replace the last successful upgrade/rollback record. Cleanup history uses CLEANED/CLEANUP_FAILED terminal states and does not send upgrade-completed emails. Browser disconnection does not terminate the worker. On an agent restart, interrupted work is marked failed and is never automatically replayed; review free space and submit another explicit request. Rerun preflight before starting the upgrade; all reserve checks remain enforced.
+
+### One-time host installation
+
+This is an optional protocol-v1 capability (`build-cache-cleanup-v1`). Older agents remain compatible for ordinary upgrades; the web interface disables cleanup and explains the host update requirement. Web deployment alone cannot update the separately installed host agent.
+
+After verifying that no job is queued, running or awaiting recovery, use the actual production source checkout:
+
+```sh
+cd /path/to/your/production/checkout
+git pull --ff-only
+sudo systemctl stop axildb-deploy.service
+sudo install -o root -g root -m 0644 \
+  scripts/deployment-agent/core.py scripts/deployment-agent/agent.py \
+  /opt/axildb-deploy/
+sudo systemctl start axildb-deploy.service
+sudo -u axildb-deploy timeout 60s /usr/bin/python3 \
+  /opt/axildb-deploy/agent.py \
+  --config /etc/axildb-deploy/config.json --probe
+```
+
+Review the pulled agent changes before copying them. Preserve configuration, keys, SQLite state, images and releases. No Compose, systemd, app schema or agent configuration changes are needed. Deploy the web interface normally, before or after the agent update; the cleanup control enables once both are current.
+
+Tests cover the authenticated fixed operation, confirmation/payload rejection, idempotency, exclusive deployment slot, measured free-space delta, failure, migration hold, restart behavior, preserved deployment metadata/notifications, old-agent capability gating and the browser confirmation flow. Docker removal is simulated in those tests; no production cache is pruned by tests or installation.

@@ -7,6 +7,7 @@ export type DeploymentOperation =
   | 'NOTIFICATIONS'
   | 'STATUS'
   | 'CHECK_UPDATES'
+  | 'CLEAN_BUILD_CACHE'
   | 'PREFLIGHT'
   | 'START_UPGRADE'
   | 'JOB'
@@ -33,6 +34,8 @@ export type DeploymentJob = {
   started: string | null
   finished: string | null
   data: {
+    kind?: 'BUILD_CACHE_CLEANUP'
+    cacheCleanup?: { beforeAvailableBytes: number; afterAvailableBytes: number; availableDeltaBytes: number; checkedAt: string; policy: string }
     backup?: string
     migrationStatus?: string
     hasMigrations?: boolean
