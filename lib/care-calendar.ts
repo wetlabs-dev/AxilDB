@@ -9,7 +9,8 @@ export type ShiftRule = { careType: string; active: boolean; defaultShiftDirecti
 export type CalendarConfig = { quietDays: QuietDate[]; rules: ShiftRule[]; timezone: string }
 export type SavedShift = { adjustedDueAt: Date; originalDueAt: Date; reason: string; ruleUsed: string; shiftDirection: string; quietDayId: string | null }
 // Cadence is a moisture-assessment heuristic, never a drought-tolerance claim.
-export const calendarPolicy = { shortWateringDays: 7, longWateringDays: 14, wateringShiftDays: 1, maximumShiftDays: 14, coherentGroupLimit: 40 }
+export const calendarPolicyVersion = 2
+export const calendarPolicy = { shortWateringDays: 7, longWateringDays: 14, maximumShiftDays: 14, coherentGroupLimit: 40 }
 // Exact assignment only: parent locations do not implicitly restrict children.
 export function effectiveQuietRules(quietDays: QuietDate[], locationId?: string | null) {
   return quietDays.filter(rule => !rule.locationId || rule.locationId === locationId)
@@ -25,19 +26,20 @@ export function calendarSchedule(items: CareQueueItem[], config: CalendarConfig,
   const count = (date: Date, delta: number) => { const key = dateInputValue(date, timezone); dates.set(key, (dates.get(key) || 0) + delta) }
   const waiting: CareQueueItem[] = []
   for (const original of items) {
-    const item = { ...original, dueAt: startOfDayInTimeZone(original.dueAt, timezone) }
+    const item: CareQueueItem = { ...original, dueAt: startOfDayInTimeZone(!original.manualSchedule && !original.completedAt && original.originalDueAt || original.dueAt, timezone), originalDueAt: null, quietDayReason: null, quietDayName: null, quietDayShiftDirection: null, schedulingConflict: false }
     const previous = saved.get(item.key)
-    // Once an adjusted occurrence is actionable, do not make unfinished work vanish.
-    if (previous && (!item.manualSchedule || item.dueAt.getTime() === previous.originalDueAt.getTime()) && (previous.ruleUsed === (typeof revision === 'string' ? revision : revision.get(item.key)) || previous.adjustedDueAt <= today)) {
+    // Stable during ordinary reads; explicit calendar revisions invalidate even today's decisions.
+    if (previous && !item.completedAt && !item.manualSchedule && previous.ruleUsed === (typeof revision === 'string' ? revision : revision.get(item.key)) && (previous.shiftDirection === 'CONFLICT' || !quietDateReasons(previous.adjustedDueAt, config, item.locationId).length)) {
       item.originalDueAt = previous.originalDueAt
       item.dueAt = previous.adjustedDueAt
-      item.quietDayReason = isQuietDate(previous.adjustedDueAt, effectiveQuietRules(config.quietDays, item.locationId), timezone) ? `${previous.reason} Quiet Day exception: an already-started plan remains outstanding.` : previous.reason
+      item.quietDayReason = previous.reason
+      item.schedulingConflict = previous.shiftDirection === 'CONFLICT'
       item.quietDayShiftDirection = previous.shiftDirection
       item.quietDayName = config.quietDays.find(day => day.id === previous.quietDayId)?.name || 'Quiet Day adjustment'
       result.set(item.key, item); if (!item.completedAt) count(item.dueAt, 1); continue
     }
     const quiet = isQuietDate(item.dueAt, effectiveQuietRules(config.quietDays, item.locationId), timezone)
-    if (!quiet || item.completedAt || item.manualSchedule || item.dueAt < today) {
+    if (!quiet || item.completedAt || item.manualSchedule) {
       if (quiet && !item.completedAt) item.quietDayReason = item.manualSchedule ? 'Required on Quiet Day: explicit schedule or time-sensitive care is preserved.' : 'Overdue care remains outstanding on Quiet Day.'
       result.set(item.key, item); if (!item.completedAt) count(item.dueAt, 1)
     } else waiting.push(item)
@@ -90,7 +92,13 @@ export function calendarSchedule(items: CareQueueItem[], config: CalendarConfig,
         item.quietDayReason = first.taskType === 'WATER' && preferred
           ? `Moved ${chosen.direction.toLowerCase()} around ${quiet.name}; ${preferred === 'EARLIER' ? 'shorter' : 'longer'} watering cadence. Check moisture before watering.`
           : `Moved with other ${type.toLowerCase().replaceAll('_', ' ')} tasks around ${quiet.name} to balance nearby workload.`
-      } else item.quietDayReason = `Quiet Day exception: no safe non-quiet date within the configured shift bounds (${quiet.name}).`
+      } else {
+        item.originalDueAt = item.dueAt
+        item.schedulingConflict = true
+        item.quietDayShiftDirection = 'CONFLICT'
+        item.quietDayName = quiet.name
+        item.quietDayReason = `Scheduling conflict: no safe non-quiet date within the configured shift bounds (${quiet.name}). Choose a manual date or adjust Quiet Days; necessary care remains outstanding.`
+      }
       result.set(item.key, item); count(item.dueAt, 1)
     }
   }
@@ -106,10 +114,12 @@ export function careForecast(items: CareQueueItem[], config: CalendarConfig, now
   for (let iteration = 0; iteration < 32 && frontier.length; iteration++) {
     const nextItems: CareQueueItem[] = []
     for (const item of frontier) {
-      const anchor = item.dueAt < today ? today : item.dueAt
+      if (item.schedulingConflict) continue
+      const basis = item.originalDueAt || item.dueAt
+      const anchor = basis < today ? today : basis
       const next = item.recurrenceRule ? nextOccurrence(anchor, item.recurrenceRule, config.timezone) : cadenceDueAt(anchor, item.recurrenceCadence!, config.timezone)
       if (!next || next <= anchor || next >= end) continue
-      nextItems.push({ ...item, key: `${item.key}:projection`, dueAt: next, originalDueAt: null, projected: true, notBeforeDate: dateInputValue(addCalendarDays(anchor, 1, config.timezone), config.timezone), quietDayReason: null, quietDayName: null, quietDayShiftDirection: null })
+      nextItems.push({ ...item, key: `${item.key}:projection`, dueAt: next, originalDueAt: null, projected: true, notBeforeDate: dateInputValue(addCalendarDays(item.dueAt < today ? today : item.dueAt, 1, config.timezone), config.timezone), quietDayReason: null, quietDayName: null, quietDayShiftDirection: null })
     }
     // Lock previous hypothetical decisions while calculating each next occurrence.
     const preserved = new Map(projected.map(item => [item.key, { originalDueAt: item.originalDueAt || item.dueAt, adjustedDueAt: item.dueAt, reason: item.quietDayReason || '', ruleUsed: 'forecast', shiftDirection: item.quietDayShiftDirection || 'NONE', quietDayId: null }]))
@@ -120,9 +130,11 @@ export function careForecast(items: CareQueueItem[], config: CalendarConfig, now
   return Array.from({ length: 7 }, (_, offset) => {
     const date = addCalendarDays(today, offset, config.timezone)
     const key = dateInputValue(date, config.timezone)
-    const tasks = projected.filter(item => !item.completedAt && (dateInputValue(item.dueAt, config.timezone) === key || offset === 0 && item.dueAt < today))
+    const outstanding = projected.filter(item => !item.completedAt && (dateInputValue(item.dueAt, config.timezone) === key || offset === 0 && item.dueAt < today))
+    const conflicts = outstanding.filter(item => item.schedulingConflict)
+    const tasks = outstanding.filter(item => !item.schedulingConflict)
     const categories: Record<string, number> = {}
     tasks.forEach(item => { categories[item.taskType] = (categories[item.taskType] || 0) + 1 })
-    return { date: key, total: tasks.length, categories, overdue: tasks.filter(item => item.dueAt < today).length, quietDay: isQuietDate(date, effectiveQuietRules(config.quietDays), config.timezone), restrictions: config.quietDays.filter(rule => isQuietDate(date, [rule], config.timezone)), tasks: tasks.map(({ key, title, taskType, href, dueAt, originalDueAt, quietDayReason, projected, manualSchedule, locationId, locationName }) => ({ key, title, taskType, href, dueAt, originalDueAt, quietDayReason, projected, manualSchedule, locationId, locationName })) }
+    return { date: key, conflicts: conflicts.map(({ key, title, href, taskType, locationId, quietDayReason }) => ({ key, title, href, taskType, locationId, quietDayReason })), total: tasks.length, categories, overdue: tasks.filter(item => item.dueAt < today).length, quietDay: isQuietDate(date, effectiveQuietRules(config.quietDays), config.timezone), restrictions: config.quietDays.filter(rule => isQuietDate(date, [rule], config.timezone)), tasks: tasks.map(({ key, title, taskType, href, dueAt, originalDueAt, quietDayReason, projected, manualSchedule, locationId, locationName }) => ({ key, title, taskType, href, dueAt, originalDueAt, quietDayReason, projected, manualSchedule, locationId, locationName })) }
   })
 }

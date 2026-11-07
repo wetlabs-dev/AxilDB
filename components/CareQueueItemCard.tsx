@@ -135,7 +135,7 @@ function PlantHeading({ item, collectionSlug }: { item: CareQueueItem; collectio
 function QuietDayNotice({ item }: { item: CareQueueItem }) {
   if (!item.quietDayReason) return null
   return (
-    <p className="rounded-md border border-[#c7d8bd] bg-[#f5fbf0] px-2 py-1 text-xs font-medium text-[#2f6b45]">
+    <p role={item.schedulingConflict ? 'alert' : undefined} className={`rounded-md border px-2 py-1 text-xs font-medium ${item.schedulingConflict ? 'border-amber-300 bg-amber-50 text-amber-900' : 'border-[#c7d8bd] bg-[#f5fbf0] text-[#2f6b45]'}`}>
       {item.quietDayReason}
     </p>
   )

@@ -39,9 +39,13 @@ async function getQueue(request: NextRequest) {
     }
     const preference = context.user ? await prisma.emailPreference.findUnique({ where: { userId: context.user.id } }) : null
     const snapshotAt = Date.now()
-    const items = await getCareQueue(prisma, { collectionId: context.collection.id, collectionSlug: slug, userId: context.user?.id, timezone: preference?.timezone, includeCompleted: true })
-    const forecast = request.nextUrl.searchParams.get('forecast') === '1' ? { ...await loadCareForecast(prisma, { collectionId: context.collection.id, collectionSlug: slug, userId: context.user?.id, timezone: preference?.timezone }, items), canManage: canManageCollection(context.user, context) } : undefined
-    return json({ items, snapshotAt, forecast })
+    const snapshot = await prisma.$transaction(async tx => {
+      const scope = { collectionId: context.collection.id, collectionSlug: slug, userId: context.user?.id, timezone: preference?.timezone }
+      const items = await getCareQueue(tx, { ...scope, includeCompleted: true })
+      const forecast = request.nextUrl.searchParams.get('forecast') === '1' ? { ...await loadCareForecast(tx, scope, items), canManage: canManageCollection(context.user, context) } : undefined
+      return { items, snapshotAt, forecast }
+    }, { maxWait: 15000, timeout: 30000 })
+    return json(snapshot)
   } catch (error) { return failure(error) }
 }
 async function postQueue(request: NextRequest) {

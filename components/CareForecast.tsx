@@ -9,7 +9,8 @@ import type { CareTaskType } from '@/lib/care-queue'
 import type { QuietDraft } from '@/lib/care-forecast-service'
 import { addCalendarDays, dateInputValue, parseDateLocal, startOfDayInTimeZone } from '@/lib/time'
 type Task = { key: string; title: string; taskType: string; href: string; dueAt: string; originalDueAt?: string; quietDayReason?: string; projected?: boolean; locationId?: string | null; locationName?: string | null }
-type Day = { date: string; total: number; overdue: number; categories: Record<string, number>; quietDay: { id: string; name: string; quietType: string } | null; restrictions?: { id: string; name: string; locationId?: string | null }[]; tasks: Task[] }
+type Conflict = { key: string; title: string; href: string; locationId?: string | null; quietDayReason?: string | null }
+type Day = { conflicts?: Conflict[]; date: string; total: number; overdue: number; categories: Record<string, number>; quietDay: { id: string; name: string; quietType: string } | null; restrictions?: { id: string; name: string; locationId?: string | null }[]; tasks: Task[] }
 type Forecast = { timezone: string; days: Day[]; canManage: boolean; quietDays: { id: string; name: string; quietType: string; locationId?: string | null }[]; locations: { id: string; name: string }[] }
 type Preview = { careRisks?: { key: string; title: string; taskType: string; locationName?: string | null; date: string; reason: string }[]; hash: string; draft: QuietDraft; earlier: number; later: number; todayCount: number; wateringToday: number; tomorrow: boolean; days: Day[]; exceptions: { key: string; title: string; date: string; reason: string }[]; changes: { key: string; title: string; from: string; to: string; reason: string }[] }
 export function CareForecast({ collectionSlug, initialDraft, stayOnPage = false }: { collectionSlug: string; initialDraft?: QuietDraft; stayOnPage?: boolean }) {
@@ -91,7 +92,7 @@ export function CareForecast({ collectionSlug, initialDraft, stayOnPage = false 
     const restrictions = day.restrictions?.filter(rule => !rule.locationId || rule.locationId === locationFilter) || []
     const categories: Record<string, number> = {}
     tasks.forEach(task => { categories[task.taskType] = (categories[task.taskType] || 0) + 1 })
-    return { ...day, tasks, total: tasks.length, categories, overdue: tasks.filter(task => dateInputValue(task.dueAt, forecast!.timezone) < day.date).length, restrictions, quietDay: restrictions.length ? { ...restrictions[0], quietType: forecast!.quietDays.find(rule => rule.id === restrictions[0].id)?.quietType || '' } : null }
+    return { ...day, conflicts: day.conflicts?.filter(item => item.locationId === locationFilter), tasks, total: tasks.length, categories, overdue: tasks.filter(task => dateInputValue(task.dueAt, forecast!.timezone) < day.date).length, restrictions, quietDay: restrictions.length ? { ...restrictions[0], quietType: forecast!.quietDays.find(rule => rule.id === restrictions[0].id)?.quietType || '' } : null }
   })
   const day = visibleDays?.find(day => day.date === selected)
   const today = forecast?.days[0].date
@@ -107,6 +108,7 @@ export function CareForecast({ collectionSlug, initialDraft, stayOnPage = false 
         <b className="block text-2xl">{day.total}</b><span className="block text-xs">{index === 0 ? 'Today' : 'Projected'}</span>
         {day.quietDay && <span className="block text-xs font-semibold">Quiet Day{day.total ? ` · ${day.total} task(s)` : ''}</span>}
         {!day.quietDay && !!day.restrictions?.length && <span className="block text-xs">{new Set(day.restrictions.map(rule => rule.locationId)).size} location(s) quiet</span>}
+        {!!day.conflicts?.length && <span className="block text-xs font-semibold text-amber-800">{day.conflicts.length} scheduling conflict(s)</span>}
         {day.overdue > 0 && <span className="block text-xs">{day.overdue} overdue</span>}
       </button>)}
     </div>
@@ -115,6 +117,7 @@ export function CareForecast({ collectionSlug, initialDraft, stayOnPage = false 
       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">{Object.entries(day.categories).map(([type, count]) => <span key={type}>{careTaskLabel(type as CareTaskType)}: <b>{count}</b></span>)}{day.total === 0 && <span>No projected care.</span>}</div>
       {day.quietDay && <p className="mt-2 text-[#2f6b45]">{day.quietDay.name}{day.total ? ' · Outstanding work or required exceptions are never hidden.' : ''}</p>}
       {!!day.restrictions?.length && <ul className="mt-2 text-xs">{day.restrictions.map(rule => <li key={rule.id}>{rule.locationId ? forecast?.locations?.find(location => location.id === rule.locationId)?.name : 'Collection-wide'} · {rule.name}</li>)}</ul>}
+      {!!day.conflicts?.length && <div role="alert" className="mt-2 rounded border border-amber-300 p-2"><b>Care needs a scheduling decision</b><ul>{day.conflicts.map(item => <li key={item.key}><Link className="underline" href={item.href}>{item.title}</Link> · {item.quietDayReason}</li>)}</ul></div>}
       {forecast?.canManage && !locationFilter && <div className="my-3 flex flex-wrap gap-2">
         {!day.quietDay && <button type="button" disabled={busy} className="rounded border px-3 py-1" onClick={() => void propose({ kind: 'set', date: day.date })}>Set as Quiet Day</button>}
         {day.quietDay && <button type="button" disabled={busy} className="rounded border px-3 py-1" onClick={() => void propose({ kind: 'remove', id: day.quietDay!.id })}>Remove {day.quietDay.quietType === 'ONE_TIME' ? 'Quiet Day' : 'entire recurring/range rule'}</button>}
@@ -126,12 +129,12 @@ export function CareForecast({ collectionSlug, initialDraft, stayOnPage = false 
     {preview && <section role="dialog" aria-labelledby="quiet-preview-heading" className="space-y-3 rounded-lg border border-[#c7d8bd] bg-[#f5fbf0] p-3 text-sm">
       <h4 id="quiet-preview-heading" className="text-lg font-semibold">Review Quiet Day change</h4>
       {preview.tomorrow && <p className="font-semibold">Quiet Day tomorrow: some care may need to be completed today. {preview.wateringToday} watering assessment(s) move into today.</p>}
-      <p>{preview.changes.length} affected · {preview.earlier} earlier · {preview.later} later · {preview.todayCount} needing attention today · {preview.exceptions.length} required exceptions.</p>
+      <p>{preview.changes.length} affected · {preview.earlier} earlier · {preview.later} later · {preview.todayCount} needing attention today · {preview.exceptions.length} conflicts or explicit exceptions.</p>
       <div className="flex flex-wrap gap-3">{preview.days.map(day => <span key={day.date}>{day.date}: <b>{day.total}</b>{day.quietDay ? ' · Quiet' : ''}</span>)}</div>
       <ul className="max-h-56 space-y-2 overflow-auto">{preview.changes.slice(0, 100).map(change => <li key={change.key}><b>{change.title}</b> · {change.from} → {change.to}<p className="text-xs text-stone-600">{change.reason}</p></li>)}</ul>
       {!!preview.careRisks?.length && <div role="alert" className="rounded border border-amber-300 p-3"><h5 className="font-semibold">Extended care interruption</h5><p>{new Set(preview.careRisks.map(item => item.title)).size} plant(s) may require attention during this closure. Arrange necessary care before confirming.</p><ul>{preview.careRisks.map(item => <li key={item.key}>{item.title} · {item.locationName} · {careTaskLabel(item.taskType as CareTaskType)} · proposed {item.date}</li>)}</ul></div>}
       {preview.exceptions.length > 0 && <p className="font-semibold">Extended care interruption or scheduling conflict: review the plants below and arrange necessary care. Tasks without a safe destination remain outstanding.</p>}
-      {preview.exceptions.length > 0 && <details><summary>Required tasks that stay scheduled</summary>{preview.exceptions.slice(0, 100).map(item => <p key={item.key}>{item.title} · {item.date} · {item.reason}</p>)}</details>}
+      {preview.exceptions.length > 0 && <details><summary>Scheduling conflicts and explicit exceptions</summary>{preview.exceptions.slice(0, 100).map(item => <p key={item.key}>{item.title} · {item.date} · {item.reason}</p>)}</details>}
       <div className="flex gap-2"><Button disabled={busy} onClick={() => void confirm()}>{busy ? 'Saving…' : 'Confirm Quiet Day change'}</Button><button type="button" disabled={busy} className="rounded border px-3 py-2" onClick={() => setPreview(null)}>Cancel</button></div>
     </section>}
   </Card>

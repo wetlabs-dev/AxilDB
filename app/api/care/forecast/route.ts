@@ -43,9 +43,9 @@ async function postForecast(req: NextRequest) {
         const rule = preview.rules.find(rule => rule.careType === input.draft.careType)!
         await tx.collectionQuietDayShiftRule.upsert({ where: { collectionId_careType: { collectionId: scope.collectionId, careType: rule.careType } }, create: { ...rule, collectionId: scope.collectionId }, update: rule })
       }
-      await getCareQueue(tx, { ...scope, quietDayOverride: preview.quietDays, quietRuleOverride: preview.rules, reviseQuietPlan: true })
+      await getCareQueue(tx, { ...scope, quietDayOverride: preview.quietDays, quietRuleOverride: preview.rules })
       await tx.auditLog.create({ data: { collectionId: scope.collectionId, userId: context.user.id, userEmail: context.user.email, userRole: context.user.role, action: 'UPDATE', entityType: 'CARE_CALENDAR', summary: `Quiet Day updated: ${preview.earlier} earlier, ${preview.later} later; ${preview.todayCount} requiring attention today`, metadata: JSON.stringify({ draft: input.draft, hash: input.hash, changes: preview.changes }) } })
-      return { stale: false, forecast: await loadCareForecast(tx, scope), notice: `Quiet Day updated. ${preview.todayCount} task(s), including ${preview.wateringToday} watering assessment(s), moved into today's queue.` }
+      return { stale: false, forecast: await loadCareForecast(tx, scope), notice: `Quiet Day updated. ${preview.changes.length} task(s) reconciled: ${preview.earlier} earlier, ${preview.later} later; ${preview.exceptions.length} conflict(s) or explicit exception(s) need attention.` }
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: 30000, maxWait: 15000 })
     if (result.stale) return json({ error: 'The schedule changed. Review the updated preview before confirming.', ...result }, 409)
     revalidatePath(collectionPath(scope.collectionSlug), 'layout')

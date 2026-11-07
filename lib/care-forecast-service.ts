@@ -13,7 +13,9 @@ export async function forecastConfiguration(db: PrismaClient | Prisma.Transactio
   ])
   return { quietDays, rules, timezone: normalizeTimeZone(scope.timezone) }
 }
-export async function loadCareForecast(db: PrismaClient | Prisma.TransactionClient, scope: ForecastScope, suppliedItems?: CareQueueItem[]) {
+export async function loadCareForecast(db: PrismaClient | Prisma.TransactionClient, scope: ForecastScope, suppliedItems?: CareQueueItem[]): Promise<{ timezone: string; days: ReturnType<typeof careForecast>; quietDays: QuietDate[]; allQuietDays: QuietDate[]; locations: { id: string; name: string }[] }> {
+  if ('$transaction' in db) return db.$transaction(tx => loadCareForecast(tx, scope, suppliedItems), { maxWait: 15000, timeout: 30000 })
+  await db.$executeRaw`SELECT pg_advisory_xact_lock_shared(hashtextextended(${`care-calendar:${scope.collectionId}`}, 0))`
   const config = await forecastConfiguration(db, scope)
   const locations = await db.location.findMany({ where: { collectionId: scope.collectionId }, select: { id: true, name: true }, orderBy: { name: 'asc' } })
   const items = suppliedItems || await getCareQueue(db, { ...scope, timezone: config.timezone })
@@ -59,6 +61,11 @@ export function proposedQuietDays(config: CalendarConfig, draft: QuietDraft, col
   return [...days.filter(old => old.id !== day.id), day]
 }
 export async function previewQuietChange(db: PrismaClient | Prisma.TransactionClient, scope: ForecastScope, draft: QuietDraft) {
+  if ('$transaction' in db) return db.$transaction(tx => previewQuietChangeSnapshot(tx, scope, draft), { maxWait: 15000, timeout: 30000 })
+  return previewQuietChangeSnapshot(db, scope, draft)
+}
+async function previewQuietChangeSnapshot(db: Prisma.TransactionClient, scope: ForecastScope, draft: QuietDraft) {
+  await db.$executeRaw`SELECT pg_advisory_xact_lock_shared(hashtextextended(${`care-calendar:${scope.collectionId}`}, 0))`
   const now = scope.now || new Date()
   const config = await forecastConfiguration(db, scope)
   if ((draft?.kind === 'create' || draft?.kind === 'weekly') && draft.locationId !== undefined && draft.locationId !== null && typeof draft.locationId !== 'string') throw new Error('Invalid location scope.')
@@ -72,13 +79,13 @@ export async function previewQuietChange(db: PrismaClient | Prisma.TransactionCl
     rules = [...rules.filter(rule => rule.careType !== draft.careType), { careType: draft.careType, active: draft.active, defaultShiftDirection: draft.defaultShiftDirection, maxShiftDaysBefore: draft.maxShiftDaysBefore, maxShiftDaysAfter: draft.maxShiftDaysAfter }]
   }
   const before = await getCareQueue(db, { ...scope, timezone: config.timezone, persistQuietPlan: false })
-  const after = await getCareQueue(db, { ...scope, timezone: config.timezone, quietDayOverride: quietDays, quietRuleOverride: rules, persistQuietPlan: false, reviseQuietPlan: true })
+  const after = await getCareQueue(db, { ...scope, timezone: config.timezone, quietDayOverride: quietDays, quietRuleOverride: rules, persistQuietPlan: false })
   const previous = new Map(before.map(item => [item.key, item]))
   const today = dateInputValue(now, config.timezone)
-  const changes = after.filter(item => previous.get(item.key)?.dueAt.getTime() !== item.dueAt.getTime()).map(item => ({ key: item.key, taskType: item.taskType, title: item.title, locationId: item.locationId, locationName: item.locationName, originalDate: dateInputValue(item.originalDueAt || previous.get(item.key)!.dueAt, config.timezone), from: dateInputValue(previous.get(item.key)!.dueAt, config.timezone), to: dateInputValue(item.dueAt, config.timezone), reason: item.quietDayReason || 'Original calendar date restored.' }))
+  const changes = after.filter(item => previous.get(item.key)?.dueAt.getTime() !== item.dueAt.getTime() || Boolean(previous.get(item.key)?.schedulingConflict) !== Boolean(item.schedulingConflict)).map(item => ({ key: item.key, taskType: item.taskType, title: item.title, locationId: item.locationId, locationName: item.locationName, originalDate: dateInputValue(item.originalDueAt || previous.get(item.key)!.dueAt, config.timezone), from: dateInputValue(previous.get(item.key)!.dueAt, config.timezone), to: dateInputValue(item.dueAt, config.timezone), reason: item.quietDayReason || 'Original calendar date restored.' }))
   const changedLocation = draft.kind === 'weekly' || draft.kind === 'create' ? draft.locationId : draft.kind === 'remove' ? config.quietDays.find(rule => rule.id === draft.id)?.locationId : draft.kind === 'set' && draft.moveId ? config.quietDays.find(rule => rule.id === draft.moveId)?.locationId : null
   const inChangedScope = (item: { locationId?: string | null }) => !changedLocation || item.locationId === changedLocation
-  const exceptions = after.filter(inChangedScope).filter(item => /exception|required on quiet|overdue care/i.test(item.quietDayReason || '')).map(item => ({ key: item.key, title: item.title, taskType: item.taskType, locationName: item.locationName, date: dateInputValue(item.dueAt, config.timezone), reason: item.quietDayReason }))
+  const exceptions = after.filter(inChangedScope).filter(item => /conflict|exception|required on quiet|overdue care/i.test(item.quietDayReason || '')).map(item => ({ key: item.key, title: item.title, taskType: item.taskType, locationName: item.locationName, date: dateInputValue(item.dueAt, config.timezone), reason: item.quietDayReason }))
   // Inspect long closures even outside the seven-day display, without expanding ranges.
   const careRisks = after.filter(inChangedScope).filter(item => !item.completedAt && item.cadenceDays && quietDays.some(rule => {
     if (!rule.active || rule.quietType !== 'DATE_RANGE' || !rule.startDate || !rule.endDate || rule.endDate < now || rule.locationId && rule.locationId !== item.locationId) return false

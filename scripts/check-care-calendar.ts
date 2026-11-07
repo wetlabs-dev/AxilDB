@@ -1,6 +1,6 @@
 import { proposedQuietDays } from '../lib/care-forecast-service'
 import assert from 'node:assert/strict'
-import { calendarSchedule, careForecast, effectiveQuietRules, quietDateReasons, type CalendarConfig } from '../lib/care-calendar'
+import { calendarSchedule, careForecast, effectiveQuietRules, quietDateReasons, type CalendarConfig, type QuietDate } from '../lib/care-calendar'
 import type { CareQueueItem } from '../lib/care-queue'
 import { addCalendarDays, dateInputValue, parseDateLocal } from '../lib/time'
 const timezone = 'America/New_York'
@@ -20,12 +20,12 @@ assert.equal(dateInputValue(fixed.find(item => item.key === 'overdue')!.dueAt, t
 assert.match(fixed.find(item => item.key === 'manual')!.quietDayReason!, /explicit/)
 const daily = calendarSchedule([{ ...task('daily', 'WATER', '2026-10-20', 1), notBeforeDate: '2026-10-20' }], config, now)
 assert.equal(dateInputValue(daily[0].dueAt, timezone), '2026-10-20', 'Never advance assessment to the day just completed.')
-assert.match(daily[0].quietDayReason!, /exception/)
+assert.equal(daily[0].schedulingConflict, true)
 const noDestination = calendarSchedule([task('blocked')], { ...config, quietDays: [{ ...quiet, quietType: 'DATE_RANGE', date: null, startDate: date('2026-10-18'), endDate: date('2026-10-24') }] }, now)
 assert.equal(dateInputValue(noDestination[0].dueAt, timezone), '2026-10-20')
-assert.match(noDestination[0].quietDayReason!, /exception/)
+assert.equal(noDestination[0].schedulingConflict, true)
 const saved = new Map([['fern', { originalDueAt: date('2026-10-20'), adjustedDueAt: date('2026-10-19'), ruleUsed: 'old', reason: 'Moved earlier', shiftDirection: 'EARLIER', quietDayId: 'quiet' }]])
-assert.equal(dateInputValue(calendarSchedule([task('fern')], { ...config, quietDays: [] }, new Date('2026-10-20T12:00Z'), saved, 'new')[0].dueAt, timezone), '2026-10-19', 'Unfinished advanced work remains overdue after quiet-day changes.')
+assert.equal(dateInputValue(calendarSchedule([task('fern')], { ...config, quietDays: [] }, new Date('2026-10-20T12:00Z'), saved, 'new')[0].dueAt, timezone), '2026-10-20', 'Explicit calendar changes restore the cadence date; ordinary reads preserve advanced work.')
 const recurrence = { ...task('recur', 'WATER', '2026-10-19', 3), recurrenceCadence: { activity: 'WATERING', interval: 3, unit: 'DAY' } }
 const forecast = careForecast([recurrence, task('carry', 'PEST_CHECK', '2026-10-18')], { ...config, quietDays: [] }, now)
 assert.equal(forecast.length, 7); assert.equal(forecast[0].date, '2026-10-19'); assert.equal(forecast[6].date, '2026-10-25')
@@ -63,7 +63,7 @@ assert.equal(effectiveQuietRules(weekend.quietDays, 'home').length, 0)
 const vacation = { ...weekend, quietDays: [{ ...quiet, locationId: 'office', quietType: 'DATE_RANGE', date: null, startDate: date('2026-12-24'), endDate: date('2027-01-03') }] }
 const unsafe = calendarSchedule([office('closure', '2026-12-29')], vacation, date('2026-12-20'))
 assert.equal(dateInputValue(unsafe[0].dueAt, timezone), '2026-12-29')
-assert.match(unsafe[0].quietDayReason!, /exception/)
+assert.equal(unsafe[0].schedulingConflict, true)
 assert.equal(quietDateReasons(date('2027-01-01'), vacation, 'office').length, 1)
 assert.equal(quietDateReasons(date('2027-01-01'), vacation, 'home').length, 0)
 const manualOffice = calendarSchedule([{ ...office('manual-office'), manualSchedule: true }], weekend, now)
@@ -76,3 +76,62 @@ assert.equal(proposedQuietDays(union, { kind: 'weekly', locationId: 'office', we
 assert.throws(() => proposedQuietDays(config, { kind: 'weekly', weekdays: [7] }, 'collection'))
 assert.throws(() => proposedQuietDays(config, { kind: 'create', name: '', quietType: 'DATE_RANGE', startDate: '2027-01-03', endDate: '2026-12-24' }, 'collection'))
 console.log('Scoped calendar: office weekends, additive inheritance, overlap provenance, isolated locations, year-crossing closures, safety exceptions, manual dates and weekday validation passed.')
+
+// Reproduce the reported sequential edit after Thursday's shifted work becomes due.
+const thursday = date('2026-10-22')
+const friday = date('2026-10-23')
+const sequentialTask = task('sequential', 'WATER', '2026-10-22', 21)
+const thursdayQuiet = { ...quiet, id: 'thursday', date: thursday }
+const fridayQuiet = { ...quiet, id: 'friday', date: friday }
+const firstConfig = { ...config, quietDays: [thursdayQuiet] }
+const bothConfig = { ...config, quietDays: [thursdayQuiet, fridayQuiet] }
+const firstShift = calendarSchedule([sequentialTask], firstConfig, now)[0]
+assert.equal(dateInputValue(firstShift.dueAt, timezone), '2026-10-23')
+const materialized = new Map([[sequentialTask.key, { originalDueAt: thursday, adjustedDueAt: firstShift.dueAt, ruleUsed: 'thursday-only', reason: firstShift.quietDayReason!, shiftDirection: 'LATER', quietDayId: thursdayQuiet.id }]])
+const revised = calendarSchedule([sequentialTask], bothConfig, friday, materialized, 'both')[0]
+assert.equal(dateInputValue(revised.dueAt, timezone), '2026-10-24', 'New quiet days must invalidate an already-actionable automatic shift.')
+
+const savePlan = (items: CareQueueItem[], revision: string) => new Map(items.filter(item => item.originalDueAt).map(item => [item.key, { originalDueAt: item.originalDueAt!, adjustedDueAt: item.dueAt, ruleUsed: revision, reason: item.quietDayReason!, shiftDirection: item.quietDayShiftDirection!, quietDayId: null }]))
+const signature = (items: CareQueueItem[]) => items.map(item => [item.key, dateInputValue(item.dueAt, timezone), !!item.schedulingConflict]).sort((a,b) => String(a[0]).localeCompare(String(b[0])))
+const assortment = [3,7,14,30].flatMap(days => ['2026-10-22','2026-10-23'].map(due => task(`${days}-${due}`, 'WATER', due, days))).concat(['PEST_CHECK','HEALTH_CHECK','FERTILIZE','REPOT','PRUNE'].flatMap(type => ['2026-10-22','2026-10-23'].map(due => task(`${type}-${due}`, type, due))))
+const together = calendarSchedule(assortment, bothConfig, now)
+for (const initial of [thursdayQuiet, fridayQuiet]) {
+  const first = calendarSchedule(assortment, { ...config, quietDays: [initial] }, now)
+  assert.deepEqual(signature(calendarSchedule(assortment, bothConfig, now, savePlan(first, 'first'), 'both')), signature(together), 'Calendar edits converge regardless of creation order.')
+}
+assert.deepEqual(signature(calendarSchedule(together, bothConfig, now, savePlan(together, 'both'), 'both')), signature(together), 'Reconciliation is idempotent, including already-adjusted input.')
+assert.deepEqual(signature(calendarSchedule(together, { ...config, quietDays: [] }, now, savePlan(together, 'both'), 'removed')), signature(assortment), 'Removing rules restores cadence dates without drift.')
+for (const item of together) assert.ok(item.schedulingConflict || !quietDateReasons(item.dueAt, bothConfig, item.locationId).length)
+const fullWeek = { ...config, quietDays: Array.from({ length: 7 }, (_, dayOfWeek) => ({ ...quiet, id: `week-${dayOfWeek}`, quietType: 'WEEKLY_RECURRING', date: null, dayOfWeek })) }
+const allBlocked = calendarSchedule(assortment, fullWeek, now)
+assert.ok(allBlocked.every(item => item.schedulingConflict))
+const blockedForecast = careForecast(allBlocked, fullWeek, now)
+assert.equal(blockedForecast.reduce((sum, day) => sum + day.total, 0), 0)
+assert.equal(blockedForecast.reduce((sum, day) => sum + day.conflicts.length, 0), assortment.length, 'Conflicts remain visible without masquerading as scheduled tasks.')
+const protectedTasks = [{ ...task('done'), completedAt: now }, { ...task('snoozed'), manualSchedule: true }, { ...task('workflow', 'HEALTH_CHECK'), manualSchedule: true }]
+assert.deepEqual(signature(calendarSchedule(protectedTasks, fullWeek, now)), signature(protectedTasks))
+// Seeded invariant checks require no additional testing dependency.
+let seed = 90127
+const random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 2 ** 32 }
+for (const start of ['2026-03-06','2026-10-29','2026-12-28','2028-02-26']) {
+  for (let run = 0; run < 25; run++) {
+    const origin = date(start)
+    const rules: QuietDate[] = Array.from({ length: 7 }, (_, dayOfWeek) => ({ ...quiet, id: `rule-${dayOfWeek}`, active: random() > .35, locationId: random() > .5 ? 'office' : null, quietType: 'WEEKLY_RECURRING', date: null, dayOfWeek }))
+    rules.push({ ...quiet, id: 'one-off', locationId: null, date: addCalendarDays(origin, 4, timezone) })
+    const cfg = { ...config, quietDays: rules }
+    const inputs = Array.from({ length: 24 }, (_, i) => ({ ...task(`generated-${i}`, ['WATER','PEST_CHECK','FERTILIZE','REPOT'][i % 4], dateInputValue(addCalendarDays(origin, 1 + i % 7, timezone), timezone), [3,7,14,30][i % 4]), locationId: i % 2 ? 'office' : 'home' }))
+    const output = calendarSchedule(inputs, cfg, origin)
+    assert.equal(output.length, inputs.length)
+    assert.equal(new Set(output.map(item => item.key)).size, inputs.length)
+    for (const item of output) assert.ok(item.schedulingConflict || !quietDateReasons(item.dueAt, cfg, item.locationId).length)
+    assert.deepEqual(signature(calendarSchedule(inputs, cfg, origin, savePlan(output, 'current'), 'current')), signature(output))
+    assert.deepEqual(signature(calendarSchedule(inputs, { ...cfg, quietDays: [...rules].reverse() }, origin)), signature(output))
+  }
+}
+console.log('Quiet Day reliability: sequential actionable edits reproduced, edit-order convergence, stable cadence anchors, explicit conflicts, protected tasks, full quiet week and 100 generated calendar invariants passed.')
+
+for (const length of [3,5]) {
+  const cfg = { ...config, quietDays: [{ ...quiet, quietType: 'DATE_RANGE', date: null, startDate: thursday, endDate: addCalendarDays(thursday, length - 1, timezone) }] }
+  const output = calendarSchedule(assortment, cfg, now)
+  for (const item of output) assert.ok(item.schedulingConflict || !quietDateReasons(item.dueAt, cfg, item.locationId).length)
+}

@@ -14,6 +14,7 @@ export async function executeCareOperation<T extends object>(db: PrismaClient, i
   // Expired original requests are rejected above, so pruning cannot make an old retry run again.
   await db.careQueueOperation.deleteMany({ where: { expiresAt: { lt: new Date() } } })
   return db.$transaction(async tx => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`care-calendar:${input.collectionId}`}, 0))`
     const inserted = await tx.careQueueOperation.createMany({ data: { ...scope, action: input.action, payloadHash, expiresAt: new Date(identity.issuedAt + retentionMs), result: Prisma.JsonNull }, skipDuplicates: true })
     if (!inserted.count) {
       const previous = await tx.careQueueOperation.findUniqueOrThrow({ where: { collectionId_userId_operationId: scope } })

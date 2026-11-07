@@ -47,6 +47,7 @@ export type CareQueueItem = {
   cadenceDays?: number
   recurrenceRule?: string | null
   recurrenceCadence?: import('@/lib/care-cadences').Cadence
+  schedulingConflict?: boolean
   manualSchedule?: boolean
   projected?: boolean
   key: string
@@ -248,7 +249,6 @@ export async function getCareQueue(
     quietDayOverride,
     quietRuleOverride,
     persistQuietPlan = true,
-    reviseQuietPlan = false,
   }: {
     collectionId: string
     collectionSlug: string
@@ -259,9 +259,15 @@ export async function getCareQueue(
     quietDayOverride?: QuietDate[]
     quietRuleOverride?: ShiftRule[]
     persistQuietPlan?: boolean
-    reviseQuietPlan?: boolean
   },
-) {
+): Promise<CareQueueItem[]> {
+  // Shared reads may run concurrently; calendar edits and queue mutations take the
+  // exclusive form of this collection lock. Read config, care state and persist
+  // decisions in one transaction so a stale reader cannot overwrite a new calendar.
+  if ('$transaction' in prisma) {
+    return prisma.$transaction(tx => getCareQueue(tx, { collectionId, collectionSlug, userId, now, includeCompleted, timezone, quietDayOverride, quietRuleOverride, persistQuietPlan }), { maxWait: 15000, timeout: 30000 })
+  }
+  await prisma.$executeRaw`SELECT pg_advisory_xact_lock_shared(hashtextextended(${`care-calendar:${collectionId}`}, 0))`
   timezone = normalizeTimeZone(timezone)
   const instances = await prisma.plantInstance.findMany({
     where: { collectionId, status: 'ACTIVE' },
@@ -633,7 +639,7 @@ export async function getCareQueue(
     })
   }
 
-  const plan = await resolveCalendarPlan(prisma, collectionId, [...new Map(items.map(item => [item.key, item])).values()], { quietDays: quietDayOverride || quietDays, rules: quietRuleOverride || quietRules, timezone }, now, persistQuietPlan, reviseQuietPlan)
+  const plan = await resolveCalendarPlan(prisma, collectionId, [...new Map(items.map(item => [item.key, item])).values()], { quietDays: quietDayOverride || quietDays, rules: quietRuleOverride || quietRules, timezone }, now, persistQuietPlan)
   return plan.sort((a, b) => {
     if (Boolean(a.completedAt) !== Boolean(b.completedAt)) return a.completedAt ? 1 : -1
     return b.priority - a.priority || a.dueAt.getTime() - b.dueAt.getTime()
