@@ -1,0 +1,16 @@
+{
+  "checkedAt": "2026-11-18T16:34:28.641Z",
+  "assetCount": 262,
+  "checks": [
+    "All coverage and finding image assets exist",
+    "HTML loads directly from file without server",
+    "No browser JavaScript errors",
+    "Priority and text filtering",
+    "Per-finding decisions persist",
+    "JSON export contains selected decision and note",
+    "Route search",
+    "Scene selector",
+    "Mobile report no horizontal overflow"
+  ],
+  "productionChanges": false
+}

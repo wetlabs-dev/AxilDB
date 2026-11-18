@@ -1,0 +1,59 @@
+/* PROPOSED ONLY — direction A; browser-injected audit demonstration, not production CSS. */
+:root[data-theme='dark']{--audit-elevated:#263029;--audit-action:#315c42;--audit-focus:#a0c69a;}
+:root[data-theme='dark'] body [class*='bg-[#2f6b45]']{background:var(--audit-action)!important;color:#f1f6ee!important}
+:root[data-theme='dark'] .bg-neutral-50 {background:var(--ax-surface-solid)!important;color:var(--ax-text)!important}
+:root[data-theme='dark'] .text-neutral-600 {color:var(--ax-muted)!important}
+:root[data-theme='dark'] .bg-indigo-50 {background:#2a2d43!important;color:#c3c8f2!important}
+:root[data-theme='dark'] .bg-rose-50 {background:#3c242e!important;color:#eab2c1!important}
+:root[data-theme='dark'] .bg-emerald-50 {background:#233425!important;color:#b5d4ad!important}
+:root[data-theme='dark'] [class*='bg-green-50']{background:#233425!important}
+:root[data-theme='dark'] [class*='bg-amber-50']{background:#3c321e!important}
+:root[data-theme='dark'] :is(.text-green-950,.text-green-900){color:#b5d4ad!important}
+:root[data-theme='dark'] :is(.text-amber-950,.text-amber-900){color:#f0d28f!important}
+:root[data-theme='dark'] #backup-storage {background:var(--ax-surface-solid)!important;color:var(--ax-text)!important}
+:root[data-theme='dark'] [class*='bg-[#f7f4e8]/70'] {background:var(--audit-elevated)!important}
+:root[data-theme='dark'] [class*='bg-white/35'],:root[data-theme='dark'] [class*='bg-white/40']{background:var(--ax-surface-solid)!important}
+:root[data-theme='dark'] [class*='text-[#913e2d]'] {background:#3c321e!important;color:#f0d28f!important;border-color:#b8974e!important}
+:root[data-theme='dark'] [class*='bg-[#6d7f6d]']{background:var(--audit-action)!important;color:#f1f6ee!important}
+:root[data-theme='dark'] :is(input,textarea,select,button,a,summary):focus-visible{outline:2px solid var(--audit-focus)!important;outline-offset:3px}
+
+
+/* PROPOSED ONLY — direction B; browser-injected audit demonstration, not production CSS. */
+:root[data-theme='dark']{--ax-bg:#151a17;--ax-bg-soft:#181e1a;--ax-bg-warm:#191f1b;--ax-surface:#202722;--ax-surface-solid:#202722;--ax-surface-muted:#263029;--ax-field:#181e1a;--ax-text:#e7ebe3;--ax-heading:#f1f6ee;--ax-muted:#bbc6ba;--ax-muted-strong:#bbc6ba;--ax-border:#39463c;--ax-border-strong:#536457;--ax-primary:#8ebb91;--audit-nav:#191f1b;--audit-elevated:#263029;--audit-action:#315c42;--audit-focus:#a0c69a;}
+:root[data-theme='dark'] body [class*='bg-[#2f6b45]']{background:var(--audit-action)!important;color:#f1f6ee!important}
+:root[data-theme='dark'] .bg-neutral-50 {background:var(--ax-surface-solid)!important;color:var(--ax-text)!important}
+:root[data-theme='dark'] .text-neutral-600 {color:var(--ax-muted)!important}
+:root[data-theme='dark'] .bg-indigo-50 {background:#2a2d43!important;color:#c3c8f2!important}
+:root[data-theme='dark'] .bg-rose-50 {background:#3c242e!important;color:#eab2c1!important}
+:root[data-theme='dark'] .bg-emerald-50 {background:#233425!important;color:#b5d4ad!important}
+:root[data-theme='dark'] [class*='bg-green-50']{background:#233425!important}
+:root[data-theme='dark'] [class*='bg-amber-50']{background:#3c321e!important}
+:root[data-theme='dark'] :is(.text-green-950,.text-green-900){color:#b5d4ad!important}
+:root[data-theme='dark'] :is(.text-amber-950,.text-amber-900){color:#f0d28f!important}
+:root[data-theme='dark'] #backup-storage {background:var(--ax-surface-solid)!important;color:var(--ax-text)!important}
+:root[data-theme='dark'] [class*='bg-[#f7f4e8]/70'] {background:var(--audit-elevated)!important}
+:root[data-theme='dark'] [class*='bg-white/35'],:root[data-theme='dark'] [class*='bg-white/40']{background:var(--ax-surface-solid)!important}
+:root[data-theme='dark'] [class*='text-[#913e2d]'] {background:#3c321e!important;color:#f0d28f!important;border-color:#b8974e!important}
+:root[data-theme='dark'] [class*='bg-[#6d7f6d]']{background:var(--audit-action)!important;color:#f1f6ee!important}
+:root[data-theme='dark'] :is(input,textarea,select,button,a,summary):focus-visible{outline:2px solid var(--audit-focus)!important;outline-offset:3px}
+:root[data-theme='dark'] body{background:var(--ax-bg)!important}:root[data-theme='dark'] aside[class]{background:var(--audit-nav)!important}
+
+/* PROPOSED ONLY — direction C; browser-injected audit demonstration, not production CSS. */
+:root[data-theme='dark']{--ax-bg:#17191a;--ax-bg-soft:#1b1d1f;--ax-bg-warm:#202224;--ax-surface:#232628;--ax-surface-solid:#232628;--ax-surface-muted:#2b3032;--ax-field:#1b1d1f;--ax-text:#e8e9e6;--ax-heading:#f2f3ef;--ax-muted:#adb4ae;--ax-muted-strong:#c2c9c3;--ax-border:#414946;--ax-border-strong:#65716a;--ax-primary:#a3c6a3;--audit-nav:#1d2020;--audit-elevated:#2b3032;--audit-action:#315742;--audit-focus:#b0d1aa;}
+:root[data-theme='dark'] body [class*='bg-[#2f6b45]']{background:var(--audit-action)!important;color:#f1f6ee!important}
+:root[data-theme='dark'] .bg-neutral-50 {background:var(--ax-surface-solid)!important;color:var(--ax-text)!important}
+:root[data-theme='dark'] .text-neutral-600 {color:var(--ax-muted)!important}
+:root[data-theme='dark'] .bg-indigo-50 {background:#2a2d43!important;color:#c3c8f2!important}
+:root[data-theme='dark'] .bg-rose-50 {background:#3c242e!important;color:#eab2c1!important}
+:root[data-theme='dark'] .bg-emerald-50 {background:#233425!important;color:#b5d4ad!important}
+:root[data-theme='dark'] [class*='bg-green-50']{background:#233425!important}
+:root[data-theme='dark'] [class*='bg-amber-50']{background:#3c321e!important}
+:root[data-theme='dark'] :is(.text-green-950,.text-green-900){color:#b5d4ad!important}
+:root[data-theme='dark'] :is(.text-amber-950,.text-amber-900){color:#f0d28f!important}
+:root[data-theme='dark'] #backup-storage {background:var(--ax-surface-solid)!important;color:var(--ax-text)!important}
+:root[data-theme='dark'] [class*='bg-[#f7f4e8]/70'] {background:var(--audit-elevated)!important}
+:root[data-theme='dark'] [class*='bg-white/35'],:root[data-theme='dark'] [class*='bg-white/40']{background:var(--ax-surface-solid)!important}
+:root[data-theme='dark'] [class*='text-[#913e2d]'] {background:#3c321e!important;color:#f0d28f!important;border-color:#b8974e!important}
+:root[data-theme='dark'] [class*='bg-[#6d7f6d]']{background:var(--audit-action)!important;color:#f1f6ee!important}
+:root[data-theme='dark'] :is(input,textarea,select,button,a,summary):focus-visible{outline:2px solid var(--audit-focus)!important;outline-offset:3px}
+:root[data-theme='dark'] body{background:var(--ax-bg)!important}:root[data-theme='dark'] aside[class]{background:var(--audit-nav)!important}

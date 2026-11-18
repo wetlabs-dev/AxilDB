@@ -1,0 +1,48 @@
+import { PrismaClient } from '@prisma/client'
+import { randomBytes, createHash } from 'node:crypto'
+import { writeFile } from 'node:fs/promises'
+const target=new URL(process.env.DATABASE_URL || '')
+if(!['localhost','127.0.0.1'].includes(target.hostname)||target.port!=='55441'||target.pathname!=='/axildb_dark_audit')throw Error('Disposable audit database only')
+const db=new PrismaClient(),now=new Date(),ago=n=>new Date(now.getTime()-n*86400000)
+try {
+ const user=await db.user.findUniqueOrThrow({where:{email:'admin@audit.example.test'}}),collection=await db.collection.findUniqueOrThrow({where:{slug:'audit'}})
+ await db.userTwoFactor.create({data:{userId:user.id,enabledAt:now,secretCiphertext:'isolated-fixture-not-a-real-secret'}})
+ await db.collection.update({where:{id:collection.id},data:{visibility:'PUBLIC',aiFeaturesEnabled:true,aiCuratorEnabled:true}})
+ await db.aiCuratorSettings.upsert({where:{id:'global'},create:{id:'global',enabled:false},update:{enabled:false}})
+ const token=randomBytes(32).toString('hex');await db.session.create({data:{userId:user.id,tokenHash:createHash('sha256').update(token).digest('hex'),expiresAt:new Date(Date.now()+24*3600000),twoFactorVerifiedAt:now}})
+ const viewer=await db.user.create({data:{email:'viewer@audit.example.test',emailVerifiedAt:now,passwordHash:'fixture'}})
+ await db.collectionMembership.create({data:{collectionId:collection.id,userId:viewer.id,role:'VIEWER',status:'ACTIVE'}})
+ const viewerToken=randomBytes(32).toString('hex');await db.session.create({data:{userId:viewer.id,tokenHash:createHash('sha256').update(viewerToken).digest('hex'),expiresAt:new Date(Date.now()+24*3600000)}})
+ const definition=await db.plantDefinition.findFirstOrThrow({where:{collectionId:collection.id}}),plant=await db.plantInstance.findFirstOrThrow({where:{collectionId:collection.id,instanceType:'MOTHER'}})
+ const location=await db.location.findFirstOrThrow({where:{collectionId:collection.id}})
+ await db.location.create({data:{collectionId:collection.id,locationTypeId:location.locationTypeId,parentLocationId:location.id,name:'Cabinet — lower shelf',code:'LOC-CHILD-01'}})
+ const recipe=await db.fertilizerRecipe.create({data:{collectionId:collection.id,name:'Balanced foliage — fixture',frequencyDays:14,declaredNpk:'3-1-2'}})
+ await db.plantHusbandryGuide.update({where:{plantDefinitionId:definition.id},data:{fertilizerRecipeId:recipe.id}})
+ await db.plantDefinitionCareCadence.createMany({data:[['WATERING',7,'DAY'],['FERTILIZING',2,'WEEK'],['REPOTTING',1,'YEAR'],['PEST_INSPECTION',1,'WEEK'],['GENERAL_INSPECTION',1,'WEEK'],['PRUNING',3,'MONTH']].map(([activity,interval,unit])=>({plantDefinitionId:definition.id,activity,interval,unit}))})
+ for(const eventType of ['WATERED','FERTILIZED','PEST_CHECK','HEALTH_CHECK','PRUNED','REPOTTED'])await db.plantCareEvent.create({data:{collectionId:collection.id,plantInstanceId:plant.id,userId:user.id,eventType,performedAt:ago(eventType==='REPOTTED'?500:30),fertilizerRecipeId:eventType==='FERTILIZED'?recipe.id:null}})
+ for(let i=0;i<9;i++)await db.plantDefinition.create({data:{collectionId:collection.id,genus:['Monstera','Hoya','Philodendron'][i%3],species:i%2?'carnosa':'deliciosa',cultivarName:i%2?'Long Botanical Name Demonstration':'',description:i%2?'Fictional audit specimen with incomplete metadata; no botanical care advice.':null}})
+ await db.plantInstance.create({data:{collectionId:collection.id,plantDefinitionId:definition.id,plantId:'ARCHIVED-AUDIT-001',instanceType:'ACQUIRED',status:'ARCHIVED'}})
+ await db.photo.create({data:{collectionId:collection.id,uploadedByUserId:user.id,entityType:'PLANT_INSTANCE',entityId:plant.id,filename:'repository-demo.png',path:'/splash-photos.png',isCover:true,isType:true,moderationStatus:'APPROVED',plantDetected:true,caption:'Repository illustration used as an audit fixture'}})
+ for(const [i,colorToken]of ['fern','sage','amber','coral','rose','sky','ocean','violet','stone'].entries()) {
+  const tag=await db.plantTag.create({data:{collectionId:collection.id,name:`Audit ${colorToken}`,slug:`audit-${colorToken}`,category:i%2?'PET_SAFETY':'APPEARANCE',colorToken,icon:i%2?'shield-alert':'leaf',active:true,publicVisible:true}})
+  await db.plantDefinitionTag.create({data:{collectionId:collection.id,plantDefinitionId:definition.id,plantTagId:tag.id}})
+ }
+ await db.reminder.create({data:{collectionId:collection.id,userId:user.id,title:'Inspect new growth — fixture',category:'GENERAL',entityType:'PLANT_INSTANCE',entityId:plant.id,dueAt:ago(1)}})
+ await db.reminder.create({data:{collectionId:collection.id,userId:user.id,title:'Completed reminder — fixture',completedAt:now,dueAt:ago(1)}})
+ const template=await db.workflowTemplate.create({data:{collectionId:collection.id,name:'Weekly Greenhouse Round — audit',category:'INSPECTION',steps:{create:[{stepType:'CHECK',title:'Inspect leaves',sortOrder:0},{stepType:'NOTE',title:'Record observation',sortOrder:1}]}}})
+ const run=await db.workflowRun.create({data:{collectionId:collection.id,templateId:template.id,title:'Audit inspection in progress',startedByUserId:user.id,plants:{create:{collectionId:collection.id,plantInstanceId:plant.id}},steps:{create:{collectionId:collection.id,stepType:'NOTE',title:'Record observation',sortOrder:0}}}})
+ const sheetToken='audit-public-sheet'
+ const sheet=await db.careSheet.create({data:{collectionId:collection.id,createdById:user.id,title:'Audit care sheet',status:'ACTIVE',publicTokenHash:createHash('sha256').update(sheetToken).digest('hex'),sections:['identity','watering'],plants:{create:{collectionId:collection.id,plantInstanceId:plant.id}}}})
+ const exhibit=await db.collectionExhibit.create({data:{collectionId:collection.id,title:'Botanical study — fictional exhibit',slug:'audit-exhibit',status:'PUBLISHED',accessMode:'PUBLIC',publishedAt:now,plants:{create:{plantInstanceId:plant.id}}}})
+ const condition=await db.plantCondition.create({data:{collectionId:collection.id,plantInstanceId:plant.id,category:'PESTS',severity:'MODERATE',status:'OPEN',notes:'Fictional condition for visual inspection only.'}})
+ const plan=await db.treatmentPlan.create({data:{collectionId:collection.id,plantInstanceId:plant.id,plantConditionId:condition.id,title:'Fictional pest follow-up',steps:{create:{collectionId:collection.id,stepType:'INSPECTION',title:'Inspect for recovery',scheduledAt:ago(1)}}}})
+ const incident=await db.serverIncident.create({data:{type:'MANUAL',category:'MANUAL',severity:'WARNING',title:'Fictional service warning',description:'Synthetic status; no real outage.',detectedAt:ago(1)}})
+ const event=await db.domainEvent.create({data:{collectionId:collection.id,eventType:'care.watering_completed',aggregateType:'PLANT_INSTANCE',aggregateId:plant.id,visibility:'COLLECTION',occurredAt:now,payloadJson:{},summaryJson:{text:'Fictional care activity'},idempotencyKey:'audit-event'}})
+ for(const status of ['PENDING','APPROVED','REJECTED'])await db.aiCuratorSuggestion.create({data:{collectionId:collection.id,plantDefinitionId:definition.id,phase:'ENRICHMENT',suggestionType:'DESCRIPTION',targetEntityType:'PLANT_DEFINITION',targetEntityId:definition.id,targetField:'description',title:`${status.toLowerCase()} botanical description — fixture`,status,currentValue:{description:definition.description},suggestedValue:{description:'Fictional proposed description for contrast review.'},reasoning:'Synthetic review evidence; no model request was made.',confidence:.85}})
+ for(const [i,status]of ['QUEUED','RUNNING','WAITING_FOR_HUMAN','COMPLETED','DEFERRED'].entries())await db.aiCuratorJob.create({data:{collectionId:collection.id,plantDefinitionId:definition.id,jobType:'AUDIT_FIXTURE',phase:'ENRICHMENT',targetEntityType:'PLANT_DEFINITION',targetEntityId:definition.id,targetField:`audit-${i}`,status,reason:'Synthetic visual state',blockingReason:status==='WAITING_FOR_HUMAN'?'Fictional provider unavailable; no requests sent.':null}})
+ await db.careCadenceProposal.create({data:{plantDefinitionId:definition.id,activity:'WATERING',interval:10,unit:'DAY',confidence:'MEDIUM',rationale:'Fictional calibration example. This fixture is not care advice.',applicability:'RECOMMENDED',sourceReferences:[],source:'CADENCE_CALIBRATION',calibrationEvidence:{current:{interval:7,unit:'DAY'},summary:{mean:10,robustEstimate:10,contributingInstances:2,intervalCount:12,spanDays:120},confidence:.74,warnings:['Fictional observed evidence.']}}})
+ await db.backupRun.create({data:{scope:'SITEWIDE',status:'FAILED',notes:'Fictional backup status. No backup contents included.'}})
+ const propagation=await db.propagationEvent.findFirst({where:{collectionId:collection.id}}),sport=await db.plantInstance.findFirst({where:{collectionId:collection.id,isSportCandidate:true}}),authority=await db.taxonomicAuthority.findFirst({where:{collectionId:collection.id}})
+ await writeFile('/tmp/axildb-dark-audit-context.json',JSON.stringify({collectionId:collection.id,slug:collection.slug,token,viewerToken,userId:user.id,definition:definition.id,plant:plant.id,location:location.id,propagation:propagation.id,sport:sport.id,template:template.id,run:run.id,sheet:sheet.id,sheetToken,exhibit:exhibit.id,exhibitSlug:exhibit.slug,plan:plan.id,incident:incident.id,event:event.id,authority:authority.id}))
+ console.log('Sanitized fixtures ready; session material written only to /tmp, never to the review package.')
+}finally{await db.$disconnect()}

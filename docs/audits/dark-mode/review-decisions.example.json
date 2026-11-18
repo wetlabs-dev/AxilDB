@@ -1,0 +1,56 @@
+{
+  "auditVersion": 1,
+  "sourceCommit": "952ab1b63e3c9cc19f0c9082c600f71089f93ee1",
+  "decisions": [
+    {
+      "id": "DM-001",
+      "decision": "pending",
+      "note": ""
+    },
+    {
+      "id": "DM-002",
+      "decision": "pending",
+      "note": ""
+    },
+    {
+      "id": "DM-003",
+      "decision": "pending",
+      "note": ""
+    },
+    {
+      "id": "DM-004",
+      "decision": "pending",
+      "note": ""
+    },
+    {
+      "id": "DM-005",
+      "decision": "pending",
+      "note": ""
+    },
+    {
+      "id": "DM-006",
+      "decision": "pending",
+      "note": ""
+    },
+    {
+      "id": "DM-007",
+      "decision": "pending",
+      "note": ""
+    },
+    {
+      "id": "DM-008",
+      "decision": "pending",
+      "note": ""
+    },
+    {
+      "id": "DM-009",
+      "decision": "pending",
+      "note": ""
+    },
+    {
+      "id": "DM-010",
+      "decision": "pending",
+      "note": ""
+    }
+  ]
+}

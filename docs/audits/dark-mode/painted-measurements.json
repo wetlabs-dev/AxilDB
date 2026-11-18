@@ -1,0 +1,44 @@
+[
+  {
+    "id": "care-overdue",
+    "fg": "rgb(145, 62, 45)",
+    "opacity": "1",
+    "text": "7 overdue",
+    "background": [
+      106,
+      81,
+      73
+    ],
+    "ratio": 1.02,
+    "backgroundPixelFraction": 0.453,
+    "method": "Most frequent actual painted RGB in lossless element screenshot; localized sample, not whole-gradient certification."
+  },
+  {
+    "id": "care-location",
+    "fg": "rgb(189, 181, 165)",
+    "opacity": "1",
+    "text": "LOC-AREA-01 Plant shelf A",
+    "background": [
+      103,
+      108,
+      102
+    ],
+    "ratio": 2.64,
+    "backgroundPixelFraction": 0.319,
+    "method": "Most frequent actual painted RGB in lossless element screenshot; localized sample, not whole-gradient certification."
+  },
+  {
+    "id": "ai-secondary",
+    "fg": "rgb(238, 231, 215)",
+    "opacity": "1",
+    "text": "Edit then Accept",
+    "background": [
+      109,
+      127,
+      109
+    ],
+    "ratio": 3.47,
+    "backgroundPixelFraction": 0.645,
+    "method": "Most frequent actual painted RGB in lossless element screenshot; localized sample, not whole-gradient certification."
+  }
+]

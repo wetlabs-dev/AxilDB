@@ -1,0 +1,5098 @@
+{
+  "method": "Computed foreground and ancestor-composited background. Opaque samples with no uncertainty are verified calculations; gradients, group opacity and root estimates are candidates requiring painted sampling. Hidden elements excluded in targeted states. Disabled and color emoji excluded from findings. Normal text 4.5:1; large text 3:1. Samples are not a complete accessibility certification.",
+  "samples": [
+    {
+      "state": "dashboard.desktop.dark.current-detail",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Start collection workflow",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 322,
+        "y": 1588,
+        "width": 425,
+        "height": 36
+      }
+    },
+    {
+      "state": "dashboard.desktop.dark.current-detail",
+      "selector": "a.rounded-full.border.px-2",
+      "tag": "A",
+      "text": "Condition resolved",
+      "foreground": "rgb(238, 231, 215)",
+      "effectiveBackground": [
+        236,
+        253,
+        245
+      ],
+      "ratio": 1.17,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 915,
+        "y": 1913,
+        "width": 126,
+        "height": 26
+      }
+    },
+    {
+      "state": "dashboard.desktop.dark.current-detail",
+      "selector": "a.rounded-full.border.px-2",
+      "tag": "A",
+      "text": "Workflow",
+      "foreground": "rgb(238, 231, 215)",
+      "effectiveBackground": [
+        238,
+        242,
+        255
+      ],
+      "ratio": 1.1,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 1049,
+        "y": 1913,
+        "width": 73,
+        "height": 26
+      }
+    },
+    {
+      "state": "dashboard.desktop.dark.current-detail",
+      "selector": "a.rounded-full.border.px-2",
+      "tag": "A",
+      "text": "Exhibit",
+      "foreground": "rgb(238, 231, 215)",
+      "effectiveBackground": [
+        255,
+        241,
+        242
+      ],
+      "ratio": 1.12,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 1130,
+        "y": 1913,
+        "width": 57,
+        "height": 26
+      }
+    },
+    {
+      "state": "plant-grid.desktop.dark.current-detail",
+      "selector": "button.rounded-md.border.border-\\[\\#2f6b45\\]",
+      "tag": "BUTTON",
+      "text": "Apply",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 561,
+        "y": 101,
+        "width": 66,
+        "height": 34
+      }
+    },
+    {
+      "state": "plant-grid.desktop.dark.current-detail",
+      "selector": "a.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "A",
+      "text": "ID History",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 900,
+        "y": 66,
+        "width": 98,
+        "height": 36
+      }
+    },
+    {
+      "state": "plant-grid.desktop.dark.current-detail",
+      "selector": "a.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "A",
+      "text": "Validated",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 1005,
+        "y": 66,
+        "width": 94,
+        "height": 36
+      }
+    },
+    {
+      "state": "plant-grid.desktop.dark.current-detail",
+      "selector": "a.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "A",
+      "text": "Search",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 1108,
+        "y": 66,
+        "width": 79,
+        "height": 36
+      }
+    },
+    {
+      "state": "plant-grid.desktop.dark.current-detail",
+      "selector": "a.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "A",
+      "text": "Plant Tags",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 1306,
+        "y": 66,
+        "width": 102,
+        "height": 36
+      }
+    },
+    {
+      "state": "plant-grid.desktop.dark.current-detail",
+      "selector": "span.rounded-md.bg-\\[\\#2f6b45\\].px-3",
+      "tag": "SPAN",
+      "text": "Open form",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 1302,
+        "y": 172,
+        "width": 85,
+        "height": 28
+      }
+    },
+    {
+      "state": "plant-grid.desktop.dark.current-detail",
+      "selector": "button.rounded.px-2\\.5.py-1",
+      "tag": "BUTTON",
+      "text": "None",
+      "foreground": "rgb(155, 195, 138)",
+      "effectiveBackground": [
+        220,
+        232,
+        212
+      ],
+      "ratio": 1.56,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 1241,
+        "y": 565,
+        "width": 51,
+        "height": 24
+      }
+    },
+    {
+      "state": "plant-grid.desktop.dark.current-detail",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Follow type \u00b7 0",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 321,
+        "y": 1361,
+        "width": 486,
+        "height": 28
+      }
+    },
+    {
+      "state": "plant-grid.desktop.dark.current-detail",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Follow type \u00b7 0",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 889,
+        "y": 1361,
+        "width": 486,
+        "height": 28
+      }
+    },
+    {
+      "state": "plant-grid.desktop.dark.current-detail",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Follow type \u00b7 0",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 321,
+        "y": 2121,
+        "width": 486,
+        "height": 28
+      }
+    },
+    {
+      "state": "plant-grid.desktop.dark.current-detail",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Follow type \u00b7 0",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 889,
+        "y": 2121,
+        "width": 486,
+        "height": 28
+      }
+    },
+    {
+      "state": "plant-grid.desktop.dark.current-detail",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Follow type \u00b7 0",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 321,
+        "y": 2841,
+        "width": 486,
+        "height": 28
+      }
+    },
+    {
+      "state": "plant-grid.desktop.dark.current-detail",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Follow type \u00b7 0",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 889,
+        "y": 2841,
+        "width": 486,
+        "height": 28
+      }
+    },
+    {
+      "state": "plant-grid.desktop.dark.current-detail",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Follow type \u00b7 0",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 321,
+        "y": 3601,
+        "width": 486,
+        "height": 28
+      }
+    },
+    {
+      "state": "plant-grid.desktop.dark.current-detail",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Follow type \u00b7 0",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 889,
+        "y": 3601,
+        "width": 486,
+        "height": 28
+      }
+    },
+    {
+      "state": "plant-grid.desktop.dark.current-detail",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Follow type \u00b7 0",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 321,
+        "y": 4532,
+        "width": 486,
+        "height": 28
+      }
+    },
+    {
+      "state": "plant-grid.desktop.dark.current-detail",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Follow type \u00b7 0",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 889,
+        "y": 4532,
+        "width": 486,
+        "height": 28
+      }
+    },
+    {
+      "state": "definition-details.desktop.dark.current-detail",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].text-sm",
+      "tag": "BUTTON",
+      "text": "Add another alias",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 309,
+        "y": 1777,
+        "width": 141,
+        "height": 32
+      }
+    },
+    {
+      "state": "definition-details.desktop.dark.current-detail",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Save changes",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 458,
+        "y": 1775,
+        "width": 126,
+        "height": 36
+      }
+    },
+    {
+      "state": "definition-details.desktop.dark.current-detail",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Research repotting windows",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 309,
+        "y": 2638,
+        "width": 222,
+        "height": 36
+      }
+    },
+    {
+      "state": "definition-details.desktop.dark.current-detail",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Save changes",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 309,
+        "y": 3176,
+        "width": 126,
+        "height": 36
+      }
+    },
+    {
+      "state": "definition-details.desktop.dark.current-detail",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Upload type image",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 640,
+        "y": 7672,
+        "width": 158,
+        "height": 36
+      }
+    },
+    {
+      "state": "definition-details.desktop.dark.current-detail",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Set as type image",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 1089,
+        "y": 7448,
+        "width": 174,
+        "height": 28
+      }
+    },
+    {
+      "state": "definition-details.desktop.dark.current-detail",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Nominate for Validation",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 309,
+        "y": 8010,
+        "width": 188,
+        "height": 36
+      }
+    },
+    {
+      "state": "care-queue.desktop.dark.current-detail",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].text-sm",
+      "tag": "BUTTON",
+      "text": "Apply view",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 1310,
+        "y": 1003,
+        "width": 98,
+        "height": 32
+      }
+    },
+    {
+      "state": "care-queue.desktop.dark.current-detail",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Start workflow",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 977,
+        "y": 1117,
+        "width": 130,
+        "height": 36
+      }
+    },
+    {
+      "state": "care-queue.desktop.dark.current-detail",
+      "selector": "span.block.truncate.text-xs",
+      "tag": "SPAN",
+      "text": "LOC-AREA-01 Plant shelf A",
+      "foreground": "rgb(189, 181, 165)",
+      "effectiveBackground": [
+        99,
+        103,
+        99
+      ],
+      "ratio": 2.82,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [
+        "image or gradient",
+        "root gradient/canvas estimate"
+      ],
+      "rect": {
+        "x": 325,
+        "y": 1275,
+        "width": 153,
+        "height": 16
+      }
+    },
+    {
+      "state": "care-queue.desktop.dark.current-detail",
+      "selector": "span.rounded-full.border.border-\\[\\#ddb3a7\\]",
+      "tag": "SPAN",
+      "text": "7 overdue",
+      "foreground": "rgb(145, 62, 45)",
+      "effectiveBackground": [
+        103,
+        78,
+        72
+      ],
+      "ratio": 1.06,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [
+        "image or gradient",
+        "root gradient/canvas estimate"
+      ],
+      "rect": {
+        "x": 674,
+        "y": 1256,
+        "width": 74,
+        "height": 26
+      }
+    },
+    {
+      "state": "care-queue.desktop.dark.current-detail",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Start workflow",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 1291,
+        "y": 1254,
+        "width": 104,
+        "height": 30
+      }
+    },
+    {
+      "state": "care-queue.desktop.dark.current-detail",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-3",
+      "tag": "BUTTON",
+      "text": "Complete",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 619,
+        "y": 1403,
+        "width": 89,
+        "height": 36
+      }
+    },
+    {
+      "state": "care-queue.desktop.dark.current-detail",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-3",
+      "tag": "BUTTON",
+      "text": "Complete",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 619,
+        "y": 1632,
+        "width": 89,
+        "height": 36
+      }
+    },
+    {
+      "state": "care-queue.desktop.dark.current-detail",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-3",
+      "tag": "BUTTON",
+      "text": "Complete",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 1172,
+        "y": 1642,
+        "width": 89,
+        "height": 36
+      }
+    },
+    {
+      "state": "care-queue.desktop.dark.current-detail",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-3",
+      "tag": "BUTTON",
+      "text": "Complete",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 619,
+        "y": 1881,
+        "width": 89,
+        "height": 36
+      }
+    },
+    {
+      "state": "care-queue.desktop.dark.current-detail",
+      "selector": "a.rounded-md.bg-\\[\\#2f6b45\\].px-3",
+      "tag": "A",
+      "text": "Continue plan",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 1144,
+        "y": 1889,
+        "width": 118,
+        "height": 38
+      }
+    },
+    {
+      "state": "care-queue.desktop.dark.current-detail",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-3",
+      "tag": "BUTTON",
+      "text": "Complete",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 619,
+        "y": 2126,
+        "width": 89,
+        "height": 36
+      }
+    },
+    {
+      "state": "server-backup.desktop.dark.current-detail",
+      "selector": "a.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "A",
+      "text": "Validated Definitions",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 288,
+        "y": 128,
+        "width": 170,
+        "height": 36
+      }
+    },
+    {
+      "state": "server-backup.desktop.dark.current-detail",
+      "selector": "a.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "A",
+      "text": "Application Updates",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 466,
+        "y": 128,
+        "width": 167,
+        "height": 36
+      }
+    },
+    {
+      "state": "server-backup.desktop.dark.current-detail",
+      "selector": "a.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "A",
+      "text": "Incident History",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 641,
+        "y": 128,
+        "width": 138,
+        "height": 36
+      }
+    },
+    {
+      "state": "server-backup.desktop.dark.current-detail",
+      "selector": "a.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "A",
+      "text": "Event Processing",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 787,
+        "y": 128,
+        "width": 148,
+        "height": 36
+      }
+    },
+    {
+      "state": "server-backup.desktop.dark.current-detail",
+      "selector": "a.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "A",
+      "text": "Image Moderation",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 943,
+        "y": 128,
+        "width": 153,
+        "height": 36
+      }
+    },
+    {
+      "state": "server-backup.desktop.dark.current-detail",
+      "selector": "a.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "A",
+      "text": "AI Curator",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 1105,
+        "y": 128,
+        "width": 100,
+        "height": 36
+      }
+    },
+    {
+      "state": "server-backup.desktop.dark.current-detail",
+      "selector": "a.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "A",
+      "text": "Care Cadence Research",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 1213,
+        "y": 128,
+        "width": 193,
+        "height": 36
+      }
+    },
+    {
+      "state": "server-backup.desktop.dark.current-detail",
+      "selector": "a.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "A",
+      "text": "Orphaned Images",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 288,
+        "y": 172,
+        "width": 151,
+        "height": 36
+      }
+    },
+    {
+      "state": "server-backup.desktop.dark.current-detail",
+      "selector": "a.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "A",
+      "text": "Collections",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 447,
+        "y": 172,
+        "width": 107,
+        "height": 36
+      }
+    },
+    {
+      "state": "server-backup.desktop.dark.current-detail",
+      "selector": "a.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "A",
+      "text": "Users",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 562,
+        "y": 172,
+        "width": 71,
+        "height": 36
+      }
+    },
+    {
+      "state": "server-backup.desktop.dark.current-detail",
+      "selector": "a.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "A",
+      "text": "Application Updates",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 997,
+        "y": 389,
+        "width": 167,
+        "height": 36
+      }
+    },
+    {
+      "state": "server-backup.desktop.dark.current-detail",
+      "selector": "a.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "A",
+      "text": "Open Incident History",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 1209,
+        "y": 389,
+        "width": 178,
+        "height": 36
+      }
+    },
+    {
+      "state": "server-backup.desktop.dark.current-detail",
+      "selector": "a.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "A",
+      "text": "Toggle AI availability",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 1217,
+        "y": 1157,
+        "width": 170,
+        "height": 36
+      }
+    },
+    {
+      "state": "server-backup.desktop.dark.current-detail",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Save maintenance mode",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 322,
+        "y": 3096,
+        "width": 196,
+        "height": 36
+      }
+    },
+    {
+      "state": "server-backup.desktop.dark.current-detail",
+      "selector": "h4.font-serif.text-lg.font-semibold",
+      "tag": "H4",
+      "text": "Backup storage",
+      "foreground": "rgb(238, 231, 215)",
+      "effectiveBackground": [
+        245,
+        247,
+        238
+      ],
+      "ratio": 1.14,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 326,
+        "y": 3300,
+        "width": 1044,
+        "height": 28
+      }
+    },
+    {
+      "state": "server-backup.desktop.dark.current-detail",
+      "selector": "p",
+      "tag": "P",
+      "text": "Live guest filesystem measurements for the configured backup directory. Ubuntu free space does not measure or shrink the VirtualBox disk file on Windows.",
+      "foreground": "rgb(238, 231, 215)",
+      "effectiveBackground": [
+        245,
+        247,
+        238
+      ],
+      "ratio": 1.14,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 326,
+        "y": 3340,
+        "width": 1044,
+        "height": 20
+      }
+    },
+    {
+      "state": "server-backup.desktop.dark.current-detail",
+      "selector": "p.text-xs",
+      "tag": "P",
+      "text": "Last checked: Not measured yet. PostgreSQL records have no recorded-size field; recorded-versus-actual size comparison is unavailable.",
+      "foreground": "rgb(238, 231, 215)",
+      "effectiveBackground": [
+        245,
+        247,
+        238
+      ],
+      "ratio": 1.14,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 326,
+        "y": 3442,
+        "width": 1044,
+        "height": 16
+      }
+    },
+    {
+      "state": "server-backup.desktop.dark.current-detail",
+      "selector": "p",
+      "tag": "P",
+      "text": "Backup storage could not be measured. Check server logs and the backup mount.",
+      "foreground": "rgb(238, 231, 215)",
+      "effectiveBackground": [
+        245,
+        247,
+        238
+      ],
+      "ratio": 1.14,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 326,
+        "y": 3520,
+        "width": 1044,
+        "height": 20
+      }
+    },
+    {
+      "state": "server-backup.desktop.dark.current-detail",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Request sitewide backup",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 322,
+        "y": 3788,
+        "width": 202,
+        "height": 36
+      }
+    },
+    {
+      "state": "server-backup.desktop.dark.current-detail",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].text-sm",
+      "tag": "BUTTON",
+      "text": "Preview cleanup",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 653,
+        "y": 3965,
+        "width": 134,
+        "height": 32
+      }
+    },
+    {
+      "state": "cadence-dialog.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].text-sm",
+      "tag": "BUTTON",
+      "text": "Add another alias",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 309,
+        "y": 1777,
+        "width": 141,
+        "height": 32
+      }
+    },
+    {
+      "state": "cadence-dialog.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Save changes",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 458,
+        "y": 1775,
+        "width": 126,
+        "height": 36
+      }
+    },
+    {
+      "state": "cadence-dialog.desktop.dark.current",
+      "selector": "button.min-h-11.rounded-md.bg-\\[\\#2f6b45\\]",
+      "tag": "BUTTON",
+      "text": "Save cadences",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 389,
+        "y": 2556,
+        "width": 147,
+        "height": 44
+      }
+    },
+    {
+      "state": "cadence-dialog.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Research repotting windows",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 309,
+        "y": 2638,
+        "width": 222,
+        "height": 36
+      }
+    },
+    {
+      "state": "cadence-dialog.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Save changes",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 309,
+        "y": 3176,
+        "width": 126,
+        "height": 36
+      }
+    },
+    {
+      "state": "cadence-dialog.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Upload type image",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 640,
+        "y": 7672,
+        "width": 158,
+        "height": 36
+      }
+    },
+    {
+      "state": "cadence-dialog.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Set as type image",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 1089,
+        "y": 7448,
+        "width": 174,
+        "height": 28
+      }
+    },
+    {
+      "state": "cadence-dialog.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Nominate for Validation",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 309,
+        "y": 8010,
+        "width": 188,
+        "height": 36
+      }
+    },
+    {
+      "state": "cadence-dialog.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].text-sm",
+      "tag": "BUTTON",
+      "text": "Add another alias",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 33,
+        "y": 3492,
+        "width": 141,
+        "height": 32
+      }
+    },
+    {
+      "state": "cadence-dialog.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Save changes",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 182,
+        "y": 3490,
+        "width": 126,
+        "height": 36
+      }
+    },
+    {
+      "state": "cadence-dialog.mobile.dark.current",
+      "selector": "button.min-h-11.rounded-md.bg-\\[\\#2f6b45\\]",
+      "tag": "BUTTON",
+      "text": "Save cadences",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 40,
+        "y": 2500,
+        "width": 147,
+        "height": 44
+      }
+    },
+    {
+      "state": "cadence-dialog.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Research repotting windows",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 33,
+        "y": 4820,
+        "width": 222,
+        "height": 36
+      }
+    },
+    {
+      "state": "cadence-dialog.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Save changes",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 33,
+        "y": 5795,
+        "width": 126,
+        "height": 36
+      }
+    },
+    {
+      "state": "cadence-dialog.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Upload type image",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 33,
+        "y": 13086,
+        "width": 158,
+        "height": 36
+      }
+    },
+    {
+      "state": "cadence-dialog.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Set as type image",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 55,
+        "y": 13456,
+        "width": 174,
+        "height": 28
+      }
+    },
+    {
+      "state": "cadence-dialog.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Nominate for Validation",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 33,
+        "y": 13880,
+        "width": 188,
+        "height": 36
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Record substrate",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 765,
+        "y": 1469,
+        "width": 146,
+        "height": 36
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.min-h-11.rounded.bg-\\[\\#2f6b45\\]",
+      "tag": "BUTTON",
+      "text": "Save photo",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 322,
+        "y": 2707,
+        "width": 119,
+        "height": 44
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Save caption",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 331,
+        "y": 3155,
+        "width": 140,
+        "height": 28
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Save framing",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 331,
+        "y": 3772,
+        "width": 140,
+        "height": 28
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Start quarantine",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 322,
+        "y": 6415,
+        "width": 140,
+        "height": 36
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Start workflow",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 977,
+        "y": 6563,
+        "width": 130,
+        "height": 36
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Log watering",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 322,
+        "y": 7064,
+        "width": 507,
+        "height": 57
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Add condition",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 867,
+        "y": 7084,
+        "width": 507,
+        "height": 36
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Save",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 1309,
+        "y": 7256,
+        "width": 65,
+        "height": 36
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "a.rounded-md.bg-\\[\\#2f6b45\\].px-3",
+      "tag": "A",
+      "text": "Start plan",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 1307,
+        "y": 7341,
+        "width": 80,
+        "height": 30
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Ask Green Thumb",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 322,
+        "y": 7690,
+        "width": 1052,
+        "height": 36
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "p.text-xs.font-bold.uppercase",
+      "tag": "P",
+      "text": "Location compatibility",
+      "foreground": "rgb(238, 231, 215)",
+      "effectiveBackground": [
+        202,
+        203,
+        200
+      ],
+      "ratio": 1.32,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [
+        "image or gradient",
+        "root gradient/canvas estimate"
+      ],
+      "rect": {
+        "x": 765,
+        "y": 8296,
+        "width": 234,
+        "height": 16
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "p.mt-1.font-serif.text-xl",
+      "tag": "P",
+      "text": "Not enough information",
+      "foreground": "rgb(238, 231, 215)",
+      "effectiveBackground": [
+        202,
+        203,
+        200
+      ],
+      "ratio": 1.32,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [
+        "image or gradient",
+        "root gradient/canvas estimate"
+      ],
+      "rect": {
+        "x": 765,
+        "y": 8316,
+        "width": 234,
+        "height": 28
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "span.rounded-full.border.border-current\\/20",
+      "tag": "SPAN",
+      "text": "Advisory",
+      "foreground": "rgb(238, 231, 215)",
+      "effectiveBackground": [
+        223,
+        224,
+        222
+      ],
+      "ratio": 1.08,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [
+        "image or gradient",
+        "root gradient/canvas estimate"
+      ],
+      "rect": {
+        "x": 1300,
+        "y": 8296,
+        "width": 74,
+        "height": 26
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "p.mt-2.text-sm",
+      "tag": "P",
+      "text": "There is not enough structured data for a reliable comparison.",
+      "foreground": "rgb(238, 231, 215)",
+      "effectiveBackground": [
+        202,
+        203,
+        200
+      ],
+      "ratio": 1.32,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [
+        "image or gradient",
+        "root gradient/canvas estimate"
+      ],
+      "rect": {
+        "x": 765,
+        "y": 8352,
+        "width": 609,
+        "height": 20
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "p.mt-2.text-xs.opacity-80",
+      "tag": "P",
+      "text": "Missing comparison data: Temperature, Nighttime temperature, Humidity, Light measurement, Photoperiod, Light intensity, Light exposure, Airflow, Stability.",
+      "foreground": "rgb(238, 231, 215)",
+      "effectiveBackground": [
+        202,
+        203,
+        200
+      ],
+      "ratio": 1.32,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [
+        "group opacity",
+        "image or gradient",
+        "root gradient/canvas estimate"
+      ],
+      "rect": {
+        "x": 765,
+        "y": 9230,
+        "width": 609,
+        "height": 32
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Save environmental requirements",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 765,
+        "y": 9792,
+        "width": 256,
+        "height": 36
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Save specimen fertilizer override",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 765,
+        "y": 10018,
+        "width": 252,
+        "height": 36
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Save override",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 847,
+        "y": 10412,
+        "width": 103,
+        "height": 28
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Save override",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 840,
+        "y": 10479,
+        "width": 103,
+        "height": 28
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Save override",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 860,
+        "y": 10546,
+        "width": 103,
+        "height": 28
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Save override",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 880,
+        "y": 10672,
+        "width": 103,
+        "height": 28
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Save override",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 1178,
+        "y": 10471,
+        "width": 103,
+        "height": 28
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Save override",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 1212,
+        "y": 10558,
+        "width": 103,
+        "height": 28
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Save override",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 865,
+        "y": 10836,
+        "width": 103,
+        "height": 28
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Save override",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 1160,
+        "y": 10836,
+        "width": 103,
+        "height": 28
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Save override",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 928,
+        "y": 11000,
+        "width": 103,
+        "height": 28
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Save override",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 1176,
+        "y": 11000,
+        "width": 103,
+        "height": 28
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Save override",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 1189,
+        "y": 11067,
+        "width": 103,
+        "height": 28
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Save override",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 1244,
+        "y": 11231,
+        "width": 103,
+        "height": 28
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Save override",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 1179,
+        "y": 11298,
+        "width": 103,
+        "height": 28
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Save override",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 836,
+        "y": 11442,
+        "width": 103,
+        "height": 28
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Save override",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 1264,
+        "y": 11442,
+        "width": 103,
+        "height": 28
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Save override",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 1243,
+        "y": 11529,
+        "width": 103,
+        "height": 28
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Save override",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 893,
+        "y": 11673,
+        "width": 103,
+        "height": 28
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Mark suspected sport",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 322,
+        "y": 8367,
+        "width": 359,
+        "height": 36
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "p.text-sm.text-neutral-600",
+      "tag": "P",
+      "text": "No parent propagation recorded.",
+      "foreground": "rgb(82, 82, 82)",
+      "effectiveBackground": [
+        29,
+        36,
+        26
+      ],
+      "ratio": 2.05,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [
+        "image or gradient",
+        "root gradient/canvas estimate"
+      ],
+      "rect": {
+        "x": 636,
+        "y": 11648,
+        "width": 347,
+        "height": 20
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Follow Specimen \u00b7 0",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 1040,
+        "y": 11918,
+        "width": 139,
+        "height": 28
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Follow Lineage \u00b7 0",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 1187,
+        "y": 11918,
+        "width": 127,
+        "height": 28
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Follow Plant type \u00b7 0",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 1040,
+        "y": 11954,
+        "width": 140,
+        "height": 28
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Add note",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 309,
+        "y": 13699,
+        "width": 269,
+        "height": 36
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Create reminder",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 649,
+        "y": 14033,
+        "width": 321,
+        "height": 36
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Complete",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 649,
+        "y": 14163,
+        "width": 79,
+        "height": 28
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "p.mb-4.text-sm.text-neutral-600",
+      "tag": "P",
+      "text": "Open a bloom when it starts, mark peak later, then close it when finished. Photos can be added to the bloom event at any stage.",
+      "foreground": "rgb(82, 82, 82)",
+      "effectiveBackground": [
+        29,
+        36,
+        26
+      ],
+      "ratio": 2.05,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [
+        "image or gradient",
+        "root gradient/canvas estimate"
+      ],
+      "rect": {
+        "x": 309,
+        "y": 11894,
+        "width": 673,
+        "height": 40
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Open bloom event",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 326,
+        "y": 12175,
+        "width": 639,
+        "height": 36
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "p.text-sm.text-neutral-600",
+      "tag": "P",
+      "text": "Status: Peaked / open",
+      "foreground": "rgb(82, 82, 82)",
+      "effectiveBackground": [
+        29,
+        36,
+        26
+      ],
+      "ratio": 2.05,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [
+        "image or gradient",
+        "root gradient/canvas estimate"
+      ],
+      "rect": {
+        "x": 326,
+        "y": 12293,
+        "width": 210,
+        "height": 20
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "span.min-w-0.truncate",
+      "tag": "SPAN",
+      "text": "Bloom end date",
+      "foreground": "rgb(238, 231, 215)",
+      "effectiveBackground": [
+        250,
+        250,
+        250
+      ],
+      "ratio": 1.18,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 338,
+        "y": 12401,
+        "width": 104,
+        "height": 20
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "span.min-w-0.truncate",
+      "tag": "SPAN",
+      "text": "Closing notes",
+      "foreground": "rgb(238, 231, 215)",
+      "effectiveBackground": [
+        250,
+        250,
+        250
+      ],
+      "ratio": 1.18,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 338,
+        "y": 12469,
+        "width": 91,
+        "height": 20
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Close bloom event",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 338,
+        "y": 12581,
+        "width": 615,
+        "height": 36
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "label.grid.gap-1.text-sm",
+      "tag": "LABEL",
+      "text": "Image file",
+      "foreground": "rgb(238, 231, 215)",
+      "effectiveBackground": [
+        109,
+        124,
+        105
+      ],
+      "ratio": 3.61,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 351,
+        "y": 12670,
+        "width": 589,
+        "height": 64
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "span.flex.h-full.w-full",
+      "tag": "SPAN",
+      "text": "Choose an image to preview framing",
+      "foreground": "rgb(189, 181, 165)",
+      "effectiveBackground": [
+        70,
+        89,
+        65
+      ],
+      "ratio": 3.75,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 352,
+        "y": 12747,
+        "width": 254,
+        "height": 190
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "p.text-stone-600",
+      "tag": "P",
+      "text": "Click the preview to set the focus point, then tighten or loosen the crop for cards and previews.",
+      "foreground": "rgb(189, 181, 165)",
+      "effectiveBackground": [
+        109,
+        124,
+        105
+      ],
+      "ratio": 2.18,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 615,
+        "y": 12746,
+        "width": 325,
+        "height": 60
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "label.grid.gap-1.font-medium",
+      "tag": "LABEL",
+      "text": "Crop",
+      "foreground": "rgb(238, 231, 215)",
+      "effectiveBackground": [
+        109,
+        124,
+        105
+      ],
+      "ratio": 3.61,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 615,
+        "y": 12818,
+        "width": 325,
+        "height": 60
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "span.text-xs.font-normal.text-stone-500",
+      "tag": "SPAN",
+      "text": "1.00x",
+      "foreground": "rgb(189, 181, 165)",
+      "effectiveBackground": [
+        109,
+        124,
+        105
+      ],
+      "ratio": 2.18,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 615,
+        "y": 12862,
+        "width": 325,
+        "height": 16
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "span.min-w-0.truncate",
+      "tag": "SPAN",
+      "text": "Caption",
+      "foreground": "rgb(238, 231, 215)",
+      "effectiveBackground": [
+        250,
+        250,
+        250
+      ],
+      "ratio": 1.18,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 338,
+        "y": 12959,
+        "width": 52,
+        "height": 20
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Add bloom photo",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 338,
+        "y": 13025,
+        "width": 615,
+        "height": 36
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "p.mb-2.text-sm.font-medium",
+      "tag": "P",
+      "text": "Bloom reminders",
+      "foreground": "rgb(238, 231, 215)",
+      "effectiveBackground": [
+        250,
+        250,
+        250
+      ],
+      "ratio": 1.18,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 338,
+        "y": 13101,
+        "width": 615,
+        "height": 20
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "span.min-w-0.truncate",
+      "tag": "SPAN",
+      "text": "Title",
+      "foreground": "rgb(238, 231, 215)",
+      "effectiveBackground": [
+        250,
+        250,
+        250
+      ],
+      "ratio": 1.18,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 338,
+        "y": 13129,
+        "width": 29,
+        "height": 20
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "span.min-w-0.truncate",
+      "tag": "SPAN",
+      "text": "Send at",
+      "foreground": "rgb(238, 231, 215)",
+      "effectiveBackground": [
+        250,
+        250,
+        250
+      ],
+      "ratio": 1.18,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 338,
+        "y": 13195,
+        "width": 51,
+        "height": 20
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "span.min-w-0.truncate",
+      "tag": "SPAN",
+      "text": "Repeat",
+      "foreground": "rgb(238, 231, 215)",
+      "effectiveBackground": [
+        250,
+        250,
+        250
+      ],
+      "ratio": 1.18,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 338,
+        "y": 13263,
+        "width": 47,
+        "height": 20
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "span.min-w-0.truncate",
+      "tag": "SPAN",
+      "text": "Notes",
+      "foreground": "rgb(238, 231, 215)",
+      "effectiveBackground": [
+        250,
+        250,
+        250
+      ],
+      "ratio": 1.18,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 338,
+        "y": 13328,
+        "width": 39,
+        "height": 20
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Create bloom reminder",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 338,
+        "y": 13440,
+        "width": 615,
+        "height": 36
+      }
+    },
+    {
+      "state": "instance-expanded.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Archive plant",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 309,
+        "y": 14474,
+        "width": 672,
+        "height": 36
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Record substrate",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 46,
+        "y": 2612,
+        "width": 146,
+        "height": 36
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.min-h-11.rounded.bg-\\[\\#2f6b45\\]",
+      "tag": "BUTTON",
+      "text": "Save photo",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 46,
+        "y": 3874,
+        "width": 119,
+        "height": 44
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Save caption",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 55,
+        "y": 4375,
+        "width": 280,
+        "height": 28
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Save framing",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 55,
+        "y": 4875,
+        "width": 280,
+        "height": 28
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Start quarantine",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 46,
+        "y": 8479,
+        "width": 140,
+        "height": 36
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Start workflow",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 33,
+        "y": 8699,
+        "width": 130,
+        "height": 36
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Log watering",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 46,
+        "y": 9398,
+        "width": 298,
+        "height": 36
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Add condition",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 46,
+        "y": 9690,
+        "width": 298,
+        "height": 36
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Save",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 46,
+        "y": 10036,
+        "width": 298,
+        "height": 36
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "a.rounded-md.bg-\\[\\#2f6b45\\].px-3",
+      "tag": "A",
+      "text": "Start plan",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 180,
+        "y": 10178,
+        "width": 80,
+        "height": 30
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Ask Green Thumb",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 46,
+        "y": 10556,
+        "width": 298,
+        "height": 36
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "p.text-xs.font-bold.uppercase",
+      "tag": "P",
+      "text": "Location compatibility",
+      "foreground": "rgb(238, 231, 215)",
+      "effectiveBackground": [
+        202,
+        203,
+        200
+      ],
+      "ratio": 1.32,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [
+        "image or gradient",
+        "root gradient/canvas estimate"
+      ],
+      "rect": {
+        "x": 46,
+        "y": 11206,
+        "width": 234,
+        "height": 16
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "p.mt-1.font-serif.text-xl",
+      "tag": "P",
+      "text": "Not enough information",
+      "foreground": "rgb(238, 231, 215)",
+      "effectiveBackground": [
+        202,
+        203,
+        200
+      ],
+      "ratio": 1.32,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [
+        "image or gradient",
+        "root gradient/canvas estimate"
+      ],
+      "rect": {
+        "x": 46,
+        "y": 11226,
+        "width": 234,
+        "height": 28
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "span.rounded-full.border.border-current\\/20",
+      "tag": "SPAN",
+      "text": "Advisory",
+      "foreground": "rgb(238, 231, 215)",
+      "effectiveBackground": [
+        223,
+        224,
+        222
+      ],
+      "ratio": 1.08,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [
+        "image or gradient",
+        "root gradient/canvas estimate"
+      ],
+      "rect": {
+        "x": 46,
+        "y": 11262,
+        "width": 74,
+        "height": 26
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "p.mt-2.text-sm",
+      "tag": "P",
+      "text": "There is not enough structured data for a reliable comparison.",
+      "foreground": "rgb(238, 231, 215)",
+      "effectiveBackground": [
+        202,
+        203,
+        200
+      ],
+      "ratio": 1.32,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [
+        "image or gradient",
+        "root gradient/canvas estimate"
+      ],
+      "rect": {
+        "x": 46,
+        "y": 11296,
+        "width": 298,
+        "height": 40
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "p.mt-2.text-xs.opacity-80",
+      "tag": "P",
+      "text": "Missing comparison data: Temperature, Nighttime temperature, Humidity, Light measurement, Photoperiod, Light intensity, Light exposure, Airflow, Stability.",
+      "foreground": "rgb(238, 231, 215)",
+      "effectiveBackground": [
+        202,
+        203,
+        200
+      ],
+      "ratio": 1.32,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [
+        "group opacity",
+        "image or gradient",
+        "root gradient/canvas estimate"
+      ],
+      "rect": {
+        "x": 46,
+        "y": 12354,
+        "width": 298,
+        "height": 64
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Save environmental requirements",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 46,
+        "y": 13747,
+        "width": 256,
+        "height": 36
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Save specimen fertilizer override",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 46,
+        "y": 14043,
+        "width": 252,
+        "height": 36
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Save override",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 124,
+        "y": 14517,
+        "width": 73,
+        "height": 44
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Save override",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 118,
+        "y": 14564,
+        "width": 73,
+        "height": 44
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Save override",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 137,
+        "y": 14651,
+        "width": 73,
+        "height": 44
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Save override",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 157,
+        "y": 14777,
+        "width": 73,
+        "height": 44
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Save override",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 144,
+        "y": 14933,
+        "width": 73,
+        "height": 44
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Save override",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 179,
+        "y": 15040,
+        "width": 73,
+        "height": 44
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Save override",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 143,
+        "y": 15156,
+        "width": 73,
+        "height": 44
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Save override",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 127,
+        "y": 15312,
+        "width": 73,
+        "height": 44
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Save override",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 206,
+        "y": 15468,
+        "width": 73,
+        "height": 44
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Save override",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 142,
+        "y": 15604,
+        "width": 73,
+        "height": 44
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Save override",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 156,
+        "y": 15671,
+        "width": 73,
+        "height": 44
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Save override",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 211,
+        "y": 16011,
+        "width": 73,
+        "height": 44
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Save override",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 146,
+        "y": 16058,
+        "width": 73,
+        "height": 44
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Save override",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 114,
+        "y": 16174,
+        "width": 73,
+        "height": 44
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Save override",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 231,
+        "y": 16370,
+        "width": 73,
+        "height": 44
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Save override",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 210,
+        "y": 16437,
+        "width": 73,
+        "height": 44
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Save override",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 171,
+        "y": 16573,
+        "width": 73,
+        "height": 44
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Mark suspected sport",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 46,
+        "y": 16610,
+        "width": 298,
+        "height": 36
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "p.text-sm.text-neutral-600",
+      "tag": "P",
+      "text": "No parent propagation recorded.",
+      "foreground": "rgb(82, 82, 82)",
+      "effectiveBackground": [
+        29,
+        36,
+        26
+      ],
+      "ratio": 2.05,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [
+        "image or gradient",
+        "root gradient/canvas estimate"
+      ],
+      "rect": {
+        "x": 33,
+        "y": 16741,
+        "width": 324,
+        "height": 20
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Follow Specimen \u00b7 0",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 33,
+        "y": 17104,
+        "width": 139,
+        "height": 28
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Follow Lineage \u00b7 0",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 180,
+        "y": 17104,
+        "width": 127,
+        "height": 28
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Follow Plant type \u00b7 0",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 33,
+        "y": 17140,
+        "width": 140,
+        "height": 28
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Add note",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 33,
+        "y": 17564,
+        "width": 324,
+        "height": 36
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Create reminder",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 46,
+        "y": 18204,
+        "width": 298,
+        "height": 36
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Complete",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 46,
+        "y": 18354,
+        "width": 79,
+        "height": 28
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "p.mb-4.text-sm.text-neutral-600",
+      "tag": "P",
+      "text": "Open a bloom when it starts, mark peak later, then close it when finished. Photos can be added to the bloom event at any stage.",
+      "foreground": "rgb(82, 82, 82)",
+      "effectiveBackground": [
+        29,
+        36,
+        26
+      ],
+      "ratio": 2.05,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [
+        "image or gradient",
+        "root gradient/canvas estimate"
+      ],
+      "rect": {
+        "x": 33,
+        "y": 18471,
+        "width": 324,
+        "height": 60
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Open bloom event",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 50,
+        "y": 18772,
+        "width": 290,
+        "height": 36
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "p.text-sm.text-neutral-600",
+      "tag": "P",
+      "text": "Status: Peaked / open",
+      "foreground": "rgb(82, 82, 82)",
+      "effectiveBackground": [
+        29,
+        36,
+        26
+      ],
+      "ratio": 2.05,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [
+        "image or gradient",
+        "root gradient/canvas estimate"
+      ],
+      "rect": {
+        "x": 50,
+        "y": 18890,
+        "width": 210,
+        "height": 20
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "span.min-w-0.truncate",
+      "tag": "SPAN",
+      "text": "Bloom end date",
+      "foreground": "rgb(238, 231, 215)",
+      "effectiveBackground": [
+        250,
+        250,
+        250
+      ],
+      "ratio": 1.18,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 62,
+        "y": 18999,
+        "width": 104,
+        "height": 20
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "span.min-w-0.truncate",
+      "tag": "SPAN",
+      "text": "Closing notes",
+      "foreground": "rgb(238, 231, 215)",
+      "effectiveBackground": [
+        250,
+        250,
+        250
+      ],
+      "ratio": 1.18,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 62,
+        "y": 19067,
+        "width": 91,
+        "height": 20
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Close bloom event",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 62,
+        "y": 19179,
+        "width": 266,
+        "height": 36
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "label.grid.gap-1.text-sm",
+      "tag": "LABEL",
+      "text": "Image file",
+      "foreground": "rgb(238, 231, 215)",
+      "effectiveBackground": [
+        109,
+        124,
+        105
+      ],
+      "ratio": 3.61,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 75,
+        "y": 19268,
+        "width": 240,
+        "height": 64
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "span.flex.h-full.w-full",
+      "tag": "SPAN",
+      "text": "Choose an image to preview framing",
+      "foreground": "rgb(189, 181, 165)",
+      "effectiveBackground": [
+        70,
+        89,
+        65
+      ],
+      "ratio": 3.75,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 76,
+        "y": 19345,
+        "width": 238,
+        "height": 178
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "p.text-stone-600",
+      "tag": "P",
+      "text": "Click the preview to set the focus point, then tighten or loosen the crop for cards and previews.",
+      "foreground": "rgb(189, 181, 165)",
+      "effectiveBackground": [
+        109,
+        124,
+        105
+      ],
+      "ratio": 2.18,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 75,
+        "y": 19532,
+        "width": 240,
+        "height": 60
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "label.grid.gap-1.font-medium",
+      "tag": "LABEL",
+      "text": "Crop",
+      "foreground": "rgb(238, 231, 215)",
+      "effectiveBackground": [
+        109,
+        124,
+        105
+      ],
+      "ratio": 3.61,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 75,
+        "y": 19604,
+        "width": 240,
+        "height": 60
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "span.text-xs.font-normal.text-stone-500",
+      "tag": "SPAN",
+      "text": "1.00x",
+      "foreground": "rgb(189, 181, 165)",
+      "effectiveBackground": [
+        109,
+        124,
+        105
+      ],
+      "ratio": 2.18,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 75,
+        "y": 19648,
+        "width": 240,
+        "height": 16
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "span.min-w-0.truncate",
+      "tag": "SPAN",
+      "text": "Caption",
+      "foreground": "rgb(238, 231, 215)",
+      "effectiveBackground": [
+        250,
+        250,
+        250
+      ],
+      "ratio": 1.18,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 62,
+        "y": 19727,
+        "width": 52,
+        "height": 20
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Add bloom photo",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 62,
+        "y": 19793,
+        "width": 266,
+        "height": 36
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "p.mb-2.text-sm.font-medium",
+      "tag": "P",
+      "text": "Bloom reminders",
+      "foreground": "rgb(238, 231, 215)",
+      "effectiveBackground": [
+        250,
+        250,
+        250
+      ],
+      "ratio": 1.18,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 62,
+        "y": 19869,
+        "width": 266,
+        "height": 20
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "span.min-w-0.truncate",
+      "tag": "SPAN",
+      "text": "Title",
+      "foreground": "rgb(238, 231, 215)",
+      "effectiveBackground": [
+        250,
+        250,
+        250
+      ],
+      "ratio": 1.18,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 62,
+        "y": 19897,
+        "width": 29,
+        "height": 20
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "span.min-w-0.truncate",
+      "tag": "SPAN",
+      "text": "Send at",
+      "foreground": "rgb(238, 231, 215)",
+      "effectiveBackground": [
+        250,
+        250,
+        250
+      ],
+      "ratio": 1.18,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 62,
+        "y": 19963,
+        "width": 51,
+        "height": 20
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "span.min-w-0.truncate",
+      "tag": "SPAN",
+      "text": "Repeat",
+      "foreground": "rgb(238, 231, 215)",
+      "effectiveBackground": [
+        250,
+        250,
+        250
+      ],
+      "ratio": 1.18,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 62,
+        "y": 20031,
+        "width": 47,
+        "height": 20
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "span.min-w-0.truncate",
+      "tag": "SPAN",
+      "text": "Notes",
+      "foreground": "rgb(238, 231, 215)",
+      "effectiveBackground": [
+        250,
+        250,
+        250
+      ],
+      "ratio": 1.18,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 62,
+        "y": 20096,
+        "width": 39,
+        "height": 20
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Create bloom reminder",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 62,
+        "y": 20208,
+        "width": 266,
+        "height": 36
+      }
+    },
+    {
+      "state": "instance-expanded.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Archive plant",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 33,
+        "y": 20533,
+        "width": 324,
+        "height": 36
+      }
+    },
+    {
+      "state": "login.keyboard-focus.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Sign in",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 645,
+        "y": 389,
+        "width": 406,
+        "height": 36
+      }
+    },
+    {
+      "state": "login.keyboard-focus.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Send sign-in link",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 645,
+        "y": 653,
+        "width": 406,
+        "height": 36
+      }
+    },
+    {
+      "state": "plant-grid.viewer.mobile.dark.current",
+      "selector": "button.rounded-md.border.border-\\[\\#2f6b45\\]",
+      "tag": "BUTTON",
+      "text": "Apply",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 16,
+        "y": 195,
+        "width": 66,
+        "height": 34
+      }
+    },
+    {
+      "state": "plant-grid.viewer.mobile.dark.current",
+      "selector": "a.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "A",
+      "text": "Validated",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 16,
+        "y": 237,
+        "width": 94,
+        "height": 36
+      }
+    },
+    {
+      "state": "plant-grid.viewer.mobile.dark.current",
+      "selector": "a.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "A",
+      "text": "Search",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 118,
+        "y": 237,
+        "width": 79,
+        "height": 36
+      }
+    },
+    {
+      "state": "plant-grid.viewer.mobile.dark.current",
+      "selector": "button.rounded.px-2\\.5.py-1",
+      "tag": "BUTTON",
+      "text": "None",
+      "foreground": "rgb(155, 195, 138)",
+      "effectiveBackground": [
+        220,
+        232,
+        212
+      ],
+      "ratio": 1.56,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 71,
+        "y": 1187,
+        "width": 51,
+        "height": 24
+      }
+    },
+    {
+      "state": "plant-grid.viewer.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Follow type \u00b7 0",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 29,
+        "y": 1916,
+        "width": 332,
+        "height": 28
+      }
+    },
+    {
+      "state": "plant-grid.viewer.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Follow type \u00b7 0",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 29,
+        "y": 2494,
+        "width": 332,
+        "height": 28
+      }
+    },
+    {
+      "state": "plant-grid.viewer.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Follow type \u00b7 0",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 29,
+        "y": 3014,
+        "width": 332,
+        "height": 28
+      }
+    },
+    {
+      "state": "plant-grid.viewer.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Follow type \u00b7 0",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 29,
+        "y": 3592,
+        "width": 332,
+        "height": 28
+      }
+    },
+    {
+      "state": "plant-grid.viewer.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Follow type \u00b7 0",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 29,
+        "y": 4113,
+        "width": 332,
+        "height": 28
+      }
+    },
+    {
+      "state": "plant-grid.viewer.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Follow type \u00b7 0",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 29,
+        "y": 4633,
+        "width": 332,
+        "height": 28
+      }
+    },
+    {
+      "state": "plant-grid.viewer.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Follow type \u00b7 0",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 29,
+        "y": 5211,
+        "width": 332,
+        "height": 28
+      }
+    },
+    {
+      "state": "plant-grid.viewer.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Follow type \u00b7 0",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 29,
+        "y": 5732,
+        "width": 332,
+        "height": 28
+      }
+    },
+    {
+      "state": "plant-grid.viewer.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Follow type \u00b7 0",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 29,
+        "y": 6252,
+        "width": 332,
+        "height": 28
+      }
+    },
+    {
+      "state": "plant-grid.viewer.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].font-medium",
+      "tag": "BUTTON",
+      "text": "Follow type \u00b7 0",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 29,
+        "y": 7030,
+        "width": 332,
+        "height": 28
+      }
+    },
+    {
+      "state": "shared-controls.component.desktop.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Primary action",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 245,
+        "y": 529,
+        "width": 128,
+        "height": 36
+      }
+    },
+    {
+      "state": "shared-controls.component.mobile.dark.current",
+      "selector": "button.rounded-md.bg-\\[\\#2f6b45\\].px-4",
+      "tag": "BUTTON",
+      "text": "Primary action",
+      "foreground": "rgb(255, 253, 244)",
+      "effectiveBackground": [
+        79,
+        138,
+        93
+      ],
+      "ratio": 4.02,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 41,
+        "y": 585,
+        "width": 128,
+        "height": 36
+      }
+    }
+  ]
+}

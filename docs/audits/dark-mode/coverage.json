@@ -1,0 +1,4160 @@
+{
+  "sourceCommit": "952ab1b63e3c9cc19f0c9082c600f71089f93ee1",
+  "version": "0.2.0",
+  "capturedAt": "2026-11-18T16:15:28.896Z",
+  "viewports": {
+    "desktop": "1440\u00d7900",
+    "mobile": "390\u00d7844"
+  },
+  "scope": "100 route templates discovered; two viewport initial captures per route. 96 initial-state reviews, 3 redirect aliases, 1 sitter interior gap. Conditional states listed separately; no claim that all interactions or records were reviewed.",
+  "routes": [
+    {
+      "source": "app/account/page.tsx",
+      "pattern": "/account",
+      "url": "/account",
+      "missing": false,
+      "role": "collection manager",
+      "area": "account",
+      "id": "account",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/account",
+      "desktopScreenshot": "screenshots/current/account.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/account.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Account",
+      "majorVisualComponents": [
+        "PlantImage",
+        "PlantIdentificationHistoryList",
+        "ui",
+        "PushNotificationSettings"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/acquisitions/bulk/page.tsx",
+      "pattern": "/acquisitions/bulk",
+      "url": "/c/audit/acquisitions/bulk",
+      "missing": false,
+      "role": "collection manager",
+      "area": "acquisitions",
+      "id": "acquisitions-bulk",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/acquisitions/bulk",
+      "desktopScreenshot": "screenshots/current/acquisitions-bulk.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/acquisitions-bulk.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Bulk Acquisition",
+      "majorVisualComponents": [
+        "ui",
+        "LocationCompatibilitySelect",
+        "DistributorFields",
+        "PlantInstanceTypeSelect"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/acquisitions/page.tsx",
+      "pattern": "/acquisitions",
+      "url": "/c/audit/acquisitions",
+      "missing": false,
+      "role": "collection manager",
+      "area": "acquisitions",
+      "id": "acquisitions",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/acquisitions",
+      "desktopScreenshot": "screenshots/current/acquisitions.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/acquisitions.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Acquisition Pipeline",
+      "majorVisualComponents": [
+        "ui",
+        "PlantImage",
+        "PlantLocationCompatibilityPanel",
+        "LocationCompatibilitySelect",
+        "LifecycleDateFields",
+        "PlantInstanceTypeSelect",
+        "AcquisitionSourceChainFields",
+        "DistributorFields"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/activity/page.tsx",
+      "pattern": "/activity",
+      "url": "/c/audit/activity",
+      "missing": false,
+      "role": "collection manager",
+      "area": "activity",
+      "id": "activity",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/activity",
+      "desktopScreenshot": "screenshots/current/activity.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/activity.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Collection Activity",
+      "majorVisualComponents": [
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/archived/page.tsx",
+      "pattern": "/archived",
+      "url": "/c/audit/archived",
+      "missing": false,
+      "role": "collection manager",
+      "area": "archived",
+      "id": "archived",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/archived",
+      "desktopScreenshot": "screenshots/current/archived.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/archived.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Archived Plants",
+      "majorVisualComponents": [
+        "SortControl",
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/audit/page.tsx",
+      "pattern": "/audit",
+      "url": "/c/audit/audit",
+      "missing": false,
+      "role": "collection manager",
+      "area": "audit",
+      "id": "audit",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/audit",
+      "desktopScreenshot": "screenshots/current/audit.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/audit.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Audit Log",
+      "majorVisualComponents": [
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/blooms/page.tsx",
+      "pattern": "/blooms",
+      "url": "/c/audit/blooms",
+      "missing": false,
+      "role": "collection manager",
+      "area": "blooms",
+      "id": "blooms",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/blooms",
+      "desktopScreenshot": "screenshots/current/blooms.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/blooms.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Bloom Tracker",
+      "majorVisualComponents": [
+        "PlantImage",
+        "SortControl",
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/care-sheet/[token]/page.tsx",
+      "pattern": "/care-sheet/[token]",
+      "url": "/care-sheet/audit-public-sheet",
+      "missing": false,
+      "role": "collection manager",
+      "area": "care-sheet",
+      "id": "care-sheet-token",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/care-sheet/audit-public-sheet",
+      "desktopScreenshot": "screenshots/current/care-sheet-token.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/care-sheet-token.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "AxilDB Care Sheet",
+      "majorVisualComponents": [
+        "CareSheetView",
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/care-sheets/[id]/page.tsx",
+      "pattern": "/care-sheets/[id]",
+      "url": "/c/audit/care-sheets/cmwmbffk8002w8ijzofzm5xep",
+      "missing": false,
+      "role": "collection manager",
+      "area": "care-sheets",
+      "id": "care-sheets-id",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/care-sheets/[fixture-id]",
+      "desktopScreenshot": "screenshots/current/care-sheets-id.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/care-sheets-id.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Delete care sheet?",
+      "majorVisualComponents": [
+        "ConfirmDeleteButton",
+        "CareSheetView",
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/care-sheets/new/page.tsx",
+      "pattern": "/care-sheets/new",
+      "url": "/c/audit/care-sheets/new",
+      "missing": false,
+      "role": "collection manager",
+      "area": "care-sheets",
+      "id": "care-sheets-new",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/care-sheets/new",
+      "desktopScreenshot": "screenshots/current/care-sheets-new.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/care-sheets-new.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "New Care Sheet",
+      "majorVisualComponents": [
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/care-sheets/page.tsx",
+      "pattern": "/care-sheets",
+      "url": "/c/audit/care-sheets",
+      "missing": false,
+      "role": "collection manager",
+      "area": "care-sheets",
+      "id": "care-sheets",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/care-sheets",
+      "desktopScreenshot": "screenshots/current/care-sheets.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/care-sheets.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Care Sheets",
+      "majorVisualComponents": [
+        "ConfirmDeleteButton",
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/care/bulk/page.tsx",
+      "pattern": "/care/bulk",
+      "url": "/c/audit/care/bulk",
+      "missing": false,
+      "role": "collection manager",
+      "area": "care",
+      "id": "care-bulk",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/care/bulk",
+      "desktopScreenshot": "screenshots/current/care-bulk.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/care-bulk.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Bulk care by location",
+      "majorVisualComponents": [
+        "BulkCareEligibility",
+        "CareQueueOptimistic",
+        "BulkCareSelectionControls",
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/care/checklist/page.tsx",
+      "pattern": "/care/checklist",
+      "url": "/c/audit/care/checklist",
+      "missing": false,
+      "role": "collection manager",
+      "area": "care",
+      "id": "care-checklist",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/care/checklist",
+      "desktopScreenshot": "screenshots/current/care-checklist.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/care-checklist.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Weekly Greenhouse Checklist",
+      "majorVisualComponents": [
+        "CareQueueOptimistic",
+        "CareQueueChecklist"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/care/page.tsx",
+      "pattern": "/care",
+      "url": "/c/audit/care",
+      "missing": false,
+      "role": "collection manager",
+      "area": "care",
+      "id": "care",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/care",
+      "desktopScreenshot": "screenshots/current/care.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/care.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Today's Care",
+      "majorVisualComponents": [
+        "CareQueueOptimistic",
+        "CareQueueView"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": [
+        "DM-005",
+        "DM-006"
+      ]
+    },
+    {
+      "source": "app/care/quiet-day-review/page.tsx",
+      "pattern": "/care/quiet-day-review",
+      "url": "/c/audit/care/quiet-day-review?draft=%7B%22kind%22%3A%22set%22%2C%22date%22%3A%222026-11-20%22%7D",
+      "missing": false,
+      "role": "collection manager",
+      "area": "care",
+      "id": "care-quiet-day-review",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/care/quiet-day-review",
+      "desktopScreenshot": "screenshots/current/care-quiet-day-review.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/care-quiet-day-review.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Review Quiet Day scheduling",
+      "majorVisualComponents": [
+        "CareForecast"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/care/repotting/page.tsx",
+      "pattern": "/care/repotting",
+      "url": "/c/audit/care/repotting",
+      "missing": false,
+      "role": "collection manager",
+      "area": "care",
+      "id": "care-repotting",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/care/repotting",
+      "desktopScreenshot": "screenshots/current/care-repotting.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/care-repotting.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Repotting Planner",
+      "majorVisualComponents": [
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/care/sync/page.tsx",
+      "pattern": "/care/sync",
+      "url": "/c/audit/care/sync",
+      "missing": false,
+      "role": "collection manager",
+      "area": "care",
+      "id": "care-sync",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/care/sync",
+      "desktopScreenshot": "screenshots/current/care-sync.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/care-sync.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Care Schedule Sync",
+      "majorVisualComponents": [
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/collection-settings/page.tsx",
+      "pattern": "/collection-settings",
+      "url": "/c/audit/collection-settings",
+      "missing": false,
+      "role": "collection manager",
+      "area": "collection-settings",
+      "id": "collection-settings",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/collection-settings",
+      "desktopScreenshot": "screenshots/current/collection-settings.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/collection-settings.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Collection Settings",
+      "majorVisualComponents": [
+        "QuietDaysManager",
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/collections/new/page.tsx",
+      "pattern": "/collections/new",
+      "url": "/collections/new",
+      "missing": false,
+      "role": "collection manager",
+      "area": "collections",
+      "id": "collections-new",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": true,
+      "actualPath": "/server/collections/new",
+      "desktopScreenshot": "screenshots/current/collections-new.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/collections-new.mobile.dark.current.jpg",
+      "auditStatus": "Partially reviewed",
+      "reason": "Redirect/permission/challenge state captured; requested interior is not counted as reviewed.",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "New Collection",
+      "majorVisualComponents": [],
+      "reasonNotFullyReviewed": "Redirect alias; destination default captured.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/collections/page.tsx",
+      "pattern": "/collections",
+      "url": "/collections",
+      "missing": false,
+      "role": "collection manager",
+      "area": "collections",
+      "id": "collections",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/collections",
+      "desktopScreenshot": "screenshots/current/collections.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/collections.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Collections",
+      "majorVisualComponents": [
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/exhibit-subscription/confirm/page.tsx",
+      "pattern": "/exhibit-subscription/confirm",
+      "url": "/exhibit-subscription/confirm",
+      "missing": false,
+      "role": "anonymous",
+      "area": "exhibit-subscription",
+      "id": "exhibit-subscription-confirm",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/exhibit-subscription/confirm",
+      "desktopScreenshot": "screenshots/current/exhibit-subscription-confirm.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/exhibit-subscription-confirm.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Subscription unavailable",
+      "majorVisualComponents": [],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/exhibit-subscription/unsubscribe/page.tsx",
+      "pattern": "/exhibit-subscription/unsubscribe",
+      "url": "/exhibit-subscription/unsubscribe",
+      "missing": false,
+      "role": "anonymous",
+      "area": "exhibit-subscription",
+      "id": "exhibit-subscription-unsubscribe",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/exhibit-subscription/unsubscribe",
+      "desktopScreenshot": "screenshots/current/exhibit-subscription-unsubscribe.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/exhibit-subscription-unsubscribe.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Subscription unavailable",
+      "majorVisualComponents": [],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/exhibit/[slug]/page.tsx",
+      "pattern": "/exhibit/[slug]",
+      "url": "/exhibit/audit-exhibit",
+      "missing": false,
+      "role": "public",
+      "area": "exhibit",
+      "id": "exhibit-slug",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/exhibit/audit-exhibit",
+      "desktopScreenshot": "screenshots/current/exhibit-slug.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/exhibit-slug.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Botanical study \u2014 fictional exhibit",
+      "majorVisualComponents": [
+        "exhibits/CollectionExhibitView"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/exhibit/[slug]/print/page.tsx",
+      "pattern": "/exhibit/[slug]/print",
+      "url": "/exhibit/audit-exhibit/print",
+      "missing": false,
+      "role": "public",
+      "area": "exhibit",
+      "id": "exhibit-slug-print",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/exhibit/audit-exhibit/print",
+      "desktopScreenshot": "screenshots/current/exhibit-slug-print.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/exhibit-slug-print.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Botanical study \u2014 fictional exhibit",
+      "majorVisualComponents": [
+        "exhibits/CollectionExhibitView"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/exhibits/[id]/page.tsx",
+      "pattern": "/exhibits/[id]",
+      "url": "/c/audit/exhibits/cmwmbffkb00308ijzlc2smu23",
+      "missing": false,
+      "role": "collection manager",
+      "area": "exhibits",
+      "id": "exhibits-id",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/exhibits/[fixture-id]",
+      "desktopScreenshot": "screenshots/current/exhibits-id.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/exhibits-id.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Botanical study \u2014 fictional exhibit",
+      "majorVisualComponents": [
+        "exhibits/CollectionExhibitBuilder",
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/exhibits/page.tsx",
+      "pattern": "/exhibits",
+      "url": "/c/audit/exhibits",
+      "missing": false,
+      "role": "collection manager",
+      "area": "exhibits",
+      "id": "exhibits",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/exhibits",
+      "desktopScreenshot": "screenshots/current/exhibits.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/exhibits.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Collection Exhibits",
+      "majorVisualComponents": [
+        "exhibits/CopyPublicUrlButton",
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/fertilizers/page.tsx",
+      "pattern": "/fertilizers",
+      "url": "/c/audit/fertilizers",
+      "missing": false,
+      "role": "collection manager",
+      "area": "fertilizers",
+      "id": "fertilizers",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/fertilizers",
+      "desktopScreenshot": "screenshots/current/fertilizers.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/fertilizers.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Fertilizers",
+      "majorVisualComponents": [
+        "FertilizerProductMagicFillButton",
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/following/page.tsx",
+      "pattern": "/following",
+      "url": "/c/audit/following",
+      "missing": false,
+      "role": "collection manager",
+      "area": "following",
+      "id": "following",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/following",
+      "desktopScreenshot": "screenshots/current/following.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/following.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Following",
+      "majorVisualComponents": [
+        "ConfirmDeleteButton",
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/forgot-password/page.tsx",
+      "pattern": "/forgot-password",
+      "url": "/forgot-password",
+      "missing": false,
+      "role": "anonymous",
+      "area": "forgot-password",
+      "id": "forgot-password",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/forgot-password",
+      "desktopScreenshot": "screenshots/current/forgot-password.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/forgot-password.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Reset password",
+      "majorVisualComponents": [
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/gallery/page.tsx",
+      "pattern": "/gallery",
+      "url": "/c/audit/gallery",
+      "missing": false,
+      "role": "collection manager",
+      "area": "gallery",
+      "id": "gallery",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/gallery",
+      "desktopScreenshot": "screenshots/current/gallery.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/gallery.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Gallery",
+      "majorVisualComponents": [
+        "PhotoGallery",
+        "SortControl"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/graphs/page.tsx",
+      "pattern": "/graphs",
+      "url": "/c/audit/graphs",
+      "missing": false,
+      "role": "collection manager",
+      "area": "graphs",
+      "id": "graphs",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/graphs",
+      "desktopScreenshot": "screenshots/current/graphs.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/graphs.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Lineage Graphs",
+      "majorVisualComponents": [
+        "LineageGraph",
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/help/page.tsx",
+      "pattern": "/help",
+      "url": "/c/audit/help",
+      "missing": false,
+      "role": "collection manager",
+      "area": "help",
+      "id": "help",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/help",
+      "desktopScreenshot": "screenshots/current/help.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/help.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "AxilDB User Manual",
+      "majorVisualComponents": [
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/id-history/page.tsx",
+      "pattern": "/id-history",
+      "url": "/c/audit/id-history",
+      "missing": false,
+      "role": "collection manager",
+      "area": "id-history",
+      "id": "id-history",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/id-history",
+      "desktopScreenshot": "screenshots/current/id-history.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/id-history.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "ID My Plant History",
+      "majorVisualComponents": [
+        "PlantIdentificationHistoryList",
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/instances/[id]/acquisition/page.tsx",
+      "pattern": "/instances/[id]/acquisition",
+      "url": "/c/audit/instances/cmwmbfb4e005s9zy99c2zanig/acquisition",
+      "missing": false,
+      "role": "collection manager",
+      "area": "instances",
+      "id": "instances-id-acquisition",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/instances/[fixture-id]/acquisition",
+      "desktopScreenshot": "screenshots/current/instances-id-acquisition.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/instances-id-acquisition.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Edit Acquisition & Provenance",
+      "majorVisualComponents": [
+        "AcquisitionSourceChainFields",
+        "DistributorFields",
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/instances/[id]/edit/page.tsx",
+      "pattern": "/instances/[id]/edit",
+      "url": "/c/audit/instances/cmwmbfb4e005s9zy99c2zanig/edit",
+      "missing": false,
+      "role": "collection manager",
+      "area": "instances",
+      "id": "instances-id-edit",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/instances/[fixture-id]/edit",
+      "desktopScreenshot": "screenshots/current/instances-id-edit.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/instances-id-edit.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Edit Plant Instance",
+      "majorVisualComponents": [
+        "ConfirmDeleteButton",
+        "LifecycleDateFields",
+        "LocationCompatibilitySelect",
+        "PlantDefinitionCascadePicker",
+        "PlantInstanceTypeSelect",
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/instances/[id]/page.tsx",
+      "pattern": "/instances/[id]",
+      "url": "/c/audit/instances/cmwmbfb4e005s9zy99c2zanig",
+      "missing": false,
+      "role": "collection manager",
+      "area": "instances",
+      "id": "instances-id",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/instances/[fixture-id]",
+      "desktopScreenshot": "screenshots/current/instances-id.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/instances-id.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "AV-001",
+      "majorVisualComponents": [
+        "PlantPhotoUploadForm",
+        "Repotting",
+        "CareCadences",
+        "ConfirmDeleteButton",
+        "GreenThumbAssist",
+        "PlantIdPreviewLink",
+        "PlantImage",
+        "PlantHealthTimeline",
+        "PhotoFramingEditor",
+        "SunshineButton",
+        "ui",
+        "Husbandry",
+        "PlantEnvironmentRequirementsForm",
+        "PlantLocationCompatibilityPanel",
+        "SubstrateCompositionBar"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/instances/merge/page.tsx",
+      "pattern": "/instances/merge",
+      "url": "/c/audit/instances/merge",
+      "missing": false,
+      "role": "collection manager",
+      "area": "instances",
+      "id": "instances-merge",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/instances/merge",
+      "desktopScreenshot": "screenshots/current/instances-merge.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/instances-merge.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Pot specimens together",
+      "majorVisualComponents": [
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/instances/page.tsx",
+      "pattern": "/instances",
+      "url": "/c/audit/instances",
+      "missing": false,
+      "role": "collection manager",
+      "area": "instances",
+      "id": "instances",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/instances",
+      "desktopScreenshot": "screenshots/current/instances.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/instances.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Plant Instances",
+      "majorVisualComponents": [
+        "PlantImage",
+        "PlantInstanceFilters",
+        "LifecycleDateFields",
+        "LocationCompatibilitySelect",
+        "PlantDefinitionCascadePicker",
+        "PlantInstanceTypeSelect",
+        "AcquisitionSourceChainFields",
+        "DistributorFields",
+        "SortControl",
+        "SunshineButton",
+        "ui",
+        "PlantTagChip"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/labels/[id]/page.tsx",
+      "pattern": "/labels/[id]",
+      "url": "/c/audit/labels/cmwmbfb4e005s9zy99c2zanig",
+      "missing": false,
+      "role": "collection manager",
+      "area": "labels",
+      "id": "labels-id",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/labels/[fixture-id]",
+      "desktopScreenshot": "screenshots/current/labels-id.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/labels-id.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "/labels/[id]",
+      "majorVisualComponents": [
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/labels/page.tsx",
+      "pattern": "/labels",
+      "url": "/c/audit/labels",
+      "missing": false,
+      "role": "collection manager",
+      "area": "labels",
+      "id": "labels",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/labels",
+      "desktopScreenshot": "screenshots/current/labels.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/labels.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Plant Labels",
+      "majorVisualComponents": [
+        "LabelPdfPreferences",
+        "LabelExportControls",
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/login/page.tsx",
+      "pattern": "/login",
+      "url": "/login",
+      "missing": false,
+      "role": "anonymous",
+      "area": "login",
+      "id": "login",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/login",
+      "desktopScreenshot": "screenshots/current/login.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/login.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Sign in",
+      "majorVisualComponents": [
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/members/page.tsx",
+      "pattern": "/members",
+      "url": "/c/audit/members",
+      "missing": false,
+      "role": "collection manager",
+      "area": "members",
+      "id": "members",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/members",
+      "desktopScreenshot": "screenshots/current/members.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/members.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Collection Members",
+      "majorVisualComponents": [
+        "ConfirmDeleteButton",
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/page.tsx",
+      "pattern": "/",
+      "url": "/c/audit",
+      "missing": false,
+      "role": "collection manager",
+      "area": "dashboard",
+      "id": "dashboard",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit",
+      "desktopScreenshot": "screenshots/current/dashboard.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/dashboard.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Dashboard",
+      "majorVisualComponents": [
+        "PlantImage",
+        "ConfirmDeleteButton",
+        "PlantIdPreviewLink",
+        "ui",
+        "OpenReviewItems",
+        "CareForecast"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": [
+        "DM-001"
+      ]
+    },
+    {
+      "source": "app/plant-tags/page.tsx",
+      "pattern": "/plant-tags",
+      "url": "/c/audit/plant-tags",
+      "missing": false,
+      "role": "collection manager",
+      "area": "plant-tags",
+      "id": "plant-tags",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/plant-tags",
+      "desktopScreenshot": "screenshots/current/plant-tags.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/plant-tags.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Plant Tags",
+      "majorVisualComponents": [
+        "PlantTagChip",
+        "PlantTagFields",
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/plants/[id]/edit/page.tsx",
+      "pattern": "/plants/[id]/edit",
+      "url": "/c/audit/plants/cmwmbfb48005l9zy9amisabes/edit",
+      "missing": false,
+      "role": "collection manager",
+      "area": "plants",
+      "id": "plants-id-edit",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/plants/[fixture-id]/edit",
+      "desktopScreenshot": "screenshots/current/plants-id-edit.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/plants-id-edit.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Saintpaulia ionantha",
+      "majorVisualComponents": [
+        "PlantDefinitionEditorHeader",
+        "Repotting",
+        "CareCadences",
+        "ui",
+        "PlantAliasFields",
+        "ConfirmDeleteButton",
+        "PlantImage",
+        "PhotoFramingEditor",
+        "AIDescriptionField",
+        "PlantIdentificationAssistant",
+        "Husbandry",
+        "HusbandryMagicFillButton",
+        "PlantEnvironmentRequirementsForm",
+        "PlantTagPicker",
+        "PlantTagChip",
+        "SubstrateCompositionBar",
+        "PlantDefinitionCompleteness"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/plants/[id]/husbandry/page.tsx",
+      "pattern": "/plants/[id]/husbandry",
+      "url": "/c/audit/plants/cmwmbfb48005l9zy9amisabes/husbandry",
+      "missing": false,
+      "role": "collection manager",
+      "area": "plants",
+      "id": "plants-id-husbandry",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/plants/[fixture-id]/husbandry",
+      "desktopScreenshot": "screenshots/current/plants-id-husbandry.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/plants-id-husbandry.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Saintpaulia ionantha husbandry",
+      "majorVisualComponents": [
+        "Repotting",
+        "CareCadences",
+        "ui",
+        "Husbandry"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/plants/page.tsx",
+      "pattern": "/plants",
+      "url": "/c/audit/plants",
+      "missing": false,
+      "role": "collection manager",
+      "area": "plants",
+      "id": "plants",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/plants",
+      "desktopScreenshot": "screenshots/current/plants.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/plants.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Plant Definitions",
+      "majorVisualComponents": [
+        "ui",
+        "PlantAliasFields",
+        "PlantImage",
+        "PlantDefinitionFilters",
+        "PlantDefinitionIdentityFields",
+        "SortControl",
+        "AIDescriptionField",
+        "PlantIdentificationAssistant",
+        "Husbandry",
+        "PlantTagPicker",
+        "PlantTagChip",
+        "PlantTagFilter",
+        "PlantDefinitionCompleteness"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/privacy/page.tsx",
+      "pattern": "/privacy",
+      "url": "/privacy",
+      "missing": false,
+      "role": "collection manager",
+      "area": "privacy",
+      "id": "privacy",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/privacy",
+      "desktopScreenshot": "screenshots/current/privacy.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/privacy.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Privacy Policy",
+      "majorVisualComponents": [],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/propagations/[id]/edit/page.tsx",
+      "pattern": "/propagations/[id]/edit",
+      "url": "/c/audit/propagations/cmwmbfb4g005u9zy96okr4uc5/edit",
+      "missing": false,
+      "role": "collection manager",
+      "area": "propagations",
+      "id": "propagations-id-edit",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/propagations/[fixture-id]/edit",
+      "desktopScreenshot": "screenshots/current/propagations-id-edit.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/propagations-id-edit.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Edit Propagation Event",
+      "majorVisualComponents": [
+        "ConfirmDeleteButton",
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/propagations/page.tsx",
+      "pattern": "/propagations",
+      "url": "/c/audit/propagations",
+      "missing": false,
+      "role": "collection manager",
+      "area": "propagations",
+      "id": "propagations",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/propagations",
+      "desktopScreenshot": "screenshots/current/propagations.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/propagations.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Propagations",
+      "majorVisualComponents": [
+        "PlantImage",
+        "PlantInstanceTypeSelect",
+        "SortControl",
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/provenance/page.tsx",
+      "pattern": "/provenance",
+      "url": "/c/audit/provenance",
+      "missing": false,
+      "role": "collection manager",
+      "area": "provenance",
+      "id": "provenance",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/provenance",
+      "desktopScreenshot": "screenshots/current/provenance.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/provenance.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Provenance",
+      "majorVisualComponents": [
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/register/page.tsx",
+      "pattern": "/register",
+      "url": "/register",
+      "missing": false,
+      "role": "anonymous",
+      "area": "register",
+      "id": "register",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/register",
+      "desktopScreenshot": "screenshots/current/register.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/register.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Create Viewer Account",
+      "majorVisualComponents": [
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/reminders/page.tsx",
+      "pattern": "/reminders",
+      "url": "/c/audit/reminders",
+      "missing": false,
+      "role": "collection manager",
+      "area": "reminders",
+      "id": "reminders",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/reminders",
+      "desktopScreenshot": "screenshots/current/reminders.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/reminders.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Reminders",
+      "majorVisualComponents": [
+        "ConfirmDeleteButton",
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/reset-password/page.tsx",
+      "pattern": "/reset-password",
+      "url": "/reset-password",
+      "missing": false,
+      "role": "anonymous",
+      "area": "reset-password",
+      "id": "reset-password",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/reset-password",
+      "desktopScreenshot": "screenshots/current/reset-password.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/reset-password.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Choose a new password",
+      "majorVisualComponents": [
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/search/page.tsx",
+      "pattern": "/search",
+      "url": "/c/audit/search",
+      "missing": false,
+      "role": "collection manager",
+      "area": "search",
+      "id": "search",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/search",
+      "desktopScreenshot": "screenshots/current/search.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/search.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Search / Filter",
+      "majorVisualComponents": [
+        "SunshineButton",
+        "ui",
+        "PlantTagChip",
+        "SubstrateCompositionBar"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/server/ai-curator/page.tsx",
+      "pattern": "/server/ai-curator",
+      "url": "/server/ai-curator",
+      "missing": false,
+      "role": "server administrator",
+      "area": "server",
+      "id": "server-ai-curator",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/server/ai-curator",
+      "desktopScreenshot": "screenshots/current/server-ai-curator.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/server-ai-curator.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "AI Curator",
+      "majorVisualComponents": [
+        "CalibrationOverview",
+        "HusbandryConsolidation",
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": [
+        "DM-004",
+        "DM-007"
+      ]
+    },
+    {
+      "source": "app/server/application-updates/page.tsx",
+      "pattern": "/server/application-updates",
+      "url": "/server/application-updates",
+      "missing": false,
+      "role": "server administrator",
+      "area": "server",
+      "id": "server-application-updates",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/server/application-updates",
+      "desktopScreenshot": "screenshots/current/server-application-updates.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/server-application-updates.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Application Updates",
+      "majorVisualComponents": [
+        "ApplicationUpdates"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/server/care-cadence-research/page.tsx",
+      "pattern": "/server/care-cadence-research",
+      "url": "/server/care-cadence-research",
+      "missing": false,
+      "role": "server administrator",
+      "area": "server",
+      "id": "server-care-cadence-research",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/server/care-cadence-research",
+      "desktopScreenshot": "screenshots/current/server-care-cadence-research.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/server-care-cadence-research.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Care Cadence Research",
+      "majorVisualComponents": [
+        "ObservedCare",
+        "CadenceResearchControls"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/server/collections/new/page.tsx",
+      "pattern": "/server/collections/new",
+      "url": "/server/collections/new",
+      "missing": false,
+      "role": "server administrator",
+      "area": "server",
+      "id": "server-collections-new",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/server/collections/new",
+      "desktopScreenshot": "screenshots/current/server-collections-new.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/server-collections-new.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "New Collection",
+      "majorVisualComponents": [
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/server/collections/page.tsx",
+      "pattern": "/server/collections",
+      "url": "/server/collections",
+      "missing": false,
+      "role": "server administrator",
+      "area": "server",
+      "id": "server-collections",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/server/collections",
+      "desktopScreenshot": "screenshots/current/server-collections.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/server-collections.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Server Collections",
+      "majorVisualComponents": [
+        "ConfirmDeleteButton",
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/server/events/[id]/page.tsx",
+      "pattern": "/server/events/[id]",
+      "url": "/server/events/cmwmbffkl003b8ijzyne2on46",
+      "missing": false,
+      "role": "server administrator",
+      "area": "server",
+      "id": "server-events-id",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/server/events/[fixture-id]",
+      "desktopScreenshot": "screenshots/current/server-events-id.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/server-events-id.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "care.watering_completed",
+      "majorVisualComponents": [
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/server/events/page.tsx",
+      "pattern": "/server/events",
+      "url": "/server/events",
+      "missing": false,
+      "role": "server administrator",
+      "area": "server",
+      "id": "server-events",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/server/events",
+      "desktopScreenshot": "screenshots/current/server-events.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/server-events.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Event Processing",
+      "majorVisualComponents": [
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/server/image-moderation/page.tsx",
+      "pattern": "/server/image-moderation",
+      "url": "/server/image-moderation",
+      "missing": false,
+      "role": "server administrator",
+      "area": "server",
+      "id": "server-image-moderation",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/server/image-moderation",
+      "desktopScreenshot": "screenshots/current/server-image-moderation.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/server-image-moderation.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Image Moderation",
+      "majorVisualComponents": [
+        "PlantImage",
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/server/incidents/[id]/page.tsx",
+      "pattern": "/server/incidents/[id]",
+      "url": "/server/incidents/cmwmbffkj00398ijzvcvcie0e",
+      "missing": false,
+      "role": "server administrator",
+      "area": "server",
+      "id": "server-incidents-id",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/server/incidents/[fixture-id]",
+      "desktopScreenshot": "screenshots/current/server-incidents-id.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/server-incidents-id.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Fictional service warning",
+      "majorVisualComponents": [
+        "MetricChart",
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/server/incidents/page.tsx",
+      "pattern": "/server/incidents",
+      "url": "/server/incidents",
+      "missing": false,
+      "role": "server administrator",
+      "area": "server",
+      "id": "server-incidents",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/server/incidents",
+      "desktopScreenshot": "screenshots/current/server-incidents.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/server-incidents.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Incident History",
+      "majorVisualComponents": [
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/server/migrations/page.tsx",
+      "pattern": "/server/migrations",
+      "url": "/server/migrations",
+      "missing": false,
+      "role": "server administrator",
+      "area": "server",
+      "id": "server-migrations",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/server/migrations",
+      "desktopScreenshot": "screenshots/current/server-migrations.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/server-migrations.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Full Instance Migration",
+      "majorVisualComponents": [],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/server/orphaned-images/page.tsx",
+      "pattern": "/server/orphaned-images",
+      "url": "/server/orphaned-images",
+      "missing": false,
+      "role": "server administrator",
+      "area": "server",
+      "id": "server-orphaned-images",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/server/orphaned-images",
+      "desktopScreenshot": "screenshots/current/server-orphaned-images.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/server-orphaned-images.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Orphaned Image Cleanup",
+      "majorVisualComponents": [
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/server/page.tsx",
+      "pattern": "/server",
+      "url": "/server",
+      "missing": false,
+      "role": "server administrator",
+      "area": "server",
+      "id": "server",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/server",
+      "desktopScreenshot": "screenshots/current/server.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/server.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Server Management",
+      "majorVisualComponents": [
+        "BackupStoragePanel",
+        "DeleteBackupForm",
+        "AiUsageBreakdown",
+        "MetricChart",
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": [
+        "DM-002"
+      ]
+    },
+    {
+      "source": "app/server/repotting-windows/page.tsx",
+      "pattern": "/server/repotting-windows",
+      "url": "/server/repotting-windows",
+      "missing": false,
+      "role": "server administrator",
+      "area": "server",
+      "id": "server-repotting-windows",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/server/repotting-windows",
+      "desktopScreenshot": "screenshots/current/server-repotting-windows.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/server-repotting-windows.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Repotting Windows",
+      "majorVisualComponents": [
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/server/users/page.tsx",
+      "pattern": "/server/users",
+      "url": "/server/users",
+      "missing": false,
+      "role": "server administrator",
+      "area": "server",
+      "id": "server-users",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/server/users",
+      "desktopScreenshot": "screenshots/current/server-users.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/server-users.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Site Users",
+      "majorVisualComponents": [
+        "ConfirmDeleteButton",
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/server/validated-definitions/page.tsx",
+      "pattern": "/server/validated-definitions",
+      "url": "/server/validated-definitions",
+      "missing": false,
+      "role": "server administrator",
+      "area": "server",
+      "id": "server-validated-definitions",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/server/validated-definitions",
+      "desktopScreenshot": "screenshots/current/server-validated-definitions.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/server-validated-definitions.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Validated Plant Definitions",
+      "majorVisualComponents": [
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/settings/page.tsx",
+      "pattern": "/settings",
+      "url": "/c/audit/settings",
+      "missing": false,
+      "role": "collection manager",
+      "area": "settings",
+      "id": "settings",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": true,
+      "actualPath": "/c/audit/taxonomic-authorities",
+      "desktopScreenshot": "screenshots/current/settings.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/settings.mobile.dark.current.jpg",
+      "auditStatus": "Partially reviewed",
+      "reason": "Redirect/permission/challenge state captured; requested interior is not counted as reviewed.",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Taxonomic Authorities",
+      "majorVisualComponents": [],
+      "reasonNotFullyReviewed": "Redirect alias; destination default captured.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/sitter/[token]/page.tsx",
+      "pattern": "/sitter/[token]",
+      "url": "/sitter/audit-public-sheet",
+      "missing": false,
+      "role": "collection manager",
+      "area": "sitter",
+      "id": "sitter-token",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 404,
+      "redirected": false,
+      "actualPath": "/sitter/audit-public-sheet",
+      "desktopScreenshot": "screenshots/current/sitter-token.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/sitter-token.mobile.dark.current.jpg",
+      "auditStatus": "Partially reviewed",
+      "reason": "Error/permission/not-found response captured, not a successful interior review.",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "404",
+      "majorVisualComponents": [
+        "CareSheetView",
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Sitter-session fixture unavailable; only 404 state captured.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/splash/page.tsx",
+      "pattern": "/splash",
+      "url": "/splash",
+      "missing": false,
+      "role": "collection manager",
+      "area": "splash",
+      "id": "splash",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/splash",
+      "desktopScreenshot": "screenshots/current/splash.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/splash.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "themePolicy": "Intentional light/print surface; not automatically a dark-mode defect.",
+      "desktopSummary": {
+        "theme": "light",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "light",
+        "overflow": false
+      },
+      "name": "A living database for collections with complicated plants.",
+      "majorVisualComponents": [
+        "ForceLightTheme"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/sports/[id]/cultivar/page.tsx",
+      "pattern": "/sports/[id]/cultivar",
+      "url": "/c/audit/sports/cmwmbfb4k00609zy9yockksqe/cultivar",
+      "missing": false,
+      "role": "collection manager",
+      "area": "sports",
+      "id": "sports-id-cultivar",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/sports/[fixture-id]/cultivar",
+      "desktopScreenshot": "screenshots/current/sports-id-cultivar.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/sports-id-cultivar.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Create Cultivar from Stable Sport",
+      "majorVisualComponents": [
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/sports/page.tsx",
+      "pattern": "/sports",
+      "url": "/c/audit/sports",
+      "missing": false,
+      "role": "collection manager",
+      "area": "sports",
+      "id": "sports",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/sports",
+      "desktopScreenshot": "screenshots/current/sports.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/sports.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Sport Stability Review",
+      "majorVisualComponents": [
+        "PlantImage",
+        "SortControl",
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/substrates/page.tsx",
+      "pattern": "/substrates",
+      "url": "/c/audit/substrates",
+      "missing": false,
+      "role": "collection manager",
+      "area": "substrates",
+      "id": "substrates",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/substrates",
+      "desktopScreenshot": "screenshots/current/substrates.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/substrates.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Substrates",
+      "majorVisualComponents": [
+        "SubstrateRecipeEditor",
+        "SubstrateCompositionBar",
+        "SubstrateRecipeComparison",
+        "SubstrateVisualIdentityEditor",
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/taxonomic-authorities/page.tsx",
+      "pattern": "/taxonomic-authorities",
+      "url": "/c/audit/taxonomic-authorities",
+      "missing": false,
+      "role": "collection manager",
+      "area": "taxonomic-authorities",
+      "id": "taxonomic-authorities",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/taxonomic-authorities",
+      "desktopScreenshot": "screenshots/current/taxonomic-authorities.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/taxonomic-authorities.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Taxonomic Authorities",
+      "majorVisualComponents": [
+        "ConfirmDeleteButton",
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/terms/page.tsx",
+      "pattern": "/terms",
+      "url": "/terms",
+      "missing": false,
+      "role": "collection manager",
+      "area": "terms",
+      "id": "terms",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/terms",
+      "desktopScreenshot": "screenshots/current/terms.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/terms.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Terms of Use",
+      "majorVisualComponents": [],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/transfers/page.tsx",
+      "pattern": "/transfers",
+      "url": "/c/audit/transfers",
+      "missing": false,
+      "role": "collection manager",
+      "area": "transfers",
+      "id": "transfers",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/transfers",
+      "desktopScreenshot": "screenshots/current/transfers.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/transfers.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Collection Transfers",
+      "majorVisualComponents": [
+        "ConfirmDeleteButton",
+        "PlantImage",
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/treatments/apply/page.tsx",
+      "pattern": "/treatments/apply",
+      "url": "/c/audit/treatments/apply",
+      "missing": false,
+      "role": "collection manager",
+      "area": "treatments",
+      "id": "treatments-apply",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/treatments/apply",
+      "desktopScreenshot": "screenshots/current/treatments-apply.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/treatments-apply.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Record treatment application",
+      "majorVisualComponents": [
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/treatments/batch/page.tsx",
+      "pattern": "/treatments/batch",
+      "url": "/c/audit/treatments/batch",
+      "missing": false,
+      "role": "collection manager",
+      "area": "treatments",
+      "id": "treatments-batch",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/treatments/batch",
+      "desktopScreenshot": "screenshots/current/treatments-batch.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/treatments-batch.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Batch treatment application",
+      "majorVisualComponents": [
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/treatments/page.tsx",
+      "pattern": "/treatments",
+      "url": "/c/audit/treatments",
+      "missing": false,
+      "role": "collection manager",
+      "area": "treatments",
+      "id": "treatments",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/treatments",
+      "desktopScreenshot": "screenshots/current/treatments.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/treatments.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Treatment Management",
+      "majorVisualComponents": [
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/treatments/plans/[id]/page.tsx",
+      "pattern": "/treatments/plans/[id]",
+      "url": "/c/audit/treatments/plans/cmwmbffkg00368ijzq2h48x82",
+      "missing": false,
+      "role": "collection manager",
+      "area": "treatments",
+      "id": "treatments-plans-id",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/treatments/plans/[fixture-id]",
+      "desktopScreenshot": "screenshots/current/treatments-plans-id.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/treatments-plans-id.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Fictional pest follow-up",
+      "majorVisualComponents": [
+        "ui",
+        "PlantImage"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/users/page.tsx",
+      "pattern": "/users",
+      "url": "/c/audit/users",
+      "missing": false,
+      "role": "collection manager",
+      "area": "users",
+      "id": "users",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": true,
+      "actualPath": "/server/users",
+      "desktopScreenshot": "screenshots/current/users.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/users.mobile.dark.current.jpg",
+      "auditStatus": "Partially reviewed",
+      "reason": "Redirect/permission/challenge state captured; requested interior is not counted as reviewed.",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Site Users",
+      "majorVisualComponents": [],
+      "reasonNotFullyReviewed": "Redirect alias; destination default captured.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/validated-definitions/page.tsx",
+      "pattern": "/validated-definitions",
+      "url": "/c/audit/validated-definitions",
+      "missing": false,
+      "role": "collection manager",
+      "area": "validated-definitions",
+      "id": "validated-definitions",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/validated-definitions",
+      "desktopScreenshot": "screenshots/current/validated-definitions.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/validated-definitions.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Validated Plant Definitions",
+      "majorVisualComponents": [
+        "ui",
+        "PlantDefinitionCompleteness"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/verify-email/page.tsx",
+      "pattern": "/verify-email",
+      "url": "/verify-email",
+      "missing": false,
+      "role": "anonymous",
+      "area": "verify-email",
+      "id": "verify-email",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/verify-email",
+      "desktopScreenshot": "screenshots/current/verify-email.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/verify-email.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Email verification",
+      "majorVisualComponents": [
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/wishlist/page.tsx",
+      "pattern": "/wishlist",
+      "url": "/c/audit/wishlist",
+      "missing": false,
+      "role": "collection manager",
+      "area": "wishlist",
+      "id": "wishlist",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/wishlist",
+      "desktopScreenshot": "screenshots/current/wishlist.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/wishlist.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Plant Wishlist",
+      "majorVisualComponents": [
+        "PlantImage",
+        "WishlistSelectionControls",
+        "PlantTagChip"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/workflows/page.tsx",
+      "pattern": "/workflows",
+      "url": "/c/audit/workflows",
+      "missing": false,
+      "role": "collection manager",
+      "area": "workflows",
+      "id": "workflows",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/workflows",
+      "desktopScreenshot": "screenshots/current/workflows.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/workflows.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Greenhouse Workflows",
+      "majorVisualComponents": [
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/workflows/runs/[id]/page.tsx",
+      "pattern": "/workflows/runs/[id]",
+      "url": "/c/audit/workflows/runs/cmwmbffk3002q8ijznn9btkh1",
+      "missing": false,
+      "role": "collection manager",
+      "area": "workflows",
+      "id": "workflows-runs-id",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/workflows/runs/[fixture-id]",
+      "desktopScreenshot": "screenshots/current/workflows-runs-id.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/workflows-runs-id.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Audit inspection in progress",
+      "majorVisualComponents": [
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/workflows/templates/[id]/page.tsx",
+      "pattern": "/workflows/templates/[id]",
+      "url": "/c/audit/workflows/templates/cmwmbffjy002m8ijz282vkqnx",
+      "missing": false,
+      "role": "collection manager",
+      "area": "workflows",
+      "id": "workflows-templates-id",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/workflows/templates/[fixture-id]",
+      "desktopScreenshot": "screenshots/current/workflows-templates-id.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/workflows-templates-id.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Weekly Greenhouse Round \u2014 audit",
+      "majorVisualComponents": [
+        "ui",
+        "workflows/WorkflowStepBuilder"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/account/security/page.tsx",
+      "pattern": "/account/security",
+      "url": "/account/security",
+      "missing": false,
+      "role": "collection manager",
+      "area": "account",
+      "id": "account-security",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/account/security",
+      "desktopScreenshot": "screenshots/current/account-security.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/account-security.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Account security",
+      "majorVisualComponents": [
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/activity/[id]/page.tsx",
+      "pattern": "/activity/[id]",
+      "url": "/c/audit/activity/cmwmbffkl003b8ijzyne2on46",
+      "missing": false,
+      "role": "collection manager",
+      "area": "activity",
+      "id": "activity-id",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/activity/[fixture-id]",
+      "desktopScreenshot": "screenshots/current/activity-id.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/activity-id.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "care.watering_completed",
+      "majorVisualComponents": [
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/admin-tools/page.tsx",
+      "pattern": "/admin-tools",
+      "url": "/c/audit/admin-tools",
+      "missing": false,
+      "role": "collection manager",
+      "area": "admin-tools",
+      "id": "admin-tools",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/admin-tools",
+      "desktopScreenshot": "screenshots/current/admin-tools.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/admin-tools.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Admin Tools",
+      "majorVisualComponents": [
+        "ConfirmDeleteButton",
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/collection-access/page.tsx",
+      "pattern": "/collection-access",
+      "url": "/collection-access",
+      "missing": false,
+      "role": "anonymous",
+      "area": "collection-access",
+      "id": "collection-access",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/collection-access",
+      "desktopScreenshot": "screenshots/current/collection-access.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/collection-access.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Collection Not Found",
+      "majorVisualComponents": [
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/locations/[id]/page.tsx",
+      "pattern": "/locations/[id]",
+      "url": "/c/audit/locations/cmwmbfb3q004n9zy9ci53g7u1",
+      "missing": false,
+      "role": "collection manager",
+      "area": "locations",
+      "id": "locations-id",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/locations/[fixture-id]",
+      "desktopScreenshot": "screenshots/current/locations-id.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/locations-id.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Plant shelf A",
+      "majorVisualComponents": [
+        "QuietDaysManager",
+        "ConfirmDeleteButton",
+        "CompatibilityMoveForm",
+        "LocationEnvironmentForm",
+        "PlantIdPreviewLink",
+        "PlantLocationCompatibilityPanel",
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/locations/page.tsx",
+      "pattern": "/locations",
+      "url": "/c/audit/locations",
+      "missing": false,
+      "role": "collection manager",
+      "area": "locations",
+      "id": "locations",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/locations",
+      "desktopScreenshot": "screenshots/current/locations.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/locations.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Locations",
+      "majorVisualComponents": [
+        "ui",
+        "LocationDragDropManager",
+        "CompatibilityMoveForm",
+        "PlantIdPreviewLink"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/server/validated-definitions/[id]/page.tsx",
+      "pattern": "/server/validated-definitions/[id]",
+      "url": "/server/validated-definitions/cmwmbnmtf0001zxy0wvs7spjz",
+      "missing": false,
+      "role": "server administrator",
+      "area": "server",
+      "id": "server-validated-definitions-id",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/server/validated-definitions/[fixture-id]",
+      "desktopScreenshot": "screenshots/current/server-validated-definitions-id.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/server-validated-definitions-id.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Edit Validated Definition",
+      "majorVisualComponents": [
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/treatments/reports/page.tsx",
+      "pattern": "/treatments/reports",
+      "url": "/c/audit/treatments/reports",
+      "missing": false,
+      "role": "collection manager",
+      "area": "treatments",
+      "id": "treatments-reports",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/c/audit/treatments/reports",
+      "desktopScreenshot": "screenshots/current/treatments-reports.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/treatments-reports.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Treatment reports",
+      "majorVisualComponents": [
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    },
+    {
+      "source": "app/two-factor/page.tsx",
+      "pattern": "/two-factor",
+      "url": "/two-factor",
+      "missing": false,
+      "role": "anonymous",
+      "area": "two-factor",
+      "id": "two-factor",
+      "states": [
+        "default"
+      ],
+      "issues": [],
+      "httpStatus": 200,
+      "redirected": false,
+      "actualPath": "/two-factor",
+      "desktopScreenshot": "screenshots/current/two-factor.desktop.dark.current.jpg",
+      "mobileScreenshot": "screenshots/current/two-factor.mobile.dark.current.jpg",
+      "auditStatus": "Reviewed \u2014 initial state captured",
+      "desktopSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "mobileSummary": {
+        "theme": "dark",
+        "overflow": false
+      },
+      "name": "Two-factor verification",
+      "majorVisualComponents": [
+        "ui"
+      ],
+      "reasonNotFullyReviewed": "Default state only; interactions not exhaustively traversed.",
+      "reviewedStates": [
+        "initial route render"
+      ],
+      "identifiedFindings": []
+    }
+  ],
+  "conditionalStates": [
+    {
+      "id": "dashboard.desktop.dark.current-detail",
+      "kind": "current",
+      "file": "screenshots/current/dashboard.desktop.dark.current-detail.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "dashboard.desktop.dark.proposed-A",
+      "kind": "proposed",
+      "file": "screenshots/proposed/dashboard.desktop.dark.proposed-A.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "dashboard.desktop.dark.proposed-B",
+      "kind": "proposed",
+      "file": "screenshots/proposed/dashboard.desktop.dark.proposed-B.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "dashboard.desktop.dark.proposed-C",
+      "kind": "proposed",
+      "file": "screenshots/proposed/dashboard.desktop.dark.proposed-C.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "dashboard.desktop.light.reference",
+      "kind": "light-reference",
+      "file": "screenshots/light-reference/dashboard.desktop.light.reference.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "plant-grid.desktop.dark.current-detail",
+      "kind": "current",
+      "file": "screenshots/current/plant-grid.desktop.dark.current-detail.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "plant-grid.desktop.dark.proposed-A",
+      "kind": "proposed",
+      "file": "screenshots/proposed/plant-grid.desktop.dark.proposed-A.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "plant-grid.desktop.dark.proposed-B",
+      "kind": "proposed",
+      "file": "screenshots/proposed/plant-grid.desktop.dark.proposed-B.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "plant-grid.desktop.dark.proposed-C",
+      "kind": "proposed",
+      "file": "screenshots/proposed/plant-grid.desktop.dark.proposed-C.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "plant-grid.desktop.light.reference",
+      "kind": "light-reference",
+      "file": "screenshots/light-reference/plant-grid.desktop.light.reference.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "definition-details.desktop.dark.current-detail",
+      "kind": "current",
+      "file": "screenshots/current/definition-details.desktop.dark.current-detail.jpg",
+      "selector": "#care-cadences"
+    },
+    {
+      "id": "definition-details.desktop.dark.proposed-A",
+      "kind": "proposed",
+      "file": "screenshots/proposed/definition-details.desktop.dark.proposed-A.jpg",
+      "selector": "#care-cadences"
+    },
+    {
+      "id": "definition-details.desktop.dark.proposed-B",
+      "kind": "proposed",
+      "file": "screenshots/proposed/definition-details.desktop.dark.proposed-B.jpg",
+      "selector": "#care-cadences"
+    },
+    {
+      "id": "definition-details.desktop.dark.proposed-C",
+      "kind": "proposed",
+      "file": "screenshots/proposed/definition-details.desktop.dark.proposed-C.jpg",
+      "selector": "#care-cadences"
+    },
+    {
+      "id": "definition-details.desktop.light.reference",
+      "kind": "light-reference",
+      "file": "screenshots/light-reference/definition-details.desktop.light.reference.jpg",
+      "selector": "#care-cadences"
+    },
+    {
+      "id": "care-queue.desktop.dark.current-detail",
+      "kind": "current",
+      "file": "screenshots/current/care-queue.desktop.dark.current-detail.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "care-queue.desktop.dark.proposed-A",
+      "kind": "proposed",
+      "file": "screenshots/proposed/care-queue.desktop.dark.proposed-A.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "care-queue.desktop.dark.proposed-B",
+      "kind": "proposed",
+      "file": "screenshots/proposed/care-queue.desktop.dark.proposed-B.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "care-queue.desktop.dark.proposed-C",
+      "kind": "proposed",
+      "file": "screenshots/proposed/care-queue.desktop.dark.proposed-C.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "care-queue.desktop.light.reference",
+      "kind": "light-reference",
+      "file": "screenshots/light-reference/care-queue.desktop.light.reference.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "server-backup.desktop.dark.current-detail",
+      "kind": "current",
+      "file": "screenshots/current/server-backup.desktop.dark.current-detail.jpg",
+      "selector": "#backup-storage"
+    },
+    {
+      "id": "server-backup.desktop.dark.proposed-A",
+      "kind": "proposed",
+      "file": "screenshots/proposed/server-backup.desktop.dark.proposed-A.jpg",
+      "selector": "#backup-storage"
+    },
+    {
+      "id": "server-backup.desktop.dark.proposed-B",
+      "kind": "proposed",
+      "file": "screenshots/proposed/server-backup.desktop.dark.proposed-B.jpg",
+      "selector": "#backup-storage"
+    },
+    {
+      "id": "server-backup.desktop.dark.proposed-C",
+      "kind": "proposed",
+      "file": "screenshots/proposed/server-backup.desktop.dark.proposed-C.jpg",
+      "selector": "#backup-storage"
+    },
+    {
+      "id": "server-backup.desktop.light.reference",
+      "kind": "light-reference",
+      "file": "screenshots/light-reference/server-backup.desktop.light.reference.jpg",
+      "selector": "#backup-storage"
+    },
+    {
+      "id": "cadence-dialog.desktop.dark.current",
+      "kind": "current",
+      "file": "screenshots/current/cadence-dialog.desktop.dark.current.jpg",
+      "selector": "viewport"
+    },
+    {
+      "id": "cadence-dialog.desktop.dark.proposed-A",
+      "kind": "proposed",
+      "file": "screenshots/proposed/cadence-dialog.desktop.dark.proposed-A.jpg",
+      "selector": "viewport"
+    },
+    {
+      "id": "cadence-dialog.desktop.dark.proposed-B",
+      "kind": "proposed",
+      "file": "screenshots/proposed/cadence-dialog.desktop.dark.proposed-B.jpg",
+      "selector": "viewport"
+    },
+    {
+      "id": "cadence-dialog.desktop.dark.proposed-C",
+      "kind": "proposed",
+      "file": "screenshots/proposed/cadence-dialog.desktop.dark.proposed-C.jpg",
+      "selector": "viewport"
+    },
+    {
+      "id": "cadence-dialog.mobile.dark.current",
+      "kind": "current",
+      "file": "screenshots/current/cadence-dialog.mobile.dark.current.jpg",
+      "selector": "viewport"
+    },
+    {
+      "id": "cadence-dialog.mobile.dark.proposed-B",
+      "kind": "proposed",
+      "file": "screenshots/proposed/cadence-dialog.mobile.dark.proposed-B.jpg",
+      "selector": "viewport"
+    },
+    {
+      "id": "instance-expanded.desktop.dark.current",
+      "kind": "current",
+      "file": "screenshots/current/instance-expanded.desktop.dark.current.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "instance-expanded.mobile.dark.current",
+      "kind": "current",
+      "file": "screenshots/current/instance-expanded.mobile.dark.current.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "login.keyboard-focus.dark.current",
+      "kind": "current",
+      "file": "screenshots/current/login.keyboard-focus.dark.current.jpg",
+      "selector": "main",
+      "focus": {
+        "outline": "rgba(0, 0, 0, 0) solid 2px",
+        "boxShadow": "rgba(0, 0, 0, 0.24) 0px 1px 2px 0px inset",
+        "border": "rgba(116, 130, 101, 0.44)",
+        "background": "rgba(30, 37, 27, 0.9)"
+      }
+    },
+    {
+      "id": "login.keyboard-focus.dark.proposed-B",
+      "kind": "proposed",
+      "file": "screenshots/proposed/login.keyboard-focus.dark.proposed-B.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "plant-grid.viewer.mobile.dark.current",
+      "kind": "current",
+      "file": "screenshots/current/plant-grid.viewer.mobile.dark.current.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "deployment-running.component.desktop.dark.current",
+      "kind": "current",
+      "file": "screenshots/current/deployment-running.component.desktop.dark.current.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "deployment-running.component.desktop.dark.proposed-B",
+      "kind": "proposed",
+      "file": "screenshots/proposed/deployment-running.component.desktop.dark.proposed-B.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "deployment-running.component.mobile.dark.current",
+      "kind": "current",
+      "file": "screenshots/current/deployment-running.component.mobile.dark.current.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "deployment-failed.component.desktop.dark.current",
+      "kind": "current",
+      "file": "screenshots/current/deployment-failed.component.desktop.dark.current.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "deployment-failed.component.desktop.dark.proposed-B",
+      "kind": "proposed",
+      "file": "screenshots/proposed/deployment-failed.component.desktop.dark.proposed-B.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "deployment-failed.component.mobile.dark.current",
+      "kind": "current",
+      "file": "screenshots/current/deployment-failed.component.mobile.dark.current.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "deployment-completed.component.desktop.dark.current",
+      "kind": "current",
+      "file": "screenshots/current/deployment-completed.component.desktop.dark.current.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "deployment-completed.component.desktop.dark.proposed-B",
+      "kind": "proposed",
+      "file": "screenshots/proposed/deployment-completed.component.desktop.dark.proposed-B.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "deployment-completed.component.mobile.dark.current",
+      "kind": "current",
+      "file": "screenshots/current/deployment-completed.component.mobile.dark.current.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "shared-controls.component.desktop.dark.current",
+      "kind": "current",
+      "file": "screenshots/current/shared-controls.component.desktop.dark.current.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "shared-controls.component.desktop.dark.proposed-B",
+      "kind": "proposed",
+      "file": "screenshots/proposed/shared-controls.component.desktop.dark.proposed-B.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "shared-controls.component.mobile.dark.current",
+      "kind": "current",
+      "file": "screenshots/current/shared-controls.component.mobile.dark.current.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "photo-framing.component.desktop.dark.current",
+      "kind": "current",
+      "file": "screenshots/current/photo-framing.component.desktop.dark.current.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "photo-framing.component.desktop.dark.proposed-B",
+      "kind": "proposed",
+      "file": "screenshots/proposed/photo-framing.component.desktop.dark.proposed-B.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "photo-framing.component.mobile.dark.current",
+      "kind": "current",
+      "file": "screenshots/current/photo-framing.component.mobile.dark.current.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "semantic-palettes.component.desktop.dark.current",
+      "kind": "current",
+      "file": "screenshots/current/semantic-palettes.component.desktop.dark.current.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "semantic-palettes.component.desktop.dark.proposed-B",
+      "kind": "proposed",
+      "file": "screenshots/proposed/semantic-palettes.component.desktop.dark.proposed-B.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "semantic-palettes.component.mobile.dark.current",
+      "kind": "current",
+      "file": "screenshots/current/semantic-palettes.component.mobile.dark.current.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "metric-chart.component.desktop.dark.current",
+      "kind": "current",
+      "file": "screenshots/current/metric-chart.component.desktop.dark.current.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "metric-chart.component.desktop.dark.proposed-B",
+      "kind": "proposed",
+      "file": "screenshots/proposed/metric-chart.component.desktop.dark.proposed-B.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "metric-chart.component.mobile.dark.current",
+      "kind": "current",
+      "file": "screenshots/current/metric-chart.component.mobile.dark.current.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "backup-storage.dark.annotated",
+      "kind": "annotated",
+      "file": "screenshots/annotated/backup-storage.dark.annotated.jpg",
+      "selector": "#backup-storage"
+    },
+    {
+      "id": "activity-chips.dark.annotated",
+      "kind": "annotated",
+      "file": "screenshots/annotated/activity-chips.dark.annotated.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "ai-review.dark.annotated",
+      "kind": "annotated",
+      "file": "screenshots/annotated/ai-review.dark.annotated.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "instance-surfaces.dark.annotated",
+      "kind": "annotated",
+      "file": "screenshots/annotated/instance-surfaces.dark.annotated.jpg",
+      "selector": "main"
+    },
+    {
+      "id": "care-overdue.dark.annotated",
+      "kind": "annotated",
+      "file": "screenshots/annotated/care-overdue.dark.annotated.jpg",
+      "selector": "main"
+    }
+  ],
+  "components": {
+    "sourceScanned": 85,
+    "runtimeFixtures": [
+      "DeploymentProgress (running, failed, completed)",
+      "PhotoFramingEditor",
+      "MetricChart",
+      "shared controls",
+      "CareCategoryBadge",
+      "PlantTagChip"
+    ],
+    "limitation": "Static production component render with fictional props; no operational effects or hydration. All other component source scans are not runtime sign-off."
+  },
+  "gaps": [
+    "Sitter session interior: fixture token belonged to care-sheet mode; 404 captured, not reviewed.",
+    "Live deployment agent, filesystem garbage collection, real notification delivery, uploads, native camera/picker, provider errors and destructive confirmation completion not exercised.",
+    "No Safari/Firefox/device hardware or screen-reader audit. Mobile route defaults captured, not every conditional state.",
+    "No end-to-end persistence, keyboard traversal of every workflow or all user permissions.",
+    "Initial-route contrast candidates may include closed-detail content; findings rely on targeted visible states or explicitly labeled estimates."
+  ]
+}

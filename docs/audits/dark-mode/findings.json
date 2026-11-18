@@ -1,0 +1,238 @@
+{
+  "sourceCommit": "952ab1b63e3c9cc19f0c9082c600f71089f93ee1",
+  "auditOnly": true,
+  "findings": [
+    {
+      "id": "DM-001",
+      "severity": "P1",
+      "title": "Activity badges lose their text",
+      "area": "Dashboard",
+      "category": "Contrast",
+      "current": "screenshots/annotated/activity-chips.dark.annotated.jpg",
+      "source": "app/page.tsx: activity-kind badge styles",
+      "problem": "Workflow, Exhibit and Condition resolved inherit ivory text on opaque pastel backgrounds.",
+      "proposal": "Use paired semantic foreground/background tokens for each activity kind; retain icon and text labels.",
+      "acceptance": "All normal badge text \u22654.5:1 in both themes; check all activity kinds.",
+      "measurement": {
+        "status": "Computed, opaque",
+        "ratios": "Workflow 1.10:1; Exhibit 1.12:1; Condition resolved 1.17:1",
+        "foreground": "#eee7d7",
+        "background": "#eef2ff / #fff1f2 / #ecfdf5"
+      },
+      "proposedImage": "screenshots/proposed/dashboard.desktop.dark.proposed-B.jpg",
+      "decision": "pending",
+      "dependencies": [
+        "DM-009 semantic role consolidation"
+      ],
+      "reproduction": "Manager dashboard: inspect recent activity kind badges.",
+      "rootCause": "Workflow, Exhibit and Condition resolved inherit ivory text on opaque pastel backgrounds."
+    },
+    {
+      "id": "DM-002",
+      "severity": "P1",
+      "title": "Backup storage text nearly disappears",
+      "area": "Server management",
+      "category": "Contrast",
+      "current": "screenshots/annotated/backup-storage.dark.annotated.jpg",
+      "source": "components/BackupStoragePanel.tsx: #backup-storage",
+      "problem": "A fixed #f5f7ee panel bypasses dark surfaces while inheriting ivory foreground. Diagnostics become unreadable.",
+      "proposal": "Replace panel literal with a semantic surface; keep warning, diagnostic and unavailable states separately paired.",
+      "acceptance": "Heading and metadata \u22654.5:1 unless large; test unavailable, loading, success and error states.",
+      "measurement": {
+        "status": "Computed, opaque",
+        "ratios": "1.14:1",
+        "foreground": "#eee7d7",
+        "background": "#f5f7ee"
+      },
+      "proposedImage": "screenshots/proposed/server-backup.desktop.dark.proposed-B.jpg",
+      "decision": "pending",
+      "dependencies": [
+        "DM-009 semantic role consolidation"
+      ],
+      "reproduction": "Server administrator: Server Management \u2192 Backup storage, unavailable diagnostic state.",
+      "rootCause": "A fixed #f5f7ee panel bypasses dark surfaces while inheriting ivory foreground. Diagnostics become unreadable."
+    },
+    {
+      "id": "DM-003",
+      "severity": "P1",
+      "title": "Primary action labels miss normal-text contrast",
+      "area": "Shared controls",
+      "category": "Contrast",
+      "current": "screenshots/current/shared-controls.component.desktop.dark.current.jpg",
+      "source": "app/globals.css; components/ui.tsx",
+      "problem": "Primary actions use near-white labels on #4f8a5d. At ordinary button sizes the measured 4.02:1 falls below 4.5:1. This repeats across queue, dashboard and server actions.",
+      "proposal": "Separate action background from accent foreground; use a darker green action fill with light text.",
+      "acceptance": "Every enabled primary action label \u22654.5:1; preserve hover, pressed and disabled distinctions.",
+      "measurement": {
+        "status": "Computed, opaque",
+        "ratios": "4.02:1",
+        "foreground": "#fffdf4",
+        "background": "#4f8a5d"
+      },
+      "proposedImage": "screenshots/proposed/shared-controls.component.desktop.dark.proposed-B.jpg",
+      "decision": "pending",
+      "dependencies": [
+        "DM-009 semantic role consolidation"
+      ],
+      "reproduction": "Shared-controls static fixture or any enabled primary action in Care Queue.",
+      "rootCause": "Primary actions use near-white labels on #4f8a5d. At ordinary button sizes the measured 4.02:1 falls below 4.5:1. This repeats across queue, dashboard and server actions."
+    },
+    {
+      "id": "DM-004",
+      "severity": "P1",
+      "title": "Secondary approval actions have low contrast",
+      "area": "AI Curator",
+      "category": "Contrast",
+      "current": "screenshots/annotated/ai-review.dark.annotated.jpg",
+      "source": "app/server/ai-curator/page.tsx; secondary action color #6d7f6d",
+      "problem": "Edit then Accept uses ivory normal text on a medium sage background.",
+      "proposal": "Use a dedicated secondary action role or outlined action with compliant text.",
+      "acceptance": "Normal action text \u22654.5:1; primary, secondary and destructive actions remain distinguishable.",
+      "measurement": {
+        "status": "Computed, opaque",
+        "ratios": "3.47:1",
+        "foreground": "#eee7d7",
+        "background": "#6d7f6d"
+      },
+      "proposedImage": "screenshots/proposed/shared-controls.component.desktop.dark.proposed-B.jpg",
+      "decision": "pending",
+      "dependencies": [
+        "DM-009 semantic role consolidation"
+      ],
+      "reproduction": "Server administrator: AI Curator \u2192 review pending suggestion \u2192 Edit then Accept.",
+      "rootCause": "Edit then Accept uses ivory normal text on a medium sage background."
+    },
+    {
+      "id": "DM-005",
+      "severity": "P1",
+      "title": "Overdue care badge is difficult to read",
+      "area": "Care Queue",
+      "category": "Contrast candidate",
+      "current": "screenshots/annotated/care-overdue.dark.annotated.jpg",
+      "source": "components/CareQueueLocationBoard.tsx: overdue badge",
+      "problem": "A fixed brown-red foreground sits over a translucent tinted background. Ancestor-composited estimate is 1.06:1; use the painted-measurements file for a localized actual-pixel cross-check.",
+      "proposal": "Use paired warning or overdue tokens and retain the overdue count and text.",
+      "acceptance": "Validate \u22654.5:1 at actual rendered backgrounds in both themes; never rely on hue alone.",
+      "measurement": {
+        "status": "Gradient/compositing estimate; localized painted sample supplemental",
+        "ratios": "Estimated 1.06:1; painted local sample 1.02:1 (#913e2d / #6a5149)",
+        "foreground": "#913e2d",
+        "background": "Estimated #674e48"
+      },
+      "proposedImage": "screenshots/proposed/care-queue.desktop.dark.proposed-B.jpg",
+      "decision": "pending",
+      "dependencies": [
+        "DM-009 semantic role consolidation"
+      ],
+      "reproduction": "Care Queue with overdue fixture tasks: location header overdue badge.",
+      "rootCause": "A fixed brown-red foreground sits over a translucent tinted background. Ancestor-composited estimate is 1.06:1; use the painted-measurements file for a localized actual-pixel cross-check."
+    },
+    {
+      "id": "DM-006",
+      "severity": "P1",
+      "title": "Care group metadata sits on a washed surface",
+      "area": "Care Queue",
+      "category": "Contrast candidate",
+      "current": "screenshots/current/care-queue.desktop.dark.current-detail.jpg",
+      "source": "components/CareQueueLocationBoard.tsx: location group header",
+      "problem": "White-opacity layers brighten the location header while muted text remains relatively dim. Estimated metadata contrast is 2.82:1.",
+      "proposal": "Give grouped headers an explicit dark surface and secondary text pair.",
+      "acceptance": "Location codes and group counts \u22654.5:1; nested groups remain distinct without a bright gray slab.",
+      "measurement": {
+        "status": "Gradient/compositing estimate; painted sample supplemental",
+        "ratios": "Estimated 2.82:1; painted local sample 2.64:1 (#bdb5a5 / #676c66)",
+        "foreground": "#bdb5a5",
+        "background": "Estimated #636763"
+      },
+      "proposedImage": "screenshots/proposed/care-queue.desktop.dark.proposed-B.jpg",
+      "decision": "pending",
+      "dependencies": [
+        "DM-009 semantic role consolidation"
+      ],
+      "reproduction": "Care Queue grouped by location: inspect location code under group heading.",
+      "rootCause": "White-opacity layers brighten the location header while muted text remains relatively dim. Estimated metadata contrast is 2.82:1."
+    },
+    {
+      "id": "DM-007",
+      "severity": "P2",
+      "title": "AI review color roles are inconsistent",
+      "area": "AI Curator",
+      "category": "Semantic surfaces",
+      "current": "screenshots/annotated/ai-review.dark.annotated.jpg",
+      "source": "app/server/ai-curator/page.tsx: PrettyValue, status classes",
+      "problem": "Green/amber utility combinations and opacity variants are not consistently covered by the compatibility layer. Proposed and current sections vary in brightness and hierarchy. Some computed candidates require painted validation.",
+      "proposal": "Use shared status, comparison-current and comparison-proposed roles; preserve Changed and Can apply text.",
+      "acceptance": "Review pending, approved, rejected, blocked and stale states; text and icons carry meaning; remeasure all variants.",
+      "measurement": {
+        "status": "Candidate only; gradients and opacity prevent blanket pass/fail",
+        "ratios": "Examples in contrast-measurements.json"
+      },
+      "proposedImage": null,
+      "decision": "pending",
+      "dependencies": [
+        "DM-009 semantic role consolidation"
+      ],
+      "reproduction": "AI Curator pending review, status panels and proposed/current comparison.",
+      "rootCause": "Green/amber utility combinations and opacity variants are not consistently covered by the compatibility layer. Proposed and current sections vary in brightness and hierarchy. Some computed candidates require painted validation."
+    },
+    {
+      "id": "DM-008",
+      "severity": "P2",
+      "title": "Keyboard focus needs an explicit theme role",
+      "area": "Authentication and shared controls",
+      "category": "Interaction",
+      "current": "screenshots/current/login.keyboard-focus.dark.current.jpg",
+      "source": "components/ui.tsx; app/globals.css: focus and compatibility rules",
+      "problem": "Focused email field reports transparent outline and only an inset shadow; inherited border overrides make the intended focus treatment hard to distinguish. This is a focus design finding, not a quantified WCAG violation.",
+      "proposal": "Apply a visible opaque focus outline with offset and retain it in dark and light themes.",
+      "acceptance": "Keyboard-only review of links, fields, buttons, dialogs and menus; compare focused/unfocused states and measure non-text contrast at the indicator.",
+      "measurement": {
+        "status": "Observed computed style; no claimed indicator contrast ratio",
+        "ratios": "Transparent 2px outline; inset rgba(0,0,0,.24) shadow"
+      },
+      "proposedImage": "screenshots/proposed/login.keyboard-focus.dark.proposed-B.jpg",
+      "decision": "pending",
+      "dependencies": [
+        "DM-009 semantic role consolidation"
+      ],
+      "reproduction": "Anonymous login: keyboard-focus email field without submitting.",
+      "rootCause": "Focused email field reports transparent outline and only an inset shadow; inherited border overrides make the intended focus treatment hard to distinguish. This is a focus design finding, not a quantified WCAG violation."
+    },
+    {
+      "id": "DM-009",
+      "severity": "P2",
+      "title": "Theme compatibility selectors are fragile",
+      "area": "Application-wide",
+      "category": "Architecture",
+      "current": "screenshots/current/instance-expanded.desktop.dark.current.jpg",
+      "source": "app/globals.css; source-inventory.json",
+      "problem": "Large literal-color compatibility lists with !important cannot reliably cover every neutral family, opacity variant and new module. Source candidates are not automatically visible defects.",
+      "proposal": "Introduce semantic surface, field, action, status, chart and focus roles; migrate shared components first and retire compatibility mappings incrementally.",
+      "acceptance": "No new page-specific light literal without an intentional documented exception; regression gallery covers both themes and real conditional states.",
+      "measurement": null,
+      "proposedImage": null,
+      "decision": "pending",
+      "dependencies": [],
+      "reproduction": "Inspect source inventory and compare current grid, expanded instance and dialog captures.",
+      "rootCause": "Large literal-color compatibility lists with !important cannot reliably cover every neutral family, opacity variant and new module. Source candidates are not automatically visible defects."
+    },
+    {
+      "id": "DM-010",
+      "severity": "P3",
+      "title": "Choose the desired dark-mode character",
+      "area": "Application-wide",
+      "category": "Design direction",
+      "current": "screenshots/current/dashboard.desktop.dark.current-detail.jpg",
+      "source": "assets/proposed-treatments.css",
+      "problem": "Existing warm olive treatment is coherent in places, but layered translucency makes surface hierarchy variable. This is a design choice independent of accessibility repairs.",
+      "proposal": "Compare A refined existing, B botanical charcoal and C neutral charcoal. Recommend B as the starting direction, subject to owner review.",
+      "acceptance": "Approve a direction separately from individual fixes; verify all semantic palettes, print and intentionally light pages after implementation.",
+      "measurement": null,
+      "proposedImage": "screenshots/proposed/dashboard.desktop.dark.proposed-B.jpg",
+      "decision": "pending",
+      "dependencies": [],
+      "reproduction": "Compare A/B/C in the review report using dashboard, grid and queue scenes.",
+      "rootCause": "Existing warm olive treatment is coherent in places, but layered translucency makes surface hierarchy variable. This is a design choice independent of accessibility repairs."
+    }
+  ]
+}
