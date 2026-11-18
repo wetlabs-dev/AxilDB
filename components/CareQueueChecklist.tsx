@@ -1,5 +1,7 @@
  'use client'
 import Link from 'next/link'
+import { CareCategoryBadge } from '@/components/CareCategoryBadge'
+import { careCategoryPresentation } from '@/lib/care-category-presentation'
 import { CalendarDays, CheckCircle2, MapPin } from 'lucide-react'
 import { createCareSheet, completeCareTask, planRepottingTask, markPropagationEstablished, snoozeCareTask } from '@/app/actions'
 import { CareActionForm, useCareQueue } from '@/components/CareQueueOptimistic'
@@ -10,7 +12,6 @@ import { collectionPath } from '@/lib/collection-path'
 import type { CareQueueItem } from '@/lib/care-queue'
 import { husbandrySections as careSheetSectionOptions } from '@/lib/husbandry'
 import { dateInputValue, formatDate } from '@/lib/time'
-import { careTaskLabel } from '@/lib/care-queue-view'
 function dateLabel(date: Date, timezone?: string | null) {
   return formatDate(date, timezone || undefined)
 }
@@ -87,12 +88,12 @@ export function CareQueueChecklist({ collectionSlug, canAct, timezone, rangeEnd 
               </div>
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {locationItems.map((item) => (
-                  <div key={item.key} data-care-key={item.key} tabIndex={-1} aria-label={item.title} style={{ display: visibleKeys.has(item.key) ? undefined : 'none' }} className="grid min-w-0 grid-cols-[5rem_1fr] gap-3 rounded-xl border border-stone-200 bg-white/60 p-3">
+                  <div key={item.key} data-care-category={careCategoryPresentation(item.taskType).category} data-semantic-color={careCategoryPresentation(item.taskType).color} data-care-completed={Boolean(item.completedAt)} data-care-key={item.key} tabIndex={-1} aria-label={item.title} style={{ display: visibleKeys.has(item.key) ? undefined : 'none' }} className="care-category-card relative overflow-hidden grid min-w-0 grid-cols-[5rem_1fr] gap-3 rounded-xl border border-stone-200 p-3">
                     <div className="h-20 overflow-hidden rounded-lg bg-[#d6dfc9]/35">
                       <PlantImage src={item.image} alt={item.plantName || item.title} />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#2f6b45]">{careTaskLabel(item.taskType)} · {dateLabel(item.dueAt, timezone)}</p>
+                      <p className="flex flex-wrap items-center gap-1 text-xs"><CareCategoryBadge type={item.taskType} className="font-bold uppercase tracking-[0.14em]"/> · {dateLabel(item.dueAt, timezone)}</p>
                       <p className="truncate font-serif text-lg font-bold">
                         {item.plantId && item.plantInstanceId ? (
                           <PlantIdPreviewLink collectionSlug={context.collection.slug} plantId={item.plantId} href={item.href}>

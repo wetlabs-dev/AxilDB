@@ -1,3 +1,4 @@
+import { careCategoryPresentation } from '@/lib/care-category-presentation'
 import type { CareQueueItem, CareTaskType } from '@/lib/care-queue'
 import { startOfDayInTimeZone, endOfDayInTimeZone } from '@/lib/time'
 
@@ -30,19 +31,7 @@ export function careQueueSummary(items: CareQueueItem[], now = new Date(), timez
 }
 
 
-export function careTaskLabel(type: CareTaskType) {
-  if (type === 'PRUNE') return 'Prune'
-  if (type === 'WATER') return 'Water'
-  if (type === 'FERTILIZE') return 'Fertilize'
-  if (type === 'REPOT') return 'Repot'
-  if (type === 'PROPAGATION_CHECK') return 'Propagation check'
-  if (type === 'PEST_CHECK') return 'Pest check'
-  if (type === 'HEALTH_CHECK') return 'Health check'
-  if (type === 'BLOOM_CHECK') return 'Bloom check'
-  if (type === 'QUARANTINE_REVIEW') return 'Quarantine review'
-  if (type === 'TREATMENT') return 'Treatment'
-  return 'Reminder'
-}
+export function careTaskLabel(type: CareTaskType) { return careCategoryPresentation(type).label }
 
 
 export function conditionPriority(severity?: string | null) {

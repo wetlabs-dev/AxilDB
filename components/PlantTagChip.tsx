@@ -14,16 +14,28 @@ const icons = {
   'shield-check': ShieldCheck, 'shield-alert': ShieldAlert, 'triangle-alert': TriangleAlert,
 }
 export const plantTagColorClassNames: Record<string, string> = {
-  fern: 'border-[#9fbea1] bg-[#eaf2e4] text-[#285d3b]', moss: 'border-[#a9b48e] bg-[#f0f2df] text-[#4c5d31]',
-  sage: 'border-[#b7c6ae] bg-[#f2f5ec] text-[#486044]', amber: 'border-[#dcc88b] bg-[#fff5d8] text-[#71551b]',
-  rose: 'border-[#d8aaa0] bg-[#fff0eb] text-[#7b4437]', sky: 'border-[#a8c8cc] bg-[#ebf5f5] text-[#315f64]',
-  coral: 'border-[#d9a08d] bg-[#fff0e8] text-[#824837]', ocean: 'border-[#91abc4] bg-[#edf3fa] text-[#34536f]',
-  violet: 'border-[#bdb1cf] bg-[#f3eef8] text-[#5d4b75]', stone: 'border-stone-300 bg-stone-100 text-stone-700',
+  fern: 'semantic-chip semantic-color-fern',
+  moss: 'semantic-chip semantic-color-moss',
+  sage: 'semantic-chip semantic-color-sage',
+  amber: 'semantic-chip semantic-color-amber',
+  coral: 'semantic-chip semantic-color-coral',
+  rose: 'semantic-chip semantic-color-rose',
+  sky: 'semantic-chip semantic-color-sky',
+  ocean: 'semantic-chip semantic-color-ocean',
+  violet: 'semantic-chip semantic-color-violet',
+  stone: 'semantic-chip semantic-color-stone',
 }
 export const plantTagColorSwatches: Record<string, string> = {
-  fern: '#4f835d', moss: '#899466', sage: '#9eae99', amber: '#c09c43',
-  coral: '#c87860', rose: '#b96f83', sky: '#6fa9b2', ocean: '#527da7',
-  violet: '#8d78a8', stone: '#8c8276',
+  fern: 'var(--palette-fern-swatch)',
+  moss: 'var(--palette-moss-swatch)',
+  sage: 'var(--palette-sage-swatch)',
+  amber: 'var(--palette-amber-swatch)',
+  coral: 'var(--palette-coral-swatch)',
+  rose: 'var(--palette-rose-swatch)',
+  sky: 'var(--palette-sky-swatch)',
+  ocean: 'var(--palette-ocean-swatch)',
+  violet: 'var(--palette-violet-swatch)',
+  stone: 'var(--palette-stone-swatch)',
 }
 
 export type PlantTagSummary = { id: string; name: string; icon?: string | null; colorToken?: string | null; publicVisible?: boolean; active?: boolean }

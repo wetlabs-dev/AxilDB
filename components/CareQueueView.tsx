@@ -1,6 +1,7 @@
 
 'use client'
 import Link from 'next/link'
+import { careFilterPresentation } from '@/lib/care-category-presentation'
 import { CareForecast } from '@/components/CareForecast'
 import { formatDate } from '@/lib/time'
 import { CheckCircle2 } from 'lucide-react'
@@ -97,8 +98,10 @@ export function CareQueueView({ collectionSlug, canAct, timezone, filter, search
         {filters.map(([value, label]) => (
           <Link
             key={value}
+            aria-current={filter===value?'page':undefined}
+            data-semantic-color={careFilterPresentation(value)?.color}
             href={query({ filter: value, location: undefined })}
-            className={`shrink-0 rounded-full border px-3 py-1 text-sm font-medium ${filter === value ? 'border-[#2f6b45] bg-[#d6dfc9] text-[#1f472f]' : 'border-stone-200 bg-white/60 text-stone-700'}`}
+            className={`care-category-filter shrink-0 rounded-full border px-3 py-1 text-sm font-medium ${filter === value ? 'border-[#2f6b45] bg-[#d6dfc9] text-[#1f472f]' : 'border-stone-200 bg-white/60 text-stone-700'}`}
           >
             {label}
           </Link>

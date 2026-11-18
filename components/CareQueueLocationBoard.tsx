@@ -1,4 +1,5 @@
 'use client'
+import { careCategoryPresentation } from '@/lib/care-category-presentation'
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
@@ -95,7 +96,7 @@ export function CareQueueLocationBoard({
               <div className="flex flex-wrap items-center gap-1.5 text-xs text-stone-600">
                 <span className="rounded-full border border-stone-200 bg-white/70 px-2 py-1">{section.items.length} due</span>
                 {section.overdue > 0 && <span className="rounded-full border border-[#ddb3a7] bg-[#fff1ec] px-2 py-1 text-[#913e2d]">{section.overdue} overdue</span>}
-                {section.typeCounts.map(({ type, count }) => <span key={type} className="hidden rounded-full border border-stone-200 bg-white/60 px-2 py-1 sm:inline">{count} {type.toLowerCase().replaceAll('_', ' ')}</span>)}
+                {section.typeCounts.map(({ type, count }) => <span key={type} data-semantic-color={careCategoryPresentation(type).color} className="semantic-chip hidden rounded-full border px-2 py-1 sm:inline">{count} {type.toLowerCase().replaceAll('_', ' ')}</span>)}
               </div>
               {canAct && section.locationId && (
                 <div className="flex flex-wrap gap-1.5">

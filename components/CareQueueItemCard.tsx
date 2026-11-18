@@ -3,7 +3,9 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { CareActionForm } from '@/components/CareQueueOptimistic'
-import { Bell, Bug, ChevronDown, Droplets, FlaskConical, Flower2, HeartPulse, Layers3, Sprout } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
+import { CareCategoryBadge } from '@/components/CareCategoryBadge'
+import { careCategoryPresentation } from '@/lib/care-category-presentation'
 import {
   completeCareTask,
   planRepottingTask,
@@ -23,33 +25,6 @@ import { SubstrateCompositionBar } from '@/components/SubstrateCompositionBar'
 
 const conditionSeverityOptions = ['LOW', 'MODERATE', 'HIGH', 'CRITICAL'] as const
 const conditionStatusOptions = ['OPEN', 'IMPROVING', 'RESOLVED'] as const
-
-function taskIcon(task: CareQueueItem) {
-  const className = 'h-4 w-4'
-  if (task.taskType === 'WATER') return <Droplets className={className} />
-  if (task.taskType === 'FERTILIZE') return <FlaskConical className={className} />
-  if (task.taskType === 'REPOT') return <Layers3 className={className} />
-  if (task.taskType === 'TREATMENT') return <FlaskConical className={className} />
-  if (task.taskType === 'PROPAGATION_CHECK') return <Sprout className={className} />
-  if (task.taskType === 'PEST_CHECK') return <Bug className={className} />
-  if (task.taskType === 'HEALTH_CHECK') return <HeartPulse className={className} />
-  if (task.taskType === 'BLOOM_CHECK') return <Flower2 className={className} />
-  return <Bell className={className} />
-}
-
-function careTaskLabel(type: CareQueueItem['taskType']) {
-  if (type === 'PRUNE') return 'Prune'
-  if (type === 'WATER') return 'Water'
-  if (type === 'FERTILIZE') return 'Fertilize'
-  if (type === 'REPOT') return 'Repot'
-  if (type === 'TREATMENT') return 'Treatment'
-  if (type === 'PROPAGATION_CHECK') return 'Propagation check'
-  if (type === 'PEST_CHECK') return 'Pest check'
-  if (type === 'HEALTH_CHECK') return 'Health check'
-  if (type === 'BLOOM_CHECK') return 'Bloom check'
-  if (type === 'QUARANTINE_REVIEW') return 'Quarantine review'
-  return 'Reminder'
-}
 
 function priorityLabel(priority: number) {
   if (priority >= 180) return 'Urgent'
@@ -107,9 +82,7 @@ function CompleteCareHiddenFields({ item, collectionSlug, back }: { item: CareQu
 function MetaRow({ item, timezone }: { item: CareQueueItem; timezone?: string | null }) {
   return (
     <div className="flex flex-wrap items-center gap-2 text-sm text-stone-600">
-      <span className="inline-flex items-center gap-1 rounded-full border border-stone-200 bg-white/70 px-2 py-0.5 font-bold uppercase tracking-[0.14em] text-stone-700">
-        {taskIcon(item)} {careTaskLabel(item.taskType)}
-      </span>
+      <CareCategoryBadge type={item.taskType} className="font-bold uppercase tracking-[0.14em]" />
       <span>{dateLabel(item.dueAt, timezone)}</span>
       <span className={item.priority >= 100 ? 'font-semibold text-[#9a3f35]' : 'font-medium text-stone-600'}>{priorityLabel(item.priority)}</span>
     </div>
@@ -392,7 +365,7 @@ export function CareQueueItemCard({
   const summary = item.condition ? compactConditionSummary(item, timezone) : item.reason
 
   return (
-    <Card className="p-0">
+    <Card className="care-category-card p-0" data-care-category={careCategoryPresentation(item.taskType).category} data-semantic-color={careCategoryPresentation(item.taskType).color} data-care-completed={Boolean(item.completedAt)}>
       <div className="grid gap-3 p-0 md:hidden sm:grid-cols-[8.5rem_1fr]">
         <div className="h-32 min-w-0 overflow-hidden bg-[#d6dfc9]/35 sm:h-full">
           <CareQueuePhoto item={item} collectionSlug={collectionSlug} canUpload={canAct} />

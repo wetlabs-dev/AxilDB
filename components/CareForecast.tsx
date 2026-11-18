@@ -1,4 +1,5 @@
 'use client'
+import { careCategoryPresentation } from '@/lib/care-category-presentation'
 import { useCallback, useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -114,7 +115,7 @@ export function CareForecast({ collectionSlug, initialDraft, stayOnPage = false 
     </div>
     {day && <details key={day.date} open className="rounded border border-stone-200 p-3 text-sm">
       <summary className="cursor-pointer font-semibold">{day.date === today ? "Today's care" : `Projected care · ${day.date}`} · {day.total} item(s)</summary>
-      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">{Object.entries(day.categories).map(([type, count]) => <span key={type}>{careTaskLabel(type as CareTaskType)}: <b>{count}</b></span>)}{day.total === 0 && <span>No projected care.</span>}</div>
+      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">{Object.entries(day.categories).map(([type, count]) => <span key={type} data-semantic-color={careCategoryPresentation(type).color} className="semantic-chip rounded-full border px-2 py-0.5">{careTaskLabel(type as CareTaskType)}: <b>{count}</b></span>)}{day.total === 0 && <span>No projected care.</span>}</div>
       {day.quietDay && <p className="mt-2 text-[#2f6b45]">{day.quietDay.name}{day.total ? ' · Outstanding work or required exceptions are never hidden.' : ''}</p>}
       {!!day.restrictions?.length && <ul className="mt-2 text-xs">{day.restrictions.map(rule => <li key={rule.id}>{rule.locationId ? forecast?.locations?.find(location => location.id === rule.locationId)?.name : 'Collection-wide'} · {rule.name}</li>)}</ul>}
       {!!day.conflicts?.length && <div role="alert" className="mt-2 rounded border border-amber-300 p-2"><b>Care needs a scheduling decision</b><ul>{day.conflicts.map(item => <li key={item.key}><Link className="underline" href={item.href}>{item.title}</Link> · {item.quietDayReason}</li>)}</ul></div>}
