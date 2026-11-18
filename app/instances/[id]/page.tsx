@@ -1266,7 +1266,7 @@ export default async function InstanceDetail({
       <div className="grid gap-4 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1fr)]">
         <Card className="xl:order-1">
           <h3 className="font-bold">Parents</h3>
-          {parentRelationships.length === 0 && <p className="text-sm text-neutral-600">No parent propagation recorded.</p>}
+          {parentRelationships.length === 0 && <p className="text-sm ax-text-muted">No parent propagation recorded.</p>}
           <div className="mt-2 grid gap-2 text-sm">
             {parentRelationships.map((relationship) => (
               <div key={relationship.key} className="rounded-md border border-stone-200 bg-white/60 p-2">
@@ -1284,7 +1284,7 @@ export default async function InstanceDetail({
 
         <Card className="xl:order-2">
           <h3 className="font-bold">Children</h3>
-          {childRelationships.length === 0 && <p className="text-sm text-neutral-600">No child propagations yet.</p>}
+          {childRelationships.length === 0 && <p className="text-sm ax-text-muted">No child propagations yet.</p>}
           <div className="mt-2 grid gap-2 text-sm">
             {childRelationships.map((relationship) => (
               <div key={relationship.key} className="rounded-md border border-stone-200 bg-white/60 p-2">
@@ -1402,7 +1402,7 @@ export default async function InstanceDetail({
 
         <Card className="xl:order-2 xl:col-span-2">
           <h3 className="font-bold">Bloom tracker</h3>
-          <p className="mb-4 text-sm text-neutral-600">
+          <p className="mb-4 text-sm ax-text-muted">
             Open a bloom when it starts, mark peak later, then close it when finished. Photos can be added to the bloom event at any stage.
           </p>
 
@@ -1419,7 +1419,7 @@ export default async function InstanceDetail({
 
           <div className="mt-6 space-y-4">
             {i.blooms.length === 0 && (
-              <p className="text-sm text-neutral-600">No bloom events recorded yet.</p>
+              <p className="text-sm ax-text-muted">No bloom events recorded yet.</p>
             )}
 
             {i.blooms.map((b) => {
@@ -1434,7 +1434,7 @@ export default async function InstanceDetail({
                   <div className="mb-3 flex items-start justify-between gap-3">
                     <div>
                       <p className="font-bold">Bloom started {fmtDate(b.bloomStartDate, timezone)}</p>
-                      <p className="text-sm text-neutral-600">Status: {status}</p>
+                      <p className="text-sm ax-text-muted">Status: {status}</p>
                     </div>
                   </div>
 
@@ -1447,7 +1447,7 @@ export default async function InstanceDetail({
                   {b.notes && <p className="mt-2 text-sm whitespace-pre-wrap">{b.notes}</p>}
 
                   {canEditInCollection(user, context) && !b.peakBloomDate && (
-                    <form action={updateBloomPeak} className="mt-4 grid gap-2 rounded-xl bg-neutral-50 p-3">
+                    <form action={updateBloomPeak} className="mt-4 grid gap-2 rounded-xl ax-surface-inset p-3">
                       <input type="hidden" name="id" value={b.id} />
                       <input type="hidden" name="plantInstanceId" value={id} />
                       <Field label="Peak bloom date" help="The date the bloom looked its fullest or most representative." name="peakBloomDate" type="date" required />
@@ -1458,7 +1458,7 @@ export default async function InstanceDetail({
                   )}
 
                   {canEditInCollection(user, context) && !b.bloomEndDate && (
-                    <form action={closeBloomEvent} className="mt-4 grid gap-2 rounded-xl bg-neutral-50 p-3">
+                    <form action={closeBloomEvent} className="mt-4 grid gap-2 rounded-xl ax-surface-inset p-3">
                       <input type="hidden" name="id" value={b.id} />
                       <input type="hidden" name="plantInstanceId" value={id} />
                       <Field label="Bloom end date" help="The date the bloom event was finished or no longer useful to track as open." name="bloomEndDate" type="date" required />
@@ -1471,7 +1471,7 @@ export default async function InstanceDetail({
                     action="/api/photos"
                     method="post"
                     encType="multipart/form-data"
-                    className="mt-4 grid gap-2 rounded-xl bg-neutral-50 p-3"
+                    className="mt-4 grid gap-2 rounded-xl ax-surface-inset p-3"
                   >
                     <input type="hidden" name="entityType" value="BLOOM_EVENT" />
                     <input type="hidden" name="entityId" value={b.id} />
@@ -1483,7 +1483,7 @@ export default async function InstanceDetail({
                   </form>}
 
                   {user && (
-                    <div className="mt-4 rounded-xl bg-neutral-50 p-3">
+                    <div className="mt-4 rounded-xl ax-surface-inset p-3">
                       <p className="mb-2 text-sm font-medium">Bloom reminders</p>
                       <form action={createReminder} className="grid gap-2">
                         <input type="hidden" name="entityType" value="BLOOM_EVENT" />

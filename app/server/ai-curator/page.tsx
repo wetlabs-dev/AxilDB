@@ -37,8 +37,8 @@ function budgetPct(spend: unknown, budget: unknown) {
 }
 
 function statusClass(status: string) {
-  if (status === 'Running') return 'border-green-200 bg-green-50 text-green-900'
-  if (status === 'Waiting') return 'border-amber-200 bg-amber-50 text-amber-900'
+  if (status === 'Running') return 'border-green-200 ax-status-success ax-text-success'
+  if (status === 'Waiting') return 'border-amber-200 ax-status-warning ax-text-warning'
   if (status === 'Paused') return 'border-blue-200 bg-blue-50 text-blue-900'
   return 'border-stone-200 bg-stone-50 text-stone-700'
 }
@@ -203,12 +203,12 @@ function AliasListValue({ value, changedFields }: { value: unknown; changedField
       {aliases.map((alias, index) => {
         const changed = Boolean(changedFields?.size)
         return (
-          <li key={`${compactValue(alias.name)}-${index}`} className={`rounded-md border p-3 ${changed ? 'border-green-300 bg-green-50 shadow-sm shadow-green-900/5' : 'border-stone-200 bg-white/60'}`}>
+          <li key={`${compactValue(alias.name)}-${index}`} className={`rounded-md border p-3 ${changed ? 'border-green-300 ax-status-success shadow-sm shadow-green-900/5' : 'border-stone-200 bg-white/60'}`}>
             <div className="flex flex-wrap items-start justify-between gap-2">
               <p className="font-semibold text-stone-950">{compactValue(alias.name)}</p>
               <div className="flex flex-wrap gap-1.5">
                 {alias.aliasType ? <span className="rounded-full bg-white/75 px-2 py-0.5 text-xs font-medium text-stone-700">{displayValue(alias.aliasType)}</span> : null}
-                {alias.confidence ? <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-900">{displayValue(alias.confidence)}</span> : null}
+                {alias.confidence ? <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium ax-text-success">{displayValue(alias.confidence)}</span> : null}
               </div>
             </div>
             {alias.source ? <p className="mt-1 text-sm text-stone-700">Source: {compactValue(alias.source)}</p> : null}
@@ -254,10 +254,10 @@ function HusbandryValue({ value, changedFields }: { value: unknown; changedField
             {section.entries.map(([field, label, entryValue]: readonly [string, string, string | null]) => {
               const changed = changedField(changedFields, field)
               return (
-                <div key={field} className={`rounded-md border p-2.5 ${changed ? 'border-green-300 bg-green-50' : 'border-stone-200 bg-[#fffdf7]'}`}>
-                  <dt className={`flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] ${changed ? 'text-green-900' : 'text-stone-500'}`}>
+                <div key={field} className={`rounded-md border p-2.5 ${changed ? 'border-green-300 ax-status-success' : 'border-stone-200 bg-[#fffdf7]'}`}>
+                  <dt className={`flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] ${changed ? 'ax-text-success' : 'text-stone-500'}`}>
                     <span>{label}</span>
-                    {changed && <span className="rounded-full bg-green-100 px-2 py-0.5 text-[0.65rem] normal-case tracking-normal text-green-900">Changed</span>}
+                    {changed && <span className="rounded-full bg-green-100 px-2 py-0.5 text-[0.65rem] normal-case tracking-normal ax-text-success">Changed</span>}
                   </dt>
                   <dd className="mt-1 break-words text-sm leading-5 text-stone-900">{entryValue}</dd>
                 </div>
@@ -304,7 +304,7 @@ function SubstrateValue({ value, changedFields, contextValue }: { value: unknown
         const composition = substrateComposition(version)
         const changed = Boolean(changedFields?.size)
         return (
-          <li key={`${versionId || title}-${index}`} className={`rounded-md border p-3 ${changed ? 'border-green-300 bg-green-50 shadow-sm shadow-green-900/5' : 'border-stone-200 bg-white/60'}`}>
+          <li key={`${versionId || title}-${index}`} className={`rounded-md border p-3 ${changed ? 'border-green-300 ax-status-success shadow-sm shadow-green-900/5' : 'border-stone-200 bg-white/60'}`}>
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
                 <p className="font-semibold text-stone-950">{Number(recommendation.rank || index + 1)}. {title}</p>
@@ -312,7 +312,7 @@ function SubstrateValue({ value, changedFields, contextValue }: { value: unknown
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {recommendation.suitability ? <span className="rounded-full bg-white/75 px-2 py-0.5 text-xs font-medium text-stone-700">{substrateLabel(String(recommendation.suitability))}</span> : null}
-                {recommendation.confidence !== null && recommendation.confidence !== undefined ? <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-900">{confidenceText(recommendation.confidence)}</span> : null}
+                {recommendation.confidence !== null && recommendation.confidence !== undefined ? <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium ax-text-success">{confidenceText(recommendation.confidence)}</span> : null}
               </div>
             </div>
             {composition.length ? <p className="mt-2 text-xs leading-5 text-stone-600">{composition.join(' · ')}</p> : null}
@@ -333,7 +333,7 @@ function prettyChangedCount(targetField: string | null | undefined, value: unkno
 function PrettyValue({ value, changedFields, targetField, contextValue, recipeNames }: { value: unknown; changedFields?: Set<string>; targetField?: string | null; contextValue?: unknown; recipeNames?: ReadonlyMap<string, string> }) {
   if (value === null || value === undefined || value === '') {
     const changed = Boolean(changedFields?.size)
-    return <p className={`rounded-md border p-3 text-sm italic ${changed ? 'border-green-300 bg-green-50 text-green-950' : 'border-dashed border-stone-300 bg-white/45 text-stone-500'}`}>No value recorded.</p>
+    return <p className={`rounded-md border p-3 text-sm italic ${changed ? 'border-green-300 ax-status-success ax-text-success' : 'border-dashed border-stone-300 bg-white/45 text-stone-500'}`}>No value recorded.</p>
   }
   if (targetField === 'husbandryLink') return <HusbandryLinkComparison value={value} context={(contextValue as any)?.consolidation}/>
   if (targetField === 'repottingWindows') {
@@ -348,7 +348,7 @@ function PrettyValue({ value, changedFields, targetField, contextValue, recipeNa
   if (targetField === 'substrate') return <SubstrateValue value={value} changedFields={changedFields} contextValue={contextValue} />
   if (typeof value !== 'object') {
     const changed = Boolean(changedFields?.size)
-    return <p className={`whitespace-pre-wrap rounded-md border p-3 text-sm ${changed ? 'border-green-300 bg-green-50 text-green-950' : 'border-stone-200 bg-white/55 text-stone-800'}`}>{compactValue(value)}{changed && <span className="ml-2 rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-900">Changed</span>}</p>
+    return <p className={`whitespace-pre-wrap rounded-md border p-3 text-sm ${changed ? 'border-green-300 ax-status-success ax-text-success' : 'border-stone-200 bg-white/55 text-stone-800'}`}>{compactValue(value)}{changed && <span className="ml-2 rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold ax-text-success">Changed</span>}</p>
   }
   if (Array.isArray(value)) {
     if (value.length === 0) return <p className="rounded-md border border-dashed border-stone-300 bg-white/45 p-3 text-sm italic text-stone-500">No items.</p>
@@ -366,10 +366,10 @@ function PrettyValue({ value, changedFields, targetField, contextValue, recipeNa
       {orderedEntries(value as Record<string, unknown>).slice(0, 18).map(([key, entryValue]) => {
         const changed = Boolean(changedFields?.has(key))
         return (
-        <div key={key} className={`min-w-0 rounded-md border p-3 ${changed ? 'border-green-300 bg-green-50 shadow-sm shadow-green-900/5' : 'border-stone-200 bg-white/60'}`}>
-          <dt className={`flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] ${changed ? 'text-green-900' : 'text-stone-500'}`}>
+        <div key={key} className={`min-w-0 rounded-md border p-3 ${changed ? 'border-green-300 ax-status-success shadow-sm shadow-green-900/5' : 'border-stone-200 bg-white/60'}`}>
+          <dt className={`flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] ${changed ? 'ax-text-success' : 'text-stone-500'}`}>
             <span>{key === 'fertilizerRecipeId' ? 'Fertilizer recipe' : fieldLabel(key)}</span>
-            {changed && <span className="rounded-full bg-green-100 px-2 py-0.5 text-[0.65rem] normal-case tracking-normal text-green-900">Changed</span>}
+            {changed && <span className="rounded-full bg-green-100 px-2 py-0.5 text-[0.65rem] normal-case tracking-normal ax-text-success">Changed</span>}
           </dt>
           <dd className="mt-1 min-w-0 break-words text-sm text-stone-900">{key === 'fertilizerRecipeId' && typeof entryValue === 'string' && entryValue.trim() ? recipeNames?.get(entryValue) || 'Unavailable fertilizer recipe' : compactValue(entryValue)}</dd>
         </div>
@@ -395,18 +395,18 @@ function ReviewSuggestionCard({ suggestion, recipeNames }: { suggestion: any; re
             <p className="font-semibold">{suggestion.title}</p>
             <p className="mt-1 text-sm text-stone-600">{fieldLabel(suggestion.targetField)} · {confidenceText(suggestion.confidence)}</p>
           </div>
-          <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${appliesDirectly ? 'border-green-200 bg-green-50 text-green-900' : 'border-amber-200 bg-amber-50 text-amber-900'}`}>
+          <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${appliesDirectly ? 'border-green-200 ax-status-success ax-text-success' : 'border-amber-200 ax-status-warning ax-text-warning'}`}>
             {appliesDirectly ? 'Can apply' : 'Manual follow-up'}
           </span>
         </div>
       </summary>
       <div className="mt-3 grid gap-4">
-        {linkedOverride && <p className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm">Proposed local override of linked care. Accept records manual follow-up and preserves the live link. Review the evidence below. To apply locally, open the definition and deliberately choose Make local copy first. Reason: {(suggestion.suggestedValue as any)?.localOverride?.reason} Evidence: {(suggestion.suggestedValue as any)?.localOverride?.evidence}</p>}
+        {linkedOverride && <p className="rounded-md border border-amber-200 ax-status-warning p-3 text-sm">Proposed local override of linked care. Accept records manual follow-up and preserves the live link. Review the evidence below. To apply locally, open the definition and deliberately choose Make local copy first. Reason: {(suggestion.suggestedValue as any)?.localOverride?.reason} Evidence: {(suggestion.suggestedValue as any)?.localOverride?.evidence}</p>}
         <p className="rounded-md border border-stone-200 bg-white/50 p-3 text-sm leading-6 text-stone-800">{suggestion.reasoning}</p>
         {references.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {references.map((reference, index) => reference.url ? (
-              <a key={`${reference.url}-${index}`} href={reference.url} target="_blank" rel="noreferrer" className="rounded-full border border-green-200 bg-green-50 px-3 py-1 text-sm font-medium text-green-900 underline-offset-2 hover:underline">
+              <a key={`${reference.url}-${index}`} href={reference.url} target="_blank" rel="noreferrer" className="rounded-full border border-green-200 ax-status-success px-3 py-1 text-sm font-medium ax-text-success underline-offset-2 hover:underline">
                 {reference.label}
               </a>
             ) : (
@@ -428,14 +428,14 @@ function ReviewSuggestionCard({ suggestion, recipeNames }: { suggestion: any; re
               </div>
             )}
           </section>
-          <section className="rounded-lg border border-green-200 bg-green-50/35 p-3">
+          <section className="rounded-lg border border-green-200 ax-status-success p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h5 className="font-semibold text-green-950">Proposed change</h5>
-              <span className="rounded-full border border-green-200 bg-white/70 px-2.5 py-1 text-xs font-medium text-green-900">
+              <h5 className="font-semibold ax-text-success">Proposed change</h5>
+              <span className="rounded-full border border-green-200 bg-white/70 px-2.5 py-1 text-xs font-medium ax-text-success">
                 {changedCount ? `${changedCount} changed` : 'No field changes'}
               </span>
             </div>
-            {!changedFields.size && <p className="mt-2 rounded-md border border-amber-200 bg-amber-50/70 p-2 text-xs text-amber-950">This suggestion restates the current value. New no-change suggestions are skipped automatically.</p>}
+            {!changedFields.size && <p className="mt-2 rounded-md border border-amber-200 ax-status-warning p-2 text-xs ax-text-warning">This suggestion restates the current value. New no-change suggestions are skipped automatically.</p>}
             <div className="mt-2">
               <PrettyValue value={suggestion.suggestedValue} changedFields={changedFields} targetField={suggestion.targetField} contextValue={suggestion.currentValue} recipeNames={recipeNames} />
             </div>
@@ -453,7 +453,7 @@ function ReviewSuggestionCard({ suggestion, recipeNames }: { suggestion: any; re
           </p>
           <div className="flex flex-wrap gap-2">
             <Button name="action" value="ACCEPT" className="px-3 py-1.5 text-xs">{suggestion.targetField === 'husbandryLink' ? 'Approve Link' : 'Accept'}</Button>
-            {suggestion.targetField !== 'husbandryLink' && <Button name="action" value="EDIT_ACCEPT" className="bg-[#6d7f6d] px-3 py-1.5 text-xs hover:bg-[#536453]">Edit then Accept</Button>}
+            {suggestion.targetField !== 'husbandryLink' && <Button name="action" value="EDIT_ACCEPT" className="ax-action-secondary px-3 py-1.5 text-xs ">Edit then Accept</Button>}
             <Button name="action" value="REJECT" className="bg-[#9a3f35] px-3 py-1.5 text-xs hover:bg-[#7d3028]">Reject</Button>
           </div>
         </form>
@@ -521,12 +521,12 @@ export default async function AiCuratorPage({
       {sp.linkBatch && <p role="status">Consolidation batch results: {sp.linkBatch}</p>}
       {sp.review === 'stale' && <p role="alert">The husbandry link was not applied. Review the stale comparison explanation and refresh or reject it.</p>}
       <CalibrationOverview />
-      {sp.settings === 'updated' && <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900">AI Curator settings updated.</p>}
-      {sp.review && sp.review !== 'stale' && <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900">Review action recorded.</p>}
+      {sp.settings === 'updated' && <p className="rounded-lg border border-green-200 ax-status-success p-3 text-sm ax-text-success">AI Curator settings updated.</p>}
+      {sp.review && sp.review !== 'stale' && <p className="rounded-lg border border-green-200 ax-status-success p-3 text-sm ax-text-success">Review action recorded.</p>}
       {sp.responseRequeued !== undefined && <p role="status" className="rounded-lg border p-3 text-sm">Response-error jobs: {Number(sp.responseRecovered) || 0} results recovered, {Number(sp.responseRequeued) || 0} queued, {Number(sp.responseFailed) || 0} failed, {Number(sp.responseLimited) || 0} need a higher Max tokens setting, {Number(sp.responseBusy) || 0} busy or conflicting. Normal AI budget limits apply.</p>}
       {sp.jobRetry && <p role="status" className="rounded-lg border p-3 text-sm">{({OUTPUT_LIMIT_UNCHANGED:'Increase Curator Max tokens before retrying this output-limit job.',QUEUED:'Job requeued with a fresh bounded retry allowance.',RECOVERED:'The existing result was recovered without another AI request.',WORKER_BUSY:'The worker is active. Retry once it finishes.',ACTIVE_WORK_EXISTS:'Another job for this work is active. Review that job first.',UNCHANGED:'This job is no longer eligible for retry.'} as Record<string,string>)[sp.jobRetry] || 'Review the current job status.'}</p>}
       {sp.requeued !== undefined && <p role="status" className="rounded-lg border p-3 text-sm">Database-blocked jobs: {Number(sp.recovered) || 0} existing results recovered, {Number(sp.requeued) || 0} queued, {Number(sp.retryFailed) || 0} failed, {Number(sp.retrySkipped) || 0} left unchanged because work is active; retry after the worker finishes. Queued work follows the normal AI budget.</p>}
-      {sp.errors === 'cleared' && <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900">Recent AI Curator errors cleared.</p>}
+      {sp.errors === 'cleared' && <p className="rounded-lg border border-green-200 ax-status-success p-3 text-sm ax-text-success">Recent AI Curator errors cleared.</p>}
 
       <Card>
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -572,7 +572,7 @@ export default async function AiCuratorPage({
           <span>Monthly spend: {money(dashboard.budget.monthSpend)} of {money(dashboard.budget.monthlyBudget)}</span>
         </div>
         {dashboard.currentJob && (
-          <p className="mt-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-950">
+          <p className="mt-4 rounded-lg border border-green-200 ax-status-success p-3 text-sm ax-text-success">
             Current job: {dashboard.currentJob.jobType.replaceAll('_', ' ').toLowerCase()} for {dashboard.currentJob.plantDefinition ? dashboard.currentJob.plantDefinition.genus : dashboard.currentJob.collection.name}.
           </p>
         )}
@@ -616,7 +616,7 @@ export default async function AiCuratorPage({
               <h3 className="font-serif text-xl font-semibold">Waiting for Human</h3>
               <p className="mt-1 text-sm text-stone-600">These jobs need a curator to clear an ambiguity, add missing evidence, or cancel the work.</p>
             </div>
-            <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-900">{waitingJobBadge}</span>
+            <span className="rounded-full border border-amber-200 ax-status-warning px-3 py-1 text-sm font-semibold ax-text-warning">{waitingJobBadge}</span>
           </div>
           <form action={retryDatabaseBlockedJobs} className="mt-3 space-y-2">
             <Button>Retry database-blocked jobs</Button>
@@ -628,11 +628,11 @@ export default async function AiCuratorPage({
           </form>
           <div className="mt-4 grid gap-3">
             {dashboard.waitingJobs.map((job) => (
-              <div key={job.id} className="rounded-lg border border-amber-200 bg-amber-50/55 p-3">
+              <div key={job.id} className="rounded-lg border border-amber-200 ax-status-warning p-3">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="font-semibold">{job.plantDefinition ? plantName(job.plantDefinition) : job.collection.name}</p>
-                    <p className="text-sm text-amber-950">{curatorFailureDescription(job.blockingReason)}</p>
+                    <p className="text-sm ax-text-warning">{curatorFailureDescription(job.blockingReason)}</p>
                     {!isCuratorHistoryConflict(job.blockingReason) && (!isCuratorResponseFailure(job.blockingReason) || job.blockingReason?.includes('configured output limit')) && job.humanActionRequired && <p className="mt-1 text-sm text-stone-700">Suggested action: {job.humanActionRequired}</p>}
                     {!isCuratorHistoryConflict(job.blockingReason) && (!isCuratorResponseFailure(job.blockingReason) || job.blockingReason?.includes('configured output limit')) && job.retryConditions && <p className="mt-1 text-xs text-stone-600">Retry when: {job.retryConditions}</p>}
                   </div>
@@ -712,7 +712,7 @@ export default async function AiCuratorPage({
                 </div>
               ))}
               {dashboard.recentErrors.map((error, index) => (
-                <div key={`${error.updatedAt.toISOString()}-${index}`} className="rounded-lg border border-amber-200 bg-amber-50/55 p-2 text-sm text-amber-950">
+                <div key={`${error.updatedAt.toISOString()}-${index}`} className="rounded-lg border border-amber-200 ax-status-warning p-2 text-sm ax-text-warning">
                   <p className="text-xs font-semibold uppercase tracking-[0.12em] text-amber-800">{formatDateTime(error.updatedAt, timezone)}</p>
                   <p className="mt-1">{curatorFailureDescription(error.blockingReason)}</p>
                 </div>

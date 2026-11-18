@@ -108,7 +108,7 @@ function PlantHeading({ item, collectionSlug }: { item: CareQueueItem; collectio
 function QuietDayNotice({ item }: { item: CareQueueItem }) {
   if (!item.quietDayReason) return null
   return (
-    <p role={item.schedulingConflict ? 'alert' : undefined} className={`rounded-md border px-2 py-1 text-xs font-medium ${item.schedulingConflict ? 'border-amber-300 bg-amber-50 text-amber-900' : 'border-[#c7d8bd] bg-[#f5fbf0] text-[#2f6b45]'}`}>
+    <p role={item.schedulingConflict ? 'alert' : undefined} className={`rounded-md border px-2 py-1 text-xs font-medium ${item.schedulingConflict ? 'border-amber-300 ax-status-warning ax-text-warning' : 'border-[#c7d8bd] bg-[#f5fbf0] text-[#2f6b45]'}`}>
       {item.quietDayReason}
     </p>
   )
@@ -127,7 +127,7 @@ function ConditionActionsPanel({
 }) {
   if (!item.condition) return null
   return (
-    <div className="grid gap-3 rounded-lg border border-[#c7d8bd] bg-[#f5fbf0]/70 p-3">
+    <div className="grid gap-3 rounded-lg border border-[#c7d8bd] ax-surface-elevated p-3">
       <div className="grid gap-1 text-xs text-stone-700 sm:grid-cols-2 lg:grid-cols-3">
         <p><span className="font-semibold">Condition:</span> {labelize(item.condition.category)}</p>
         <p><span className="font-semibold">Severity:</span> {labelize(item.condition.severity)}</p>
@@ -181,7 +181,7 @@ function ConditionActionsPanel({
               defaultValue={item.condition.followUpAt ? dateInputValue(item.condition.followUpAt, timezone || undefined) : ''}
             />
             <TextArea label="Attention note" name="attentionNote" className="min-h-14" />
-            <button className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900 shadow-sm hover:bg-amber-100">Still needs attention</button>
+            <button className="rounded-md border border-amber-200 ax-status-warning px-3 py-2 text-sm font-semibold ax-text-warning shadow-sm hover:bg-amber-100">Still needs attention</button>
           </CareActionForm>
         </div>
       </div>
@@ -201,11 +201,11 @@ function NormalCareDetails({
   substrateVersions: Array<{ id: string; label: string }>
 }) {
   if (item.source === 'treatment-plan') return (
-    <div className="grid gap-2 rounded-md border border-amber-200 bg-amber-50/70 p-3 text-sm text-stone-700">
+    <div className="grid gap-2 rounded-md border border-amber-200 ax-status-warning p-3 text-sm text-stone-700">
       <p className="font-semibold text-stone-900">{item.treatmentPlanTitle || 'Treatment plan'}</p>
       {item.treatmentName && <p>Treatment: {item.treatmentName}</p>}
       {item.treatmentProgress && <p>{item.treatmentProgress}</p>}
-      {item.treatmentSafetySummary && <p className="font-medium text-amber-900">Safety: {item.treatmentSafetySummary}</p>}
+      {item.treatmentSafetySummary && <p className="font-medium ax-text-warning">Safety: {item.treatmentSafetySummary}</p>}
       <Link prefetch={false} href={item.href} className="mt-1 inline-flex w-fit rounded-md bg-[#2f6b45] px-3 py-2 font-semibold text-white">Continue plan</Link>
     </div>
   )

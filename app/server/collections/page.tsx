@@ -86,7 +86,7 @@ export default async function ServerCollections() {
                 <form action={setCollectionAiFeatures}>
                   <input type="hidden" name="collectionId" value={collection.id} />
                   <input type="hidden" name="enabled" value={collection.aiFeaturesEnabled ? 'false' : 'true'} />
-                  <Button className="bg-[#6d7f6d] px-3 py-1.5 hover:bg-[#536453]">
+                  <Button className="ax-action-secondary px-3 py-1.5 ">
                     {collection.aiFeaturesEnabled ? 'Disable AI' : 'Enable AI'}
                   </Button>
                 </form>

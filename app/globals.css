@@ -66,7 +66,8 @@
   font-display: swap;
 }
 
-:root {
+:root,
+.ax-public-light {
   color-scheme: light;
   --ax-bg: #fffdf7;
   --ax-bg-soft: #faf6ea;
@@ -91,40 +92,84 @@
   --ax-warning: #6f541f;
   --ax-warning-soft: #fff5d6;
   --ax-shadow: rgba(47, 38, 24, .07);
-  --ax-focus: rgba(143, 165, 143, .3);
+  --ax-focus: #2f6b45;
+  --ax-nav: #fffaf0;
+  --ax-elevated: #f4f8ed;
+  --ax-action: #2f6b45;
+  --ax-action-hover: #245737;
+  --ax-action-text: #ffffff;
+  --ax-secondary-action: #45634b;
+  --ax-secondary-action-hover: #36513c;
+  --ax-danger-action: #9a3f35;
+  --ax-danger-action-hover: #7d3028;
+  --ax-success: #235333;
+  --ax-success-soft: #edf3e6;
+  --ax-success-border: #a8c4a3;
+  --ax-warning-border: #b79a50;
+  --ax-info: #204e6a;
+  --ax-info-soft: #eaf4fc;
+  --ax-info-border: #9dbfd6;
+  --ax-violet: #373b70;
+  --ax-violet-soft: #eef2ff;
+  --ax-violet-border: #b4badd;
+  --ax-rose: #7a304c;
+  --ax-rose-soft: #fff1f2;
+  --ax-rose-border: #d9acba;
 }
 
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --ax-bg: #0f160f;
-  --ax-bg-soft: #151d14;
-  --ax-bg-warm: #1f2419;
-  --ax-surface: rgba(30, 37, 27, .9);
-  --ax-surface-solid: #1e251b;
-  --ax-surface-muted: rgba(37, 47, 33, .9);
-  --ax-field: #151c14;
-  --ax-border: rgba(116, 130, 101, .44);
-  --ax-border-strong: rgba(157, 171, 137, .6);
-  --ax-text: #eee7d7;
-  --ax-heading: #fff3dc;
-  --ax-muted: #bdb5a5;
-  --ax-muted-strong: #d6cfbe;
-  --ax-primary: #9bc38a;
-  --ax-primary-strong: #b4d6a5;
-  --ax-primary-soft: rgba(94, 128, 79, .42);
-  --ax-primary-wash: rgba(55, 75, 48, .72);
+  --ax-bg: #151a17;
+  --ax-bg-soft: #181e1a;
+  --ax-bg-warm: #191f1b;
+  --ax-surface: #202722;
+  --ax-surface-solid: #202722;
+  --ax-surface-muted: #263029;
+  --ax-field: #181e1a;
+  --ax-border: #39463c;
+  --ax-border-strong: #65786a;
+  --ax-text: #e7ebe3;
+  --ax-heading: #f1f6ee;
+  --ax-muted: #bbc6ba;
+  --ax-muted-strong: #c7d1c5;
+  --ax-primary: #8ebb91;
+  --ax-primary-strong: #b5d4ad;
+  --ax-primary-soft: #314c36;
+  --ax-primary-wash: #233425;
   --ax-danger: #ef9a8c;
   --ax-danger-strong: #ffb3a7;
-  --ax-danger-soft: rgba(108, 47, 39, .45);
-  --ax-warning: #f2cf80;
-  --ax-warning-soft: rgba(118, 86, 29, .42);
-  --ax-blue: #bfe4ff;
-  --ax-blue-soft: rgba(28, 63, 82, .78);
-  --ax-purple: #dec6f7;
-  --ax-purple-soft: rgba(55, 42, 71, .74);
-  --ax-archive-soft: rgba(44, 48, 39, .86);
-  --ax-shadow: rgba(0, 0, 0, .32);
-  --ax-focus: rgba(155, 195, 138, .28);
+  --ax-danger-soft: #3b2724;
+  --ax-warning: #f0d28f;
+  --ax-warning-soft: #3c321e;
+  --ax-blue: #b6d7ef;
+  --ax-blue-soft: #233340;
+  --ax-purple: #c3c8f2;
+  --ax-purple-soft: #2a2d43;
+  --ax-archive-soft: #263029;
+  --ax-shadow: rgba(0, 0, 0, .28);
+  --ax-focus: #a0c69a;
+  --ax-nav: #191f1b;
+  --ax-elevated: #263029;
+  --ax-action: #315c42;
+  --ax-action-hover: #3b6b4c;
+  --ax-action-text: #f1f6ee;
+  --ax-secondary-action: #304f3b;
+  --ax-secondary-action-hover: #3c6047;
+  --ax-danger-action: #873e35;
+  --ax-danger-action-hover: #98483e;
+  --ax-success: #b5d4ad;
+  --ax-success-soft: #233425;
+  --ax-success-border: #57775b;
+  --ax-warning-border: #9e864d;
+  --ax-info: #b6d7ef;
+  --ax-info-soft: #233340;
+  --ax-info-border: #597b94;
+  --ax-violet: #c3c8f2;
+  --ax-violet-soft: #2a2d43;
+  --ax-violet-border: #747baf;
+  --ax-rose: #eab2c1;
+  --ax-rose-soft: #3c242e;
+  --ax-rose-border: #a56a80;
 }
 
 * {
@@ -149,10 +194,7 @@ body {
 }
 
 :root[data-theme='dark'] body {
-  background:
-    radial-gradient(circle at top left, rgba(155, 195, 138, .16), transparent 30rem),
-    radial-gradient(circle at 85% 8%, rgba(196, 122, 90, .1), transparent 24rem),
-    linear-gradient(135deg, var(--ax-bg) 0%, var(--ax-bg-soft) 48%, var(--ax-bg-warm) 100%);
+  background: var(--ax-bg);
 }
 
 h1,
@@ -468,7 +510,7 @@ section {
   color: #fca5a5;
 }
 
-:root[data-theme='dark'] a:not([class*="bg-"]):not([class*="text-white"]):not([class*="text-stone"]):not([class*="text-[#"]) {
+:root[data-theme='dark'] a:not([class*="ax-"]):not([class*="bg-"]):not([class*="text-white"]):not([class*="text-stone"]):not([class*="text-[#"]) {
   color: var(--ax-primary);
 }
 
@@ -492,7 +534,7 @@ section {
   color: var(--ax-text);
 }
 
-:root[data-theme='dark'] button:not([class*="bg-[#2f6b45]"]):not([class*="bg-[#9a3f35]"]):not([class*="bg-red"]):not([class*="bg-green"]) {
+:root[data-theme='dark'] button:not([class*="ax-"]):not([class*="bg-[#2f6b45]"]):not([class*="bg-[#9a3f35]"]):not([class*="bg-red"]):not([class*="bg-green"]) {
   color: inherit;
 }
 
@@ -809,13 +851,13 @@ section {
 }
 
 :root[data-theme='dark'] .bg-\[\#2f6b45\] {
-  background-color: #4f8a5d !important;
-  color: #fffdf4 !important;
+  background-color: var(--ax-action) !important;
+  color: var(--ax-action-text) !important;
 }
 
 :root[data-theme='dark'] .hover\:bg-\[\#255537\]:hover,
 :root[data-theme='dark'] .hover\:bg-\[\#245737\]:hover {
-  background-color: #6aa174 !important;
+  background-color: var(--ax-action-hover) !important;
 }
 
 :root[data-theme='dark'] .bg-amber-700 {
@@ -828,7 +870,7 @@ section {
 }
 
 :root[data-theme='dark'] .bg-\[\#9a3f35\] {
-  background-color: #a84f43 !important;
+  background-color: var(--ax-danger-action) !important;
   color: #fff7f0 !important;
 }
 
@@ -965,7 +1007,7 @@ section {
   background:
     radial-gradient(circle at 15% 20%, rgba(155, 195, 138, .16), transparent 18rem),
     radial-gradient(circle at 88% 12%, rgba(196, 122, 90, .1), transparent 16rem),
-    linear-gradient(135deg, rgba(25, 33, 22, .96), rgba(17, 24, 16, .94)),
+    linear-gradient(135deg, var(--ax-bg), var(--ax-bg-soft)),
     repeating-linear-gradient(45deg, rgba(155, 195, 138, .04) 0 1px, transparent 1px 12px);
 }
 
@@ -977,7 +1019,7 @@ section {
 
 :root[data-theme='dark'] .lineage-canvas .react-flow__node {
   border-color: rgba(155, 195, 138, .45);
-  background: rgba(30, 37, 27, .96);
+  background: var(--ax-surface);
   box-shadow: 0 10px 28px rgba(0, 0, 0, .34);
   color: var(--ax-text);
 }
@@ -1366,4 +1408,105 @@ section {
   .semantic-chip { border-color: CanvasText; }
   .care-category-card::before { background: CanvasText; }
   .care-category-filter[aria-current='page'] { outline: 2px solid Highlight; }
+}
+
+/* Theme roles: new components should use these paired roles instead of literal
+   light colors. Legacy utility mappings above remain for unmigrated screens. */
+:root .ax-surface { background-color: var(--ax-surface); color: var(--ax-text); }
+:root .ax-surface-elevated { background-color: var(--ax-elevated); color: var(--ax-text); }
+:root .ax-surface-inset { background-color: var(--ax-field); color: var(--ax-text); }
+:root .ax-text-muted { color: var(--ax-muted); }
+:root .ax-control {
+  background-color: var(--ax-field);
+  border-color: var(--ax-border-strong);
+  color: var(--ax-text);
+}
+:root .ax-action, :root .ax-action-secondary, :root .ax-action-danger {
+  background-color: var(--ax-action);
+  color: var(--ax-action-text);
+}
+:root .ax-action:hover { background-color: var(--ax-action-hover); }
+:root .ax-action.ax-action-secondary, :root .ax-action-secondary {
+  background-color: var(--ax-secondary-action);
+  color: var(--ax-action-text);
+}
+:root .ax-action-secondary:hover { background-color: var(--ax-secondary-action-hover); }
+:root .ax-action-danger { background-color: var(--ax-danger-action); }
+:root .ax-action-danger:hover { background-color: var(--ax-danger-action-hover); }
+:root :is(.ax-action, .ax-action-secondary, .ax-action-danger):disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+:root .ax-status-success { background-color: var(--ax-success-soft); color: var(--ax-success); border-color: var(--ax-success-border); }
+:root .ax-status-warning { background-color: var(--ax-warning-soft); color: var(--ax-warning); border-color: var(--ax-warning-border); }
+:root .ax-status-info { background-color: var(--ax-info-soft); color: var(--ax-info); border-color: var(--ax-info-border); }
+:root .ax-status-violet { background-color: var(--ax-violet-soft); color: var(--ax-violet); border-color: var(--ax-violet-border); }
+:root .ax-status-rose { background-color: var(--ax-rose-soft); color: var(--ax-rose); border-color: var(--ax-rose-border); }
+:root .ax-text-success { color: var(--ax-success); }
+:root .ax-text-warning { color: var(--ax-warning); }
+/* A real outline survives legacy focus:border overrides and is visible without
+   a mouse. Offset keeps the indicator separate from a control's own border. */
+:root :is(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--ax-focus) !important;
+  outline-offset: 3px;
+}
+:root .ax-navigation { background-color: var(--ax-nav); }
+@media (forced-colors: active) {
+  :root :is(a, button, input, select, textarea, summary, [tabindex]):focus-visible { outline-color: Highlight !important; }
+}
+
+:root[data-theme='dark'] .ax-metric-chart { background-color: var(--ax-field); color: var(--ax-text); }
+
+/* Paper exports and browser printing use light role values independently of preference. */
+@media print {
+  :root, :root[data-theme='dark'] {
+  color-scheme: light;
+  --ax-bg: #fffdf7;
+  --ax-bg-soft: #faf6ea;
+  --ax-bg-warm: #f4efe1;
+  --ax-surface: rgba(255, 250, 240, .82);
+  --ax-surface-solid: #fffaf0;
+  --ax-surface-muted: rgba(244, 248, 237, .88);
+  --ax-field: #fffdf7;
+  --ax-border: rgba(214, 205, 184, .92);
+  --ax-border-strong: #cfc3ad;
+  --ax-text: #1f2a22;
+  --ax-heading: #211f1b;
+  --ax-muted: #6d675d;
+  --ax-muted-strong: #575247;
+  --ax-primary: #2f6b45;
+  --ax-primary-strong: #245737;
+  --ax-primary-soft: #d6dfc9;
+  --ax-primary-wash: #edf3e6;
+  --ax-danger: #9a3f35;
+  --ax-danger-strong: #7d3028;
+  --ax-danger-soft: #fff1ec;
+  --ax-warning: #6f541f;
+  --ax-warning-soft: #fff5d6;
+  --ax-shadow: rgba(47, 38, 24, .07);
+  --ax-focus: #2f6b45;
+  --ax-nav: #fffaf0;
+  --ax-elevated: #f4f8ed;
+  --ax-action: #2f6b45;
+  --ax-action-hover: #245737;
+  --ax-action-text: #ffffff;
+  --ax-secondary-action: #45634b;
+  --ax-secondary-action-hover: #36513c;
+  --ax-danger-action: #9a3f35;
+  --ax-danger-action-hover: #7d3028;
+  --ax-success: #235333;
+  --ax-success-soft: #edf3e6;
+  --ax-success-border: #a8c4a3;
+  --ax-warning-border: #b79a50;
+  --ax-info: #204e6a;
+  --ax-info-soft: #eaf4fc;
+  --ax-info-border: #9dbfd6;
+  --ax-violet: #373b70;
+  --ax-violet-soft: #eef2ff;
+  --ax-violet-border: #b4badd;
+  --ax-rose: #7a304c;
+  --ax-rose-soft: #fff1f2;
+  --ax-rose-border: #d9acba;
+  }
+  :root[data-theme='dark'] body { background: white; }
 }

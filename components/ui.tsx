@@ -2,16 +2,19 @@ import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { HelpTooltip } from '@/components/HelpTooltip'
 
-const control = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
-const primary = 'rounded-md bg-[#2f6b45] px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-[#255537]'
+const control = 'ax-control rounded-md border px-2.5 py-1.5 text-sm font-normal shadow-inner shadow-stone-200/30 transition'
+const primary = 'ax-action rounded-md px-4 py-2 text-sm font-medium text-white shadow-sm transition'
+
+// Explicit fills retain their existing intent; hover-only classes do not remove the default fill.
+function hasBackgroundOverride(className: string) { return /(?:^|\s)(?:bg-|ax-status-)/.test(className) }
 
 export function Card({ className = '', children, ...props }: any) {
-  return <div className={cn('w-full max-w-full min-w-0 isolate overflow-hidden rounded-lg border border-stone-200/90 bg-[#fffaf0]/82 bg-clip-padding p-4 shadow-[0_8px_30px_rgba(47,38,24,0.07)] sm:p-5', className)} {...props}>{children}</div>
+  return <div className={cn(hasBackgroundOverride(className) ? '' : 'ax-surface', 'w-full max-w-full min-w-0 isolate overflow-hidden rounded-lg border border-stone-200/90 bg-clip-padding p-4 shadow-[0_8px_30px_rgba(47,38,24,0.07)] sm:p-5', className)} {...props}>{children}</div>
 }
 
 export function AddPanel({ label, children, className = '', defaultOpen = false }: any) {
   return (
-    <details open={defaultOpen} className={cn('group w-full max-w-full min-w-0 isolate overflow-hidden rounded-lg border border-stone-200/90 bg-[#fffaf0]/82 bg-clip-padding shadow-[0_8px_30px_rgba(47,38,24,0.07)]', className)}>
+    <details open={defaultOpen} className={cn(hasBackgroundOverride(className) ? '' : 'ax-surface', 'group w-full max-w-full min-w-0 isolate overflow-hidden rounded-lg border border-stone-200/90 bg-clip-padding shadow-[0_8px_30px_rgba(47,38,24,0.07)]', className)}>
       <summary className="flex min-w-0 cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-4 py-3 text-sm font-semibold text-stone-900 transition hover:bg-[#f5f0e2] group-open:rounded-b-none sm:px-5">
         <span className="min-w-0 truncate">{label}</span>
         <span className="rounded-md bg-[#2f6b45] px-3 py-1.5 text-xs font-medium text-white group-open:hidden">Open form</span>
@@ -24,7 +27,7 @@ export function AddPanel({ label, children, className = '', defaultOpen = false 
 
 export function Button({ className = '', children, ...props }: any) {
   return (
-    <button className={cn(primary, className)} {...props}>
+    <button className={cn(hasBackgroundOverride(className) ? primary.replace('ax-action ', '') : primary, className)} {...props}>
       {children}
     </button>
   )
@@ -33,7 +36,7 @@ export function Button({ className = '', children, ...props }: any) {
 export function DangerButton({ className = '', children, ...props }: any) {
   return (
     <button
-      className={cn('rounded-md bg-[#9a3f35] px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-[#7d3028]', className)}
+      className={cn('ax-action-danger rounded-md px-4 py-2 text-sm font-medium text-white shadow-sm transition', className)}
       {...props}
     >
       {children}
@@ -43,7 +46,7 @@ export function DangerButton({ className = '', children, ...props }: any) {
 
 export function LinkButton({ href, children, className = '' }: any) {
   return (
-    <Link href={href} className={cn(primary, 'inline-flex items-center justify-center', className)}>
+    <Link href={href} className={cn(hasBackgroundOverride(className) ? primary.replace('ax-action ', '') : primary, 'inline-flex items-center justify-center', className)}>
       {children}
     </Link>
   )

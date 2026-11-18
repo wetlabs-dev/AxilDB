@@ -1,0 +1,2491 @@
+{
+  "checkedAt": "2026-11-18T16:58:28.208Z",
+  "scope": "Real route default states in both themes at desktop/mobile; expanded instance/Curator; static production component fixtures; focus and public light boundary. No operational mutations.",
+  "results": [
+    {
+      "id": "dashboard",
+      "theme": "light",
+      "status": 200,
+      "measured": [
+        {
+          "text": "Sign out",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Start collection workflow",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Condition resolved",
+          "fg": "rgb(35, 83, 51)",
+          "bg": "rgb(237, 243, 230)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 7.88
+        },
+        {
+          "text": "Workflow",
+          "fg": "rgb(55, 59, 112)",
+          "bg": "rgb(238, 242, 255)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 9.29
+        },
+        {
+          "text": "Exhibit",
+          "fg": "rgb(122, 48, 76)",
+          "bg": "rgb(255, 241, 242)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 8.12
+        }
+      ]
+    },
+    {
+      "id": "care",
+      "theme": "light",
+      "status": 200,
+      "measured": [
+        {
+          "text": "Sign out",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Apply view",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Start workflow",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "7 overdue",
+          "fg": "rgb(111, 84, 31)",
+          "bg": "rgb(255, 245, 214)",
+          "size": 12,
+          "weight": 400,
+          "ratio": 6.51
+        },
+        {
+          "text": "Start workflow",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.34
+        }
+      ]
+    },
+    {
+      "id": "plants",
+      "theme": "light",
+      "status": 200,
+      "measured": [
+        {
+          "text": "Sign out",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "ID History",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Validated",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Search",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Plant Tags",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Follow type · 0",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Follow type · 0",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Follow type · 0",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Follow type · 0",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Follow type · 0",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Follow type · 0",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Follow type · 0",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Follow type · 0",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Follow type · 0",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Follow type · 0",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.34
+        }
+      ]
+    },
+    {
+      "id": "definition",
+      "theme": "light",
+      "status": 200,
+      "measured": [
+        {
+          "text": "Sign out",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Add another alias",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Save changes",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Research repotting windows",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Save changes",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Upload type image",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Set as type image",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Nominate for Validation",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        }
+      ]
+    },
+    {
+      "id": "instance",
+      "theme": "light",
+      "status": 200,
+      "measured": [
+        {
+          "text": "Sign out",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Record substrate",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Save caption",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Save framing",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Start quarantine",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Start workflow",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Log watering",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Add condition",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Save",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Ask Green Thumb",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Save environmental requirements",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Save specimen fertilizer override",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Save override",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Save override",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Save override",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Save override",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Save override",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Save override",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Save override",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Save override",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Save override",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Save override",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Save override",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Save override",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Save override",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Save override",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Save override",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Save override",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Save override",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Mark suspected sport",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Follow Specimen · 0",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Follow Lineage · 0",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Follow Plant type · 0",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Add note",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Create reminder",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Complete",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Open bloom event",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Close bloom event",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Add bloom photo",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Create bloom reminder",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Archive plant",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        }
+      ]
+    },
+    {
+      "id": "server",
+      "theme": "light",
+      "status": 200,
+      "measured": [
+        {
+          "text": "Sign out",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Validated Definitions",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Application Updates",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Incident History",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Event Processing",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Image Moderation",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "AI Curator",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Care Cadence Research",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Orphaned Images",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Collections",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Users",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Application Updates",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Open Incident History",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Toggle AI availability",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Save maintenance mode",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Preview cleanup",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        }
+      ]
+    },
+    {
+      "id": "curator",
+      "theme": "light",
+      "status": 200,
+      "measured": [
+        {
+          "text": "Sign out",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Server Management",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Running",
+          "fg": "rgb(35, 83, 51)",
+          "bg": "rgb(237, 243, 230)",
+          "size": 14,
+          "weight": 600,
+          "ratio": 7.88
+        },
+        {
+          "text": "Current job: audit fixture for Saintpaulia.",
+          "fg": "rgb(35, 83, 51)",
+          "bg": "rgb(237, 243, 230)",
+          "size": 14,
+          "weight": 400,
+          "ratio": 7.88
+        },
+        {
+          "text": "Save calibration policy",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Save Curator settings",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "1 jobs",
+          "fg": "rgb(111, 84, 31)",
+          "bg": "rgb(255, 245, 214)",
+          "size": 14,
+          "weight": 600,
+          "ratio": 6.51
+        },
+        {
+          "text": "Retry database-blocked jobs",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Retry response-error jobs",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Saintpaulia ionanthaFictional provider unavailable; no requests sent.O",
+          "fg": "rgb(111, 84, 31)",
+          "bg": "rgb(255, 245, 214)",
+          "size": 16,
+          "weight": 400,
+          "ratio": 6.51
+        },
+        {
+          "text": "Open definition",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Retry",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Open definition",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Can apply",
+          "fg": "rgb(35, 83, 51)",
+          "bg": "rgb(237, 243, 230)",
+          "size": 12,
+          "weight": 600,
+          "ratio": 7.88
+        },
+        {
+          "text": "Proposed change1 changedDescriptionChangedFictional proposed descripti",
+          "fg": "rgb(35, 83, 51)",
+          "bg": "rgb(237, 243, 230)",
+          "size": 16,
+          "weight": 400,
+          "ratio": 7.88
+        },
+        {
+          "text": "DescriptionChangedFictional proposed description for contrast review.",
+          "fg": "rgb(35, 83, 51)",
+          "bg": "rgb(237, 243, 230)",
+          "size": 16,
+          "weight": 400,
+          "ratio": 7.88
+        },
+        {
+          "text": "Accept",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Edit then Accept",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(69, 99, 75)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.69
+        },
+        {
+          "text": "Manage",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.34
+        }
+      ]
+    },
+    {
+      "id": "lineage",
+      "theme": "light",
+      "status": 200,
+      "measured": [
+        {
+          "text": "Sign out",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        }
+      ]
+    },
+    {
+      "id": "treatments",
+      "theme": "light",
+      "status": 200,
+      "measured": [
+        {
+          "text": "Sign out",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Care Queue",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Reports",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Batch application",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Safety: AxilDB organizes records and reminders; it does not replace th",
+          "fg": "rgb(111, 84, 31)",
+          "bg": "rgb(255, 245, 214)",
+          "size": 14,
+          "weight": 400,
+          "ratio": 6.51
+        },
+        {
+          "text": "Add starter treatment templates",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Create treatment",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Start plan",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        }
+      ]
+    },
+    {
+      "id": "dashboard",
+      "theme": "dark",
+      "status": 200,
+      "measured": [
+        {
+          "text": "Sign out",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Start collection workflow",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Condition resolved",
+          "fg": "rgb(181, 212, 173)",
+          "bg": "rgb(35, 52, 37)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 8.17
+        },
+        {
+          "text": "Workflow",
+          "fg": "rgb(195, 200, 242)",
+          "bg": "rgb(42, 45, 67)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 8.27
+        },
+        {
+          "text": "Exhibit",
+          "fg": "rgb(234, 178, 193)",
+          "bg": "rgb(60, 36, 46)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 7.84
+        }
+      ]
+    },
+    {
+      "id": "care",
+      "theme": "dark",
+      "status": 200,
+      "measured": [
+        {
+          "text": "Sign out",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Apply view",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Start workflow",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "7 overdue",
+          "fg": "rgb(240, 210, 143)",
+          "bg": "rgb(60, 50, 30)",
+          "size": 12,
+          "weight": 400,
+          "ratio": 8.59
+        },
+        {
+          "text": "Start workflow",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.99
+        }
+      ]
+    },
+    {
+      "id": "plants",
+      "theme": "dark",
+      "status": 200,
+      "measured": [
+        {
+          "text": "Sign out",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "ID History",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Validated",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Search",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Plant Tags",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Follow type · 0",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Follow type · 0",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Follow type · 0",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Follow type · 0",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Follow type · 0",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Follow type · 0",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Follow type · 0",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Follow type · 0",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Follow type · 0",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Follow type · 0",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.99
+        }
+      ]
+    },
+    {
+      "id": "definition",
+      "theme": "dark",
+      "status": 200,
+      "measured": [
+        {
+          "text": "Sign out",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Add another alias",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Save changes",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Research repotting windows",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Save changes",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Upload type image",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Set as type image",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Nominate for Validation",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        }
+      ]
+    },
+    {
+      "id": "instance",
+      "theme": "dark",
+      "status": 200,
+      "measured": [
+        {
+          "text": "Sign out",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Record substrate",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Save caption",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Save framing",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Start quarantine",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Start workflow",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Log watering",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Add condition",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Save",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Ask Green Thumb",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Save environmental requirements",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Save specimen fertilizer override",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Save override",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Save override",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Save override",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Save override",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Save override",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Save override",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Save override",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Save override",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Save override",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Save override",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Save override",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Save override",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Save override",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Save override",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Save override",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Save override",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Save override",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Mark suspected sport",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "No parent propagation recorded.",
+          "fg": "rgb(187, 198, 186)",
+          "bg": "rgb(32, 39, 34)",
+          "size": 14,
+          "weight": 400,
+          "ratio": 8.66
+        },
+        {
+          "text": "Follow Specimen · 0",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Follow Lineage · 0",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Follow Plant type · 0",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Add note",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Create reminder",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Complete",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Open a bloom when it starts, mark peak later, then close it when finis",
+          "fg": "rgb(187, 198, 186)",
+          "bg": "rgb(32, 39, 34)",
+          "size": 14,
+          "weight": 400,
+          "ratio": 8.66
+        },
+        {
+          "text": "Open bloom event",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Status: Peaked / open",
+          "fg": "rgb(187, 198, 186)",
+          "bg": "rgb(32, 39, 34)",
+          "size": 14,
+          "weight": 400,
+          "ratio": 8.66
+        },
+        {
+          "text": "Close bloom event",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Add bloom photo",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Create bloom reminder",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Archive plant",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        }
+      ]
+    },
+    {
+      "id": "server",
+      "theme": "dark",
+      "status": 200,
+      "measured": [
+        {
+          "text": "Sign out",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Validated Definitions",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Application Updates",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Incident History",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Event Processing",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Image Moderation",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "AI Curator",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Care Cadence Research",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Orphaned Images",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Collections",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Users",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Application Updates",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Open Incident History",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Toggle AI availability",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Save maintenance mode",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Preview cleanup",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        }
+      ]
+    },
+    {
+      "id": "curator",
+      "theme": "dark",
+      "status": 200,
+      "measured": [
+        {
+          "text": "Sign out",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Server Management",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Running",
+          "fg": "rgb(181, 212, 173)",
+          "bg": "rgb(35, 52, 37)",
+          "size": 14,
+          "weight": 600,
+          "ratio": 8.17
+        },
+        {
+          "text": "Current job: audit fixture for Saintpaulia.",
+          "fg": "rgb(181, 212, 173)",
+          "bg": "rgb(35, 52, 37)",
+          "size": 14,
+          "weight": 400,
+          "ratio": 8.17
+        },
+        {
+          "text": "Save calibration policy",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Save Curator settings",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "1 jobs",
+          "fg": "rgb(240, 210, 143)",
+          "bg": "rgb(60, 50, 30)",
+          "size": 14,
+          "weight": 600,
+          "ratio": 8.59
+        },
+        {
+          "text": "Retry database-blocked jobs",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Retry response-error jobs",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Saintpaulia ionanthaFictional provider unavailable; no requests sent.O",
+          "fg": "rgb(240, 210, 143)",
+          "bg": "rgb(60, 50, 30)",
+          "size": 16,
+          "weight": 400,
+          "ratio": 8.59
+        },
+        {
+          "text": "Open definition",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Retry",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Open definition",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Can apply",
+          "fg": "rgb(181, 212, 173)",
+          "bg": "rgb(35, 52, 37)",
+          "size": 12,
+          "weight": 600,
+          "ratio": 8.17
+        },
+        {
+          "text": "Proposed change1 changedDescriptionChangedFictional proposed descripti",
+          "fg": "rgb(181, 212, 173)",
+          "bg": "rgb(35, 52, 37)",
+          "size": 16,
+          "weight": 400,
+          "ratio": 8.17
+        },
+        {
+          "text": "DescriptionChangedFictional proposed description for contrast review.",
+          "fg": "rgb(181, 212, 173)",
+          "bg": "rgb(35, 52, 37)",
+          "size": 16,
+          "weight": 400,
+          "ratio": 8.17
+        },
+        {
+          "text": "Accept",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Edit then Accept",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(48, 79, 59)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 8.3
+        },
+        {
+          "text": "Manage",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 12,
+          "weight": 500,
+          "ratio": 6.99
+        }
+      ]
+    },
+    {
+      "id": "lineage",
+      "theme": "dark",
+      "status": 200,
+      "measured": [
+        {
+          "text": "Sign out",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        }
+      ]
+    },
+    {
+      "id": "treatments",
+      "theme": "dark",
+      "status": 200,
+      "measured": [
+        {
+          "text": "Sign out",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Care Queue",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Reports",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Batch application",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Safety: AxilDB organizes records and reminders; it does not replace th",
+          "fg": "rgb(240, 210, 143)",
+          "bg": "rgb(60, 50, 30)",
+          "size": 14,
+          "weight": 400,
+          "ratio": 8.59
+        },
+        {
+          "text": "Add starter treatment templates",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Create treatment",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Start plan",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        }
+      ]
+    },
+    {
+      "id": "shared-components",
+      "theme": "light",
+      "measured": [
+        {
+          "text": "Primary action",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(47, 107, 69)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.34
+        },
+        {
+          "text": "Destructive action",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(154, 63, 53)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.7
+        },
+        {
+          "text": "Water",
+          "fg": "rgb(52, 83, 111)",
+          "bg": "rgb(237, 243, 250)",
+          "size": 16,
+          "weight": 400,
+          "ratio": 7.2
+        },
+        {
+          "text": "Prune",
+          "fg": "rgb(154, 73, 31)",
+          "bg": "rgb(255, 241, 230)",
+          "size": 16,
+          "weight": 400,
+          "ratio": 5.67
+        },
+        {
+          "text": "Fertilize",
+          "fg": "rgb(40, 93, 59)",
+          "bg": "rgb(234, 242, 228)",
+          "size": 16,
+          "weight": 400,
+          "ratio": 6.74
+        },
+        {
+          "text": "Repot",
+          "fg": "rgb(125, 86, 55)",
+          "bg": "rgb(247, 240, 231)",
+          "size": 16,
+          "weight": 400,
+          "ratio": 5.7
+        },
+        {
+          "text": "Propagation check",
+          "fg": "rgb(49, 95, 100)",
+          "bg": "rgb(235, 245, 245)",
+          "size": 16,
+          "weight": 400,
+          "ratio": 6.41
+        },
+        {
+          "text": "Pest check",
+          "fg": "rgb(113, 85, 27)",
+          "bg": "rgb(255, 245, 216)",
+          "size": 16,
+          "weight": 400,
+          "ratio": 6.4
+        },
+        {
+          "text": "Health check",
+          "fg": "rgb(82, 93, 150)",
+          "bg": "rgb(241, 241, 249)",
+          "size": 16,
+          "weight": 400,
+          "ratio": 5.55
+        },
+        {
+          "text": "Bloom check",
+          "fg": "rgb(93, 75, 117)",
+          "bg": "rgb(243, 238, 248)",
+          "size": 16,
+          "weight": 400,
+          "ratio": 6.74
+        },
+        {
+          "text": "Quarantine review",
+          "fg": "rgb(82, 93, 150)",
+          "bg": "rgb(241, 241, 249)",
+          "size": 16,
+          "weight": 400,
+          "ratio": 5.55
+        },
+        {
+          "text": "Treatment",
+          "fg": "rgb(139, 60, 78)",
+          "bg": "rgb(250, 239, 242)",
+          "size": 16,
+          "weight": 400,
+          "ratio": 6.55
+        },
+        {
+          "text": "Reminder",
+          "fg": "rgb(68, 64, 60)",
+          "bg": "rgb(245, 245, 244)",
+          "size": 16,
+          "weight": 400,
+          "ratio": 9.42
+        },
+        {
+          "text": "fern",
+          "fg": "rgb(40, 93, 59)",
+          "bg": "rgb(234, 242, 228)",
+          "size": 12,
+          "weight": 600,
+          "ratio": 6.74
+        },
+        {
+          "text": "moss",
+          "fg": "rgb(76, 93, 49)",
+          "bg": "rgb(240, 242, 223)",
+          "size": 12,
+          "weight": 600,
+          "ratio": 6.33
+        },
+        {
+          "text": "sage",
+          "fg": "rgb(72, 96, 68)",
+          "bg": "rgb(242, 245, 236)",
+          "size": 12,
+          "weight": 600,
+          "ratio": 6.28
+        },
+        {
+          "text": "amber",
+          "fg": "rgb(113, 85, 27)",
+          "bg": "rgb(255, 245, 216)",
+          "size": 12,
+          "weight": 600,
+          "ratio": 6.4
+        },
+        {
+          "text": "coral",
+          "fg": "rgb(154, 73, 31)",
+          "bg": "rgb(255, 241, 230)",
+          "size": 12,
+          "weight": 600,
+          "ratio": 5.67
+        },
+        {
+          "text": "rose",
+          "fg": "rgb(139, 60, 78)",
+          "bg": "rgb(250, 239, 242)",
+          "size": 12,
+          "weight": 600,
+          "ratio": 6.55
+        },
+        {
+          "text": "sky",
+          "fg": "rgb(49, 95, 100)",
+          "bg": "rgb(235, 245, 245)",
+          "size": 12,
+          "weight": 600,
+          "ratio": 6.41
+        },
+        {
+          "text": "ocean",
+          "fg": "rgb(52, 83, 111)",
+          "bg": "rgb(237, 243, 250)",
+          "size": 12,
+          "weight": 600,
+          "ratio": 7.2
+        },
+        {
+          "text": "violet",
+          "fg": "rgb(93, 75, 117)",
+          "bg": "rgb(243, 238, 248)",
+          "size": 12,
+          "weight": 600,
+          "ratio": 6.74
+        },
+        {
+          "text": "stone",
+          "fg": "rgb(68, 64, 60)",
+          "bg": "rgb(245, 245, 244)",
+          "size": 12,
+          "weight": 600,
+          "ratio": 9.42
+        }
+      ],
+      "focus": {
+        "style": "solid",
+        "color": "rgb(47, 107, 69)",
+        "width": "2px",
+        "offset": "3px",
+        "background": "rgb(255, 253, 247)",
+        "ratio": 6.24
+      },
+      "hover": [
+        {
+          "text": "Primary action",
+          "fg": "rgb(255, 255, 255)",
+          "bg": "rgb(36, 87, 55)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 8.42
+        }
+      ],
+      "paper": {
+        "bg": "rgba(255, 250, 240, 0.82)",
+        "fg": "rgb(31, 42, 34)"
+      }
+    },
+    {
+      "id": "shared-components",
+      "theme": "dark",
+      "measured": [
+        {
+          "text": "Primary action",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(49, 92, 66)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.99
+        },
+        {
+          "text": "Destructive action",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(135, 62, 53)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 6.91
+        },
+        {
+          "text": "Water",
+          "fg": "rgb(180, 211, 237)",
+          "bg": "rgb(34, 50, 63)",
+          "size": 16,
+          "weight": 400,
+          "ratio": 8.45
+        },
+        {
+          "text": "Prune",
+          "fg": "rgb(241, 189, 153)",
+          "bg": "rgb(62, 44, 33)",
+          "size": 16,
+          "weight": 400,
+          "ratio": 7.86
+        },
+        {
+          "text": "Fertilize",
+          "fg": "rgb(181, 212, 173)",
+          "bg": "rgb(35, 52, 37)",
+          "size": 16,
+          "weight": 400,
+          "ratio": 8.17
+        },
+        {
+          "text": "Repot",
+          "fg": "rgb(223, 195, 165)",
+          "bg": "rgb(56, 45, 35)",
+          "size": 16,
+          "weight": 400,
+          "ratio": 7.96
+        },
+        {
+          "text": "Propagation check",
+          "fg": "rgb(169, 214, 208)",
+          "bg": "rgb(33, 54, 52)",
+          "size": 16,
+          "weight": 400,
+          "ratio": 8.05
+        },
+        {
+          "text": "Pest check",
+          "fg": "rgb(240, 210, 143)",
+          "bg": "rgb(60, 50, 30)",
+          "size": 16,
+          "weight": 400,
+          "ratio": 8.59
+        },
+        {
+          "text": "Health check",
+          "fg": "rgb(195, 200, 242)",
+          "bg": "rgb(42, 45, 67)",
+          "size": 16,
+          "weight": 400,
+          "ratio": 8.27
+        },
+        {
+          "text": "Bloom check",
+          "fg": "rgb(213, 188, 232)",
+          "bg": "rgb(50, 40, 61)",
+          "size": 16,
+          "weight": 400,
+          "ratio": 8.09
+        },
+        {
+          "text": "Quarantine review",
+          "fg": "rgb(195, 200, 242)",
+          "bg": "rgb(42, 45, 67)",
+          "size": 16,
+          "weight": 400,
+          "ratio": 8.27
+        },
+        {
+          "text": "Treatment",
+          "fg": "rgb(234, 178, 193)",
+          "bg": "rgb(60, 36, 46)",
+          "size": 16,
+          "weight": 400,
+          "ratio": 7.84
+        },
+        {
+          "text": "Reminder",
+          "fg": "rgb(212, 210, 208)",
+          "bg": "rgb(48, 48, 45)",
+          "size": 16,
+          "weight": 400,
+          "ratio": 8.78
+        },
+        {
+          "text": "fern",
+          "fg": "rgb(181, 212, 173)",
+          "bg": "rgb(35, 52, 37)",
+          "size": 12,
+          "weight": 600,
+          "ratio": 8.17
+        },
+        {
+          "text": "moss",
+          "fg": "rgb(195, 205, 168)",
+          "bg": "rgb(45, 50, 35)",
+          "size": 12,
+          "weight": 600,
+          "ratio": 7.93
+        },
+        {
+          "text": "sage",
+          "fg": "rgb(194, 210, 186)",
+          "bg": "rgb(44, 54, 40)",
+          "size": 12,
+          "weight": 600,
+          "ratio": 7.94
+        },
+        {
+          "text": "amber",
+          "fg": "rgb(240, 210, 143)",
+          "bg": "rgb(60, 50, 30)",
+          "size": 12,
+          "weight": 600,
+          "ratio": 8.59
+        },
+        {
+          "text": "coral",
+          "fg": "rgb(241, 189, 153)",
+          "bg": "rgb(62, 44, 33)",
+          "size": 12,
+          "weight": 600,
+          "ratio": 7.86
+        },
+        {
+          "text": "rose",
+          "fg": "rgb(234, 178, 193)",
+          "bg": "rgb(60, 36, 46)",
+          "size": 12,
+          "weight": 600,
+          "ratio": 7.84
+        },
+        {
+          "text": "sky",
+          "fg": "rgb(169, 214, 208)",
+          "bg": "rgb(33, 54, 52)",
+          "size": 12,
+          "weight": 600,
+          "ratio": 8.05
+        },
+        {
+          "text": "ocean",
+          "fg": "rgb(180, 211, 237)",
+          "bg": "rgb(34, 50, 63)",
+          "size": 12,
+          "weight": 600,
+          "ratio": 8.45
+        },
+        {
+          "text": "violet",
+          "fg": "rgb(213, 188, 232)",
+          "bg": "rgb(50, 40, 61)",
+          "size": 12,
+          "weight": 600,
+          "ratio": 8.09
+        },
+        {
+          "text": "stone",
+          "fg": "rgb(212, 210, 208)",
+          "bg": "rgb(48, 48, 45)",
+          "size": 12,
+          "weight": 600,
+          "ratio": 8.78
+        }
+      ],
+      "focus": {
+        "style": "solid",
+        "color": "rgb(160, 198, 154)",
+        "width": "2px",
+        "offset": "3px",
+        "background": "rgb(24, 30, 26)",
+        "ratio": 8.91
+      },
+      "hover": [
+        {
+          "text": "Primary action",
+          "fg": "rgb(241, 246, 238)",
+          "bg": "rgb(59, 107, 76)",
+          "size": 14,
+          "weight": 500,
+          "ratio": 5.65
+        }
+      ],
+      "paper": {
+        "bg": "rgba(255, 250, 240, 0.82)",
+        "fg": "rgb(31, 42, 34)"
+      }
+    },
+    {
+      "id": "public-care-sheet",
+      "preferencePreserved": true
+    },
+    {
+      "id": "public-exhibit",
+      "lightBoundary": true
+    },
+    {
+      "id": "splash",
+      "forcedLight": true
+    }
+  ],
+  "blockedRequests": [
+    {
+      "method": "POST",
+      "path": "/server"
+    },
+    {
+      "method": "POST",
+      "path": "/server"
+    }
+  ],
+  "limitations": "No live upgrade, screen reader, native picker, Safari or exhaustive workflow coverage."
+}

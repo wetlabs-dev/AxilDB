@@ -28,7 +28,7 @@ export function BackupStoragePanel() {
   }, [active, load, router])
   const measured = data?.entries.filter(e => !['Missing artifact', 'Metadata reconciliation'].includes(e.status) && (/^(axildb|manual|deploy)-/.test(e.name) || e.intentId))
   const managedBytes = measured?.some(e => e.allocatedBytes == null) ? null : measured?.reduce((n, e) => n + (e.allocatedBytes || 0), 0)
-  return <section id="backup-storage" className="mt-4 min-w-0 space-y-3 rounded-lg border border-[#8fa58f] bg-[#f5f7ee] p-4 text-sm">
+  return <section id="backup-storage" className="mt-4 min-w-0 space-y-3 rounded-lg border ax-surface border-[var(--ax-border-strong)] p-4 text-sm">
     <h4 className="font-serif text-lg font-semibold">Backup storage</h4>
     <p>Live guest filesystem measurements for the configured backup directory. Ubuntu free space does not measure or shrink the VirtualBox disk file on Windows.</p>
     <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">

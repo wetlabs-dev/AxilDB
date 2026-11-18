@@ -63,7 +63,7 @@ export function PhotoFramingEditor({
   }, [focalX, focalY, zoom])
 
   return (
-    <div className={cn('grid gap-3 rounded-lg border border-[#d6dfc9] bg-[#f7f4e8]/70 p-3', className)}>
+    <div className={cn('grid gap-3 rounded-lg border border-[#d6dfc9] ax-surface-elevated p-3', className)}>
       {fileInputName && (
         <label className="grid gap-1 text-sm font-medium text-stone-800">
           Image file

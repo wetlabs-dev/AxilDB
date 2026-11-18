@@ -73,7 +73,7 @@ export function CareQueueLocationBoard({
           ? `${bulkCarePath}?locationId=${encodeURIComponent(section.locationId)}&includeNested=1`
           : bulkCarePath
         return (
-          <section data-care-section key={section.id} className="rounded-lg border border-stone-200 bg-white/35 shadow-sm" style={{ display: visible.length ? undefined : 'none', marginLeft: section.depth ? `${Math.min(section.depth, 3) * 0.75}rem` : undefined }}>
+          <section data-care-section key={section.id} className="rounded-lg border ax-surface border-[var(--ax-border)] shadow-sm" style={{ display: visible.length ? undefined : 'none', marginLeft: section.depth ? `${Math.min(section.depth, 3) * 0.75}rem` : undefined }}>
             <div className="flex flex-wrap items-center gap-2 border-b border-stone-200 px-3 py-2.5">
               <button
                 type="button"
@@ -95,7 +95,7 @@ export function CareQueueLocationBoard({
               </button>
               <div className="flex flex-wrap items-center gap-1.5 text-xs text-stone-600">
                 <span className="rounded-full border border-stone-200 bg-white/70 px-2 py-1">{section.items.length} due</span>
-                {section.overdue > 0 && <span className="rounded-full border border-[#ddb3a7] bg-[#fff1ec] px-2 py-1 text-[#913e2d]">{section.overdue} overdue</span>}
+                {section.overdue > 0 && <span className="rounded-full border ax-status-warning px-2 py-1">{section.overdue} overdue</span>}
                 {section.typeCounts.map(({ type, count }) => <span key={type} data-semantic-color={careCategoryPresentation(type).color} className="semantic-chip hidden rounded-full border px-2 py-1 sm:inline">{count} {type.toLowerCase().replaceAll('_', ' ')}</span>)}
               </div>
               {canAct && section.locationId && (

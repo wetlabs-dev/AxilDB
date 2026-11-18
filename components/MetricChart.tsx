@@ -67,7 +67,7 @@ export function MetricChart({ title, value, subtitle, points, markers = [], clas
     }, [])
 
   return (
-    <div className={cn('min-w-0 overflow-hidden rounded-lg border border-stone-200 bg-[#10170f] p-4 text-[#f8f2e4] shadow-[0_8px_30px_rgba(47,38,24,0.12)]', className)}>
+    <div className={cn('ax-metric-chart min-w-0 overflow-hidden rounded-lg border border-stone-200 bg-[#10170f] p-4 text-[#f8f2e4] shadow-[0_8px_30px_rgba(47,38,24,0.12)]', className)}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold text-[#d6dfc9]">{title}</h3>

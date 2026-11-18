@@ -354,7 +354,7 @@ export function SidebarClient({
         </div>
       </header>
 
-      <aside className="no-print sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-stone-200/80 bg-[#fffaf0]/85 p-4 shadow-sm backdrop-blur md:flex">
+      <aside className="no-print sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-stone-200/80 ax-navigation p-4 shadow-sm backdrop-blur md:flex">
         <Link href={collectionPath(slug)} className="mb-3 flex items-center gap-3 rounded-md outline-none transition hover:text-[#1f472f] focus:ring-2 focus:ring-[#8fa58f]/30">
           <img src="/axildb-logo.png" alt="" className="h-11 w-11 shrink-0 object-contain" />
           <div>

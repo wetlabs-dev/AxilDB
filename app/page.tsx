@@ -79,9 +79,9 @@ const activityStyles: Record<ActivityKind, { label: string; className: string; i
     imageClassName: 'activity-sunshine-image bg-[#f4e7aa]/55 text-[#7a5a00]',
   },
   location: { label: 'Location move', icon: MapPin, className: 'border-sky-200 bg-sky-50', imageClassName: 'bg-sky-100 text-sky-800' },
-  condition: { label: 'Condition resolved', icon: ShieldCheck, className: 'border-emerald-200 bg-emerald-50', imageClassName: 'bg-emerald-100 text-emerald-800' },
-  workflow: { label: 'Workflow', icon: ListChecks, className: 'border-indigo-200 bg-indigo-50', imageClassName: 'bg-indigo-100 text-indigo-800' },
-  exhibit: { label: 'Exhibit', icon: GalleryHorizontal, className: 'border-rose-200 bg-rose-50', imageClassName: 'bg-rose-100 text-rose-800' },
+  condition: { label: 'Condition resolved', icon: ShieldCheck, className: 'ax-status-success', imageClassName: 'ax-status-success' },
+  workflow: { label: 'Workflow', icon: ListChecks, className: 'ax-status-violet', imageClassName: 'ax-status-violet' },
+  exhibit: { label: 'Exhibit', icon: GalleryHorizontal, className: 'ax-status-rose', imageClassName: 'ax-status-rose' },
 }
 const activityKinds = Object.keys(activityStyles) as ActivityKind[]
 
