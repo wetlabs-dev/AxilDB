@@ -1,3 +1,4 @@
+import { calibrationPolicy } from '@/lib/calibration-policy'
 import type { Prisma } from '@prisma/client'
 import { cadenceActivities, validateCadenceState } from '@/lib/care-cadences'
 
@@ -33,8 +34,11 @@ export async function configureDefinitionCadence(
       },
     })
   }
+  // Existing observed-care states get a new evidence boundary after an explicit decision.
+  const policy = calibrationPolicy((await tx.aiCuratorSettings.findUnique({where:{id:'global'}}))?.calibrationPolicy)
+  if (!input.missingOnly) await tx.metricCalibrationState.updateMany({where:{plantDefinitionId:input.definitionId,metricKey:`care:${input.activity}`},data:{outcome:status==='SCHEDULED'?'CALIBRATING':status==='NOT_APPLICABLE'?'NOT_APPLICABLE':'NO_CADENCE',baseline:null,observationBoundary:new Date(),proposalId:null,nextEligibleAt:status==='SCHEDULED'?new Date(Date.now()+policy.manualDays*86400000):null}})
   if (status === 'NOT_SCHEDULED') return { count: 0 }
-  return tx.plantDefinitionCareCadence.createMany({
+  const created = await tx.plantDefinitionCareCadence.createMany({
     data: {
       ...where,
       status,
@@ -43,4 +47,6 @@ export async function configureDefinitionCadence(
     },
     skipDuplicates: Boolean(input.missingOnly),
   })
+  if (input.missingOnly && created.count) await tx.metricCalibrationState.updateMany({where:{plantDefinitionId:input.definitionId,metricKey:`care:${input.activity}`},data:{outcome:status==='SCHEDULED'?'LEARNING':'NOT_APPLICABLE',baseline:null,nextEligibleAt:status==='SCHEDULED'?new Date(Date.now()+policy.manualDays*86400000):null}})
+  return created
 }

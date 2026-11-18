@@ -107,7 +107,10 @@
     "check:care-photos": "node scripts/check-care-photos.mjs",
     "check:photo-form": "tsx scripts/check-photo-form.ts",
     "check:magic-fill-review": "tsx scripts/check-magic-fill-review.ts",
-    "check:magic-fill-review:ui": "tsx scripts/check-magic-fill-review-ui.ts"
+    "check:magic-fill-review:ui": "tsx scripts/check-magic-fill-review-ui.ts",
+    "check:calibration": "tsx scripts/check-cadence-calibration.ts",
+    "check:calibration:db": "tsx scripts/check-cadence-calibration-db.ts",
+    "check:calibration:ui": "tsx scripts/check-calibration-ui.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

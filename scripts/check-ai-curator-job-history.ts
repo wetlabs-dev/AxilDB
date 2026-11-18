@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
-import { PrismaClient } from '@prisma/client'
+import { Prisma, PrismaClient } from '@prisma/client'
 import {
   ensureAiCuratorSettings,
   processAiCuratorWake,
@@ -298,7 +298,7 @@ async function main() {
     await db.collection.delete({ where: { id: c.id } })
     if (settingsBefore) {
       const { id, createdAt, updatedAt, ...data } = settingsBefore
-      await db.aiCuratorSettings.update({ where: { id }, data })
+      await db.aiCuratorSettings.update({ where: { id }, data: {...data,calibrationPolicy:data.calibrationPolicy ?? Prisma.DbNull} })
     }
     await db.$disconnect()
   }

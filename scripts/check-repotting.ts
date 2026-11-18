@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
-import { PrismaClient } from '@prisma/client'
+import { Prisma, PrismaClient } from '@prisma/client'
 import {
   selectRepottingWindow,
   windowOccurrence,
@@ -540,7 +540,7 @@ async function main() {
     await db.repottingWindow.delete({ where: { id: window.id } })
     if (settingsBefore) {
       const { id, createdAt, updatedAt, ...data } = settingsBefore
-      await db.aiCuratorSettings.update({ where: { id }, data })
+      await db.aiCuratorSettings.update({ where: { id }, data: {...data,calibrationPolicy:data.calibrationPolicy ?? Prisma.DbNull} })
     }
     await db.$disconnect()
   }

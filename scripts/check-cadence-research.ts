@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { PrismaClient } from '@prisma/client'
+import { Prisma, PrismaClient } from '@prisma/client'
 import {
   validateRecommendations,
   explicitLegacyInterval,
@@ -537,7 +537,7 @@ async function main() {
     if (settingsBefore)
       await db.aiCuratorSettings.update({
         where: { id: 'global' },
-        data: settingsBefore,
+        data: {...settingsBefore,calibrationPolicy:settingsBefore.calibrationPolicy ?? Prisma.DbNull},
       })
     else await db.aiCuratorSettings.deleteMany({ where: { id: 'global' } })
     await db.$disconnect()

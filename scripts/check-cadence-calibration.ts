@@ -1,0 +1,36 @@
+import assert from 'node:assert/strict'
+import { aggregateIntervals, analyzeIntervals } from '../lib/metrics/interval-analysis'
+import { calibrationPolicy } from '../lib/calibration-policy'
+import { assessCareEvidence, type CareEvidence } from '../lib/cadence-calibration'
+const observations=(interval:number,count:number,end=200)=>Array.from({length:count},(_,i)=>({day:end-(count-i-1)*interval}))
+const series=analyzeIntervals([...observations(14,9),{day:200},{day:201},{day:NaN}],200)
+assert.equal(series.mean,14);assert.equal(series.median,14);assert.equal(series.intervalCount,8);assert.equal(series.duplicates,1);assert.equal(series.excluded,2)
+assert.equal(series.ongoingDays,0)
+assert.equal(analyzeIntervals(observations(14,9),210).mean,14,'Ongoing time is not a completed interval.')
+assert.equal(analyzeIntervals([{day:28},{day:0},{day:14}],40).mean,14,'Backdated/out-of-order entries sort by occurrence day.')
+assert.equal(analyzeIntervals([{day:0},{day:7},{day:14},{day:21},{day:28},{day:70}],70).robustEstimate,7,'An isolated gap cannot lengthen the robust estimate.')
+const aggregate=aggregateIntervals([analyzeIntervals(observations(7,40),300),analyzeIntervals(observations(14,6),300)])
+assert.equal(aggregate.mean,10.5,'Each specimen gets equal weight independent of observation count.')
+const recent=analyzeIntervals([{day:0},{day:14},{day:28},{day:35},{day:42},{day:49}],49,20)
+assert.ok(recent.weightedMean!<recent.mean!)
+const policy=calibrationPolicy(null)
+const evidence=(interval:number,current=7):CareEvidence=>({activity:'WATERING',current:{activity:'WATERING',status:'SCHEDULED',interval:current,unit:'DAY'},configuredDays:current,summary:aggregateIntervals([analyzeIntervals(observations(interval,9),200)]),series:[{cohort:'home',...analyzeIntervals(observations(interval,9),200)}],eligibleInstances:1,hasRecipe:true,truncated:false,seasonal:false,adjustedEvents:0,groupedEvents:0} as CareEvidence)
+assert.equal(assessCareEvidence(evidence(14),policy).proposed?.interval,14)
+assert.equal(assessCareEvidence(evidence(7,14),policy).proposed?.interval,7)
+assert.equal(assessCareEvidence(evidence(14,14),policy).outcome,'STABLE')
+assert.equal(assessCareEvidence(evidence(13,14),policy).outcome,'STABLE')
+assert.equal(assessCareEvidence({...evidence(14),summary:{...evidence(14).summary,intervalCount:1}},policy).outcome,'INSUFFICIENT_HISTORY')
+assert.equal(assessCareEvidence({...evidence(14),seasonal:true},policy).outcome,'INCONCLUSIVE')
+assert.equal(assessCareEvidence({...evidence(14),current:undefined},policy).outcome,'NO_CADENCE')
+assert.equal(assessCareEvidence({...evidence(14),current:{...evidence(14).current!,activity:'WATERING',status:'NOT_APPLICABLE',interval:null,unit:null}},policy).outcome,'NOT_APPLICABLE')
+assert.equal(assessCareEvidence({...evidence(14),activity:'FERTILIZING',hasRecipe:false},policy).outcome,'INELIGIBLE')
+assert.equal(assessCareEvidence(evidence(30,3),policy).outcome,'INCONCLUSIVE')
+assert.ok(assessCareEvidence(evidence(14),policy).confidence<=.74,'Single specimen is never high confidence.')
+assert.throws(()=>calibrationPolicy({batchSize:10000}))
+assert.throws(()=>calibrationPolicy({relativeDeviation:2}))
+assert.equal(calibrationPolicy({stableDays:120}).stableDays,120)
+console.log('Calibration statistical normalization, robust/recency estimates, equal specimen weighting, sufficiency, seasonality, N/A, recipe prerequisites and bounded policies passed.')
+
+const yearlySeries=analyzeIntervals([{day:0},{day:730},{day:1460}],1460)
+const yearly={...evidence(14),activity:'REPOTTING',current:{...evidence(14).current!,activity:'REPOTTING',interval:1,unit:'YEAR'},configuredDays:365,summary:aggregateIntervals([yearlySeries]),series:[{cohort:'home',...yearlySeries}]}
+assert.deepEqual(assessCareEvidence(yearly,policy).proposed,{interval:2,unit:'YEAR'},'Analytical comparison preserves calendar-year units.')

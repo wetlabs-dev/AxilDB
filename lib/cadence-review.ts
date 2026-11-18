@@ -9,7 +9,7 @@ import {
 export function actionableCadenceWhere(
   collectionId?: string
 ): Prisma.CareCadenceProposalWhereInput {
-  return {
+  const botanical: Prisma.CareCadenceProposalWhereInput = {
     status: 'PENDING',
     AND: [
       { OR: [{ jobId: null }, { job: { status: 'COMPLETED' } }] },
@@ -52,9 +52,12 @@ export function actionableCadenceWhere(
       },
     ],
   }
+  return { OR: [botanical, { status:'PENDING',source:'CADENCE_CALIBRATION',job:{status:'COMPLETED'},OR:cadenceActivities.map(({activity})=>({activity,plantDefinition:{...(collectionId?{collectionId}:{}),careCadences:{some:{activity,status:'SCHEDULED'}},...(activity==='FERTILIZING'?{husbandryGuide:{fertilizerRecipe:{active:true,...(collectionId?{collectionId}:{})}}}:{})}})) }] }
 }
 
 type ReviewProposal = {
+  source?: string
+  calibrationEvidence?: unknown
   status: string
   applicability: string
   activity: string
@@ -65,7 +68,7 @@ type ReviewProposal = {
 }
 type ReviewDefinition = {
   collectionId: string | null
-  careCadences: Array<{ activity: string }>
+  careCadences: Array<{ activity: string; status?: string }>
   husbandryGuide: {
     fertilizerRecipe: { active: boolean; collectionId: string } | null
   } | null
@@ -75,11 +78,12 @@ export function isActionableCadenceProposal(
   d: ReviewDefinition
 ) {
   if (
+    (p.source==='CADENCE_CALIBRATION' && !d.careCadences.some(c=>c.activity===p.activity && c.status==='SCHEDULED')) ||
     p.status !== 'PENDING' ||
     !['RECOMMENDED', 'NOT_APPLICABLE'].includes(p.applicability) ||
     !cadenceActivities.some((a) => a.activity === p.activity) ||
     (p.jobId && p.job?.status !== 'COMPLETED') ||
-    d.careCadences.some((c) => c.activity === p.activity)
+    (p.source !== 'CADENCE_CALIBRATION' && d.careCadences.some((c) => c.activity === p.activity))
   )
     return false
   if (p.applicability === 'NOT_APPLICABLE')

@@ -165,3 +165,8 @@ The provider error “Response input messages must contain the word 'json' … '
 Deploy the application and AI Curator worker together through the usual web upgrade. No database migration, host agent update, credentials change or additional server configuration is needed. Then open **AI Curator → Waiting for Human → Retry response-error jobs**. That existing administrator action now recognizes this exact request-validation error in deferred/human-blocked jobs, clears stale job ownership and retry counters, and requeues under ordinary budgets and participation rules. Unrelated botanical blockers and provider refusals are left alone. Busy work can be retried after the current worker finishes. **Clear** on Recent Errors only dismisses the display; it does not requeue jobs.
 
 If this deterministic validation error recurs, its job pauses after one attempt instead of being automatically retried repeatedly. No partial suggestions or definition changes are saved. The regression checks use mocked API responses and disposable local data, without live provider calls.
+
+
+## Adaptive cadence calibration
+
+The existing Curator worker also supports collection-scoped Cadence Calibration using completed care history and human-reviewed cadence proposals. Live observed statistics and independent category cooldowns are described in [Cadence Calibration](CADENCE_CALIBRATION.md), including policy, modular statistical adapters, privacy and deployment.

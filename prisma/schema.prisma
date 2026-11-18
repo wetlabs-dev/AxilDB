@@ -249,6 +249,7 @@ model User {
 }
 
 model Collection {
+  metricCalibrations MetricCalibrationState[]
   careQueueOperations CareQueueOperation[]
   id                         String    @id @default(cuid())
   name                       String
@@ -675,6 +676,7 @@ model AiUsageEvent {
 }
 
 model AiCuratorSettings {
+  calibrationPolicy Json?
   id                              String   @id @default("global")
   enabled                         Boolean  @default(false)
   model                           String   @default("gpt-5.4-mini")
@@ -1404,6 +1406,7 @@ model FollowNotification {
 }
 
 model PlantDefinition {
+  metricCalibrations MetricCalibrationState[]
   primaryRepottingWindowId String?
   alternateRepottingWindowId String?
   primaryRepottingWindow RepottingWindow? @relation("PrimaryRepottingWindow", fields: [primaryRepottingWindowId], references: [id], onDelete: Restrict)
@@ -4002,6 +4005,7 @@ model CareQueueOperation {
 }
 
 model CareCadenceProposal {
+  calibrationEvidence Json?
   id String @id @default(cuid())
   plantDefinitionId String
   activity String
@@ -4083,4 +4087,31 @@ model RepottingQueueItem {
   updatedAt DateTime @updatedAt
   @@index([status, repottingWindowId, scheduledYear])
   @@index([plantInstanceId, status])
+}
+
+// Metric-independent assessment lifecycle; care adapters identify their metric with care:<activity>.
+model MetricCalibrationState {
+  id String @id @default(cuid())
+  collectionId String
+  plantDefinitionId String
+  metricKey String
+  outcome String @default("LEARNING")
+  nextEligibleAt DateTime? @default(now())
+  lastAssessedAt DateTime?
+  observationBoundary DateTime?
+  baseline String?
+  evidence Json?
+  observedSummary Json?
+  statisticsAt DateTime?
+  proposalId String?
+  lastRequestedAt DateTime?
+  lastApprovedAt DateTime?
+  lastRejectedAt DateTime?
+  stableCount Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  plantDefinition PlantDefinition @relation(fields: [plantDefinitionId], references: [id], onDelete: Cascade)
+  @@unique([collectionId, plantDefinitionId, metricKey])
+  @@index([nextEligibleAt, collectionId])
 }

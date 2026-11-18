@@ -206,6 +206,11 @@ export async function approveCadenceProposal(
   edit?: { interval: number; unit: string },
   replacement?: { expected: string }
 ) {
+  const calibration = await db.careCadenceProposal.findFirst({where:{id,source:'CADENCE_CALIBRATION'},select:{plantDefinition:{select:{collectionId:true}}}})
+  if (calibration?.plantDefinition.collectionId) {
+    const { reviewCalibration } = await import('@/lib/cadence-calibration')
+    return reviewCalibration(db,{id,collectionId:calibration.plantDefinition.collectionId,reviewerId,decision:'approve',edit})
+  }
   return db.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(186104, 1)`
     const p = await tx.careCadenceProposal.findUnique({

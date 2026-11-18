@@ -58,6 +58,13 @@ async function reviewCadenceWork(fd: FormData) {
     throw new Error('Choose Approve or Reject.')
   let result: string
   if (fd.get('decision') === 'reject') {
+    const calibration = await prisma.careCadenceProposal.findFirst({where:{id,source:'CADENCE_CALIBRATION'},include:{plantDefinition:{select:{collectionId:true}}}})
+    if (calibration?.plantDefinition.collectionId) {
+      const { reviewCalibration } = await import('@/lib/cadence-calibration')
+      const result = await reviewCalibration(prisma,{id,collectionId:calibration.plantDefinition.collectionId,reviewerId:user.id,decision:'reject',note:String(fd.get('reviewNote') || '')})
+      await invalidateCadenceViews([id])
+      return {result}
+    }
     const changed = await prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(186104, 1)`
       return tx.careCadenceProposal.updateMany({
@@ -125,7 +132,7 @@ export async function manageCadenceJob(fd: FormData) {
   await prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(186104, 1)`
     const job = await tx.aiCuratorJob.findFirst({
-      where: { id, targetField: 'careCadences' },
+      where: { id, OR:[{targetField:'careCadences'},{jobType:'CADENCE_CALIBRATION'}] },
     })
     if (!job) return
     if (
@@ -134,7 +141,7 @@ export async function manageCadenceJob(fd: FormData) {
         where: {
           id: { not: id },
           plantDefinitionId: job.plantDefinitionId,
-          targetField: 'careCadences',
+          targetField: job.targetField,
           status: {
             in: ['QUEUED', 'RUNNING', 'DEFERRED', 'WAITING_FOR_HUMAN'],
           },
@@ -145,7 +152,7 @@ export async function manageCadenceJob(fd: FormData) {
     await tx.aiCuratorJob.updateMany({
       where: {
         id,
-        targetField: 'careCadences',
+        OR:[{targetField:'careCadences'},{jobType:'CADENCE_CALIBRATION'}],
         status: {
           in: retry
             ? ['WAITING_FOR_HUMAN', 'CANCELLED', 'EXPIRED']

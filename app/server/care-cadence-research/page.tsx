@@ -1,3 +1,4 @@
+import { CalibrationEvidence } from '@/components/ObservedCare'
 import { isActionableCadenceProposal, needsCadenceAttention } from '@/lib/cadence-review'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
@@ -62,7 +63,7 @@ export default async function CadenceResearchPage({
     }),
     prisma.aiCuratorJob.findMany({
       where: {
-        targetField: 'careCadences',
+        OR: [{ targetField: 'careCadences' }, { jobType: 'CADENCE_CALIBRATION' }],
         ...(selectedCollection ? { collectionId: selectedCollection.id } : {}),
       },
       include: { _count: { select: { cadenceProposals: true } } },
@@ -151,6 +152,7 @@ export default async function CadenceResearchPage({
     const actionable = isActionableCadenceProposal(p, p.definition)
     return (
       <div key={p.id} className="space-y-2 rounded-lg border p-3">
+        {p.source==='CADENCE_CALIBRATION' && <CalibrationEvidence value={p.calibrationEvidence}/>}
         <p className="font-semibold">
           {p.activity.replaceAll('_', ' ')} ·{' '}
           {p.interval
@@ -384,6 +386,7 @@ export default async function CadenceResearchPage({
                   'AI_RESEARCH',
                   'BULK_RESEARCH',
                   'LEGACY_RECOVERY',
+                  'CADENCE_CALIBRATION',
                 ],
               ],
               ['sort', ['name', 'activity', 'date', 'confidence']],

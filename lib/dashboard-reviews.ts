@@ -48,7 +48,7 @@ export async function researchReviewQueues(
     },
     {
       label: 'Care cadence suggestions',
-      description: 'AI-researched care schedules and N/A decisions awaiting approval.',
+      description: 'Botanical care schedules, observed cadence calibrations and N/A decisions awaiting approval.',
       href: `/server/care-cadence-research?tab=review&collection=${encodeURIComponent(collectionSlug)}`,
     },
   ].map((queue, index) => ({

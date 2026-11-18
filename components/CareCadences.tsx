@@ -1,4 +1,5 @@
 'use client'
+import { useObservedCare, ObservedCareDetails } from '@/components/ObservedCare'
 
 import {
   startTransition,
@@ -56,6 +57,7 @@ const control =
   'min-h-11 min-w-0 max-w-full rounded-md border border-stone-300 bg-white px-2 py-2 text-sm text-stone-900'
 
 export function CareCadences(props: Props) {
+  const observed = useObservedCare(props.collectionSlug,props.definitionId,!props.instanceId)
   const Heading = props.headingLevel === 2 ? 'h2' : 'h3'
   const [editing, setEditing] = useState<string | null>(null)
   const [saved, setSaved] = useState('')
@@ -111,6 +113,7 @@ export function CareCadences(props: Props) {
       <div className="care-cadences-grid">
         {cadenceActivities.map(({ activity, label }) => (
           <CareCadenceTile
+            observed={observed.rows.find(row=>row.activity===activity)}
             key={activity}
             {...props}
             activity={activity}
@@ -122,6 +125,7 @@ export function CareCadences(props: Props) {
       <span role="status" className="sr-only">
         {saved}
       </span>
+      {!props.instanceId && <ObservedCareDetails {...observed} collectionSlug={props.collectionSlug} definitionId={props.definitionId} canEdit={props.canEdit} />}
       {editing && (
         <CadenceDialog
           key={editing}
@@ -141,11 +145,13 @@ export function CareCadences(props: Props) {
 function CareCadenceTile({
   activity,
   label,
+  observed,
   onEdit,
   ...props
 }: Props & {
   activity: string
   label: string
+  observed?: import('@/components/ObservedCare').ObservedCareRow
   onEdit: (button: HTMLButtonElement) => void
 }) {
   const result = resolveCadence(activity, props.defaults, props.overrides)
@@ -180,6 +186,7 @@ function CareCadenceTile({
       >
         {value}
       </span>
+      {observed && <span className="care-cadence-context">Observed: {observed.evidence.summary.mean?.toFixed(1) ?? 'Insufficient history'}{observed.evidence.summary.mean!=null?' days':''} · {observed.outcome.replaceAll('_',' ').toLowerCase()}</span>}
       {!blocked && props.instanceId && result.source !== 'Not scheduled' && (
         <span className="care-cadence-context">{result.source}</span>
       )}

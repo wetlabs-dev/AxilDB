@@ -1,3 +1,6 @@
+import { CalibrationOverview } from '@/components/CalibrationOverview'
+import { saveCalibrationPolicy } from '@/app/calibration-actions'
+import { calibrationPolicy } from '@/lib/calibration-policy'
 import { HusbandryLinkComparison, HusbandryConsolidationPanel } from '@/components/HusbandryConsolidation'
 import { windowRange, windowFingerprint } from '@/lib/repotting-windows'
 import { linkedCareFields } from '@/lib/ai-curator-inheritance'
@@ -517,6 +520,7 @@ export default async function AiCuratorPage({
       <HusbandryConsolidationPanel/>
       {sp.linkBatch && <p role="status">Consolidation batch results: {sp.linkBatch}</p>}
       {sp.review === 'stale' && <p role="alert">The husbandry link was not applied. Review the stale comparison explanation and refresh or reject it.</p>}
+      <CalibrationOverview />
       {sp.settings === 'updated' && <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900">AI Curator settings updated.</p>}
       {sp.review && sp.review !== 'stale' && <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900">Review action recorded.</p>}
       {sp.responseRequeued !== undefined && <p role="status" className="rounded-lg border p-3 text-sm">Response-error jobs: {Number(sp.responseRecovered) || 0} results recovered, {Number(sp.responseRequeued) || 0} queued, {Number(sp.responseFailed) || 0} failed, {Number(sp.responseLimited) || 0} need a higher Max tokens setting, {Number(sp.responseBusy) || 0} busy or conflicting. Normal AI budget limits apply.</p>}
@@ -575,6 +579,7 @@ export default async function AiCuratorPage({
       </Card>
 
       <Card>
+        <details><summary>Cadence calibration policy</summary><p className="text-sm">Completed-care statistics and per-category reassessment. Global and collection Curator enablement still apply. Values are configurable starting policies, not validated botanical tolerances.</p><form action={saveCalibrationPolicy}><TextArea label="Calibration policy JSON" name="policy" defaultValue={JSON.stringify(calibrationPolicy(dashboard.settings.calibrationPolicy),null,2)} className="min-h-64 font-mono"/><Button>Save calibration policy</Button></form><a href="/server/care-cadence-research?tab=review&source=CADENCE_CALIBRATION" className="underline">Review cadence calibrations</a></details>
         <h3 className="font-serif text-xl font-semibold">Service settings</h3>
         <form action={updateAiCuratorSettings} className="mt-4 grid gap-3 lg:grid-cols-4">
           <label className="flex items-center gap-2 rounded-lg border border-stone-200 bg-white/50 p-3 text-sm font-medium lg:col-span-4">

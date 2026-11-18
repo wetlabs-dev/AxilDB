@@ -1,6 +1,6 @@
 import { effectiveFertilizerAssignment } from '../lib/fertilizers'
 import assert from 'node:assert/strict'
-import { PrismaClient } from '@prisma/client'
+import { Prisma, PrismaClient } from '@prisma/client'
 import {
   consolidationContext,
   compatibilityDimensions,
@@ -562,7 +562,7 @@ async function main() {
     await db.user.delete({ where: { id: user.id } })
     if (settingsBefore) {
       const { id, createdAt, updatedAt, ...data } = settingsBefore
-      await db.aiCuratorSettings.update({ where: { id }, data })
+      await db.aiCuratorSettings.update({ where: { id }, data: {...data,calibrationPolicy:data.calibrationPolicy ?? Prisma.DbNull} })
     }
     await db.$disconnect()
   }

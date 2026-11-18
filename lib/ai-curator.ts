@@ -1,3 +1,4 @@
+import { enqueueCalibrationBatch, runCalibrationJob } from '@/lib/cadence-calibration'
 import { consolidationContext, husbandryLinkTarget, validCompatibilityAssessment, lockHusbandryGraph, validateHusbandryLinkProposal, husbandryFingerprint, criticalGuideConflicts } from '@/lib/husbandry-consolidation'
 import { validWindowRecommendation } from '@/lib/repotting'
 import { curatorInheritance, linkedCarePolicy, linkedCareFields, visibleLinkedCareSuggestion } from '@/lib/ai-curator-inheritance'
@@ -1152,6 +1153,7 @@ async function resolveSatisfiedImageHumanBlocks(prisma: PrismaClient) {
 }
 
 function curatorTargetInstructions(targetField?: string | null) {
+  if (targetField === 'cadenceCalibration') return 'Interpret supplied deterministic statistics only. Do not calculate, invent or replace observations or the proposed interval. Assess botanical plausibility, incomplete logging, seasonality and safety. Return suggestedValue { supportChange: boolean }; return false for doubtful permanent changes. Explain limits in reasoning. No private identifiers are supplied. Confidence is not used to override deterministic evidence quality.'
   switch (targetField) {
     case 'careCadences':
       return cadenceResearchInstructions + ' suggestedValue must be { careCadenceRecommendations: ' + JSON.stringify(cadenceRecommendationShape) + ' }.'
@@ -1366,7 +1368,7 @@ async function processJob(prisma: PrismaClient, settings: any, job: any) {
     })
     return { status: 'WAITING_FOR_HUMAN' as const, cost: 0 }
   }
-  if (!process.env.OPENAI_API_KEY) {
+  if (!process.env.OPENAI_API_KEY && job.jobType !== 'CADENCE_CALIBRATION') {
     await prisma.aiCuratorJob.update({
       where: { id: job.id },
       data: {
@@ -1385,6 +1387,22 @@ async function processJob(prisma: PrismaClient, settings: any, job: any) {
   let usageId: string | undefined
   let attemptCost: number | null = null
   try {
+    if (job.jobType === 'CADENCE_CALIBRATION') {
+      const result = await runCalibrationJob(prisma, job, process.env.OPENAI_API_KEY ? async evidence => {
+        const { payload } = await callCuratorModel(settings, { ...job, targetField: 'cadenceCalibration' }, evidence)
+        const usage = tokenUsage(payload), cost = aiUsageCostDollars(usage, settings.model)
+        attemptCost = cost
+        const tracked = await prisma.aiUsageEvent.create({ data: { collectionId: job.collectionId, feature: 'AI_CURATOR', model: settings.model, success: false, inputTokens: usage.inputTokens, outputTokens: usage.outputTokens, totalTokens: usage.totalTokens, cachedInputTokens: usage.cachedInputTokens, estimatedCostDollars: (cost || 0).toFixed(6) } })
+        usageId = tracked.id
+        const parsed = parseCuratorResponse(payload, Number(settings.maxTokens))
+        const value = parsed.suggestedValue as { supportChange?: unknown } | null
+        if (!value || typeof value.supportChange !== 'boolean' || typeof parsed.reasoning !== 'string') throw new Error('Invalid calibration interpretation; statistics were not modified.')
+        await prisma.aiUsageEvent.update({where:{id:tracked.id},data:{success:true}})
+        return { supportChange: value.supportChange, reasoning: parsed.reasoning.slice(0,2000) }
+      } : undefined)
+      await prisma.aiCuratorJob.updateMany({where:{id:job.id,status:'COMPLETED'},data:{actualCostDollars:(attemptCost || 0).toFixed(6)}})
+      return {...result,cost:attemptCost || 0}
+    }
     const currentValue = await currentValueForJob(prisma, job)
     if (job.targetField === husbandryLinkTarget && !(currentValue as any)?.consolidation?.candidates?.length) {
       await prisma.aiCuratorJob.updateMany({where:{id:job.id,status:'RUNNING',claimedBy:job.claimedBy},data:{status:'SKIPPED',completedAt:new Date(),resultSummary:'No stable, sufficiently complete and compatible source candidates; retained independent husbandry.'}})
@@ -1510,7 +1528,9 @@ async function processAiCuratorWakeLocked(prisma: PrismaClient) {
   const expired = await expireAiCuratorWork(prisma)
   const releasedTaxonomyBlocks = await releaseLegacyTaxonomyHumanBlocks(prisma)
   const resolvedImageBlocks = await resolveSatisfiedImageHumanBlocks(prisma)
+  const calibrationCreated = await enqueueCalibrationBatch(prisma)
   const seeded = await enqueueReadinessCuratorJobs(prisma)
+  seeded.created += calibrationCreated
   const workerId = randomUUID()
   const deadline = Date.now() + Number(settings.timeSliceSeconds || 75) * 1000
   const maxJobs = Math.max(1, Number(settings.concurrency || 1))
@@ -1710,7 +1730,7 @@ export async function enqueueCadenceResearch(prisma: PrismaClient, options: { co
 }
 
 export async function recoverCadenceResearchLeases(prisma: PrismaClient, now = new Date()) {
-  const stale = await prisma.aiCuratorJob.findMany({ where: { targetField: 'careCadences', status: 'RUNNING', claimedAt: { lt: new Date(now.getTime() - 10 * 60_000) } } })
+  const stale = await prisma.aiCuratorJob.findMany({ where: { OR: [{targetField: 'careCadences'}, {jobType:'CADENCE_CALIBRATION'}], status: 'RUNNING', claimedAt: { lt: new Date(now.getTime() - 10 * 60_000) } } })
   for (const job of stale) await prisma.aiCuratorJob.updateMany({ where: { id: job.id, status: 'RUNNING', claimedAt: job.claimedAt }, data: { status: job.attempts >= job.maxAttempts ? 'WAITING_FOR_HUMAN' : 'DEFERRED', claimedBy: null, claimedAt: null, nextRetryAt: new Date(now.getTime() + 60_000), blockingReason: 'Worker lease expired; bounded retry after restart.' } })
   return stale.length
 }

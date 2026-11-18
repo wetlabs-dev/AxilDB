@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { PrismaClient } from '@prisma/client'
+import { Prisma, PrismaClient } from '@prisma/client'
 import {
   curatorInheritance,
   linkedCarePolicy,
@@ -245,7 +245,7 @@ async function main() {
     await db.collection.delete({ where: { id: c.id } })
     if (oldSettings) {
       const { id, createdAt, updatedAt, ...data } = oldSettings
-      await db.aiCuratorSettings.update({ where: { id }, data })
+      await db.aiCuratorSettings.update({ where: { id }, data: {...data,calibrationPolicy:data.calibrationPolicy ?? Prisma.DbNull} })
     }
     await db.$disconnect()
   }

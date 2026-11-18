@@ -205,6 +205,7 @@ export function CadenceProposalReview({
           Approve
         </button>
       )}
+      <label className="text-xs">Review note (optional)<input name="reviewNote" maxLength={2000} className="rounded border p-1" /></label>
       <button disabled={busy} name="decision" value="reject" formNoValidate>
         Reject
       </button>
