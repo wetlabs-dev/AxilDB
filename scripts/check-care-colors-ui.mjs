@@ -42,6 +42,7 @@ try{
  await water.getByRole('button',{name:'Details',exact:true}).click()
  for(const theme of ['light','dark']) {
   await page.evaluate(theme=>{document.documentElement.dataset.theme=theme;localStorage.setItem('axildb-theme',theme)},theme)
+  await page.waitForTimeout(400) // Let theme color transitions settle before sampling computed styles.
   for(const width of [390,768,1440]) {
    await page.setViewportSize({width,height:1000})
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`${theme} ${width} has no horizontal overflow`)
@@ -50,6 +51,7 @@ try{
   assert.ok(await water.locator('.semantic-chip').first().evaluate(el=>getComputedStyle(el).color!=='rgb(0, 0, 0)'))
  }
  await page.evaluate(()=>{document.documentElement.dataset.theme='light';localStorage.setItem('axildb-theme','light')})
+ await page.waitForTimeout(400)
  await page.setViewportSize({width:1440,height:1000})
  assert.equal(await primary.evaluate(el=>getComputedStyle(el).backgroundColor),greenBefore,'Category colors do not change primary action colors.')
  await page.getByRole('link',{name:'Water',exact:true}).click()

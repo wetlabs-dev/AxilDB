@@ -1,0 +1,77 @@
+{
+  "productionBuild": "passed; includes TypeScript",
+  "careCategoryUnit": "passed, both themes all families",
+  "themePairGuard": "passed; pre-existing dark tokens unchanged",
+  "workflowInvariants": "passed",
+  "labelDownload": "passed",
+  "existingBrowserChecks": [
+    {
+      "source": "check-plant-definition-layout-ui.mjs",
+      "status": "passed",
+      "output": "Definition cards: independent equal-height rows, dynamic content, 5-column desktop density, responsive toolbar/full-width content, image ratio, footer alignment, themes, metadata/statuses, edit/research/copy, husbandry/instances, follow/unfollow, filters, and visitor permissions passed."
+    },
+    {
+      "source": "check-care-colors-ui.mjs",
+      "status": "passed after transition-settle fix",
+      "output": "Care colors browser: all 11 task types plus legacy fallback, shared badges/cards, accents, light/dark desktop/tablet/mobile layouts, expansion, filtering and real completion passed.",
+      "initialFailure": "node:internal/process/promises:324\n    triggerUncaughtException(err, true /* fromPromise */);\n    ^\n\nroute.fulfill: Route is already handled!\n    at [workspace]/scripts/.light-theme-check-care-colors-ui.mjs:24:15 {\n  name: 'Error'\n}\n\nNode.js v26.12.1\nCommand failed: node scripts/.light-theme-check-care-colors-ui.mjs\nnode:internal/process/promises:324\n    triggerUncaughtException(err, true /* fromPromise */);\n    ^\n\nroute.fulfill: Route is already handled!\n    at [workspace]/scripts/.light-theme-check-care-colors-ui.mjs:24:15 {\n  name: 'Error'\n}\n\nNode.js v26.12.1\n"
+    },
+    {
+      "source": "check-magic-fill-review-ui.ts",
+      "status": "passed",
+      "output": "Magic Fill UI: canonical review and defaults, explicit replacement, live tag configuration, Public/Private, edit retention, cancelled research refresh, independent partial failure, persisted assignments, dirty form preservation, cadence-module update and mobile layout passed."
+    },
+    {
+      "source": "check-care-queue-responsiveness.mjs",
+      "status": "passed",
+      "output": "Browser controlled-network immediacy, concurrent rollback, counters, preserved form state, retry idempotency, focus, checklist, bulk, authorization, and four-width checks passed."
+    },
+    {
+      "source": "check-care-photos.mjs",
+      "status": "passed",
+      "output": "Care photos: initial/progress/explicit cover, existing selection, framing, metadata, rollback, lost-response and concurrent idempotency, 20 uploads, care isolation, queue state, mobile/focus/object URLs, permissions, native detail upload passed."
+    }
+  ],
+  "themeBrowserChecks": {
+    "checks": [
+      "Theme selection, client navigation persistence and live system-theme changes",
+      "No overflow /plants 360\u00d7800",
+      "No overflow /plants 820\u00d71180",
+      "No overflow /plants 1920\u00d71080",
+      "No overflow /care 360\u00d7800",
+      "No overflow /care 820\u00d71180",
+      "No overflow /care 1920\u00d71080",
+      "No overflow /plants/cmwntlmim005l6u4bu1pi6lhv/edit 360\u00d7800",
+      "No overflow /plants/cmwntlmim005l6u4bu1pi6lhv/edit 820\u00d71180",
+      "No overflow /plants/cmwntlmim005l6u4bu1pi6lhv/edit 1920\u00d71080",
+      "No overflow /graphs 360\u00d7800",
+      "No overflow /graphs 820\u00d71180",
+      "No overflow /graphs 1920\u00d71080",
+      "Mobile navigation opens, navigates and closes",
+      "Keyboard focus and cadence dialog open/Escape close",
+      "Field help open/Escape close",
+      "Archived and unselected activity text remains opaque in light mode",
+      "Print media retains white paper background"
+    ],
+    "focus": {
+      "outline": "rgb(55, 123, 87)",
+      "width": "2px",
+      "offset": "3px"
+    },
+    "errors": [],
+    "limitations": "No native camera or select popup automation, physical printers, screen readers or Firefox/Safari coverage."
+  },
+  "lint": "Changed shared components pass installed Next core-web-vitals rules using temporary legacy config. Splash retains one pre-existing internal-anchor error and six image warnings.",
+  "limitations": [
+    "One baseline dark mobile graph image contains a resize/sticky-header capture artifact; its pixel comparison is inconclusive. Final graph appearance and unchanged dark role values were reviewed separately.",
+    "Dark Server Management full-page heights differ with dynamic diagnostics; those images are not asserted pixel-identical. Other representative dark captures are identical or near-identical in the recorded thresholded comparison.",
+    "Automated initial-state capture/contrast sampling spans all 100 route templates; 3 redirect aliases are partial, not interior sign-off. Human visual review focuses on representative modules and overview sheets.",
+    "Default text scan is bounded to 550 direct-text elements per page; SVG fill, native widgets, group opacity and gradients need separate validation. Disabled controls and color emoji are excluded from normal text assertions.",
+    "Eight representative dark route templates plus 40 conditional/component state captures across both themes; not every dark workflow was recaptured. Existing dark token values are regression-checked.",
+    "Static deployment/chart/control fixtures render actual production components with fictional props; they do not run real deployment operations or provider calls.",
+    "No live-server changes, paid AI research, real notification delivery, native camera capture, hardware printing or screen-reader/Firefox/Safari certification.",
+    "Authentication screens were visually captured; password recovery, real 2FA login, invitation email and external provider workflows are not end-to-end verified.",
+    "Existing splash-page lint issue (plain internal anchor) and six image warnings predate this pass; no new lint errors in changed shared components.",
+    "Large production-sized collections and every possible tag icon combination were not exercised. Existing layout checks cover 12 definition cards and long cultivar names; all care/tag color families are measured."
+  ]
+}

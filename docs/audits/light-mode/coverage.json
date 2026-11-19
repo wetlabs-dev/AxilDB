@@ -1,0 +1,2991 @@
+{
+  "sourceCommit": "bc646216ecfa5e0f1915efa8973ad541e522a84c",
+  "routesDiscovered": 100,
+  "routeStatusCounts": {
+    "Reviewed \u2014 initial state captured": 97,
+    "Partially reviewed": 3
+  },
+  "routes": [
+    {
+      "route": "/account",
+      "source": "app/account/page.tsx",
+      "name": "Account",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/account.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/account.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/account.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/account.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/account/security",
+      "source": "app/account/security/page.tsx",
+      "name": "Account security",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/account-security.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/account-security.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/account-security.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/account-security.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/acquisitions/bulk",
+      "source": "app/acquisitions/bulk/page.tsx",
+      "name": "Bulk Acquisition",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/acquisitions-bulk.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/acquisitions-bulk.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/acquisitions-bulk.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/acquisitions-bulk.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/acquisitions",
+      "source": "app/acquisitions/page.tsx",
+      "name": "Acquisition Pipeline",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/acquisitions.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/acquisitions.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/acquisitions.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/acquisitions.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/activity/[id]",
+      "source": "app/activity/[id]/page.tsx",
+      "name": "care.watering_completed",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/activity-id.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/activity-id.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/activity-id.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/activity-id.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/activity",
+      "source": "app/activity/page.tsx",
+      "name": "Collection Activity",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/activity.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/activity.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/activity.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/activity.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/admin-tools",
+      "source": "app/admin-tools/page.tsx",
+      "name": "Admin Tools",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/admin-tools.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/admin-tools.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/admin-tools.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/admin-tools.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/archived",
+      "source": "app/archived/page.tsx",
+      "name": "Archived Plants",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/archived.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/archived.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/archived.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/archived.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/audit",
+      "source": "app/audit/page.tsx",
+      "name": "Audit Log",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/audit.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/audit.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/audit.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/audit.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/blooms",
+      "source": "app/blooms/page.tsx",
+      "name": "Bloom Tracker",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/blooms.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/blooms.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/blooms.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/blooms.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/care-sheet/[token]",
+      "source": "app/care-sheet/[token]/page.tsx",
+      "name": "AxilDB Care Sheet",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/care-sheet-token.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/care-sheet-token.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/care-sheet-token.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/care-sheet-token.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/care-sheets/[id]",
+      "source": "app/care-sheets/[id]/page.tsx",
+      "name": "Delete care sheet?",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/care-sheets-id.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/care-sheets-id.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/care-sheets-id.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/care-sheets-id.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/care-sheets/new",
+      "source": "app/care-sheets/new/page.tsx",
+      "name": "New Care Sheet",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/care-sheets-new.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/care-sheets-new.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/care-sheets-new.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/care-sheets-new.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/care-sheets",
+      "source": "app/care-sheets/page.tsx",
+      "name": "Care Sheets",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/care-sheets.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/care-sheets.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/care-sheets.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/care-sheets.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/care/bulk",
+      "source": "app/care/bulk/page.tsx",
+      "name": "Bulk care by location",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/care-bulk.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/care-bulk.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/care-bulk.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/care-bulk.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/care/checklist",
+      "source": "app/care/checklist/page.tsx",
+      "name": "Weekly Greenhouse Checklist",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/care-checklist.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/care-checklist.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/care-checklist.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/care-checklist.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/care",
+      "source": "app/care/page.tsx",
+      "name": "Today's Care",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/care.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/care.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/care.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/care.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/care/quiet-day-review",
+      "source": "app/care/quiet-day-review/page.tsx",
+      "name": "Review Quiet Day scheduling",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/care-quiet-day-review.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/care-quiet-day-review.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/care-quiet-day-review.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/care-quiet-day-review.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/care/repotting",
+      "source": "app/care/repotting/page.tsx",
+      "name": "Repotting Planner",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/care-repotting.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/care-repotting.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/care-repotting.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/care-repotting.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/care/sync",
+      "source": "app/care/sync/page.tsx",
+      "name": "Care Schedule Sync",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/care-sync.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/care-sync.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/care-sync.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/care-sync.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/collection-access",
+      "source": "app/collection-access/page.tsx",
+      "name": "Collection Not Found",
+      "role": "anonymous",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/collection-access.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/collection-access.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/collection-access.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/collection-access.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/collection-settings",
+      "source": "app/collection-settings/page.tsx",
+      "name": "Collection Settings",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/collection-settings.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/collection-settings.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/collection-settings.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/collection-settings.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/collections/new",
+      "source": "app/collections/new/page.tsx",
+      "name": "New Collection",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Partially reviewed",
+      "mobile": "Partially reviewed",
+      "httpStatus": 200,
+      "limitation": "Redirect/permission/challenge state captured; requested interior is not counted as reviewed.",
+      "before": {
+        "desktop": "screenshots/light-before/collections-new.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/collections-new.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/collections-new.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/collections-new.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/collections",
+      "source": "app/collections/page.tsx",
+      "name": "Collections",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/collections.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/collections.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/collections.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/collections.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/exhibit-subscription/confirm",
+      "source": "app/exhibit-subscription/confirm/page.tsx",
+      "name": "Subscription unavailable",
+      "role": "anonymous",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/exhibit-subscription-confirm.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/exhibit-subscription-confirm.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/exhibit-subscription-confirm.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/exhibit-subscription-confirm.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/exhibit-subscription/unsubscribe",
+      "source": "app/exhibit-subscription/unsubscribe/page.tsx",
+      "name": "Subscription unavailable",
+      "role": "anonymous",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/exhibit-subscription-unsubscribe.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/exhibit-subscription-unsubscribe.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/exhibit-subscription-unsubscribe.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/exhibit-subscription-unsubscribe.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/exhibit/[slug]",
+      "source": "app/exhibit/[slug]/page.tsx",
+      "name": "Botanical study \u2014 fictional exhibit",
+      "role": "public",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/exhibit-slug.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/exhibit-slug.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/exhibit-slug.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/exhibit-slug.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/exhibit/[slug]/print",
+      "source": "app/exhibit/[slug]/print/page.tsx",
+      "name": "Botanical study \u2014 fictional exhibit",
+      "role": "public",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/exhibit-slug-print.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/exhibit-slug-print.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/exhibit-slug-print.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/exhibit-slug-print.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/exhibits/[id]",
+      "source": "app/exhibits/[id]/page.tsx",
+      "name": "Botanical study \u2014 fictional exhibit",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/exhibits-id.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/exhibits-id.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/exhibits-id.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/exhibits-id.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/exhibits",
+      "source": "app/exhibits/page.tsx",
+      "name": "Collection Exhibits",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/exhibits.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/exhibits.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/exhibits.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/exhibits.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/fertilizers",
+      "source": "app/fertilizers/page.tsx",
+      "name": "Fertilizers",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/fertilizers.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/fertilizers.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/fertilizers.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/fertilizers.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/following",
+      "source": "app/following/page.tsx",
+      "name": "Following",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/following.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/following.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/following.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/following.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/forgot-password",
+      "source": "app/forgot-password/page.tsx",
+      "name": "Reset password",
+      "role": "anonymous",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/forgot-password.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/forgot-password.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/forgot-password.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/forgot-password.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/gallery",
+      "source": "app/gallery/page.tsx",
+      "name": "Gallery",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/gallery.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/gallery.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/gallery.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/gallery.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/graphs",
+      "source": "app/graphs/page.tsx",
+      "name": "Lineage Graphs",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/graphs.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/graphs.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/graphs.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/graphs.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/help",
+      "source": "app/help/page.tsx",
+      "name": "AxilDB User Manual",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/help.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/help.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/help.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/help.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/id-history",
+      "source": "app/id-history/page.tsx",
+      "name": "ID My Plant History",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/id-history.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/id-history.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/id-history.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/id-history.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/instances/[id]/acquisition",
+      "source": "app/instances/[id]/acquisition/page.tsx",
+      "name": "Edit Acquisition & Provenance",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/instances-id-acquisition.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/instances-id-acquisition.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/instances-id-acquisition.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/instances-id-acquisition.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/instances/[id]/edit",
+      "source": "app/instances/[id]/edit/page.tsx",
+      "name": "Edit Plant Instance",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/instances-id-edit.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/instances-id-edit.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/instances-id-edit.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/instances-id-edit.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/instances/[id]",
+      "source": "app/instances/[id]/page.tsx",
+      "name": "AV-001",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/instances-id.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/instances-id.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/instances-id.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/instances-id.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/instances/merge",
+      "source": "app/instances/merge/page.tsx",
+      "name": "Pot specimens together",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/instances-merge.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/instances-merge.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/instances-merge.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/instances-merge.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/instances",
+      "source": "app/instances/page.tsx",
+      "name": "Plant Instances",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/instances.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/instances.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/instances.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/instances.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/labels/[id]",
+      "source": "app/labels/[id]/page.tsx",
+      "name": "",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/labels-id.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/labels-id.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/labels-id.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/labels-id.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/labels",
+      "source": "app/labels/page.tsx",
+      "name": "Plant Labels",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/labels.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/labels.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/labels.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/labels.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/locations/[id]",
+      "source": "app/locations/[id]/page.tsx",
+      "name": "Plant shelf A",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/locations-id.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/locations-id.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/locations-id.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/locations-id.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/locations",
+      "source": "app/locations/page.tsx",
+      "name": "Locations",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/locations.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/locations.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/locations.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/locations.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/login",
+      "source": "app/login/page.tsx",
+      "name": "Sign in",
+      "role": "anonymous",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/login.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/login.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/login.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/login.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/members",
+      "source": "app/members/page.tsx",
+      "name": "Collection Members",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/members.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/members.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/members.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/members.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/",
+      "source": "app/page.tsx",
+      "name": "Dashboard",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/dashboard.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/dashboard.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/dashboard.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/dashboard.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/plant-tags",
+      "source": "app/plant-tags/page.tsx",
+      "name": "Plant Tags",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/plant-tags.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/plant-tags.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/plant-tags.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/plant-tags.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/plants/[id]/edit",
+      "source": "app/plants/[id]/edit/page.tsx",
+      "name": "Saintpaulia ionantha",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/plants-id-edit.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/plants-id-edit.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/plants-id-edit.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/plants-id-edit.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/plants/[id]/husbandry",
+      "source": "app/plants/[id]/husbandry/page.tsx",
+      "name": "Saintpaulia ionantha husbandry",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/plants-id-husbandry.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/plants-id-husbandry.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/plants-id-husbandry.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/plants-id-husbandry.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/plants",
+      "source": "app/plants/page.tsx",
+      "name": "Plant Definitions",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/plants.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/plants.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/plants.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/plants.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/privacy",
+      "source": "app/privacy/page.tsx",
+      "name": "Privacy Policy",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/privacy.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/privacy.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/privacy.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/privacy.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/propagations/[id]/edit",
+      "source": "app/propagations/[id]/edit/page.tsx",
+      "name": "Edit Propagation Event",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/propagations-id-edit.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/propagations-id-edit.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/propagations-id-edit.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/propagations-id-edit.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/propagations",
+      "source": "app/propagations/page.tsx",
+      "name": "Propagations",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/propagations.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/propagations.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/propagations.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/propagations.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/provenance",
+      "source": "app/provenance/page.tsx",
+      "name": "Provenance",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/provenance.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/provenance.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/provenance.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/provenance.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/register",
+      "source": "app/register/page.tsx",
+      "name": "Create Viewer Account",
+      "role": "anonymous",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/register.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/register.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/register.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/register.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/reminders",
+      "source": "app/reminders/page.tsx",
+      "name": "Reminders",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/reminders.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/reminders.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/reminders.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/reminders.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/reset-password",
+      "source": "app/reset-password/page.tsx",
+      "name": "Choose a new password",
+      "role": "anonymous",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/reset-password.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/reset-password.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/reset-password.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/reset-password.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/search",
+      "source": "app/search/page.tsx",
+      "name": "Search / Filter",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/search.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/search.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/search.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/search.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/server/ai-curator",
+      "source": "app/server/ai-curator/page.tsx",
+      "name": "AI Curator",
+      "role": "server administrator",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/server-ai-curator.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/server-ai-curator.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/server-ai-curator.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/server-ai-curator.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/server/application-updates",
+      "source": "app/server/application-updates/page.tsx",
+      "name": "Application Updates",
+      "role": "server administrator",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/server-application-updates.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/server-application-updates.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/server-application-updates.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/server-application-updates.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/server/care-cadence-research",
+      "source": "app/server/care-cadence-research/page.tsx",
+      "name": "Care Cadence Research",
+      "role": "server administrator",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/server-care-cadence-research.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/server-care-cadence-research.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/server-care-cadence-research.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/server-care-cadence-research.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/server/collections/new",
+      "source": "app/server/collections/new/page.tsx",
+      "name": "New Collection",
+      "role": "server administrator",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/server-collections-new.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/server-collections-new.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/server-collections-new.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/server-collections-new.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/server/collections",
+      "source": "app/server/collections/page.tsx",
+      "name": "Server Collections",
+      "role": "server administrator",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/server-collections.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/server-collections.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/server-collections.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/server-collections.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/server/events/[id]",
+      "source": "app/server/events/[id]/page.tsx",
+      "name": "care.watering_completed",
+      "role": "server administrator",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/server-events-id.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/server-events-id.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/server-events-id.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/server-events-id.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/server/events",
+      "source": "app/server/events/page.tsx",
+      "name": "Event Processing",
+      "role": "server administrator",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/server-events.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/server-events.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/server-events.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/server-events.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/server/image-moderation",
+      "source": "app/server/image-moderation/page.tsx",
+      "name": "Image Moderation",
+      "role": "server administrator",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/server-image-moderation.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/server-image-moderation.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/server-image-moderation.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/server-image-moderation.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/server/incidents/[id]",
+      "source": "app/server/incidents/[id]/page.tsx",
+      "name": "Fictional service warning",
+      "role": "server administrator",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/server-incidents-id.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/server-incidents-id.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/server-incidents-id.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/server-incidents-id.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/server/incidents",
+      "source": "app/server/incidents/page.tsx",
+      "name": "Incident History",
+      "role": "server administrator",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/server-incidents.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/server-incidents.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/server-incidents.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/server-incidents.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/server/migrations",
+      "source": "app/server/migrations/page.tsx",
+      "name": "Full Instance Migration",
+      "role": "server administrator",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/server-migrations.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/server-migrations.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/server-migrations.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/server-migrations.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/server/orphaned-images",
+      "source": "app/server/orphaned-images/page.tsx",
+      "name": "Orphaned Image Cleanup",
+      "role": "server administrator",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/server-orphaned-images.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/server-orphaned-images.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/server-orphaned-images.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/server-orphaned-images.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/server",
+      "source": "app/server/page.tsx",
+      "name": "Server Management",
+      "role": "server administrator",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/server.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/server.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/server.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/server.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/server/repotting-windows",
+      "source": "app/server/repotting-windows/page.tsx",
+      "name": "Repotting Windows",
+      "role": "server administrator",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/server-repotting-windows.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/server-repotting-windows.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/server-repotting-windows.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/server-repotting-windows.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/server/users",
+      "source": "app/server/users/page.tsx",
+      "name": "Site Users",
+      "role": "server administrator",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/server-users.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/server-users.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/server-users.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/server-users.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/server/validated-definitions/[id]",
+      "source": "app/server/validated-definitions/[id]/page.tsx",
+      "name": "Edit Validated Definition",
+      "role": "server administrator",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/server-validated-definitions-id.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/server-validated-definitions-id.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/server-validated-definitions-id.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/server-validated-definitions-id.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/server/validated-definitions",
+      "source": "app/server/validated-definitions/page.tsx",
+      "name": "Validated Plant Definitions",
+      "role": "server administrator",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/server-validated-definitions.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/server-validated-definitions.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/server-validated-definitions.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/server-validated-definitions.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/settings",
+      "source": "app/settings/page.tsx",
+      "name": "Taxonomic Authorities",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Partially reviewed",
+      "mobile": "Partially reviewed",
+      "httpStatus": 200,
+      "limitation": "Redirect/permission/challenge state captured; requested interior is not counted as reviewed.",
+      "before": {
+        "desktop": "screenshots/light-before/settings.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/settings.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/settings.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/settings.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/sitter/[token]",
+      "source": "app/sitter/[token]/page.tsx",
+      "name": "Plant Sitter Mode",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/sitter-token.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/sitter-token.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/sitter-token.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/sitter-token.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/splash",
+      "source": "app/splash/page.tsx",
+      "name": "A living database for collections with complicated plants.",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/splash.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/splash.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/splash.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/splash.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/sports/[id]/cultivar",
+      "source": "app/sports/[id]/cultivar/page.tsx",
+      "name": "Create Cultivar from Stable Sport",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/sports-id-cultivar.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/sports-id-cultivar.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/sports-id-cultivar.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/sports-id-cultivar.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/sports",
+      "source": "app/sports/page.tsx",
+      "name": "Sport Stability Review",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/sports.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/sports.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/sports.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/sports.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/substrates",
+      "source": "app/substrates/page.tsx",
+      "name": "Substrates",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/substrates.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/substrates.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/substrates.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/substrates.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/taxonomic-authorities",
+      "source": "app/taxonomic-authorities/page.tsx",
+      "name": "Taxonomic Authorities",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/taxonomic-authorities.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/taxonomic-authorities.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/taxonomic-authorities.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/taxonomic-authorities.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/terms",
+      "source": "app/terms/page.tsx",
+      "name": "Terms of Use",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/terms.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/terms.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/terms.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/terms.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/transfers",
+      "source": "app/transfers/page.tsx",
+      "name": "Collection Transfers",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/transfers.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/transfers.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/transfers.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/transfers.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/treatments/apply",
+      "source": "app/treatments/apply/page.tsx",
+      "name": "Record treatment application",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/treatments-apply.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/treatments-apply.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/treatments-apply.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/treatments-apply.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/treatments/batch",
+      "source": "app/treatments/batch/page.tsx",
+      "name": "Batch treatment application",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/treatments-batch.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/treatments-batch.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/treatments-batch.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/treatments-batch.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/treatments",
+      "source": "app/treatments/page.tsx",
+      "name": "Treatment Management",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/treatments.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/treatments.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/treatments.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/treatments.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/treatments/plans/[id]",
+      "source": "app/treatments/plans/[id]/page.tsx",
+      "name": "Fictional pest follow-up",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/treatments-plans-id.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/treatments-plans-id.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/treatments-plans-id.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/treatments-plans-id.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/treatments/reports",
+      "source": "app/treatments/reports/page.tsx",
+      "name": "Treatment reports",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/treatments-reports.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/treatments-reports.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/treatments-reports.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/treatments-reports.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/two-factor",
+      "source": "app/two-factor/page.tsx",
+      "name": "Two-factor verification",
+      "role": "anonymous",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/two-factor.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/two-factor.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/two-factor.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/two-factor.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/users",
+      "source": "app/users/page.tsx",
+      "name": "Site Users",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Partially reviewed",
+      "mobile": "Partially reviewed",
+      "httpStatus": 200,
+      "limitation": "Redirect/permission/challenge state captured; requested interior is not counted as reviewed.",
+      "before": {
+        "desktop": "screenshots/light-before/users.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/users.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/users.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/users.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/validated-definitions",
+      "source": "app/validated-definitions/page.tsx",
+      "name": "Validated Plant Definitions",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/validated-definitions.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/validated-definitions.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/validated-definitions.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/validated-definitions.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/verify-email",
+      "source": "app/verify-email/page.tsx",
+      "name": "Email verification",
+      "role": "anonymous",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/verify-email.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/verify-email.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/verify-email.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/verify-email.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/wishlist",
+      "source": "app/wishlist/page.tsx",
+      "name": "Plant Wishlist",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/wishlist.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/wishlist.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/wishlist.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/wishlist.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/workflows",
+      "source": "app/workflows/page.tsx",
+      "name": "Greenhouse Workflows",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/workflows.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/workflows.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/workflows.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/workflows.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/workflows/runs/[id]",
+      "source": "app/workflows/runs/[id]/page.tsx",
+      "name": "Audit inspection in progress",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/workflows-runs-id.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/workflows-runs-id.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/workflows-runs-id.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/workflows-runs-id.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    },
+    {
+      "route": "/workflows/templates/[id]",
+      "source": "app/workflows/templates/[id]/page.tsx",
+      "name": "Weekly Greenhouse Round \u2014 audit",
+      "role": "collection manager",
+      "state": "Initial fixture render; token/challenge failure states where applicable. Conditional and functional checks listed separately.",
+      "desktop": "Reviewed \u2014 initial state captured",
+      "mobile": "Reviewed \u2014 initial state captured",
+      "httpStatus": 200,
+      "limitation": "No exhaustive per-route interaction claim.",
+      "before": {
+        "desktop": "screenshots/light-before/workflows-templates-id.desktop.light.before.jpg",
+        "mobile": "screenshots/light-before/workflows-templates-id.mobile.light.before.jpg"
+      },
+      "after": {
+        "desktop": "screenshots/light-after/workflows-templates-id.desktop.light.after.jpg",
+        "mobile": "screenshots/light-after/workflows-templates-id.mobile.light.after.jpg"
+      },
+      "overflow": {
+        "desktop": false,
+        "mobile": false
+      },
+      "changes": "Shared light roles, fields and metadata; localized chart/graph/readiness/CTA owners as applicable."
+    }
+  ],
+  "componentSourceInventory": 85,
+  "statesBefore": [
+    {
+      "id": "deployment-running.fixture.desktop",
+      "theme": "light",
+      "phase": "before",
+      "file": "screenshots/light-before/deployment-running.fixture.desktop.light.before.jpg"
+    },
+    {
+      "id": "deployment-running.fixture.mobile",
+      "theme": "light",
+      "phase": "before",
+      "file": "screenshots/light-before/deployment-running.fixture.mobile.light.before.jpg"
+    },
+    {
+      "id": "deployment-failed.fixture.desktop",
+      "theme": "light",
+      "phase": "before",
+      "file": "screenshots/light-before/deployment-failed.fixture.desktop.light.before.jpg"
+    },
+    {
+      "id": "deployment-failed.fixture.mobile",
+      "theme": "light",
+      "phase": "before",
+      "file": "screenshots/light-before/deployment-failed.fixture.mobile.light.before.jpg"
+    },
+    {
+      "id": "deployment-completed.fixture.desktop",
+      "theme": "light",
+      "phase": "before",
+      "file": "screenshots/light-before/deployment-completed.fixture.desktop.light.before.jpg"
+    },
+    {
+      "id": "deployment-completed.fixture.mobile",
+      "theme": "light",
+      "phase": "before",
+      "file": "screenshots/light-before/deployment-completed.fixture.mobile.light.before.jpg"
+    },
+    {
+      "id": "shared-controls.fixture.desktop",
+      "theme": "light",
+      "phase": "before",
+      "file": "screenshots/light-before/shared-controls.fixture.desktop.light.before.jpg"
+    },
+    {
+      "id": "shared-controls.fixture.mobile",
+      "theme": "light",
+      "phase": "before",
+      "file": "screenshots/light-before/shared-controls.fixture.mobile.light.before.jpg"
+    },
+    {
+      "id": "photo-framing.fixture.desktop",
+      "theme": "light",
+      "phase": "before",
+      "file": "screenshots/light-before/photo-framing.fixture.desktop.light.before.jpg"
+    },
+    {
+      "id": "photo-framing.fixture.mobile",
+      "theme": "light",
+      "phase": "before",
+      "file": "screenshots/light-before/photo-framing.fixture.mobile.light.before.jpg"
+    },
+    {
+      "id": "semantic-palettes.fixture.desktop",
+      "theme": "light",
+      "phase": "before",
+      "file": "screenshots/light-before/semantic-palettes.fixture.desktop.light.before.jpg"
+    },
+    {
+      "id": "semantic-palettes.fixture.mobile",
+      "theme": "light",
+      "phase": "before",
+      "file": "screenshots/light-before/semantic-palettes.fixture.mobile.light.before.jpg"
+    },
+    {
+      "id": "metric-chart.fixture.desktop",
+      "theme": "light",
+      "phase": "before",
+      "file": "screenshots/light-before/metric-chart.fixture.desktop.light.before.jpg"
+    },
+    {
+      "id": "metric-chart.fixture.mobile",
+      "theme": "light",
+      "phase": "before",
+      "file": "screenshots/light-before/metric-chart.fixture.mobile.light.before.jpg"
+    },
+    {
+      "id": "cadence-dialog.desktop",
+      "theme": "light",
+      "phase": "before",
+      "file": "screenshots/light-before/cadence-dialog.desktop.light.before.jpg"
+    },
+    {
+      "id": "cadence-dialog.mobile",
+      "theme": "light",
+      "phase": "before",
+      "file": "screenshots/light-before/cadence-dialog.mobile.light.before.jpg"
+    },
+    {
+      "id": "field-help.mobile",
+      "theme": "light",
+      "phase": "before",
+      "file": "screenshots/light-before/field-help.mobile.light.before.jpg"
+    },
+    {
+      "id": "empty-collection.desktop",
+      "theme": "light",
+      "phase": "before",
+      "file": "screenshots/light-before/empty-collection.desktop.light.before.jpg"
+    },
+    {
+      "id": "instance-expanded.desktop",
+      "theme": "light",
+      "phase": "before",
+      "file": "screenshots/light-before/instance-expanded.desktop.light.before.jpg"
+    },
+    {
+      "id": "instance-expanded.mobile",
+      "theme": "light",
+      "phase": "before",
+      "file": "screenshots/light-before/instance-expanded.mobile.light.before.jpg"
+    },
+    {
+      "id": "deployment-running.fixture.desktop",
+      "theme": "dark",
+      "phase": "before",
+      "file": "screenshots/dark-before/deployment-running.fixture.desktop.dark.before.jpg"
+    },
+    {
+      "id": "deployment-running.fixture.mobile",
+      "theme": "dark",
+      "phase": "before",
+      "file": "screenshots/dark-before/deployment-running.fixture.mobile.dark.before.jpg"
+    },
+    {
+      "id": "deployment-failed.fixture.desktop",
+      "theme": "dark",
+      "phase": "before",
+      "file": "screenshots/dark-before/deployment-failed.fixture.desktop.dark.before.jpg"
+    },
+    {
+      "id": "deployment-failed.fixture.mobile",
+      "theme": "dark",
+      "phase": "before",
+      "file": "screenshots/dark-before/deployment-failed.fixture.mobile.dark.before.jpg"
+    },
+    {
+      "id": "deployment-completed.fixture.desktop",
+      "theme": "dark",
+      "phase": "before",
+      "file": "screenshots/dark-before/deployment-completed.fixture.desktop.dark.before.jpg"
+    },
+    {
+      "id": "deployment-completed.fixture.mobile",
+      "theme": "dark",
+      "phase": "before",
+      "file": "screenshots/dark-before/deployment-completed.fixture.mobile.dark.before.jpg"
+    },
+    {
+      "id": "shared-controls.fixture.desktop",
+      "theme": "dark",
+      "phase": "before",
+      "file": "screenshots/dark-before/shared-controls.fixture.desktop.dark.before.jpg"
+    },
+    {
+      "id": "shared-controls.fixture.mobile",
+      "theme": "dark",
+      "phase": "before",
+      "file": "screenshots/dark-before/shared-controls.fixture.mobile.dark.before.jpg"
+    },
+    {
+      "id": "photo-framing.fixture.desktop",
+      "theme": "dark",
+      "phase": "before",
+      "file": "screenshots/dark-before/photo-framing.fixture.desktop.dark.before.jpg"
+    },
+    {
+      "id": "photo-framing.fixture.mobile",
+      "theme": "dark",
+      "phase": "before",
+      "file": "screenshots/dark-before/photo-framing.fixture.mobile.dark.before.jpg"
+    },
+    {
+      "id": "semantic-palettes.fixture.desktop",
+      "theme": "dark",
+      "phase": "before",
+      "file": "screenshots/dark-before/semantic-palettes.fixture.desktop.dark.before.jpg"
+    },
+    {
+      "id": "semantic-palettes.fixture.mobile",
+      "theme": "dark",
+      "phase": "before",
+      "file": "screenshots/dark-before/semantic-palettes.fixture.mobile.dark.before.jpg"
+    },
+    {
+      "id": "metric-chart.fixture.desktop",
+      "theme": "dark",
+      "phase": "before",
+      "file": "screenshots/dark-before/metric-chart.fixture.desktop.dark.before.jpg"
+    },
+    {
+      "id": "metric-chart.fixture.mobile",
+      "theme": "dark",
+      "phase": "before",
+      "file": "screenshots/dark-before/metric-chart.fixture.mobile.dark.before.jpg"
+    },
+    {
+      "id": "cadence-dialog.desktop",
+      "theme": "dark",
+      "phase": "before",
+      "file": "screenshots/dark-before/cadence-dialog.desktop.dark.before.jpg"
+    },
+    {
+      "id": "cadence-dialog.mobile",
+      "theme": "dark",
+      "phase": "before",
+      "file": "screenshots/dark-before/cadence-dialog.mobile.dark.before.jpg"
+    },
+    {
+      "id": "field-help.mobile",
+      "theme": "dark",
+      "phase": "before",
+      "file": "screenshots/dark-before/field-help.mobile.dark.before.jpg"
+    },
+    {
+      "id": "empty-collection.desktop",
+      "theme": "dark",
+      "phase": "before",
+      "file": "screenshots/dark-before/empty-collection.desktop.dark.before.jpg"
+    },
+    {
+      "id": "instance-expanded.desktop",
+      "theme": "dark",
+      "phase": "before",
+      "file": "screenshots/dark-before/instance-expanded.desktop.dark.before.jpg"
+    },
+    {
+      "id": "instance-expanded.mobile",
+      "theme": "dark",
+      "phase": "before",
+      "file": "screenshots/dark-before/instance-expanded.mobile.dark.before.jpg"
+    }
+  ],
+  "statesAfter": [
+    {
+      "id": "deployment-running.fixture.desktop",
+      "theme": "light",
+      "phase": "after",
+      "file": "screenshots/light-after/deployment-running.fixture.desktop.light.after.jpg"
+    },
+    {
+      "id": "deployment-running.fixture.mobile",
+      "theme": "light",
+      "phase": "after",
+      "file": "screenshots/light-after/deployment-running.fixture.mobile.light.after.jpg"
+    },
+    {
+      "id": "deployment-failed.fixture.desktop",
+      "theme": "light",
+      "phase": "after",
+      "file": "screenshots/light-after/deployment-failed.fixture.desktop.light.after.jpg"
+    },
+    {
+      "id": "deployment-failed.fixture.mobile",
+      "theme": "light",
+      "phase": "after",
+      "file": "screenshots/light-after/deployment-failed.fixture.mobile.light.after.jpg"
+    },
+    {
+      "id": "deployment-completed.fixture.desktop",
+      "theme": "light",
+      "phase": "after",
+      "file": "screenshots/light-after/deployment-completed.fixture.desktop.light.after.jpg"
+    },
+    {
+      "id": "deployment-completed.fixture.mobile",
+      "theme": "light",
+      "phase": "after",
+      "file": "screenshots/light-after/deployment-completed.fixture.mobile.light.after.jpg"
+    },
+    {
+      "id": "shared-controls.fixture.desktop",
+      "theme": "light",
+      "phase": "after",
+      "file": "screenshots/light-after/shared-controls.fixture.desktop.light.after.jpg"
+    },
+    {
+      "id": "shared-controls.fixture.mobile",
+      "theme": "light",
+      "phase": "after",
+      "file": "screenshots/light-after/shared-controls.fixture.mobile.light.after.jpg"
+    },
+    {
+      "id": "photo-framing.fixture.desktop",
+      "theme": "light",
+      "phase": "after",
+      "file": "screenshots/light-after/photo-framing.fixture.desktop.light.after.jpg"
+    },
+    {
+      "id": "photo-framing.fixture.mobile",
+      "theme": "light",
+      "phase": "after",
+      "file": "screenshots/light-after/photo-framing.fixture.mobile.light.after.jpg"
+    },
+    {
+      "id": "semantic-palettes.fixture.desktop",
+      "theme": "light",
+      "phase": "after",
+      "file": "screenshots/light-after/semantic-palettes.fixture.desktop.light.after.jpg"
+    },
+    {
+      "id": "semantic-palettes.fixture.mobile",
+      "theme": "light",
+      "phase": "after",
+      "file": "screenshots/light-after/semantic-palettes.fixture.mobile.light.after.jpg"
+    },
+    {
+      "id": "metric-chart.fixture.desktop",
+      "theme": "light",
+      "phase": "after",
+      "file": "screenshots/light-after/metric-chart.fixture.desktop.light.after.jpg"
+    },
+    {
+      "id": "metric-chart.fixture.mobile",
+      "theme": "light",
+      "phase": "after",
+      "file": "screenshots/light-after/metric-chart.fixture.mobile.light.after.jpg"
+    },
+    {
+      "id": "cadence-dialog.desktop",
+      "theme": "light",
+      "phase": "after",
+      "file": "screenshots/light-after/cadence-dialog.desktop.light.after.jpg"
+    },
+    {
+      "id": "cadence-dialog.mobile",
+      "theme": "light",
+      "phase": "after",
+      "file": "screenshots/light-after/cadence-dialog.mobile.light.after.jpg"
+    },
+    {
+      "id": "field-help.mobile",
+      "theme": "light",
+      "phase": "after",
+      "file": "screenshots/light-after/field-help.mobile.light.after.jpg"
+    },
+    {
+      "id": "empty-collection.desktop",
+      "theme": "light",
+      "phase": "after",
+      "file": "screenshots/light-after/empty-collection.desktop.light.after.jpg"
+    },
+    {
+      "id": "instance-expanded.desktop",
+      "theme": "light",
+      "phase": "after",
+      "file": "screenshots/light-after/instance-expanded.desktop.light.after.jpg"
+    },
+    {
+      "id": "instance-expanded.mobile",
+      "theme": "light",
+      "phase": "after",
+      "file": "screenshots/light-after/instance-expanded.mobile.light.after.jpg"
+    },
+    {
+      "id": "deployment-running.fixture.desktop",
+      "theme": "dark",
+      "phase": "after",
+      "file": "screenshots/dark-after/deployment-running.fixture.desktop.dark.after.jpg"
+    },
+    {
+      "id": "deployment-running.fixture.mobile",
+      "theme": "dark",
+      "phase": "after",
+      "file": "screenshots/dark-after/deployment-running.fixture.mobile.dark.after.jpg"
+    },
+    {
+      "id": "deployment-failed.fixture.desktop",
+      "theme": "dark",
+      "phase": "after",
+      "file": "screenshots/dark-after/deployment-failed.fixture.desktop.dark.after.jpg"
+    },
+    {
+      "id": "deployment-failed.fixture.mobile",
+      "theme": "dark",
+      "phase": "after",
+      "file": "screenshots/dark-after/deployment-failed.fixture.mobile.dark.after.jpg"
+    },
+    {
+      "id": "deployment-completed.fixture.desktop",
+      "theme": "dark",
+      "phase": "after",
+      "file": "screenshots/dark-after/deployment-completed.fixture.desktop.dark.after.jpg"
+    },
+    {
+      "id": "deployment-completed.fixture.mobile",
+      "theme": "dark",
+      "phase": "after",
+      "file": "screenshots/dark-after/deployment-completed.fixture.mobile.dark.after.jpg"
+    },
+    {
+      "id": "shared-controls.fixture.desktop",
+      "theme": "dark",
+      "phase": "after",
+      "file": "screenshots/dark-after/shared-controls.fixture.desktop.dark.after.jpg"
+    },
+    {
+      "id": "shared-controls.fixture.mobile",
+      "theme": "dark",
+      "phase": "after",
+      "file": "screenshots/dark-after/shared-controls.fixture.mobile.dark.after.jpg"
+    },
+    {
+      "id": "photo-framing.fixture.desktop",
+      "theme": "dark",
+      "phase": "after",
+      "file": "screenshots/dark-after/photo-framing.fixture.desktop.dark.after.jpg"
+    },
+    {
+      "id": "photo-framing.fixture.mobile",
+      "theme": "dark",
+      "phase": "after",
+      "file": "screenshots/dark-after/photo-framing.fixture.mobile.dark.after.jpg"
+    },
+    {
+      "id": "semantic-palettes.fixture.desktop",
+      "theme": "dark",
+      "phase": "after",
+      "file": "screenshots/dark-after/semantic-palettes.fixture.desktop.dark.after.jpg"
+    },
+    {
+      "id": "semantic-palettes.fixture.mobile",
+      "theme": "dark",
+      "phase": "after",
+      "file": "screenshots/dark-after/semantic-palettes.fixture.mobile.dark.after.jpg"
+    },
+    {
+      "id": "metric-chart.fixture.desktop",
+      "theme": "dark",
+      "phase": "after",
+      "file": "screenshots/dark-after/metric-chart.fixture.desktop.dark.after.jpg"
+    },
+    {
+      "id": "metric-chart.fixture.mobile",
+      "theme": "dark",
+      "phase": "after",
+      "file": "screenshots/dark-after/metric-chart.fixture.mobile.dark.after.jpg"
+    },
+    {
+      "id": "cadence-dialog.desktop",
+      "theme": "dark",
+      "phase": "after",
+      "file": "screenshots/dark-after/cadence-dialog.desktop.dark.after.jpg"
+    },
+    {
+      "id": "cadence-dialog.mobile",
+      "theme": "dark",
+      "phase": "after",
+      "file": "screenshots/dark-after/cadence-dialog.mobile.dark.after.jpg"
+    },
+    {
+      "id": "field-help.mobile",
+      "theme": "dark",
+      "phase": "after",
+      "file": "screenshots/dark-after/field-help.mobile.dark.after.jpg"
+    },
+    {
+      "id": "empty-collection.desktop",
+      "theme": "dark",
+      "phase": "after",
+      "file": "screenshots/dark-after/empty-collection.desktop.dark.after.jpg"
+    },
+    {
+      "id": "instance-expanded.desktop",
+      "theme": "dark",
+      "phase": "after",
+      "file": "screenshots/dark-after/instance-expanded.desktop.dark.after.jpg"
+    },
+    {
+      "id": "instance-expanded.mobile",
+      "theme": "dark",
+      "phase": "after",
+      "file": "screenshots/dark-after/instance-expanded.mobile.dark.after.jpg"
+    }
+  ],
+  "darkRoutesBefore": [
+    {
+      "pattern": "/care",
+      "desktopScreenshot": "screenshots/dark-before/care.desktop.dark.before.jpg",
+      "mobileScreenshot": "screenshots/dark-before/care.mobile.dark.before.jpg"
+    },
+    {
+      "pattern": "/graphs",
+      "desktopScreenshot": "screenshots/dark-before/graphs.desktop.dark.before.jpg",
+      "mobileScreenshot": "screenshots/dark-before/graphs.mobile.dark.before.jpg"
+    },
+    {
+      "pattern": "/instances/[id]",
+      "desktopScreenshot": "screenshots/dark-before/instances-id.desktop.dark.before.jpg",
+      "mobileScreenshot": "screenshots/dark-before/instances-id.mobile.dark.before.jpg"
+    },
+    {
+      "pattern": "/",
+      "desktopScreenshot": "screenshots/dark-before/dashboard.desktop.dark.before.jpg",
+      "mobileScreenshot": "screenshots/dark-before/dashboard.mobile.dark.before.jpg"
+    },
+    {
+      "pattern": "/plants/[id]/edit",
+      "desktopScreenshot": "screenshots/dark-before/plants-id-edit.desktop.dark.before.jpg",
+      "mobileScreenshot": "screenshots/dark-before/plants-id-edit.mobile.dark.before.jpg"
+    },
+    {
+      "pattern": "/plants",
+      "desktopScreenshot": "screenshots/dark-before/plants.desktop.dark.before.jpg",
+      "mobileScreenshot": "screenshots/dark-before/plants.mobile.dark.before.jpg"
+    },
+    {
+      "pattern": "/server/ai-curator",
+      "desktopScreenshot": "screenshots/dark-before/server-ai-curator.desktop.dark.before.jpg",
+      "mobileScreenshot": "screenshots/dark-before/server-ai-curator.mobile.dark.before.jpg"
+    },
+    {
+      "pattern": "/server",
+      "desktopScreenshot": "screenshots/dark-before/server.desktop.dark.before.jpg",
+      "mobileScreenshot": "screenshots/dark-before/server.mobile.dark.before.jpg"
+    }
+  ],
+  "darkRoutesAfter": [
+    {
+      "pattern": "/care",
+      "desktopScreenshot": "screenshots/dark-after/care.desktop.dark.after.jpg",
+      "mobileScreenshot": "screenshots/dark-after/care.mobile.dark.after.jpg"
+    },
+    {
+      "pattern": "/graphs",
+      "desktopScreenshot": "screenshots/dark-after/graphs.desktop.dark.after.jpg",
+      "mobileScreenshot": "screenshots/dark-after/graphs.mobile.dark.after.jpg"
+    },
+    {
+      "pattern": "/instances/[id]",
+      "desktopScreenshot": "screenshots/dark-after/instances-id.desktop.dark.after.jpg",
+      "mobileScreenshot": "screenshots/dark-after/instances-id.mobile.dark.after.jpg"
+    },
+    {
+      "pattern": "/",
+      "desktopScreenshot": "screenshots/dark-after/dashboard.desktop.dark.after.jpg",
+      "mobileScreenshot": "screenshots/dark-after/dashboard.mobile.dark.after.jpg"
+    },
+    {
+      "pattern": "/plants/[id]/edit",
+      "desktopScreenshot": "screenshots/dark-after/plants-id-edit.desktop.dark.after.jpg",
+      "mobileScreenshot": "screenshots/dark-after/plants-id-edit.mobile.dark.after.jpg"
+    },
+    {
+      "pattern": "/plants",
+      "desktopScreenshot": "screenshots/dark-after/plants.desktop.dark.after.jpg",
+      "mobileScreenshot": "screenshots/dark-after/plants.mobile.dark.after.jpg"
+    },
+    {
+      "pattern": "/server/ai-curator",
+      "desktopScreenshot": "screenshots/dark-after/server-ai-curator.desktop.dark.after.jpg",
+      "mobileScreenshot": "screenshots/dark-after/server-ai-curator.mobile.dark.after.jpg"
+    },
+    {
+      "pattern": "/server",
+      "desktopScreenshot": "screenshots/dark-after/server.desktop.dark.after.jpg",
+      "mobileScreenshot": "screenshots/dark-after/server.mobile.dark.after.jpg"
+    }
+  ],
+  "limitations": [
+    "One baseline dark mobile graph image contains a resize/sticky-header capture artifact; its pixel comparison is inconclusive. Final graph appearance and unchanged dark role values were reviewed separately.",
+    "Dark Server Management full-page heights differ with dynamic diagnostics; those images are not asserted pixel-identical. Other representative dark captures are identical or near-identical in the recorded thresholded comparison.",
+    "Automated initial-state capture/contrast sampling spans all 100 route templates; 3 redirect aliases are partial, not interior sign-off. Human visual review focuses on representative modules and overview sheets.",
+    "Default text scan is bounded to 550 direct-text elements per page; SVG fill, native widgets, group opacity and gradients need separate validation. Disabled controls and color emoji are excluded from normal text assertions.",
+    "Eight representative dark route templates plus 40 conditional/component state captures across both themes; not every dark workflow was recaptured. Existing dark token values are regression-checked.",
+    "Static deployment/chart/control fixtures render actual production components with fictional props; they do not run real deployment operations or provider calls.",
+    "No live-server changes, paid AI research, real notification delivery, native camera capture, hardware printing or screen-reader/Firefox/Safari certification.",
+    "Authentication screens were visually captured; password recovery, real 2FA login, invitation email and external provider workflows are not end-to-end verified.",
+    "Existing splash-page lint issue (plain internal anchor) and six image warnings predate this pass; no new lint errors in changed shared components.",
+    "Large production-sized collections and every possible tag icon combination were not exercised. Existing layout checks cover 12 definition cards and long cultivar names; all care/tag color families are measured."
+  ]
+}

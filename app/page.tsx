@@ -128,7 +128,7 @@ function ActivityCard({
     <Link
       href={item.href}
       className={cn(
-        'group grid overflow-hidden rounded-lg border shadow-[0_8px_24px_rgba(47,38,24,0.06)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(47,38,24,0.10)] sm:h-36 sm:grid-cols-[8.5rem_1fr]',
+        'ax-activity-card group grid overflow-hidden rounded-lg border shadow-[0_8px_24px_rgba(47,38,24,0.06)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(47,38,24,0.10)] sm:h-36 sm:grid-cols-[8.5rem_1fr]',
         style.className,
       )}
     >
@@ -826,7 +826,7 @@ export default async function Dashboard({
                 href={activityHref(collection.slug, activityTake, toggleActivityKind(includedActivityKinds, kind as ActivityKind))}
                 aria-pressed={includedActivityKinds.includes(kind as ActivityKind)}
                 className={cn(
-                  'rounded-full border px-2 py-1 font-medium transition hover:-translate-y-0.5 hover:shadow-sm',
+                  'ax-activity-filter rounded-full border px-2 py-1 font-medium transition hover:-translate-y-0.5 hover:shadow-sm',
                   style.className,
                   includedActivityKinds.includes(kind as ActivityKind) ? 'ring-2 ring-[#2f6b45]/35' : 'opacity-45 hover:opacity-80',
                 )}

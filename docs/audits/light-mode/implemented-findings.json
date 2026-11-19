@@ -1,0 +1,139 @@
+[
+  {
+    "id": "LM-001",
+    "title": "Warm, solid surface hierarchy",
+    "classification": "Theme architecture",
+    "original": "Light mode mixed translucent cream surfaces, tinted nested modules and ornamental canvas gradients.",
+    "implemented": "Warm #f5f3e9 canvas, #faf9f3 cards, #fffdf8 raised/field surfaces, #eeefe5 inset areas, and light-only shared card/navigation shadow/border refinement. Same anatomy, fonts and density.",
+    "files": [
+      "app/globals.css",
+      "components/ui.tsx"
+    ],
+    "scene": "dashboard",
+    "darkImpact": "Existing accepted dark tokens unchanged.",
+    "measurement": null,
+    "status": "Implemented; scoped verification recorded below"
+  },
+  {
+    "id": "LM-002",
+    "title": "Recognizable editable controls",
+    "classification": "Accessibility",
+    "original": "Light field boundaries measured 1.71:1 against the field; pale borders were indistinguishable from decorative dividers.",
+    "implemented": "Shared editable controls now use emphasized #7b8878 borders, distinct field surface, explicit placeholder tone and muted read-only/disabled surfaces.",
+    "files": [
+      "app/globals.css"
+    ],
+    "scene": "plants-id-edit",
+    "darkImpact": "Existing dark field/focus tokens unchanged.",
+    "measurement": {
+      "before": "1.71:1 field boundary",
+      "after": "3.67:1 field boundary; light focus 5.00:1 against field",
+      "method": "Actual computed opaque field colors in foundations.before/after.json; no inactive-control contrast requirement asserted."
+    },
+    "status": "Implemented; scoped verification recorded below"
+  },
+  {
+    "id": "LM-003",
+    "title": "Readable small metadata",
+    "classification": "Accessibility",
+    "original": "Small metadata on tinted care cards and public exhibits measured below 4.5:1 (examples 4.44 and 4.33).",
+    "implemented": "Route legacy light metadata through shared #606b61 muted and #465348 secondary roles, preserving type sizes.",
+    "files": [
+      "app/globals.css"
+    ],
+    "scene": "care",
+    "darkImpact": "Mappings are light-only; intentionally light public surfaces remain light.",
+    "measurement": {
+      "before": "Care metadata 4.44:1; exhibit captions 4.33:1",
+      "after": "Muted role 5.28:1 on the main card; actual route samples recorded in measurements.json",
+      "method": "Computed ancestor-composited route samples. Uncertainty retained for gradients/opacity; not a full WCAG certification."
+    },
+    "status": "Implemented; scoped verification recorded below"
+  },
+  {
+    "id": "LM-004",
+    "title": "Charts consume theme roles",
+    "classification": "Accessibility / consistency",
+    "original": "Metric charts forced a dark surface in light mode; the white warning symbol on amber lacked normal-text contrast.",
+    "implemented": "Theme-aware chart surface, labels, series, grid, tooltip and marker pairs; identical plot geometry, data and clustering.",
+    "files": [
+      "components/MetricChart.tsx",
+      "app/globals.css"
+    ],
+    "scene": "metric-chart.fixture",
+    "darkImpact": "Dark chart foundation/series/tooltip values retained. Amber and resolved symbols deliberately use dark text to correct contrast.",
+    "measurement": {
+      "before": "Warning symbol #fffdf7 on #d6a533 approximately 2.22:1",
+      "after": "Light warning symbol white on #80601e 5.82:1; dark symbols checked \u22654.5:1",
+      "method": "Opaque SVG fill pairs, separately validated by check:theme-harmonization; DOM color scans alone do not measure SVG fills."
+    },
+    "status": "Implemented; scoped verification recorded below"
+  },
+  {
+    "id": "LM-005",
+    "title": "Calm lineage surfaces and labels",
+    "classification": "Consistency",
+    "original": "Layered gradients and fixed label colors bypassed theme roles.",
+    "implemented": "Light graph uses recessed canvas, raised readable nodes and quieter shadows. Label fills/text/borders consume shared roles; edge colors, widths, dash patterns, layout and relationships retained.",
+    "files": [
+      "components/LineageGraph.tsx",
+      "app/globals.css"
+    ],
+    "scene": "graphs",
+    "darkImpact": "Dark graph label role values match the previous fixed colors.",
+    "measurement": null,
+    "status": "Implemented; scoped verification recorded below"
+  },
+  {
+    "id": "LM-006",
+    "title": "Readiness belongs to the surface hierarchy",
+    "classification": "Visual hierarchy",
+    "original": "Readiness used a separate translucent yellow-beige panel.",
+    "implemented": "Light readiness panels use the shared inset surface/divider roles. Completeness values, labels and progress geometry remain unchanged.",
+    "files": [
+      "components/PlantDefinitionCompleteness.tsx",
+      "app/globals.css"
+    ],
+    "scene": "plants-id-edit",
+    "darkImpact": "Dark styling unchanged; confidence/completeness meaning not conflated.",
+    "measurement": null,
+    "status": "Implemented; scoped verification recorded below"
+  },
+  {
+    "id": "LM-007",
+    "title": "Readable botanical support action",
+    "classification": "Accessibility",
+    "original": "The normal-size white Ko-fi action label on terracotta measured 3.34:1.",
+    "implemented": "Preserve the terracotta brand fill and use dark heading text; hover remains readable.",
+    "files": [
+      "app/splash/page.tsx"
+    ],
+    "scene": "splash",
+    "darkImpact": "Marketing continues to force light mode.",
+    "measurement": {
+      "before": "3.34:1",
+      "after": "4.92:1 normal label; hover pair separately checked",
+      "method": "Opaque foreground/background calculation and actual route scan."
+    },
+    "status": "Implemented; scoped verification recorded below"
+  },
+  {
+    "id": "LM-008",
+    "title": "Opacity does not hide actionable labels",
+    "classification": "Accessibility",
+    "original": "Whole-card archival opacity and unselected filter opacity dimmed text as well as decorative surfaces. Ancestor opacity is a separate compositing risk.",
+    "implemented": "Keep activity card/filter text fully opaque in light mode. Existing selection ring and aria-pressed states retain selection cues; archival labels and image grayscale retained.",
+    "files": [
+      "app/page.tsx",
+      "app/globals.css"
+    ],
+    "scene": "dashboard",
+    "darkImpact": "Light-only override; accepted dark dimming unchanged.",
+    "measurement": {
+      "before": "Group-opacity candidate, not assigned an exact baseline ratio",
+      "after": "Full text opacity; computed metadata roles meet threshold on the rendered surfaces",
+      "method": "Visible light-state opacity assertions, plus sampled text checks. No fabricated gradient ratio."
+    },
+    "status": "Implemented; scoped verification recorded below"
+  }
+]

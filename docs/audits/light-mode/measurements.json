@@ -1,0 +1,1577 @@
+{
+  "sourceCommit": "bc646216ecfa5e0f1915efa8973ad541e522a84c",
+  "method": "Bounded actual-browser direct-text samples with ancestor alpha compositing. Uncertainty is explicit. Exact opaque field/pair calculations and SVG fill pairs are independent checks. Does not certify full WCAG conformance.",
+  "beforeCandidates": [
+    {
+      "route": "/care",
+      "viewport": "desktop",
+      "selector": "p.text-xs.text-stone-500",
+      "tag": "P",
+      "text": "LOC-AREA-01 Plant shelf A",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        250,
+        245,
+        243
+      ],
+      "ratio": 4.44,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 438,
+        "y": 1456,
+        "width": 153,
+        "height": 16
+      }
+    },
+    {
+      "route": "/care",
+      "viewport": "desktop",
+      "selector": "p.text-xs.text-stone-500",
+      "tag": "P",
+      "text": "LOC-AREA-01 Plant shelf A",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        252,
+        246,
+        236
+      ],
+      "ratio": 4.46,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 991,
+        "y": 1428,
+        "width": 153,
+        "height": 16
+      }
+    },
+    {
+      "route": "/care",
+      "viewport": "desktop",
+      "selector": "p.text-xs.text-stone-500",
+      "tag": "P",
+      "text": "LOC-AREA-01 Plant shelf A",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        248,
+        247,
+        244
+      ],
+      "ratio": 4.48,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 438,
+        "y": 1685,
+        "width": 153,
+        "height": 16
+      }
+    },
+    {
+      "route": "/care",
+      "viewport": "desktop",
+      "selector": "p.text-xs.text-stone-500",
+      "tag": "P",
+      "text": "LOC-AREA-01 Plant shelf A",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        249,
+        246,
+        244
+      ],
+      "ratio": 4.46,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 991,
+        "y": 1705,
+        "width": 153,
+        "height": 16
+      }
+    },
+    {
+      "route": "/care",
+      "viewport": "desktop",
+      "selector": "p.text-xs.text-stone-500",
+      "tag": "P",
+      "text": "LOC-AREA-01 Plant shelf A",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        247,
+        247,
+        235
+      ],
+      "ratio": 4.45,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 438,
+        "y": 1933,
+        "width": 153,
+        "height": 16
+      }
+    },
+    {
+      "route": "/care",
+      "viewport": "desktop",
+      "selector": "p.text-xs.text-stone-500",
+      "tag": "P",
+      "text": "LOC-AREA-01 Plant shelf A",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        253,
+        246,
+        241
+      ],
+      "ratio": 4.48,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 991,
+        "y": 1933,
+        "width": 137,
+        "height": 32
+      }
+    },
+    {
+      "route": "/care",
+      "viewport": "mobile",
+      "selector": "p.text-xs.text-stone-500",
+      "tag": "P",
+      "text": "LOC-AREA-01 Plant shelf A",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        250,
+        245,
+        243
+      ],
+      "ratio": 4.44,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 46,
+        "y": 2086,
+        "width": 298,
+        "height": 16
+      }
+    },
+    {
+      "route": "/care",
+      "viewport": "mobile",
+      "selector": "p.text-xs.text-stone-500",
+      "tag": "P",
+      "text": "LOC-AREA-01 Plant shelf A",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        252,
+        246,
+        236
+      ],
+      "ratio": 4.46,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 46,
+        "y": 2629,
+        "width": 298,
+        "height": 16
+      }
+    },
+    {
+      "route": "/care",
+      "viewport": "mobile",
+      "selector": "p.text-xs.text-stone-500",
+      "tag": "P",
+      "text": "LOC-AREA-01 Plant shelf A",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        248,
+        247,
+        244
+      ],
+      "ratio": 4.48,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 46,
+        "y": 3550,
+        "width": 298,
+        "height": 16
+      }
+    },
+    {
+      "route": "/care",
+      "viewport": "mobile",
+      "selector": "p.text-xs.text-stone-500",
+      "tag": "P",
+      "text": "LOC-AREA-01 Plant shelf A",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        249,
+        246,
+        244
+      ],
+      "ratio": 4.46,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 46,
+        "y": 4102,
+        "width": 298,
+        "height": 16
+      }
+    },
+    {
+      "route": "/care",
+      "viewport": "mobile",
+      "selector": "p.text-xs.text-stone-500",
+      "tag": "P",
+      "text": "LOC-AREA-01 Plant shelf A",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        247,
+        247,
+        235
+      ],
+      "ratio": 4.45,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 46,
+        "y": 4625,
+        "width": 298,
+        "height": 16
+      }
+    },
+    {
+      "route": "/care",
+      "viewport": "mobile",
+      "selector": "p.mt-1.text-xs.uppercase",
+      "tag": "P",
+      "text": "definition schedule",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        248,
+        245,
+        233
+      ],
+      "ratio": 4.38,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 59,
+        "y": 4771,
+        "width": 272,
+        "height": 16
+      }
+    },
+    {
+      "route": "/care",
+      "viewport": "mobile",
+      "selector": "p.text-xs.text-stone-500",
+      "tag": "P",
+      "text": "LOC-AREA-01 Plant shelf A",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        253,
+        246,
+        241
+      ],
+      "ratio": 4.48,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 46,
+        "y": 5468,
+        "width": 298,
+        "height": 16
+      }
+    },
+    {
+      "route": "/exhibit/[slug]",
+      "viewport": "desktop",
+      "selector": "p.text-xs.text-stone-500",
+      "tag": "P",
+      "text": "1 specimens across 1 definitions",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        248,
+        243,
+        230
+      ],
+      "ratio": 4.33,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 169,
+        "y": 141,
+        "width": 1102,
+        "height": 16
+      }
+    },
+    {
+      "route": "/exhibit/[slug]",
+      "viewport": "desktop",
+      "selector": "p.text-xs.font-semibold.uppercase",
+      "tag": "P",
+      "text": "1 selected specimens",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        248,
+        243,
+        230
+      ],
+      "ratio": 4.33,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 165,
+        "y": 361,
+        "width": 1110,
+        "height": 16
+      }
+    },
+    {
+      "route": "/exhibit/[slug]",
+      "viewport": "desktop",
+      "selector": "p.text-xs.font-semibold.uppercase",
+      "tag": "P",
+      "text": "Specimen photos",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        248,
+        243,
+        230
+      ],
+      "ratio": 4.33,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 182,
+        "y": 1022,
+        "width": 1076,
+        "height": 16
+      }
+    },
+    {
+      "route": "/exhibit/[slug]",
+      "viewport": "mobile",
+      "selector": "p.text-xs.text-stone-500",
+      "tag": "P",
+      "text": "1 specimens across 1 definitions",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        248,
+        243,
+        230
+      ],
+      "ratio": 4.33,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 41,
+        "y": 242,
+        "width": 308,
+        "height": 16
+      }
+    },
+    {
+      "route": "/exhibit/[slug]",
+      "viewport": "mobile",
+      "selector": "p.text-xs.font-semibold.uppercase",
+      "tag": "P",
+      "text": "1 selected specimens",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        248,
+        243,
+        230
+      ],
+      "ratio": 4.33,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 37,
+        "y": 576,
+        "width": 316,
+        "height": 16
+      }
+    },
+    {
+      "route": "/exhibit/[slug]",
+      "viewport": "mobile",
+      "selector": "p.text-xs.font-semibold.uppercase",
+      "tag": "P",
+      "text": "Specimen photos",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        248,
+        243,
+        230
+      ],
+      "ratio": 4.33,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 54,
+        "y": 1620,
+        "width": 282,
+        "height": 16
+      }
+    },
+    {
+      "route": "/instances/[id]",
+      "viewport": "desktop",
+      "selector": "span.text-xs.font-normal.text-stone-500",
+      "tag": "SPAN",
+      "text": "1.00x",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        244,
+        248,
+        237
+      ],
+      "ratio": 4.45,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 615,
+        "y": 7281,
+        "width": 325,
+        "height": 16
+      }
+    },
+    {
+      "route": "/instances/[id]",
+      "viewport": "mobile",
+      "selector": "span.text-xs.font-normal.text-stone-500",
+      "tag": "SPAN",
+      "text": "1.00x",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        244,
+        248,
+        237
+      ],
+      "ratio": 4.45,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 75,
+        "y": 11954,
+        "width": 240,
+        "height": 16
+      }
+    },
+    {
+      "route": "/locations/[id]",
+      "viewport": "desktop",
+      "selector": "p.text-xs.font-bold.uppercase",
+      "tag": "P",
+      "text": "Temperature",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        245,
+        248,
+        238
+      ],
+      "ratio": 4.48,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [
+        "image or gradient",
+        "root gradient/canvas estimate"
+      ],
+      "rect": {
+        "x": 320,
+        "y": 1159,
+        "width": 332,
+        "height": 16
+      }
+    },
+    {
+      "route": "/locations/[id]",
+      "viewport": "desktop",
+      "selector": "p.text-xs.font-bold.uppercase",
+      "tag": "P",
+      "text": "Humidity",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        245,
+        248,
+        238
+      ],
+      "ratio": 4.48,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [
+        "image or gradient",
+        "root gradient/canvas estimate"
+      ],
+      "rect": {
+        "x": 682,
+        "y": 1159,
+        "width": 332,
+        "height": 16
+      }
+    },
+    {
+      "route": "/locations/[id]",
+      "viewport": "desktop",
+      "selector": "p.text-xs.font-bold.uppercase",
+      "tag": "P",
+      "text": "Measured light",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        245,
+        248,
+        238
+      ],
+      "ratio": 4.48,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [
+        "image or gradient",
+        "root gradient/canvas estimate"
+      ],
+      "rect": {
+        "x": 1044,
+        "y": 1159,
+        "width": 332,
+        "height": 16
+      }
+    },
+    {
+      "route": "/locations/[id]",
+      "viewport": "desktop",
+      "selector": "p.text-xs.font-bold.uppercase",
+      "tag": "P",
+      "text": "light Level",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        245,
+        248,
+        238
+      ],
+      "ratio": 4.48,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [
+        "image or gradient",
+        "root gradient/canvas estimate"
+      ],
+      "rect": {
+        "x": 320,
+        "y": 1225,
+        "width": 332,
+        "height": 16
+      }
+    },
+    {
+      "route": "/locations/[id]",
+      "viewport": "desktop",
+      "selector": "p.text-xs.font-bold.uppercase",
+      "tag": "P",
+      "text": "light Exposure",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        245,
+        248,
+        238
+      ],
+      "ratio": 4.48,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [
+        "image or gradient",
+        "root gradient/canvas estimate"
+      ],
+      "rect": {
+        "x": 682,
+        "y": 1225,
+        "width": 332,
+        "height": 16
+      }
+    },
+    {
+      "route": "/locations/[id]",
+      "viewport": "desktop",
+      "selector": "p.text-xs.font-bold.uppercase",
+      "tag": "P",
+      "text": "photoperiod Hours",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        245,
+        248,
+        238
+      ],
+      "ratio": 4.48,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [
+        "image or gradient",
+        "root gradient/canvas estimate"
+      ],
+      "rect": {
+        "x": 1044,
+        "y": 1225,
+        "width": 332,
+        "height": 16
+      }
+    },
+    {
+      "route": "/locations/[id]",
+      "viewport": "desktop",
+      "selector": "p.text-xs.font-bold.uppercase",
+      "tag": "P",
+      "text": "airflow Level",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        245,
+        248,
+        238
+      ],
+      "ratio": 4.48,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [
+        "image or gradient",
+        "root gradient/canvas estimate"
+      ],
+      "rect": {
+        "x": 320,
+        "y": 1291,
+        "width": 332,
+        "height": 16
+      }
+    },
+    {
+      "route": "/locations/[id]",
+      "viewport": "desktop",
+      "selector": "p.text-xs.font-bold.uppercase",
+      "tag": "P",
+      "text": "environment Stability",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        245,
+        248,
+        238
+      ],
+      "ratio": 4.48,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [
+        "image or gradient",
+        "root gradient/canvas estimate"
+      ],
+      "rect": {
+        "x": 682,
+        "y": 1291,
+        "width": 332,
+        "height": 16
+      }
+    },
+    {
+      "route": "/locations/[id]",
+      "viewport": "mobile",
+      "selector": "p.text-xs.font-bold.uppercase",
+      "tag": "P",
+      "text": "Temperature",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        245,
+        248,
+        238
+      ],
+      "ratio": 4.48,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [
+        "image or gradient",
+        "root gradient/canvas estimate"
+      ],
+      "rect": {
+        "x": 44,
+        "y": 1824,
+        "width": 302,
+        "height": 16
+      }
+    },
+    {
+      "route": "/locations/[id]",
+      "viewport": "mobile",
+      "selector": "p.text-xs.font-bold.uppercase",
+      "tag": "P",
+      "text": "Humidity",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        245,
+        248,
+        238
+      ],
+      "ratio": 4.48,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [
+        "image or gradient",
+        "root gradient/canvas estimate"
+      ],
+      "rect": {
+        "x": 44,
+        "y": 1890,
+        "width": 302,
+        "height": 16
+      }
+    },
+    {
+      "route": "/locations/[id]",
+      "viewport": "mobile",
+      "selector": "p.text-xs.font-bold.uppercase",
+      "tag": "P",
+      "text": "Measured light",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        245,
+        248,
+        238
+      ],
+      "ratio": 4.48,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [
+        "image or gradient",
+        "root gradient/canvas estimate"
+      ],
+      "rect": {
+        "x": 44,
+        "y": 1956,
+        "width": 302,
+        "height": 16
+      }
+    },
+    {
+      "route": "/locations/[id]",
+      "viewport": "mobile",
+      "selector": "p.text-xs.font-bold.uppercase",
+      "tag": "P",
+      "text": "light Level",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        245,
+        248,
+        238
+      ],
+      "ratio": 4.48,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [
+        "image or gradient",
+        "root gradient/canvas estimate"
+      ],
+      "rect": {
+        "x": 44,
+        "y": 2022,
+        "width": 302,
+        "height": 16
+      }
+    },
+    {
+      "route": "/locations/[id]",
+      "viewport": "mobile",
+      "selector": "p.text-xs.font-bold.uppercase",
+      "tag": "P",
+      "text": "light Exposure",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        245,
+        248,
+        238
+      ],
+      "ratio": 4.48,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [
+        "image or gradient",
+        "root gradient/canvas estimate"
+      ],
+      "rect": {
+        "x": 44,
+        "y": 2088,
+        "width": 302,
+        "height": 16
+      }
+    },
+    {
+      "route": "/locations/[id]",
+      "viewport": "mobile",
+      "selector": "p.text-xs.font-bold.uppercase",
+      "tag": "P",
+      "text": "photoperiod Hours",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        245,
+        248,
+        238
+      ],
+      "ratio": 4.48,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [
+        "image or gradient",
+        "root gradient/canvas estimate"
+      ],
+      "rect": {
+        "x": 44,
+        "y": 2154,
+        "width": 302,
+        "height": 16
+      }
+    },
+    {
+      "route": "/locations/[id]",
+      "viewport": "mobile",
+      "selector": "p.text-xs.font-bold.uppercase",
+      "tag": "P",
+      "text": "airflow Level",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        245,
+        248,
+        238
+      ],
+      "ratio": 4.48,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [
+        "image or gradient",
+        "root gradient/canvas estimate"
+      ],
+      "rect": {
+        "x": 44,
+        "y": 2220,
+        "width": 302,
+        "height": 16
+      }
+    },
+    {
+      "route": "/locations/[id]",
+      "viewport": "mobile",
+      "selector": "p.text-xs.font-bold.uppercase",
+      "tag": "P",
+      "text": "environment Stability",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        245,
+        248,
+        238
+      ],
+      "ratio": 4.48,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [
+        "image or gradient",
+        "root gradient/canvas estimate"
+      ],
+      "rect": {
+        "x": 44,
+        "y": 2286,
+        "width": 302,
+        "height": 16
+      }
+    },
+    {
+      "route": "/",
+      "viewport": "desktop",
+      "selector": "span.text-xs.font-medium.text-stone-500",
+      "tag": "SPAN",
+      "text": "Nov 19, 2026",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        248,
+        247,
+        243
+      ],
+      "ratio": 4.47,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [
+        "group opacity",
+        "image or gradient",
+        "root gradient/canvas estimate"
+      ],
+      "rect": {
+        "x": 577,
+        "y": 1975,
+        "width": 75,
+        "height": 16
+      }
+    },
+    {
+      "route": "/",
+      "viewport": "desktop",
+      "selector": "span.text-xs.font-medium.text-stone-500",
+      "tag": "SPAN",
+      "text": "Nov 19, 2026",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        251,
+        244,
+        255
+      ],
+      "ratio": 4.45,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 1154,
+        "y": 1975,
+        "width": 75,
+        "height": 16
+      }
+    },
+    {
+      "route": "/",
+      "viewport": "desktop",
+      "selector": "span.text-xs.font-medium.text-stone-500",
+      "tag": "SPAN",
+      "text": "Nov 19, 2026",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        251,
+        244,
+        255
+      ],
+      "ratio": 4.45,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 609,
+        "y": 2131,
+        "width": 75,
+        "height": 16
+      }
+    },
+    {
+      "route": "/",
+      "viewport": "desktop",
+      "selector": "span.text-xs.font-medium.text-stone-500",
+      "tag": "SPAN",
+      "text": "May 19, 2026",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        244,
+        248,
+        237
+      ],
+      "ratio": 4.45,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 1148,
+        "y": 2131,
+        "width": 77,
+        "height": 16
+      }
+    },
+    {
+      "route": "/",
+      "viewport": "desktop",
+      "selector": "span.text-xs.font-medium.text-stone-500",
+      "tag": "SPAN",
+      "text": "May 9, 2026",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        255,
+        244,
+        238
+      ],
+      "ratio": 4.44,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 556,
+        "y": 2287,
+        "width": 72,
+        "height": 16
+      }
+    },
+    {
+      "route": "/",
+      "viewport": "desktop",
+      "selector": "span.text-xs.font-medium.text-stone-500",
+      "tag": "SPAN",
+      "text": "Apr 30, 2026",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        244,
+        248,
+        237
+      ],
+      "ratio": 4.45,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 1148,
+        "y": 2287,
+        "width": 76,
+        "height": 16
+      }
+    },
+    {
+      "route": "/",
+      "viewport": "desktop",
+      "selector": "span.text-xs.font-medium.text-stone-500",
+      "tag": "SPAN",
+      "text": "Apr 11, 2026",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        247,
+        248,
+        238
+      ],
+      "ratio": 4.48,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 587,
+        "y": 2443,
+        "width": 71,
+        "height": 16
+      }
+    },
+    {
+      "route": "/",
+      "viewport": "mobile",
+      "selector": "span.text-xs.font-medium.text-stone-500",
+      "tag": "SPAN",
+      "text": "Nov 19, 2026",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        248,
+        247,
+        243
+      ],
+      "ratio": 4.47,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [
+        "group opacity",
+        "image or gradient",
+        "root gradient/canvas estimate"
+      ],
+      "rect": {
+        "x": 165,
+        "y": 3404,
+        "width": 75,
+        "height": 16
+      }
+    },
+    {
+      "route": "/",
+      "viewport": "mobile",
+      "selector": "span.text-xs.font-medium.text-stone-500",
+      "tag": "SPAN",
+      "text": "Nov 19, 2026",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        251,
+        244,
+        255
+      ],
+      "ratio": 4.45,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 197,
+        "y": 3687,
+        "width": 75,
+        "height": 16
+      }
+    },
+    {
+      "route": "/",
+      "viewport": "mobile",
+      "selector": "span.text-xs.font-medium.text-stone-500",
+      "tag": "SPAN",
+      "text": "Nov 19, 2026",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        251,
+        244,
+        255
+      ],
+      "ratio": 4.45,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 197,
+        "y": 3997,
+        "width": 75,
+        "height": 16
+      }
+    },
+    {
+      "route": "/",
+      "viewport": "mobile",
+      "selector": "span.text-xs.font-medium.text-stone-500",
+      "tag": "SPAN",
+      "text": "May 19, 2026",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        244,
+        248,
+        237
+      ],
+      "ratio": 4.45,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 191,
+        "y": 4308,
+        "width": 77,
+        "height": 16
+      }
+    },
+    {
+      "route": "/",
+      "viewport": "mobile",
+      "selector": "span.text-xs.font-medium.text-stone-500",
+      "tag": "SPAN",
+      "text": "May 9, 2026",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        255,
+        244,
+        238
+      ],
+      "ratio": 4.44,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 144,
+        "y": 4619,
+        "width": 72,
+        "height": 16
+      }
+    },
+    {
+      "route": "/",
+      "viewport": "mobile",
+      "selector": "span.text-xs.font-medium.text-stone-500",
+      "tag": "SPAN",
+      "text": "Apr 30, 2026",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        244,
+        248,
+        237
+      ],
+      "ratio": 4.45,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 191,
+        "y": 4930,
+        "width": 76,
+        "height": 16
+      }
+    },
+    {
+      "route": "/",
+      "viewport": "mobile",
+      "selector": "span.text-xs.font-medium.text-stone-500",
+      "tag": "SPAN",
+      "text": "Apr 11, 2026",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        247,
+        248,
+        238
+      ],
+      "ratio": 4.48,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 175,
+        "y": 5241,
+        "width": 71,
+        "height": 16
+      }
+    },
+    {
+      "route": "/plants/[id]/edit",
+      "viewport": "desktop",
+      "selector": "p.mt-1.text-xs.text-stone-500",
+      "tag": "P",
+      "text": "Magic Fill may help draft up to 14 missing or partial readiness items. Suggestions do not count until you review and save them.",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        249,
+        245,
+        234
+      ],
+      "ratio": 4.42,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [
+        "image or gradient",
+        "root gradient/canvas estimate"
+      ],
+      "rect": {
+        "x": 322,
+        "y": 476,
+        "width": 1052,
+        "height": 16
+      }
+    },
+    {
+      "route": "/plants/[id]/edit",
+      "viewport": "desktop",
+      "selector": "span.text-xs.font-normal.text-stone-500",
+      "tag": "SPAN",
+      "text": "1.00x",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        244,
+        248,
+        237
+      ],
+      "ratio": 4.45,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 917,
+        "y": 7395,
+        "width": 121,
+        "height": 16
+      }
+    },
+    {
+      "route": "/plants/[id]/edit",
+      "viewport": "mobile",
+      "selector": "p.mt-1.text-xs.text-stone-500",
+      "tag": "P",
+      "text": "Magic Fill may help draft up to 14 missing or partial readiness items. Suggestions do not count until you review and save them.",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        249,
+        245,
+        234
+      ],
+      "ratio": 4.42,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [
+        "image or gradient",
+        "root gradient/canvas estimate"
+      ],
+      "rect": {
+        "x": 46,
+        "y": 924,
+        "width": 298,
+        "height": 48
+      }
+    },
+    {
+      "route": "/plants/[id]/edit",
+      "viewport": "mobile",
+      "selector": "span.text-xs.font-normal.text-stone-500",
+      "tag": "SPAN",
+      "text": "1.00x",
+      "foreground": "rgb(120, 113, 108)",
+      "effectiveBackground": [
+        244,
+        248,
+        237
+      ],
+      "ratio": 4.45,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 46,
+        "y": 12808,
+        "width": 298,
+        "height": 16
+      }
+    },
+    {
+      "route": "/splash",
+      "viewport": "desktop",
+      "selector": "a.mt-5.inline-flex.rounded-md",
+      "tag": "A",
+      "text": "Donate on Ko-fi",
+      "foreground": "rgb(255, 255, 255)",
+      "effectiveBackground": [
+        196,
+        122,
+        90
+      ],
+      "ratio": 3.34,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 958,
+        "y": 4437,
+        "width": 138,
+        "height": 36
+      }
+    },
+    {
+      "route": "/splash",
+      "viewport": "mobile",
+      "selector": "a.mt-5.inline-flex.rounded-md",
+      "tag": "A",
+      "text": "Donate on Ko-fi",
+      "foreground": "rgb(255, 255, 255)",
+      "effectiveBackground": [
+        196,
+        122,
+        90
+      ],
+      "ratio": 3.34,
+      "minimum": 4.5,
+      "passes": false,
+      "inactive": false,
+      "uncertainty": [],
+      "rect": {
+        "x": 45,
+        "y": 10298,
+        "width": 138,
+        "height": 36
+      }
+    }
+  ],
+  "afterCandidates": [],
+  "foundationsBefore": [
+    {
+      "theme": "light",
+      "control": {
+        "background": "rgb(255, 253, 247)",
+        "border": "rgb(207, 195, 173)",
+        "text": "rgb(31, 42, 34)",
+        "placeholder": "rgb(31, 42, 34)",
+        "height": 34
+      },
+      "focus": {
+        "color": "rgb(47, 107, 69)",
+        "width": "2px",
+        "offset": "3px"
+      },
+      "tokens": {
+        "--ax-bg": "#fffdf7",
+        "--ax-surface-solid": "#fffaf0",
+        "--ax-elevated": "#f4f8ed",
+        "--ax-field": "#fffdf7",
+        "--ax-border": "rgba(214,205,184,.92)",
+        "--ax-border-strong": "#cfc3ad",
+        "--ax-text": "#1f2a22",
+        "--ax-muted": "#6d675d",
+        "--ax-primary": "#2f6b45",
+        "--ax-action": "#2f6b45",
+        "--ax-action-text": "#ffffff",
+        "--ax-focus": "#2f6b45"
+      },
+      "controlBorderContrast": 1.71,
+      "placeholderContrast": 14.62,
+      "focusFieldContrast": 6.24,
+      "method": "Computed opaque field foreground/border/background; focus compared with field. Not a whole-page conformance claim."
+    },
+    {
+      "theme": "dark",
+      "control": {
+        "background": "rgb(24, 30, 26)",
+        "border": "rgb(101, 120, 106)",
+        "text": "rgb(231, 235, 227)",
+        "placeholder": "rgb(231, 235, 227)",
+        "height": 34
+      },
+      "focus": {
+        "color": "rgb(160, 198, 154)",
+        "width": "2px",
+        "offset": "3px"
+      },
+      "tokens": {
+        "--ax-bg": "#151a17",
+        "--ax-surface-solid": "#202722",
+        "--ax-elevated": "#263029",
+        "--ax-field": "#181e1a",
+        "--ax-border": "#39463c",
+        "--ax-border-strong": "#65786a",
+        "--ax-text": "#e7ebe3",
+        "--ax-muted": "#bbc6ba",
+        "--ax-primary": "#8ebb91",
+        "--ax-action": "#315c42",
+        "--ax-action-text": "#f1f6ee",
+        "--ax-focus": "#a0c69a"
+      },
+      "controlBorderContrast": 3.59,
+      "placeholderContrast": 14.03,
+      "focusFieldContrast": 8.91,
+      "method": "Computed opaque field foreground/border/background; focus compared with field. Not a whole-page conformance claim."
+    }
+  ],
+  "foundationsAfter": [
+    {
+      "theme": "light",
+      "control": {
+        "background": "rgb(255, 253, 248)",
+        "border": "rgb(123, 136, 120)",
+        "text": "rgb(36, 45, 38)",
+        "placeholder": "rgb(36, 45, 38)",
+        "height": 34
+      },
+      "focus": {
+        "color": "rgb(55, 123, 87)",
+        "width": "2px",
+        "offset": "3px"
+      },
+      "tokens": {
+        "--ax-bg": "#f5f3e9",
+        "--ax-surface-solid": "#faf9f3",
+        "--ax-elevated": "#fffdf8",
+        "--ax-field": "#fffdf8",
+        "--ax-border": "#d6dad0",
+        "--ax-border-strong": "#7b8878",
+        "--ax-text": "#242d26",
+        "--ax-muted": "#606b61",
+        "--ax-primary": "#2d684a",
+        "--ax-action": "#2d684a",
+        "--ax-action-text": "#ffffff",
+        "--ax-focus": "#377b57"
+      },
+      "controlBorderContrast": 3.67,
+      "placeholderContrast": 13.97,
+      "focusFieldContrast": 5,
+      "method": "Computed opaque field foreground/border/background; focus compared with field. Not a whole-page conformance claim."
+    },
+    {
+      "theme": "dark",
+      "control": {
+        "background": "rgb(24, 30, 26)",
+        "border": "rgb(101, 120, 106)",
+        "text": "rgb(231, 235, 227)",
+        "placeholder": "rgb(231, 235, 227)",
+        "height": 34
+      },
+      "focus": {
+        "color": "rgb(160, 198, 154)",
+        "width": "2px",
+        "offset": "3px"
+      },
+      "tokens": {
+        "--ax-bg": "#151a17",
+        "--ax-surface-solid": "#202722",
+        "--ax-elevated": "#263029",
+        "--ax-field": "#181e1a",
+        "--ax-border": "#39463c",
+        "--ax-border-strong": "#65786a",
+        "--ax-text": "#e7ebe3",
+        "--ax-muted": "#bbc6ba",
+        "--ax-primary": "#8ebb91",
+        "--ax-action": "#315c42",
+        "--ax-action-text": "#f1f6ee",
+        "--ax-focus": "#a0c69a"
+      },
+      "controlBorderContrast": 3.59,
+      "placeholderContrast": 14.03,
+      "focusFieldContrast": 8.91,
+      "method": "Computed opaque field foreground/border/background; focus compared with field. Not a whole-page conformance claim."
+    }
+  ],
+  "sampleCounts": {
+    "before": 9214,
+    "after": 9236
+  }
+}

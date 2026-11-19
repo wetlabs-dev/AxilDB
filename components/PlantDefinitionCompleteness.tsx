@@ -72,7 +72,7 @@ export function PlantDefinitionReadinessPanel({ result, baseHref, headingLevel =
   const optional = result.checklist.filter((entry) => entry.level === 'OPTIONAL' && !['COMPLETE', 'INHERITED', 'NOT_APPLICABLE'].includes(entry.state))
   const remaining = needsAttention.length + recommended.length
   return (
-    <section className="rounded-lg border border-[#cdd8c3] bg-[#f7f4e8]/80 p-4" aria-labelledby="definition-readiness-title">
+    <section className="ax-readiness-panel rounded-lg border border-[#cdd8c3] bg-[#f7f4e8]/80 p-4" aria-labelledby="definition-readiness-title">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <Heading id="definition-readiness-title" className="font-serif text-xl font-semibold">Definition Readiness</Heading>

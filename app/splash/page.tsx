@@ -325,7 +325,7 @@ export default function SplashPage() {
             <p className="mt-3 text-sm leading-6 text-stone-700">
               If AxilDB helps your collection, a Ko-fi contribution helps cover hosting, testing, and the next round of careful features.
             </p>
-            <a className="mt-5 inline-flex rounded-md bg-[#c47a5a] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#a96343]" href={donateUrl}>
+            <a className="mt-5 inline-flex rounded-md bg-[#c47a5a] px-4 py-2 text-sm font-semibold text-[#211f1b] transition hover:bg-[#d18a6b]" href={donateUrl}>
               Donate on Ko-fi
             </a>
           </div>

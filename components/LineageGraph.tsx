@@ -56,7 +56,8 @@ function styleEdges(edges: Edge[]) {
       label: method.replaceAll('_', ' '),
       labelBgPadding: [8, 4] as [number, number],
       labelBgBorderRadius: 6,
-      labelBgStyle: { fill: 'rgba(255, 250, 240, .9)', stroke: '#d8cdb8' },
+      labelBgStyle: { fill: 'var(--ax-graph-label)', stroke: 'var(--ax-graph-label-border)' },
+      labelStyle: { fill: 'var(--ax-graph-label-text)' },
       markerEnd: { type: MarkerType.ArrowClosed, color: style.color },
       style: {
         stroke: style.color,

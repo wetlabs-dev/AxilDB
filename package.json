@@ -112,7 +112,8 @@
     "check:calibration:db": "tsx scripts/check-cadence-calibration-db.ts",
     "check:calibration:ui": "tsx scripts/check-calibration-ui.ts",
     "check:care-colors": "tsx scripts/check-care-colors.ts",
-    "check:care-colors:ui": "node scripts/check-care-colors-ui.mjs"
+    "check:care-colors:ui": "node scripts/check-care-colors-ui.mjs",
+    "check:theme-harmonization": "node scripts/check-theme-harmonization.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

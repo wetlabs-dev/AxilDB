@@ -9,12 +9,12 @@ const primary = 'ax-action rounded-md px-4 py-2 text-sm font-medium text-white s
 function hasBackgroundOverride(className: string) { return /(?:^|\s)(?:bg-|ax-status-)/.test(className) }
 
 export function Card({ className = '', children, ...props }: any) {
-  return <div className={cn(hasBackgroundOverride(className) ? '' : 'ax-surface', 'w-full max-w-full min-w-0 isolate overflow-hidden rounded-lg border border-stone-200/90 bg-clip-padding p-4 shadow-[0_8px_30px_rgba(47,38,24,0.07)] sm:p-5', className)} {...props}>{children}</div>
+  return <div className={cn(hasBackgroundOverride(className) ? '' : 'ax-surface', 'ax-card w-full max-w-full min-w-0 isolate overflow-hidden rounded-lg border border-stone-200/90 bg-clip-padding p-4 shadow-[0_8px_30px_rgba(47,38,24,0.07)] sm:p-5', className)} {...props}>{children}</div>
 }
 
 export function AddPanel({ label, children, className = '', defaultOpen = false }: any) {
   return (
-    <details open={defaultOpen} className={cn(hasBackgroundOverride(className) ? '' : 'ax-surface', 'group w-full max-w-full min-w-0 isolate overflow-hidden rounded-lg border border-stone-200/90 bg-clip-padding shadow-[0_8px_30px_rgba(47,38,24,0.07)]', className)}>
+    <details open={defaultOpen} className={cn(hasBackgroundOverride(className) ? '' : 'ax-surface', 'ax-card group w-full max-w-full min-w-0 isolate overflow-hidden rounded-lg border border-stone-200/90 bg-clip-padding shadow-[0_8px_30px_rgba(47,38,24,0.07)]', className)}>
       <summary className="flex min-w-0 cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-4 py-3 text-sm font-semibold text-stone-900 transition hover:bg-[#f5f0e2] group-open:rounded-b-none sm:px-5">
         <span className="min-w-0 truncate">{label}</span>
         <span className="rounded-md bg-[#2f6b45] px-3 py-1.5 text-xs font-medium text-white group-open:hidden">Open form</span>
@@ -54,7 +54,7 @@ export function LinkButton({ href, children, className = '' }: any) {
 
 export function GhostLink({ href, children, prefetch }: any) {
   return (
-    <Link className="flex w-full min-w-0 items-center gap-2 rounded-md px-3 py-2 text-sm text-stone-800 transition hover:bg-[#d6dfc9]/70 hover:text-[#1f472f]" href={href} prefetch={prefetch}>
+    <Link className="ax-nav-link flex w-full min-w-0 items-center gap-2 rounded-md px-3 py-2 text-sm text-stone-800 transition hover:bg-[#d6dfc9]/70 hover:text-[#1f472f]" href={href} prefetch={prefetch}>
       {children}
     </Link>
   )

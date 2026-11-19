@@ -1,0 +1,131 @@
+{
+  "assetCount": 512,
+  "checks": [
+    "All 512 application/fixture assets exist",
+    "Portable report opens without server",
+    "Findings and route counts match data",
+    "Route filtering",
+    "Light/dark and desktop/mobile comparison selectors",
+    "No report JavaScript errors",
+    "Report mobile has no horizontal overflow",
+    "Six Git-tracked representative screenshots load"
+  ],
+  "darkImageComparisons": [
+    {
+      "route": "/care",
+      "viewport": "desktopScreenshot",
+      "changedPixelFraction": 0,
+      "method": "JPEG rendered-image RGB difference threshold 24; dynamic text/data may differ. Evidence, not automatic visual certification."
+    },
+    {
+      "route": "/care",
+      "viewport": "mobileScreenshot",
+      "changedPixelFraction": 0,
+      "method": "JPEG rendered-image RGB difference threshold 24; dynamic text/data may differ. Evidence, not automatic visual certification."
+    },
+    {
+      "route": "/graphs",
+      "viewport": "desktopScreenshot",
+      "changedPixelFraction": 0.0004,
+      "method": "JPEG rendered-image RGB difference threshold 24; dynamic text/data may differ. Evidence, not automatic visual certification."
+    },
+    {
+      "route": "/graphs",
+      "viewport": "mobileScreenshot",
+      "changedPixelFraction": 0.15893,
+      "method": "JPEG rendered-image RGB difference threshold 24; dynamic text/data may differ. Evidence, not automatic visual certification."
+    },
+    {
+      "route": "/instances/[id]",
+      "viewport": "desktopScreenshot",
+      "changedPixelFraction": 0.00075,
+      "method": "JPEG rendered-image RGB difference threshold 24; dynamic text/data may differ. Evidence, not automatic visual certification."
+    },
+    {
+      "route": "/instances/[id]",
+      "viewport": "mobileScreenshot",
+      "changedPixelFraction": 0,
+      "method": "JPEG rendered-image RGB difference threshold 24; dynamic text/data may differ. Evidence, not automatic visual certification."
+    },
+    {
+      "route": "/",
+      "viewport": "desktopScreenshot",
+      "changedPixelFraction": 0,
+      "method": "JPEG rendered-image RGB difference threshold 24; dynamic text/data may differ. Evidence, not automatic visual certification."
+    },
+    {
+      "route": "/",
+      "viewport": "mobileScreenshot",
+      "changedPixelFraction": 0,
+      "method": "JPEG rendered-image RGB difference threshold 24; dynamic text/data may differ. Evidence, not automatic visual certification."
+    },
+    {
+      "route": "/plants/[id]/edit",
+      "viewport": "desktopScreenshot",
+      "changedPixelFraction": 0,
+      "method": "JPEG rendered-image RGB difference threshold 24; dynamic text/data may differ. Evidence, not automatic visual certification."
+    },
+    {
+      "route": "/plants/[id]/edit",
+      "viewport": "mobileScreenshot",
+      "changedPixelFraction": 0,
+      "method": "JPEG rendered-image RGB difference threshold 24; dynamic text/data may differ. Evidence, not automatic visual certification."
+    },
+    {
+      "route": "/plants",
+      "viewport": "desktopScreenshot",
+      "changedPixelFraction": 0,
+      "method": "JPEG rendered-image RGB difference threshold 24; dynamic text/data may differ. Evidence, not automatic visual certification."
+    },
+    {
+      "route": "/plants",
+      "viewport": "mobileScreenshot",
+      "changedPixelFraction": 0,
+      "method": "JPEG rendered-image RGB difference threshold 24; dynamic text/data may differ. Evidence, not automatic visual certification."
+    },
+    {
+      "route": "/server/ai-curator",
+      "viewport": "desktopScreenshot",
+      "changedPixelFraction": 0,
+      "method": "JPEG rendered-image RGB difference threshold 24; dynamic text/data may differ. Evidence, not automatic visual certification."
+    },
+    {
+      "route": "/server/ai-curator",
+      "viewport": "mobileScreenshot",
+      "changedPixelFraction": 0,
+      "method": "JPEG rendered-image RGB difference threshold 24; dynamic text/data may differ. Evidence, not automatic visual certification."
+    },
+    {
+      "route": "/server",
+      "viewport": "desktopScreenshot",
+      "result": "Geometry differs; dynamic content or layout needs review",
+      "before": [
+        1440,
+        4583
+      ],
+      "after": [
+        1440,
+        4675
+      ]
+    },
+    {
+      "route": "/server",
+      "viewport": "mobileScreenshot",
+      "result": "Geometry differs; dynamic content or layout needs review",
+      "before": [
+        390,
+        8235
+      ],
+      "after": [
+        390,
+        8383
+      ]
+    }
+  ],
+  "darkReviewNotes": [
+    "Most sampled route images are identical under the recorded threshold.",
+    "Mobile graph baseline contains a resize/sticky-header capture artifact: comparison inconclusive, explicitly documented.",
+    "Server Management dynamic diagnostics alter full-page heights; not asserted pixel-identical.",
+    "Accepted pre-existing dark tokens preserved; chart warning/resolved glyphs are the intentional shared contrast correction."
+  ]
+}

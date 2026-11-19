@@ -69,34 +69,34 @@
 :root,
 .ax-public-light {
   color-scheme: light;
-  --ax-bg: #fffdf7;
-  --ax-bg-soft: #faf6ea;
-  --ax-bg-warm: #f4efe1;
-  --ax-surface: rgba(255, 250, 240, .82);
-  --ax-surface-solid: #fffaf0;
-  --ax-surface-muted: rgba(244, 248, 237, .88);
-  --ax-field: #fffdf7;
-  --ax-border: rgba(214, 205, 184, .92);
-  --ax-border-strong: #cfc3ad;
-  --ax-text: #1f2a22;
+  --ax-bg: #f5f3e9;
+  --ax-bg-soft: #f8f6ee;
+  --ax-bg-warm: #f0eee3;
+  --ax-surface: #faf9f3;
+  --ax-surface-solid: #faf9f3;
+  --ax-surface-muted: #eeefe5;
+  --ax-field: #fffdf8;
+  --ax-border: #d6dad0;
+  --ax-border-strong: #7b8878;
+  --ax-text: #242d26;
   --ax-heading: #211f1b;
-  --ax-muted: #6d675d;
-  --ax-muted-strong: #575247;
-  --ax-primary: #2f6b45;
-  --ax-primary-strong: #245737;
-  --ax-primary-soft: #d6dfc9;
-  --ax-primary-wash: #edf3e6;
+  --ax-muted: #606b61;
+  --ax-muted-strong: #465348;
+  --ax-primary: #2d684a;
+  --ax-primary-strong: #24583e;
+  --ax-primary-soft: #e2ebdd;
+  --ax-primary-wash: #e9eee3;
   --ax-danger: #9a3f35;
   --ax-danger-strong: #7d3028;
   --ax-danger-soft: #fff1ec;
   --ax-warning: #6f541f;
   --ax-warning-soft: #fff5d6;
-  --ax-shadow: rgba(47, 38, 24, .07);
-  --ax-focus: #2f6b45;
-  --ax-nav: #fffaf0;
-  --ax-elevated: #f4f8ed;
-  --ax-action: #2f6b45;
-  --ax-action-hover: #245737;
+  --ax-shadow: rgba(43, 50, 36, .055);
+  --ax-focus: #377b57;
+  --ax-nav: #f8f6ee;
+  --ax-elevated: #fffdf8;
+  --ax-action: #2d684a;
+  --ax-action-hover: #24583e;
   --ax-action-text: #ffffff;
   --ax-secondary-action: #45634b;
   --ax-secondary-action-hover: #36513c;
@@ -115,6 +115,28 @@
   --ax-rose: #7a304c;
   --ax-rose-soft: #fff1f2;
   --ax-rose-border: #d9acba;
+  --ax-selected: #e2ebdd;
+  --ax-hover: #e9eee3;
+  --ax-text-secondary: #465348;
+  --ax-border-subtle: #e3e5dc;
+  --ax-card-shadow: 0 3px 12px var(--ax-shadow);
+  --ax-overlay: rgba(31, 42, 34, .3);
+  --ax-chart-bg: #fffdf8;
+  --ax-chart-title: #465348;
+  --ax-chart-text: #242d26;
+  --ax-chart-muted: #606b61;
+  --ax-chart-series: #356b49;
+  --ax-chart-fill: #8fa58f;
+  --ax-chart-grid: #899382;
+  --ax-chart-tooltip: #fffdf8;
+  --ax-chart-tooltip-text: #242d26;
+  --ax-chart-warning: #80601e;
+  --ax-chart-success: #356b49;
+  --ax-chart-critical: #a43d32;
+  --ax-chart-marker-text: #ffffff;
+  --ax-graph-label: #fffdf8;
+  --ax-graph-label-text: #242d26;
+  --ax-graph-label-border: #d6dad0;
 }
 
 :root[data-theme='dark'] {
@@ -170,6 +192,28 @@
   --ax-rose: #eab2c1;
   --ax-rose-soft: #3c242e;
   --ax-rose-border: #a56a80;
+  --ax-selected: #314c36;
+  --ax-hover: #233425;
+  --ax-text-secondary: #c7d1c5;
+  --ax-border-subtle: #39463c;
+  --ax-card-shadow: 0 10px 34px var(--ax-shadow);
+  --ax-overlay: rgba(0, 0, 0, .4);
+  --ax-chart-bg: #181e1a;
+  --ax-chart-title: #d6dfc9;
+  --ax-chart-text: #e7ebe3;
+  --ax-chart-muted: #bfc7b2;
+  --ax-chart-series: #a8d08d;
+  --ax-chart-fill: #8fa58f;
+  --ax-chart-grid: #d6dfc9;
+  --ax-chart-tooltip: #fffaf0;
+  --ax-chart-tooltip-text: #2f2a22;
+  --ax-chart-warning: #d6a533;
+  --ax-chart-success: #4f8f5b;
+  --ax-chart-critical: #b64235;
+  --ax-chart-marker-text: #0b140d;
+  --ax-graph-label: rgba(255, 250, 240, .9);
+  --ax-graph-label-text: #222222;
+  --ax-graph-label-border: #d8cdb8;
 }
 
 * {
@@ -186,9 +230,7 @@ body {
   min-width: 0;
   width: 100%;
   max-width: 100%;
-  background:
-    radial-gradient(circle at top left, rgba(143, 165, 143, .18), transparent 28rem),
-    linear-gradient(135deg, var(--ax-bg) 0%, var(--ax-bg-soft) 45%, var(--ax-bg-warm) 100%);
+  background: var(--ax-bg);
   color: var(--ax-text);
   font-family: "AxilDB Sans", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
@@ -1510,3 +1552,38 @@ section {
   }
   :root[data-theme='dark'] body { background: white; }
 }
+
+/* Light harmonization: inherited roles also work inside intentionally light
+   public surfaces. Decorative dividers remain softer than control boundaries. */
+@media screen {
+  :root:not([data-theme='dark']) :is(.text-stone-500, .text-neutral-500, .text-neutral-600, .text-gray-500) { color: var(--ax-muted); }
+  :root:not([data-theme='dark']) :is(.text-stone-600, .text-stone-700) { color: var(--ax-text-secondary); }
+  :root:not([data-theme='dark']) :is(.border-stone-100, .border-stone-200, .border-stone-200\/80, .border-stone-200\/90) { border-color: var(--ax-border); }
+  :root:not([data-theme='dark']) :is(input, select, textarea):not([type='checkbox']):not([type='radio']):not([type='range']):not([type='hidden']) {
+    background-color: var(--ax-field);
+    border-color: var(--ax-border-strong);
+    color: var(--ax-text);
+  }
+  :root:not([data-theme='dark']) :is(input, textarea)::placeholder { color: var(--ax-muted); opacity: 1; }
+  :root:not([data-theme='dark']) .ax-control:disabled { background-color: var(--ax-surface-muted); color: var(--ax-muted); cursor: not-allowed; }
+  :root:not([data-theme='dark']) .ax-control[readonly] { background-color: var(--ax-surface-muted); }
+  :root:not([data-theme='dark']) .ax-control { box-shadow: none; }
+  /* Opacity dims text as well as surfaces; use the existing selected ring for filters. */
+  :root:not([data-theme='dark']) :is(.ax-activity-card,.ax-activity-filter) { opacity: 1; }
+  :root:not([data-theme='dark']) .ax-card { border-color: var(--ax-border); box-shadow: var(--ax-card-shadow); }
+  :root:not([data-theme='dark']) .ax-navigation { border-color: var(--ax-border); box-shadow: none; }
+  :root:not([data-theme='dark']) .ax-nav-link { color: var(--ax-text-secondary); }
+  :root:not([data-theme='dark']) .ax-nav-link:hover { background-color: var(--ax-hover); color: var(--ax-primary-strong); }
+  :root:not([data-theme='dark']) .lineage-canvas { background: var(--ax-surface-muted); }
+  :root:not([data-theme='dark']) .lineage-canvas .react-flow__pane { background: transparent; }
+  :root:not([data-theme='dark']) .lineage-canvas .react-flow__node { background: var(--ax-elevated); border-color: var(--ax-border-strong); color: var(--ax-text); box-shadow: var(--ax-card-shadow); }
+  :root:not([data-theme='dark']) .lineage-canvas .react-flow__node.lineage-selected { border-color: var(--ax-primary); box-shadow: 0 0 0 3px var(--ax-selected); }
+  :root:not([data-theme='dark']) .lineage-canvas :is(.react-flow__controls-button,.react-flow__minimap) { background: var(--ax-elevated); color: var(--ax-text); border-color: var(--ax-border); }
+  :root:not([data-theme='dark']) .ax-readiness-panel { background: var(--ax-surface-muted); border-color: var(--ax-border); }
+  :root:not([data-theme='dark']) .care-cadence-dialog { background: var(--ax-elevated); }
+}
+.ax-text-secondary { color: var(--ax-text-secondary); }
+:root .ax-metric-chart { background-color: var(--ax-chart-bg); color: var(--ax-chart-text); }
+.ax-metric-chart .ax-chart-title { color: var(--ax-chart-title); }
+.ax-metric-chart .ax-chart-muted { color: var(--ax-chart-muted); }
+.ax-graph-edge-label { fill: var(--ax-graph-label-text); }
