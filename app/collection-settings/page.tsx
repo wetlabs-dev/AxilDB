@@ -35,7 +35,7 @@ export default async function CollectionSettingsPage({
       <div>
         <h2 className="text-3xl font-bold">Collection Settings</h2>
         <p className="mt-2 max-w-2xl text-sm text-stone-600">
-          Manage this collection&apos;s name, URL slug, description, and whether visitors can browse it without joining.
+          Manage this collection’s name, URL slug, description, and whether visitors can browse it without joining.
         </p>
       </div>
 

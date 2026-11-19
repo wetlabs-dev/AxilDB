@@ -1,3 +1,4 @@
+import { plantDisplayName } from '@/lib/utils'
 import { repottingCadenceLabel } from '@/lib/repotting-label'
 import { DefinitionRepotting } from '@/components/Repotting'
 import { actionableCadenceWhere } from '@/lib/cadence-review'
@@ -11,7 +12,7 @@ import {
   collectionPath,
   requireCollectionViewer,
 } from '@/lib/collections'
-import { plantName } from '@/lib/utils'
+
 
 export default async function PlantHusbandryPage({
   params,
@@ -91,7 +92,7 @@ export default async function PlantHusbandryPage({
             </Link>
           </p>
           <h2 className="mt-1 text-3xl font-bold">
-            {plantName(plant)} husbandry
+            {plantDisplayName(plant)} husbandry
           </h2>
           <HusbandryBadges values={effectiveGuide as any} />
         </div>
@@ -118,7 +119,7 @@ export default async function PlantHusbandryPage({
                 `/plants/${sourceDefinition.id}/husbandry`
               )}
             >
-              {plantName(sourceDefinition)}
+              {plantDisplayName(sourceDefinition)}
             </Link>
             .
           </div>
@@ -133,7 +134,7 @@ export default async function PlantHusbandryPage({
           title="Full husbandry guide"
           sourceLabel={
             sourceDefinition
-              ? `Inherited from ${plantName(sourceDefinition)}`
+              ? `Inherited from ${plantDisplayName(sourceDefinition)}`
               : undefined
           }
         />

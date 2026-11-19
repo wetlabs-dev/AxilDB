@@ -1,5 +1,6 @@
 'use client'
 
+import { formatTypography } from '@/lib/typography'
 import { useRef, useState } from 'react'
 import { Sparkles } from 'lucide-react'
 import { MagicFillConflictDialog } from '@/components/MagicFillConflictDialog'
@@ -122,7 +123,7 @@ export function FertilizerProductMagicFillButton({ className = '' }: { className
             <p>NPK: {[draft.nitrogen, draft.phosphorus, draft.potassium].map((value) => value ?? '-').join('-')}</p>
             {draft.manufacturerRecommendedDilution && <p>Label dilution: {draft.manufacturerRecommendedDilution}</p>}
             {draft.manufacturerFeedAmount && <p>Feed rate: {[draft.manufacturerFeedAmount, draft.manufacturerFeedUnit, 'per', draft.manufacturerFeedWaterVolume, draft.manufacturerFeedWaterUnit].filter(Boolean).join(' ')}</p>}
-            {draft.guaranteedAnalysisNotes && <p className="sm:col-span-2">Notes: {draft.guaranteedAnalysisNotes}</p>}
+            {draft.guaranteedAnalysisNotes && <p className="sm:col-span-2">Notes: {formatTypography(draft.guaranteedAnalysisNotes)}</p>}
           </div>
           <button type="button" onClick={applyDraft} className="mt-3 rounded-md bg-[#2f6b45] px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[#28593b]">
             Apply draft to form

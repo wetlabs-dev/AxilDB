@@ -1,3 +1,4 @@
+import { formatTypography } from '@/lib/typography'
 import Link from 'next/link'
 import { CheckCircle2, Leaf, Printer, SkipForward } from 'lucide-react'
 import { completeCareSheetTask, skipCareSheetTask } from '@/app/actions'
@@ -48,7 +49,7 @@ export function CareSheetView({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#2f6b45]">{careSheetModeLabel(sheet.mode)}</p>
-          <h2 className="text-3xl font-bold">{sheet.title}</h2>
+          <h2 className="text-3xl font-bold">{formatTypography(sheet.title)}</h2>
           <p className="text-sm text-stone-600">
             {sheet.collection?.name}
             {sheet.startsAt ? ` · starts ${formatDate(sheet.startsAt)}` : ''}
@@ -87,7 +88,7 @@ export function CareSheetView({
                 </div>
                 <div>
                   <h3 className="font-serif text-2xl font-bold leading-tight">{instance.plantId}</h3>
-                  <p className="text-sm text-stone-700">{instanceDisplayName(instance)}</p>
+                  <p className="text-sm text-stone-700">{formatTypography(instanceDisplayName(instance))}</p>
                   {instance.currentLocation && <p className="text-xs text-stone-500">{instance.currentLocation.code} · {instance.currentLocation.name}</p>}
                   {!publicMode && (
                     <Link href={plantPath(sheet.collection?.slug, instance.id)} className="mt-2 inline-block text-sm font-medium text-[#2f6b45] underline">
@@ -97,7 +98,7 @@ export function CareSheetView({
                 </div>
               </div>
               <div className="space-y-4">
-                {entry.notes && <p className="rounded-md border border-stone-200 bg-white/50 p-3 text-sm text-stone-700">{entry.notes}</p>}
+                {entry.notes && <p className="rounded-md border border-stone-200 bg-white/50 p-3 text-sm text-stone-700">{formatTypography(entry.notes)}</p>}
 
                 {tasks.length > 0 && (
                   <div className="space-y-2">
@@ -112,8 +113,8 @@ export function CareSheetView({
                             <span className="text-sm text-stone-600">{formatDate(task.dueAt)}</span>
                             <span className={task.status === 'COMPLETED' ? 'text-sm font-medium text-[#2f6b45]' : 'text-sm text-stone-600'}>{task.status.toLowerCase()}</span>
                           </div>
-                          <p className="mt-1 font-medium text-stone-900">{task.title}</p>
-                          {task.reason && <p className="text-sm text-stone-700">{task.reason}</p>}
+                          <p className="mt-1 font-medium text-stone-900">{formatTypography(task.title)}</p>
+                          {task.reason && <p className="text-sm text-stone-700">{formatTypography(task.reason)}</p>}
                           {publicMode && token && task.status === 'PENDING' && sheet.settings?.allowTaskCompletion !== false && (
                             <div className="mt-3 grid gap-2 border-t border-stone-200 pt-3">
                               <form action={completeCareSheetTask} className="grid gap-2">

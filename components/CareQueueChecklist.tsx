@@ -1,4 +1,5 @@
- 'use client'
+'use client'
+import { formatTypography } from '@/lib/typography'
 import Link from 'next/link'
 import { CareCategoryBadge } from '@/components/CareCategoryBadge'
 import { careCategoryPresentation } from '@/lib/care-category-presentation'
@@ -88,9 +89,9 @@ export function CareQueueChecklist({ collectionSlug, canAct, timezone, rangeEnd 
               </div>
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {locationItems.map((item) => (
-                  <div key={item.key} data-care-category={careCategoryPresentation(item.taskType).category} data-semantic-color={careCategoryPresentation(item.taskType).color} data-care-completed={Boolean(item.completedAt)} data-care-key={item.key} tabIndex={-1} aria-label={item.title} style={{ display: visibleKeys.has(item.key) ? undefined : 'none' }} className="care-category-card relative overflow-hidden grid min-w-0 grid-cols-[5rem_1fr] gap-3 rounded-xl border border-stone-200 p-3">
+                  <div key={item.key} data-care-category={careCategoryPresentation(item.taskType).category} data-semantic-color={careCategoryPresentation(item.taskType).color} data-care-completed={Boolean(item.completedAt)} data-care-key={item.key} tabIndex={-1} aria-label={formatTypography(item.title)} style={{ display: visibleKeys.has(item.key) ? undefined : 'none' }} className="care-category-card relative overflow-hidden grid min-w-0 grid-cols-[5rem_1fr] gap-3 rounded-xl border border-stone-200 p-3">
                     <div className="h-20 overflow-hidden rounded-lg bg-[#d6dfc9]/35">
-                      <PlantImage src={item.image} alt={item.plantName || item.title} />
+                      <PlantImage src={item.image} alt={formatTypography(item.plantName) || formatTypography(item.title)} />
                     </div>
                     <div className="min-w-0">
                       <p className="flex flex-wrap items-center gap-1 text-xs"><CareCategoryBadge type={item.taskType} className="font-bold uppercase tracking-[0.14em]"/> · {dateLabel(item.dueAt, timezone)}</p>
@@ -99,10 +100,10 @@ export function CareQueueChecklist({ collectionSlug, canAct, timezone, rangeEnd 
                           <PlantIdPreviewLink collectionSlug={context.collection.slug} plantId={item.plantId} href={item.href}>
                             {item.plantId}
                           </PlantIdPreviewLink>
-                        ) : item.title}
+                        ) : formatTypography(item.title)}
                       </p>
-                      {item.plantName && <p className="truncate text-sm text-stone-700">{item.plantName}</p>}
-                      <p className="mt-1 line-clamp-2 text-xs text-stone-600">{item.reason}</p>
+                      {item.plantName && <p className="truncate text-sm text-stone-700">{formatTypography(item.plantName)}</p>}
+                      <p className="mt-1 line-clamp-2 text-xs text-stone-600">{formatTypography(item.reason)}</p>
                       <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
                         <Link href={item.href} className="inline-flex items-center whitespace-nowrap font-medium leading-5 text-[#2f6b45] underline">View</Link>
                         {canAct && (

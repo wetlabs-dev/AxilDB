@@ -1587,3 +1587,9 @@ section {
 .ax-metric-chart .ax-chart-title { color: var(--ax-chart-title); }
 .ax-metric-chart .ax-chart-muted { color: var(--ax-chart-muted); }
 .ax-graph-edge-label { fill: var(--ax-graph-label-text); }
+
+/* Semantic quotations only; arbitrary text is formatted at explicit display boundaries. */
+:lang(en) { quotes: "“" "”" "‘" "’"; }
+
+/* A subtree can opt into its own language’s native quotation convention. */
+[lang]:not(:lang(en)) { quotes: auto; }

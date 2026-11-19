@@ -1,3 +1,4 @@
+import { plantDisplayName } from '@/lib/utils'
 import { createLocation, createPlantInstance } from '@/app/actions'
 import { startWorkflowRun } from '@/app/workflow-actions'
 import { PlantImage } from '@/components/PlantImage'
@@ -208,7 +209,7 @@ export default async function Instances({
           <h2 className="text-3xl font-bold">Plant Instances</h2>
           {filteredDefinition && (
             <p className="mt-1 text-sm text-stone-600">
-              Showing {plantName(filteredDefinition)}.
+              Showing {plantDisplayName(filteredDefinition)}.
               {' '}
               <Link className="font-medium text-[#2f6b45] underline" href={collectionPath(collection.slug, '/instances')}>Show all instances</Link>
             </p>
@@ -289,7 +290,7 @@ export default async function Instances({
             <label className="grid gap-1 text-sm font-medium">Substrate recipe version<select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="substrateRecipeVersionId" defaultValue=""><option value="">Choose when using Recipe</option>{substrateVersions.map((version) => <option key={version.id} value={version.id}>{version.recipe.name} v{version.versionNumber}</option>)}</select></label>
             <Field label="Received/custom substrate description" name="receivedSubstrateDescription" wrapperClassName="lg:col-span-2" />
             <Field label="Substrate notes" name="substrateNotes" wrapperClassName="lg:col-span-2" />
-            <TextArea label="Notes" help="Initial observation or context to add to the plant's note history at creation." name="note" wrapperClassName="lg:col-span-2" />
+            <TextArea label="Notes" help="Initial observation or context to add to the plant’s note history at creation." name="note" wrapperClassName="lg:col-span-2" />
             <Button className="justify-self-start lg:col-span-4">Create instance</Button>
           </form>
           {canManageCollection(user, context) && (
@@ -373,7 +374,7 @@ export default async function Instances({
                 <div className="min-h-0 overflow-hidden p-3">
                   <p className="line-clamp-2 text-sm font-bold underline">{instance.plantId}</p>
                   <p className="line-clamp-2 text-sm text-stone-700">
-                    {instance.plantDefinition.isValidated ? 'Validated: ' : ''}{plantName(instance.plantDefinition)}
+                    {instance.plantDefinition.isValidated ? 'Validated: ' : ''}{plantDisplayName(instance.plantDefinition)}
                   </p>
                   <p className="truncate text-sm text-stone-600">
                     {plantInstanceTypeLabel(instance.instanceType)} · {instance.currentLocation ? `${instance.currentLocation.code} · ${locationPath(instance.currentLocation.id, locationNodes)}` : 'No location'}

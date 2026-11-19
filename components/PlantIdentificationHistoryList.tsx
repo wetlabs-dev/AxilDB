@@ -1,9 +1,11 @@
+import { formatTypography } from '@/lib/typography'
+import { plantDisplayName } from '@/lib/utils'
 import Link from 'next/link'
 import { PlantImage } from '@/components/PlantImage'
 import { collectionPath } from '@/lib/collections'
 import { createDefinitionFromIdentificationHref, identificationDisplayName } from '@/lib/plant-identification-history'
 import { formatDateTime } from '@/lib/time'
-import { plantName } from '@/lib/utils'
+
 import { addIdentificationToWishlist } from '@/app/acquisition-actions'
 
 type DefinitionSummary = {
@@ -86,12 +88,12 @@ export function PlantIdentificationHistoryList({
         return (
           <div key={log.id} className="grid gap-3 rounded-lg border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] p-3 lg:grid-cols-[7rem_minmax(0,1fr)]">
             <div className="aspect-square overflow-hidden rounded-lg border border-[color:var(--ax-border)] bg-[#d6dfc9]/45">
-              <PlantImage src={log.uploadedPhoto || null} alt={identificationDisplayName(log)} />
+              <PlantImage src={log.uploadedPhoto || null} alt={formatTypography(identificationDisplayName(log))} />
             </div>
             <div className="min-w-0">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <h3 className="font-serif text-xl font-semibold">{identificationDisplayName(log)}</h3>
+                  <h3 className="font-serif text-xl font-semibold">{formatTypography(identificationDisplayName(log))}</h3>
                   <p className="text-sm text-stone-600">
                     {formatDateTime(log.createdAt, timezone || undefined)} · {statusLabel(log.status)}
                     {showUser && log.user ? ` · submitted by ${log.user.email}` : ''}
@@ -105,16 +107,16 @@ export function PlantIdentificationHistoryList({
               </div>
 
               {log.confidenceExplanation && <p className="mt-2 text-sm text-stone-700">{log.confidenceExplanation}</p>}
-              {log.suggestedDescription && <p className="mt-2 text-sm text-stone-700">{log.suggestedDescription}</p>}
+              {log.suggestedDescription && <p className="mt-2 text-sm text-stone-700">{formatTypography(log.suggestedDescription)}</p>}
               {(log.description || log.knownNames) && (
                 <div className="mt-2 grid gap-1 text-sm text-stone-600">
-                  {log.description && <p><span className="font-semibold">Submitted description:</span> {log.description}</p>}
+                  {log.description && <p><span className="font-semibold">Submitted description:</span> {formatTypography(log.description)}</p>}
                   {log.knownNames && <p><span className="font-semibold">Known names:</span> {log.knownNames}</p>}
                 </div>
               )}
               {aliases.length > 0 && <p className="mt-2 text-sm text-stone-600">Suggested aliases: {aliases.join(', ')}</p>}
               {alternatives.length > 0 && <p className="mt-2 text-sm text-stone-600">Alternatives: {alternatives.join(', ')}</p>}
-              {warnings.map((warning) => <p key={warning} className="mt-2 text-xs text-[#9a3f35]">{warning}</p>)}
+              {warnings.map((warning) => <p key={warning} className="mt-2 text-xs text-[#9a3f35]">{formatTypography(warning)}</p>)}
 
               <div className="mt-3 flex flex-wrap gap-2 text-sm">
                 {log.createdPlantDefinition && createdHref && (
@@ -124,7 +126,7 @@ export function PlantIdentificationHistoryList({
                 )}
                 {!log.createdPlantDefinition && log.matchedPlantDefinition && matchedHref && (
                   <Link href={matchedHref} className="rounded-md border border-[#b7caa9] bg-[#edf3e6] px-3 py-1.5 font-semibold text-[#255537]">
-                    Matches {plantName(log.matchedPlantDefinition)}
+                    Matches {plantDisplayName(log.matchedPlantDefinition)}
                   </Link>
                 )}
                 {canCreateFromLog && (

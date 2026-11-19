@@ -1,3 +1,4 @@
+import { formatTypography } from '@/lib/typography'
 import './globals.css'
 import { ScrollPreserver } from '@/components/ScrollPreserver'
 import { Sidebar } from '@/components/sidebar'
@@ -33,7 +34,7 @@ function MaintenanceScreen({ message, expectedReturnAt }: { message?: string | n
       <section className="w-full max-w-2xl rounded-lg border border-stone-200 bg-white/85 p-8 shadow-sm">
         <p className="text-sm font-semibold uppercase tracking-wide text-[#2f6b45]">Maintenance mode</p>
         <h1 className="mt-3 font-serif text-4xl font-semibold">AxilDB is currently undergoing maintenance.</h1>
-        {message && <p className="mt-5 text-lg leading-8 text-stone-700">{message}</p>}
+        {message && <p className="mt-5 text-lg leading-8 text-stone-700">{formatTypography(message)}</p>}
         {expectedReturnAt && (
           <p className="mt-5 rounded-md border border-stone-200 bg-[#fffaf0] px-4 py-3 text-sm text-stone-700">
             Expected return: <span className="font-semibold">{formatDateTime(expectedReturnAt)}</span>

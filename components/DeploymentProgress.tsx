@@ -1,4 +1,5 @@
 'use client'
+import { formatTypography } from '@/lib/typography'
 import { useEffect, useRef, useState } from 'react'
 import { Check, Circle, Copy, LoaderCircle, Minus, TriangleAlert } from 'lucide-react'
 import type { DeploymentEvent, DeploymentJob } from '@/lib/deployment-agent'
@@ -59,7 +60,7 @@ export function DeploymentProgress({ job, events, reconnecting, connectionLost }
           {index < progress.rows.length - 1 && <span className={`deployment-connector ${['completed', 'skipped'].includes(stage.status) ? 'deployment-connector-done' : ''}`} aria-hidden="true" />}
           <span className="deployment-stage-indicator" aria-hidden="true"><Icon className={`${stage.status === 'active' ? 'deployment-spinner' : ''} ${justCompleted.includes(stage.id) ? 'deployment-check-enter' : ''}`} size={15} strokeWidth={2} /></span>
           <div className="deployment-stage-content"><div className="flex flex-wrap items-baseline gap-x-2 gap-y-1"><span className="font-semibold">{stage.label}</span><span className="deployment-stage-label">{label}{stage.status === 'active' && elapsed !== null ? ` · ${duration(elapsed)}` : ''}</span></div>
-            {stage.status !== 'pending' && <p className="deployment-caption">{stage.status === 'completed' ? stage.done : stage.status === 'skipped' ? 'No database migrations required' : stage.status === 'failed' ? 'This operation did not finish. Inspect the error and detailed logs below.' : stage.description}</p>}
+            {stage.status !== 'pending' && <p className="deployment-caption">{stage.status === 'completed' ? stage.done : stage.status === 'skipped' ? 'No database migrations required' : stage.status === 'failed' ? 'This operation did not finish. Inspect the error and detailed logs below.' : formatTypography(stage.description)}</p>}
           </div>
         </li>
       })}

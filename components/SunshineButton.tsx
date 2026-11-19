@@ -1,5 +1,6 @@
 'use client'
 
+import { formatTypography } from '@/lib/typography'
 import { useState, useTransition } from 'react'
 import { toggleSunshineInline } from '@/app/actions'
 import { cn } from '@/lib/utils'
@@ -63,8 +64,8 @@ export function SunshineButton({
             state.active ? 'sunshine-inline-control-active' : '',
             isPending ? 'sunshine-inline-control-pending' : '',
           )}
-          aria-label={`${title}. ${state.count} sunshine`}
-          title={title}
+          aria-label={`${formatTypography(title)}. ${state.count} sunshine`}
+          title={formatTypography(title)}
           aria-pressed={state.active}
           disabled={isPending}
           onClick={toggle}
@@ -82,7 +83,7 @@ export function SunshineButton({
           <span className="sunshine-inline-count">{state.count}</span>
         </span>
       )}
-      {error && <span className="text-xs text-[#9a3f35]" role="status">{error}</span>}
+      {error && <span className="text-xs text-[#9a3f35]" role="status">{formatTypography(error)}</span>}
     </div>
   )
 }

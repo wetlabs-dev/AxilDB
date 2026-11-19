@@ -1,3 +1,6 @@
+import { typographySearchWhere } from '@/lib/typography-search'
+import { formatTypography } from '@/lib/typography'
+import { plantDisplayName, acceptedPlantDisplayName } from '@/lib/utils'
 import { prisma } from '@/lib/prisma'
 import { copyPlantDefinition, createPlantDefinition, followEntity, unfollowEntity } from '@/app/actions'
 import { requestAiCuratorResearchNow } from '@/app/ai-curator-actions'
@@ -16,7 +19,7 @@ import { canCreateInCollection, canEditInCollection, canManageCollection, collec
 import { suggestedAliasesForForm, type PlantIdentificationSuggestion } from '@/lib/plant-identification-history'
 import { rankedSuggestions } from '@/lib/suggestions'
 import { compareText, sortPreference, timeValue, type SortOption } from '@/lib/sort-preferences'
-import { acceptedPlantName, plantName, plantNeedsIdentification, taxonomyLabel } from '@/lib/utils'
+import { plantName, plantNeedsIdentification, taxonomyLabel } from '@/lib/utils'
 import Link from 'next/link'
 import { PlantTagPicker } from '@/components/PlantTagPicker'
 import { PlantTagRow } from '@/components/PlantTagChip'
@@ -127,7 +130,7 @@ export default async function Plants({
   }
   const [plants, bodies, follows, activeTags, outgoingTransferConnections, completenessByDefinition, curatorSuggestionCounts, curatorWaitingCounts] = await Promise.all([
     prisma.plantDefinition.findMany({
-      where: definitionWhere,
+      where: typographySearchWhere(definitionWhere),
       include: {
         taxonomicAuthority: true,
         aliases: { orderBy: { name: 'asc' } },
@@ -278,7 +281,7 @@ export default async function Plants({
                 {identificationPrefill.uploadedPhoto && (
                   <label className="mt-2 flex items-center gap-2">
                     <input type="checkbox" name="attachIdentificationImage" defaultChecked />
-                    <span>Attach the uploaded ID image as this definition&apos;s type image.</span>
+                    <span>Attach the uploaded ID image as this definition’s type image.</span>
                   </label>
                 )}
               </div>
@@ -379,11 +382,11 @@ export default async function Plants({
           return (
             <Card key={plant.id} data-plant-definition-card={plant.id} className="flex h-full min-h-0 flex-col overflow-hidden p-0">
               <div className="aspect-[4/3] overflow-hidden">
-                <PlantImage src={typePhoto} alt={plantName(plant)} />
+                <PlantImage src={typePhoto} alt={plantDisplayName(plant)} />
               </div>
               <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-3">
                 {(canEdit || canCreate) && (
-                  <div role="group" aria-label={`Actions for ${plantName(plant)}`} data-plant-definition-toolbar className="mb-3 flex flex-wrap items-center gap-2">
+                  <div role="group" aria-label={`Actions for ${plantDisplayName(plant)}`} data-plant-definition-toolbar className="mb-3 flex flex-wrap items-center gap-2">
                     {canEdit && (
                       <Link className="plant-card-action inline-flex min-h-8 items-center justify-center rounded-md border px-2.5 py-1.5 text-center text-xs" href={collectionPath(collection.slug, `/plants/${plant.id}/edit`)}>
                         Edit
@@ -431,20 +434,20 @@ export default async function Plants({
                 )}
 
                 <div data-plant-definition-content className="min-w-0">
-                  <span className="line-clamp-2 text-sm font-bold leading-tight">{plantName(plant)}</span>
+                  <span className="line-clamp-2 text-sm font-bold leading-tight">{plantDisplayName(plant)}</span>
                   <p className="truncate text-sm">
                     {plant.taxonomicAuthority?.abbreviation || 'No matching Taxonomic Authority'} · {plant._count.instances} instance(s) ·{' '}
                     {taxonomyLabel(plant.confidence)}
                   </p>
                   {(plantNeedsIdentification(plant) || plant.authority) && (
                     <p className="line-clamp-2 text-sm text-stone-600">
-                      {plantNeedsIdentification(plant) && <>Needs identification review. Working placement: {acceptedPlantName(plant)}. </>}
+                      {plantNeedsIdentification(plant) && <>Needs identification review. Working placement: {acceptedPlantDisplayName(plant)}. </>}
                       {plant.authority && <>Author citation: {plant.authority}.</>}
                     </p>
                   )}
                   {plant.aliases.length > 0 && (
                     <p className="line-clamp-2 text-sm text-stone-600">
-                      Aliases: {plant.aliases.slice(0, 4).map((alias) => alias.name).join(', ')}
+                      Aliases: {formatTypography(plant.aliases.slice(0, 4).map((alias) => alias.name).join(', '))}
                       {plant.aliases.length > 4 ? `, +${plant.aliases.length - 4} more` : ''}
                     </p>
                   )}
@@ -456,7 +459,7 @@ export default async function Plants({
                       {plant.gbifUrl && <a className="rounded-md border border-stone-300 bg-white/60 px-2 py-1 underline" href={plant.gbifUrl}>GBIF</a>}
                     </div>
                   )}
-                  {plant.description && <p className="line-clamp-2 text-sm text-stone-600">{plant.description}</p>}
+                  {plant.description && <p className="line-clamp-2 text-sm text-stone-600">{formatTypography(plant.description)}</p>}
                   {plant.tags.length > 0 && <div className="mt-2"><PlantTagRow tags={plant.tags.map((item) => item.plantTag)} limit={3} /></div>}
                   <HusbandryBadges
                     values={(plant.husbandryGuide?.sourcePlantDefinitionId

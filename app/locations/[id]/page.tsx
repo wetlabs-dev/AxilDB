@@ -1,3 +1,5 @@
+import { formatTypography } from '@/lib/typography'
+import { plantDisplayName } from '@/lib/utils'
 import { QuietDaysManager } from '@/components/QuietDaysManager'
 import Link from 'next/link'
 import { RefreshCw } from 'lucide-react'
@@ -14,7 +16,7 @@ import { descendantLocationIds, isQuarantineLocation, locationPath, locationPath
 import { evaluatePlantLocationCompatibility, getEffectiveLocationEnvironment, getEffectivePlantEnvironmentRequirements } from '@/lib/location-compatibility'
 import { prisma } from '@/lib/prisma'
 import { getUserUnitPreferences } from '@/lib/units'
-import { plantName } from '@/lib/utils'
+
 import { ensureStarterWorkflowTemplates } from '@/lib/workflows'
 
 const selectClass = 'rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal shadow-inner shadow-stone-200/30 outline-none transition focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
@@ -217,7 +219,7 @@ export default async function LocationDetail({ params }: { params: Promise<{ id:
             {activeQuarantines.length === 0 && <p className="text-sm text-stone-600">No active quarantines in this location tree.</p>}
             {activeQuarantines.map((quarantine) => (
               <Link key={quarantine.id} href={collectionPath(collection.slug, `/instances/${quarantine.plantInstanceId}#quarantine`)} className="rounded-lg border border-stone-200 bg-white/55 p-3 text-sm underline">
-                {quarantine.plantInstance.plantId} · {plantName(quarantine.plantInstance.plantDefinition)} · {quarantine.riskLevel.toLowerCase()} risk · release review {quarantine.targetReleaseDate.toLocaleDateString()}
+                {quarantine.plantInstance.plantId} · {plantDisplayName(quarantine.plantInstance.plantDefinition)} · {quarantine.riskLevel.toLowerCase()} risk · release review {quarantine.targetReleaseDate.toLocaleDateString()}
               </Link>
             ))}
           </div>
@@ -257,7 +259,7 @@ export default async function LocationDetail({ params }: { params: Promise<{ id:
             {activeWorkflowRuns.length === 0 && <p className="text-sm text-stone-600">No active workflow runs for this location.</p>}
             {activeWorkflowRuns.map((run) => (
               <Link key={run.id} href={collectionPath(collection.slug, `/workflows/runs/${run.id}`)} className="rounded-lg border border-stone-200 bg-white/55 p-3 text-sm underline">
-                {run.title} · {run.steps.filter((step) => step.status !== 'PENDING').length}/{run.steps.length} steps · assigned to {run.assignedTo?.email || 'no one'}
+                {formatTypography(run.title)} · {run.steps.filter((step) => step.status !== 'PENDING').length}/{run.steps.length} steps · assigned to {run.assignedTo?.email || 'no one'}
               </Link>
             ))}
           </div>
@@ -287,7 +289,7 @@ export default async function LocationDetail({ params }: { params: Promise<{ id:
                   <PlantIdPreviewLink collectionSlug={collection.slug} plantId={plant.plantId} href={collectionPath(collection.slug, `/instances/${plant.id}`)}>
                     {plant.plantId}
                   </PlantIdPreviewLink>
-                  <p className="text-stone-600">{plantName(plant.plantDefinition)}</p>
+                  <p className="text-stone-600">{plantDisplayName(plant.plantDefinition)}</p>
                 </div>
                 {canMovePlants && (
                   <CompatibilityMoveForm collectionSlug={collection.slug} plantInstanceId={plant.id} currentLocationId={location.id} locations={locationNodes.map((option) => ({ id: option.id, label: `${option.code} · ${locationPath(option.id, locationNodes)}` }))} />
@@ -306,7 +308,7 @@ export default async function LocationDetail({ params }: { params: Promise<{ id:
                 <PlantIdPreviewLink collectionSlug={collection.slug} plantId={plant.plantId} href={collectionPath(collection.slug, `/instances/${plant.id}`)}>
                   {plant.plantId}
                 </PlantIdPreviewLink>
-                <p className="text-stone-600">{plantName(plant.plantDefinition)}</p>
+                <p className="text-stone-600">{plantDisplayName(plant.plantDefinition)}</p>
                 <p className="text-xs text-stone-500">{plant.currentLocation ? `${plant.currentLocation.code} · ${plant.currentLocation.name}` : 'No location'}</p>
               </div>
             ))}

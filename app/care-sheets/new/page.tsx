@@ -1,9 +1,10 @@
+import { plantDisplayName } from '@/lib/utils'
 import { createCareSheet } from '@/app/actions'
 import { Button, Card, Field, Select, TextArea } from '@/components/ui'
 import { careSheetSectionOptions } from '@/lib/care-sheets'
 import { requireCollectionLogger } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
-import { plantName } from '@/lib/utils'
+
 
 const taskTypes = [
   ['WATER', 'Water'],
@@ -60,7 +61,7 @@ export default async function NewCareSheetPage({ searchParams }: { searchParams:
                 <input type="checkbox" name="plantInstanceId" value={plant.id} defaultChecked={defaultPlant === plant.id} className="mt-1 h-4 w-4" />
                 <span>
                   <b className="block">{plant.plantId}</b>
-                  <span className="text-stone-700">{plantName(plant.plantDefinition)}</span>
+                  <span className="text-stone-700">{plantDisplayName(plant.plantDefinition)}</span>
                   {plant.currentLocation && <span className="block text-xs text-stone-500">{plant.currentLocation.code} · {plant.currentLocation.name}</span>}
                 </span>
               </label>

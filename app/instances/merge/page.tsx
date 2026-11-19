@@ -1,10 +1,11 @@
+import { plantDisplayName } from '@/lib/utils'
 import { mergePlantInstances } from '@/app/plant-instance-merge-actions'
 import { Button, Card, Field, TextArea } from '@/components/ui'
 import { collectionPath, requireCollectionAdmin } from '@/lib/collections'
 import { locationPath } from '@/lib/locations'
 import { plantInstanceMergeReasons } from '@/lib/plant-instance-merges'
 import { prisma } from '@/lib/prisma'
-import { dateInput, fmtDate, plantName } from '@/lib/utils'
+import { dateInput, fmtDate } from '@/lib/utils'
 import Link from 'next/link'
 
 export default async function MergePlantInstancesPage({
@@ -35,7 +36,7 @@ export default async function MergePlantInstancesPage({
       <div>
         <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#2f6b45]">Plant lifecycle</p>
         <h2 className="text-3xl font-bold">Pot specimens together</h2>
-        <p className="mt-1 max-w-3xl text-sm text-stone-600">Permanently combine active specimens of one plant definition. Historical records remain attached to their original IDs and appear in the survivor's unified timeline.</p>
+        <p className="mt-1 max-w-3xl text-sm text-stone-600">Permanently combine active specimens of one plant definition. Historical records remain attached to their original IDs and appear in the survivor’s unified timeline.</p>
       </div>
 
       {!definitionId || candidates.length < 2 ? (
@@ -49,7 +50,7 @@ export default async function MergePlantInstancesPage({
           <input type="hidden" name="collectionSlug" value={collection.slug} />
           <Card>
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-stone-500">1. Select specimens</p>
-            <h3 className="mt-1 text-xl font-bold">{plantName(candidates[0].plantDefinition)}</h3>
+            <h3 className="mt-1 text-xl font-bold">{plantDisplayName(candidates[0].plantDefinition)}</h3>
             <div className="mt-3 grid gap-2 md:grid-cols-2">
               {candidates.map((candidate) => (
                 <label key={candidate.id} className="flex gap-3 rounded-md border border-stone-200 bg-white/55 p-3">

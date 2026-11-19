@@ -1,3 +1,5 @@
+import { formatTypography } from '@/lib/typography'
+import { plantDisplayName } from '@/lib/utils'
 import Link from 'next/link'
 import { archiveWorkflowTemplate, copyWorkflowTemplate, addWorkflowStep, deleteWorkflowTemplate, startWorkflowRun, updateWorkflowTemplate } from '@/app/workflow-actions'
 import { Button, Card, DangerButton, Field, LinkButton, Select, TextArea } from '@/components/ui'
@@ -5,7 +7,7 @@ import { WorkflowStepBuilder } from '@/components/workflows/WorkflowStepBuilder'
 import { canCreateInCollection, canManageCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
 import { workflowStepLabel, workflowStepTypes } from '@/lib/workflows'
-import { plantName } from '@/lib/utils'
+
 
 export default async function WorkflowTemplatePage({ params }: { params: Promise<{ id: string }> }) {
   const context = await requireCollectionViewer()
@@ -30,7 +32,7 @@ export default async function WorkflowTemplatePage({ params }: { params: Promise
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-[#2f6b45]">{template.category || 'Workflow'}{template.isBuiltIn ? ' · Starter template' : ''}</p>
           <h2 className="text-3xl font-bold">{template.name}</h2>
-          {template.description && <p className="mt-1 max-w-3xl text-sm text-stone-600">{template.description}</p>}
+          {template.description && <p className="mt-1 max-w-3xl text-sm text-stone-600">{formatTypography(template.description)}</p>}
           <p className="mt-2 text-xs text-stone-500">{template.steps.length} step{template.steps.length === 1 ? '' : 's'} · {template._count.runs} run{template._count.runs === 1 ? '' : 's'} · triggers stored but disabled</p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -102,7 +104,7 @@ export default async function WorkflowTemplatePage({ params }: { params: Promise
                   {plants.map((plant) => (
                     <label key={plant.id} className="flex gap-2 rounded border border-stone-200 bg-white/70 p-2 text-sm">
                       <input type="checkbox" name="plantInstanceId" value={plant.id} />
-                      <span><span className="font-mono text-xs font-semibold text-[#2f6b45]">{plant.plantId}</span> · {plantName(plant.plantDefinition)}</span>
+                      <span><span className="font-mono text-xs font-semibold text-[#2f6b45]">{plant.plantId}</span> · {plantDisplayName(plant.plantDefinition)}</span>
                     </label>
                   ))}
                 </div>
@@ -152,8 +154,8 @@ export default async function WorkflowTemplatePage({ params }: { params: Promise
             {template.steps.map((step, index) => (
               <div key={step.id} className="rounded-lg border border-stone-200 bg-white/60 p-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">Step {index + 1} · {workflowStepLabel(step.stepType)} · {step.required ? 'required' : 'optional'}</p>
-                <h4 className="mt-1 font-serif text-xl font-semibold">{step.title}</h4>
-                {step.instructions && <p className="mt-1 text-sm text-stone-600">{step.instructions}</p>}
+                <h4 className="mt-1 font-serif text-xl font-semibold">{formatTypography(step.title)}</h4>
+                {step.instructions && <p className="mt-1 text-sm text-stone-600">{formatTypography(step.instructions)}</p>}
               </div>
             ))}
           </div>

@@ -1,10 +1,12 @@
 'use client'
 
+import { formatTypography } from '@/lib/typography'
+import { acceptedPlantDisplayName } from '@/lib/utils'
 import { useRef, useState } from 'react'
 import { Search, Sparkles } from 'lucide-react'
 import { MagicFillConflictDialog } from '@/components/MagicFillConflictDialog'
 import { applyMagicFillDraftToForm, getMagicFillConflictState, isMagicFillValueEmpty, readMagicFillFormValues, type MagicFillApplyMode } from '@/lib/magic-fill'
-import { acceptedPlantName, cn } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 
 const control = 'rounded-md border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] px-2.5 py-1.5 text-sm font-normal text-[var(--ax-text)] shadow-inner shadow-stone-200/30 outline-none transition placeholder:text-[var(--ax-muted)] file:mr-3 file:rounded-md file:border-0 file:bg-[var(--ax-surface-solid)] file:px-2 file:py-1 file:text-[var(--ax-text)] focus:border-[#2f6b45] focus:ring-2 focus:ring-[#8fa58f]/30'
 
@@ -52,7 +54,7 @@ function capitalizeGenus(value?: string | null) {
 }
 
 function displayName(definition: ValidatedMatch) {
-  return acceptedPlantName(definition)
+  return acceptedPlantDisplayName(definition)
 }
 
 function aliasesFromSuggestion(suggestion: PlantIdSuggestion) {
@@ -304,7 +306,7 @@ export function PlantIdentificationAssistant({
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
                   <p className="font-semibold text-[var(--ax-heading)]">
-                    {acceptedPlantName({ ...suggestion, genus: suggestion.genus || 'Unknown genus' })}
+                    {acceptedPlantDisplayName({ ...suggestion, genus: suggestion.genus || 'Unknown genus' })}
                   </p>
                   <p className="mt-1 text-sm text-[var(--ax-muted)]">{suggestion.confidenceExplanation}</p>
                 </div>
@@ -312,7 +314,7 @@ export function PlantIdentificationAssistant({
                   {suggestion.confidenceLevel || 'LOW'} confidence
                 </span>
               </div>
-              {suggestion.suggestedDescription && <p className="mt-2 text-sm">{suggestion.suggestedDescription}</p>}
+              {suggestion.suggestedDescription && <p className="mt-2 text-sm">{formatTypography(suggestion.suggestedDescription)}</p>}
               {suggestion.suggestedAliases?.length ? (
                 <p className="mt-2 text-sm text-[var(--ax-muted-strong)]">Aliases: {suggestion.suggestedAliases.join(', ')}</p>
               ) : null}
@@ -329,7 +331,7 @@ export function PlantIdentificationAssistant({
                 </div>
               ) : null}
               {(suggestion.warnings || []).map((warning) => (
-                <p key={warning} className="mt-2 text-xs text-[var(--ax-warning)]">{warning}</p>
+                <p key={warning} className="mt-2 text-xs text-[var(--ax-warning)]">{formatTypography(warning)}</p>
               ))}
             </div>
           )}

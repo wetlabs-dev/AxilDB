@@ -1,3 +1,4 @@
+import { formatTypography } from '@/lib/typography'
 type TemplateOptions = {
   title: string
   preview: string
@@ -24,6 +25,11 @@ export function renderBrandedEmail({
   actionUrl,
   footer = 'Sent by AxilDB, quietly keeping the plant records in order.',
 }: TemplateOptions) {
+  title = formatTypography(title)
+  preview = formatTypography(preview)
+  body = body.map(line => formatTypography(line))
+  actionLabel = actionLabel ? formatTypography(actionLabel) : actionLabel
+  footer = formatTypography(footer)
   const text = [
     title,
     '',

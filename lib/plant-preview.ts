@@ -2,7 +2,7 @@ import type { PrismaClient } from '@prisma/client'
 import { collectionPath } from '@/lib/collections'
 import { locationPathWithCodes } from '@/lib/locations'
 import { plantInstanceTypeLabel } from '@/lib/plant-instance-types'
-import { acceptedPlantName, plantName } from '@/lib/utils'
+import { acceptedPlantName, plantDisplayName } from '@/lib/utils'
 
 export type PlantInstancePreview = {
   id: string
@@ -139,7 +139,7 @@ export async function getPlantInstancePreview(
     ...instance.blooms.map((bloom) => bloom.bloomStartDate),
     ...instance.quarantines.map((quarantine) => quarantine.startDate),
   ])
-  const displayName = plantName(instance.plantDefinition)
+  const displayName = plantDisplayName(instance.plantDefinition)
   const botanicalName = acceptedPlantName(instance.plantDefinition)
 
   return {

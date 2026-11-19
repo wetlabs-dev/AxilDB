@@ -1,4 +1,6 @@
 'use client'
+import { normalizeTypographySearch } from '@/lib/typography'
+import { formatTypography } from '@/lib/typography'
 
 import { useMemo, useState, useTransition } from 'react'
 import {
@@ -131,7 +133,7 @@ function AvailablePlantCard({ plant, onAdd }: { plant: ExhibitBuilderPlant; onAd
         <PlantThumb plant={plant} className="h-16 w-16" />
         <div className="min-w-0 flex-1">
           <p className="truncate font-mono text-xs font-bold text-[#2f6b45] dark:text-[color:var(--ax-primary)]">{plant.plantId}</p>
-          <p className="truncate font-semibold text-stone-900 dark:text-[color:var(--ax-heading)]">{plant.scientificName}</p>
+          <p className="truncate font-semibold text-stone-900 dark:text-[color:var(--ax-heading)]">{formatTypography(plant.scientificName, { mode: 'botanical-name' })}</p>
           {plant.cultivarName && <p className="truncate text-xs text-stone-600 dark:text-[color:var(--ax-muted-strong)]">{plant.cultivarName}</p>}
           <p className="truncate text-xs text-stone-500 dark:text-[color:var(--ax-muted)]">{plant.locationPath || 'No location set'} · {statusLabel(plant.status)}</p>
         </div>
@@ -199,7 +201,7 @@ function ExhibitPlantCard({
         <PlantThumb plant={plant} className="h-24 w-24" />
         <div className="min-w-0 flex-1">
           <p className="font-mono text-xs font-bold text-[#2f6b45] dark:text-[color:var(--ax-primary)]">{plant.plantId}</p>
-          <p className="font-serif text-xl font-semibold leading-tight text-stone-950 dark:text-[color:var(--ax-heading)]">{plant.scientificName}</p>
+          <p className="font-serif text-xl font-semibold leading-tight text-stone-950 dark:text-[color:var(--ax-heading)]">{formatTypography(plant.scientificName, { mode: 'botanical-name' })}</p>
           {plant.cultivarName && <p className="text-sm text-stone-700 dark:text-[color:var(--ax-muted-strong)]">{plant.cultivarName}</p>}
           <p className="mt-1 text-xs text-stone-600 dark:text-[color:var(--ax-muted)]">{plant.locationPath || 'No location set'}</p>
           <div className="mt-2 flex flex-wrap gap-2">
@@ -283,7 +285,7 @@ export function CollectionExhibitBuilder({
   const selectedPlants = selectedRows.map((row) => plantById.get(row.plantInstanceId)).filter(Boolean) as ExhibitBuilderPlant[]
   const availablePlants = useMemo(() => {
     const normalized = query.trim().toLowerCase()
-    const filtered = plants.filter((plant) => !selectedIdSet.has(plant.id) && (!normalized || searchText(plant).includes(normalized)))
+    const filtered = plants.filter((plant) => !selectedIdSet.has(plant.id) && (!normalized || normalizeTypographySearch(searchText(plant)).includes(normalizeTypographySearch(normalized))))
     return sortPlants(filtered, sortMode)
   }, [plants, query, selectedRows, sortMode])
   const groups = useMemo(() => groupedPlants(availablePlants, groupMode), [availablePlants, groupMode])
@@ -366,7 +368,7 @@ export function CollectionExhibitBuilder({
   const handleDragStart = (event: DragStartEvent) => {
     const plantId = String(event.active.data.current?.plantId || '')
     const plant = plantById.get(plantId)
-    setActiveLabel(plant ? `${plant.plantId} ${plant.scientificName}` : 'Plant')
+    setActiveLabel(plant ? `${plant.plantId} ${formatTypography(plant.scientificName, { mode: 'botanical-name' })}` : 'Plant')
   }
 
   const handleDragEnd = (event: DragEndEvent) => {

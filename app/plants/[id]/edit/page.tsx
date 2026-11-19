@@ -1,3 +1,5 @@
+import { formatTypography } from '@/lib/typography'
+import { plantDisplayName, acceptedPlantDisplayName } from '@/lib/utils'
 import { PlantDefinitionEditorHeader } from '@/components/PlantDefinitionEditorHeader'
 import type { Metadata } from 'next'
 import { repottingCadenceLabel } from '@/lib/repotting-label'
@@ -23,7 +25,7 @@ import { savePlantDefinitionEnvironmentRequirements } from '@/app/location-envir
 import { husbandryFieldNames } from '@/lib/husbandry'
 import { locationPath } from '@/lib/locations'
 import { findMatchingValidatedDefinition } from '@/lib/validated-definitions'
-import { acceptedPlantName, plantName, plantNeedsIdentification } from '@/lib/utils'
+import { plantNeedsIdentification } from '@/lib/utils'
 import { collectionRoleAtLeast, isServerAdminRole } from '@/lib/roles'
 import { getUserUnitPreferences } from '@/lib/units'
 import { PlantTagPicker } from '@/components/PlantTagPicker'
@@ -61,7 +63,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { collection } = await requireCollectionAdmin()
   const { id } = await params
   const identity = await prisma.plantDefinition.findFirstOrThrow({ where: { id, collectionId: collection.id }, select: { genus: true, species: true, hybridNotation: true, cultivarName: true, provisionalTaxon: true, identificationStatus: true } })
-  return { title: `${plantName(identity) || 'Untitled Plant Definition'} — Edit | AxilDB` }
+  return { title: `${plantDisplayName(identity) || 'Untitled Plant Definition'} — Edit | AxilDB` }
 }
 
 export default async function EditPlant({
@@ -201,14 +203,14 @@ export default async function EditPlant({
           {plantNeedsIdentification(plant) && (
             <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 lg:col-span-4">
               <p className="font-semibold">Needs identification review</p>
-              <p className="mt-1">{plantName(plant)} is the displayed provisional identity. Its working placement is {acceptedPlantName(plant)}. Replace the provisional taxon or sp. only after identifying the species.</p>
+              <p className="mt-1">{plantDisplayName(plant)} is the displayed provisional identity. Its working placement is {acceptedPlantDisplayName(plant)}. Replace the provisional taxon or sp. only after identifying the species.</p>
             </div>
           )}
           <h3 className="font-serif text-lg font-semibold lg:col-span-4">Identity and nomenclature</h3>
           <Field label="Genus" help="Required when the provisional taxon is cleared. This working placement is also used for plant ID generation." name="genus" defaultValue={plant.genus} list="definition-genus-suggestions" />
-          <Field label="Species" help="Species epithet. Leave blank when the accepted horticultural name intentionally omits species (for example, Begonia 'Looking Glass'). Use sp. only when the species is genuinely unknown." name="species" defaultValue={plant.species || ''} list="definition-species-suggestions" autoCapitalize="none" />
+          <Field label="Species" help="Species epithet. Leave blank when the accepted horticultural name intentionally omits species (for example, Begonia ‘Looking Glass’). Use sp. only when the species is genuinely unknown." name="species" defaultValue={plant.species || ''} list="definition-species-suggestions" autoCapitalize="none" />
           <Field label="Hybrid notation" help="Use for botanical hybrid markers or formula context, such as x, grex, or parentage notation that belongs with the name." name="hybridNotation" defaultValue={plant.hybridNotation} list="definition-hybrid-notation-suggestions" />
-          <Field label="Cultivar name" help="The named cultivated variety, usually written in single quotes, such as 'Morning Glow'. Leave blank for unnamed species or clones." name="cultivarName" defaultValue={plant.cultivarName} list="definition-cultivar-name-suggestions" />
+          <Field label="Cultivar name" help="The named cultivated variety, usually written in single quotes, such as ‘Morning Glow’. Leave blank for unnamed species or clones." name="cultivarName" defaultValue={plant.cultivarName} list="definition-cultivar-name-suggestions" />
           <div className="min-w-0 rounded-lg border border-[#d6dfc9] bg-[#f7f4e8]/80 px-3 py-2 text-sm text-stone-700 lg:col-span-4">
             <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
               <span className="min-w-0">Update the core name first, then let AxilDB draft taxonomy metadata and suggested aliases.</span>
@@ -316,7 +318,7 @@ export default async function EditPlant({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="font-serif text-2xl font-semibold">Plant husbandry</h2>
-            <p className="mt-1 text-sm text-stone-600">Create a care guide, link to a similar definition&apos;s guide, or fork linked care into a local guide.</p>
+            <p className="mt-1 text-sm text-stone-600">Create a care guide, link to a similar definition’s guide, or fork linked care into a local guide.</p>
             <HusbandryBadges values={effectiveGuide as any} />
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
@@ -365,7 +367,7 @@ export default async function EditPlant({
               <p className="text-sm text-stone-700">
                 This definition uses live-linked husbandry from{' '}
                 <a className="font-semibold underline" href={collectionPath(collection.slug, `/plants/${sourceDefinition.id}/edit#husbandry`)}>
-                  {plantName(sourceDefinition)}
+                  {plantDisplayName(sourceDefinition)}
                 </a>
                 . Changes to that source guide will appear here.
               </p>
@@ -452,7 +454,7 @@ export default async function EditPlant({
                 <select name="sourcePlantDefinitionId" className={selectClass} required defaultValue={plant.husbandryGuide?.sourcePlantDefinitionId || ''}>
                   <option value="">Choose a guide...</option>
                   {guideSourceOptions.map((option) => (
-                    <option key={option.id} value={option.id}>{plantName(option)}</option>
+                    <option key={option.id} value={option.id}>{plantDisplayName(option)}</option>
                   ))}
                 </select>
               </label>
@@ -471,7 +473,7 @@ export default async function EditPlant({
               canEdit={!sourceDefinition}
               showEmptyFields={!sourceDefinition}
               title="Current husbandry guide"
-              sourceLabel={sourceDefinition ? `Inherited from ${plantName(sourceDefinition)}` : undefined}
+              sourceLabel={sourceDefinition ? `Inherited from ${plantDisplayName(sourceDefinition)}` : undefined}
             />
           ) : (
             <HusbandryGuideView
@@ -490,7 +492,7 @@ export default async function EditPlant({
             <summary className="cursor-pointer font-serif text-xl font-semibold">Environmental requirements</summary>
             <p className="mt-1 text-sm text-stone-600">These structured fields power deterministic location compatibility checks. They supplement the readable husbandry guide.</p>
             {sourceDefinition ? (
-              <p className="mt-3 rounded-md border border-stone-200 bg-white/55 p-3 text-sm">Environmental requirements are inherited from {plantName(sourceDefinition)}. Make a local copy above to override them.</p>
+              <p className="mt-3 rounded-md border border-stone-200 bg-white/55 p-3 text-sm">Environmental requirements are inherited from {plantDisplayName(sourceDefinition)}. Make a local copy above to override them.</p>
             ) : (
               <div className="mt-4">
                 <PlantEnvironmentRequirementsForm
@@ -519,13 +521,13 @@ export default async function EditPlant({
         <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(16rem,22rem)_minmax(22rem,34rem)_minmax(20rem,1fr)]">
           <div className="overflow-hidden rounded-lg border border-stone-200 bg-white/70">
             <div className="aspect-[4/3] overflow-hidden">
-              <PlantImage src={currentTypePhoto} alt={`${plantName(plant)} type image`} />
+              <PlantImage src={currentTypePhoto} alt={`${plantDisplayName(plant)} type image`} />
             </div>
             <div className="space-y-3 p-3 text-sm">
               {currentTypePhoto ? (
                 <>
                   <div className="space-y-1">
-                    <p className="font-medium">{currentTypePhoto.caption || 'Type image'}</p>
+                    <p className="font-medium">{formatTypography(currentTypePhoto.caption) || 'Type image'}</p>
                     <p className="text-stone-600">
                       Source:{' '}
                       {currentTypePhoto.sourceUrl ? (
@@ -620,11 +622,11 @@ export default async function EditPlant({
                     return (
                       <figure key={photo.id} className="overflow-hidden rounded-lg border border-stone-200 bg-white/70">
                         <div className="aspect-[4/3] overflow-hidden">
-                          <PlantImage src={photo} alt={photo.caption || `${instance?.plantId || 'Specimen'} image`} />
+                          <PlantImage src={photo} alt={formatTypography(photo.caption) || `${instance?.plantId || 'Specimen'} image`} />
                         </div>
                         <figcaption className="grid gap-2 p-2 text-xs">
                           <div className="min-w-0">
-                            <p className="truncate font-medium">{photo.caption || 'Untitled photo'}</p>
+                            <p className="truncate font-medium">{formatTypography(photo.caption) || 'Untitled photo'}</p>
                             <p className="text-stone-600">{instance?.plantId || 'Specimen'} · {instance?.status?.toLowerCase() || 'unknown'}</p>
                           </div>
                           <form action={setPlantDefinitionTypeImageFromInstancePhoto}>
@@ -658,7 +660,7 @@ export default async function EditPlant({
           </div>
           {matchingValidatedDefinition ? (
             <p className="mt-3 rounded-lg border border-[#d6dfc9] bg-[#f7f4e8]/80 p-3 text-sm text-stone-700">
-              A matching validated definition already exists: <strong>{plantName(matchingValidatedDefinition)}</strong>. Use the validated definition for new instances, or keep this local definition independent.
+              A matching validated definition already exists: <strong>{plantDisplayName(matchingValidatedDefinition)}</strong>. Use the validated definition for new instances, or keep this local definition independent.
             </p>
           ) : pendingValidationCandidate ? (
             <p className="mt-3 rounded-lg border border-[#dfcc87] bg-[#fff8dc] p-3 text-sm text-[#6f541f]">
@@ -677,7 +679,7 @@ export default async function EditPlant({
               {plant.validationCandidates.map((candidate) => (
                 <div key={candidate.id} className="rounded-md border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] px-3 py-2">
                   <span className="font-semibold">{candidate.status.replace('_', ' ')}</span>
-                  {candidate.reviewNotes ? ` · ${candidate.reviewNotes}` : ''}
+                  {candidate.reviewNotes ? ` · ${formatTypography(candidate.reviewNotes)}` : ''}
                 </div>
               ))}
             </div>
@@ -686,8 +688,8 @@ export default async function EditPlant({
         <Card className="border-[#9a3f35]/30">
           <h3 className="font-bold">Merge duplicate definition</h3>
           <p className="mt-1 max-w-3xl text-sm leading-6 text-stone-700">
-            Move this definition&apos;s specimens, aliases, definition photos, notes, reminders, follows, and husbandry links into another definition,
-            then delete this duplicate definition. The target definition&apos;s taxonomy fields are kept.
+            Move this definition’s specimens, aliases, definition photos, notes, reminders, follows, and husbandry links into another definition,
+            then delete this duplicate definition. The target definition’s taxonomy fields are kept.
           </p>
           {mergeTargetOptions.length === 0 ? (
             <p className="mt-3 text-sm text-stone-600">No other plant definitions are available as merge targets.</p>
@@ -701,7 +703,7 @@ export default async function EditPlant({
                   <option value="">Choose the definition to keep...</option>
                   {mergeTargetOptions.map((option) => (
                     <option key={option.id} value={option.id}>
-                      {plantName(option)} · {option._count.instances} instance{option._count.instances === 1 ? '' : 's'}
+                      {plantDisplayName(option)} · {option._count.instances} instance{option._count.instances === 1 ? '' : 's'}
                     </option>
                   ))}
                 </select>
@@ -709,7 +711,7 @@ export default async function EditPlant({
               <div className="self-end">
                 <ConfirmDeleteButton
                   title="Merge this duplicate definition?"
-                  message={`This will move records from ${plantName(plant)} into the selected target definition and permanently delete this definition. The target taxonomy fields will not be overwritten.`}
+                  message={`This will move records from ${plantDisplayName(plant)} into the selected target definition and permanently delete this definition. The target taxonomy fields will not be overwritten.`}
                   confirmLabel="Merge definition"
                 >
                   Merge duplicate
@@ -726,7 +728,7 @@ export default async function EditPlant({
             <input type="hidden" name="collectionSlug" value={collection.slug} />
             <ConfirmDeleteButton
               title="Delete plant definition?"
-              message={`This will permanently delete ${plantName(plant)}. Related instances may also be affected.`}
+              message={`This will permanently delete ${plantDisplayName(plant)}. Related instances may also be affected.`}
               confirmLabel="Delete definition"
             >
               Delete plant definition

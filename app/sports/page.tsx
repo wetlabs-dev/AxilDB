@@ -1,3 +1,5 @@
+import { formatTypography } from '@/lib/typography'
+import { plantDisplayName } from '@/lib/utils'
 import { createSportStabilityRecord, markSportReverted } from '@/app/actions'
 import { PlantImage } from '@/components/PlantImage'
 import { SortControl } from '@/components/SortControl'
@@ -7,7 +9,7 @@ import { canCreateInCollection, canEditInCollection, collectionPath, requireColl
 import { prisma } from '@/lib/prisma'
 import { compareText, sortPreference, timeValue, type SortOption } from '@/lib/sort-preferences'
 import { formatDate } from '@/lib/time'
-import { plantName } from '@/lib/utils'
+
 import Link from 'next/link'
 
 const sportSortOptions: SortOption[] = [
@@ -79,9 +81,9 @@ export default async function SportReview() {
                 <div className="min-h-0 overflow-hidden p-3">
                   <p className="text-xs font-medium uppercase tracking-[0.12em] text-[#2f6b45]">{sport.sportStatus}</p>
                   <h3 className="mt-1 line-clamp-2 text-sm font-bold leading-tight underline">{sport.plantId}</h3>
-                  <p className="mt-1 line-clamp-2 text-xs text-stone-700">{plantName(sport.plantDefinition)}</p>
+                  <p className="mt-1 line-clamp-2 text-xs text-stone-700">{plantDisplayName(sport.plantDefinition)}</p>
                   <p className="mt-2 text-xs font-medium text-stone-700">True records: {trueCount}</p>
-                  {sport.sportDescription && <p className="mt-2 line-clamp-3 text-xs text-stone-600">{sport.sportDescription}</p>}
+                  {sport.sportDescription && <p className="mt-2 line-clamp-3 text-xs text-stone-600">{formatTypography(sport.sportDescription)}</p>}
                 </div>
               </Link>
 

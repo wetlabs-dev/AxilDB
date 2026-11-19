@@ -1,5 +1,6 @@
 'use client'
 
+import { formatTypography } from '@/lib/typography'
 import Link from 'next/link'
 import { useState } from 'react'
 import { CareActionForm } from '@/components/CareQueueOptimistic'
@@ -97,9 +98,9 @@ function PlantHeading({ item, collectionSlug }: { item: CareQueueItem; collectio
           <PlantIdPreviewLink prefetch={false} collectionSlug={collectionSlug} plantId={item.plantId} href={item.href}>
             {item.plantId}
           </PlantIdPreviewLink>
-        ) : item.title}
+        ) : formatTypography(item.title)}
       </h3>
-      <p className="text-sm text-stone-700">{item.plantName}</p>
+      <p className="text-sm text-stone-700">{formatTypography(item.plantName)}</p>
       {item.locationPath && <p className="text-xs text-stone-500">{item.locationPath}</p>}
     </div>
   )
@@ -205,7 +206,7 @@ function NormalCareDetails({
       <p className="font-semibold text-stone-900">{item.treatmentPlanTitle || 'Treatment plan'}</p>
       {item.treatmentName && <p>Treatment: {item.treatmentName}</p>}
       {item.treatmentProgress && <p>{item.treatmentProgress}</p>}
-      {item.treatmentSafetySummary && <p className="font-medium ax-text-warning">Safety: {item.treatmentSafetySummary}</p>}
+      {item.treatmentSafetySummary && <p className="font-medium ax-text-warning">Safety: {formatTypography(item.treatmentSafetySummary)}</p>}
       <Link prefetch={false} href={item.href} className="mt-1 inline-flex w-fit rounded-md bg-[#2f6b45] px-3 py-2 font-semibold text-white">Continue plan</Link>
     </div>
   )
@@ -221,7 +222,7 @@ function NormalCareDetails({
         {item.taskType === 'FERTILIZE' && (
           <div className="rounded-md border border-[#d6dfc9] bg-[#f7f4e8]/80 p-3 text-sm text-stone-700">
             <p className="font-semibold text-stone-800">{item.fertilizerRecipeName || 'Fertilizer recipe'}</p>
-            {item.fertilizerRecipeSummary && <p className="mt-1">{item.fertilizerRecipeSummary}</p>}
+            {item.fertilizerRecipeSummary && <p className="mt-1">{formatTypography(item.fertilizerRecipeSummary)}</p>}
             {item.fertilizerSource && <p className="mt-1 text-xs uppercase tracking-[0.12em] text-stone-500">{item.fertilizerSource} schedule</p>}
             <div className="mt-3 grid gap-2 sm:grid-cols-3">
               <Field label="Strength" name="fertilizerStrength" defaultValue={item.fertilizerStrength || ''} />
@@ -373,7 +374,7 @@ export function CareQueueItemCard({
         <div className="grid gap-2 p-4">
           <MetaRow item={item} timezone={timezone} />
           <PlantHeading item={item} collectionSlug={collectionSlug} />
-          <p className="text-sm text-stone-700">{item.reason}</p>
+          <p className="text-sm text-stone-700">{formatTypography(item.reason)}</p>
           <QuietDayNotice item={item} />
           <CareQueueItemDetails item={item} collectionSlug={collectionSlug} back={back} canAct={canAct} timezone={timezone} substrateVersions={substrateVersions} />
           <Link prefetch={false} href={item.href} className="text-sm font-medium text-[#2f6b45] underline">View record</Link>
@@ -390,7 +391,7 @@ export function CareQueueItemCard({
             <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
               <PlantHeading item={item} collectionSlug={collectionSlug} />
             </div>
-            <p className="line-clamp-1 text-sm text-stone-700">{summary}</p>
+            <p className="line-clamp-1 text-sm text-stone-700">{formatTypography(summary)}</p>
             <QuietDayNotice item={item} />
           </div>
           <div className="flex shrink-0 flex-col items-stretch gap-2 sm:flex-row md:flex-col lg:flex-row">
@@ -410,7 +411,7 @@ export function CareQueueItemCard({
         {desktopExpanded && (
           <div id={detailsId} className="border-t border-stone-200 px-4 pb-4 pt-3">
             <div className="grid gap-2">
-              <p className="text-sm text-stone-700">{item.reason}</p>
+              <p className="text-sm text-stone-700">{formatTypography(item.reason)}</p>
               <CareQueueItemDetails item={item} collectionSlug={collectionSlug} back={back} canAct={canAct} timezone={timezone} substrateVersions={substrateVersions} />
               <Link prefetch={false} href={item.href} className="text-sm font-medium text-[#2f6b45] underline">View record</Link>
             </div>

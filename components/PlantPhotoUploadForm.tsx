@@ -1,4 +1,5 @@
 'use client'
+import { formatTypography } from '@/lib/typography'
 import { useEffect, useRef, useState } from 'react'
 import { PhotoFramingEditor } from '@/components/PhotoFramingEditor'
 import { MAX_PHOTO_BYTES, SUPPORTED_PHOTO_TYPES } from '@/lib/photo-upload'
@@ -55,7 +56,7 @@ export function PlantPhotoUploadForm({ collectionSlug, plantInstanceId, back, ca
       {canSetRepresentative && <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="setRepresentative" />Set as representative photo</label>}
     </fieldset>
     <p className="text-xs text-stone-600">Photos are saved in this plant’s gallery and history using the upload date. Adding a photo does not record care.</p>
-    {error && <p role="alert" className="text-sm text-red-800">{error}</p>}
+    {error && <p role="alert" className="text-sm text-red-800">{formatTypography(error)}</p>}
     <div className="sticky bottom-0 flex gap-2 bg-[#fffdf7] py-2 pb-[max(.5rem,env(safe-area-inset-bottom))]">
       <button disabled={busy} className="min-h-11 rounded bg-[#2f6b45] px-4 py-2 font-semibold text-white disabled:opacity-60">{busy ? 'Saving photo…' : 'Save photo'}</button>
       {onCancel && <button type="button" disabled={busy} onClick={onCancel} className="min-h-11 rounded border border-stone-300 px-4 py-2">Cancel</button>}

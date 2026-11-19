@@ -1,4 +1,5 @@
 'use client'
+import { formatTypography } from '@/lib/typography'
 import { useState, useTransition, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import {
@@ -88,7 +89,7 @@ export function CadenceResearchControls({
           Recover previous cadence data
         </button>
       </div>
-      <p role="status">{busy ? 'Working…' : message}</p>
+      <p role="status">{busy ? 'Working…' : formatTypography(message)}</p>
       {preview && (
         <dialog
           ref={dialogRef}
@@ -209,7 +210,7 @@ export function CadenceProposalReview({
       <button disabled={busy} name="decision" value="reject" formNoValidate>
         Reject
       </button>
-      <span role="status">{message}</span>
+      <span role="status">{formatTypography(message)}</span>
     </form>
   )
 }

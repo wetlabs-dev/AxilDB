@@ -1,10 +1,13 @@
+import { formatTypography, normalizeTypographySearch } from '@/lib/typography'
+import { typographySearchWhere } from '@/lib/typography-search'
+import { plantDisplayName } from '@/lib/utils'
 import { prisma } from '@/lib/prisma'
 import { SunshineButton } from '@/components/SunshineButton'
 import { Card, Button } from '@/components/ui'
 import { getCurrentUser } from '@/lib/auth'
 import { collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { sunshineCounts, sunshineKey, sunshineStateForUser } from '@/lib/sunshine'
-import { plantName, fmtDate, taxonomyLabel } from '@/lib/utils'
+import { fmtDate, taxonomyLabel } from '@/lib/utils'
 import Link from 'next/link'
 import { PlantTagRow } from '@/components/PlantTagChip'
 import { isServerAdminRole } from '@/lib/roles'
@@ -35,7 +38,7 @@ export default async function SearchPage({
   const tagMode = sp.tagMode === 'all' ? 'all' : 'any'
   const tagWhere = selectedTagIds.length ? tagMode === 'all' ? { AND: selectedTagIds.map((plantTagId) => ({ tags: { some: { plantTagId } } })) } : { tags: { some: { plantTagId: { in: selectedTagIds } } } } : {}
   const activeTags = await prisma.plantTag.findMany({ where: { collectionId: collection.id, active: true }, orderBy: { name: 'asc' } })
-  const identityTerms = q.split(/\s+/).map((term) => term.replace(/^['"]|['"]$/g, '')).filter(Boolean)
+  const identityTerms = normalizeTypographySearch(q).split(/\s+/).map((term) => term.replace(/^['"]|['"]$/g, '')).filter(Boolean)
   const locationNodes = q ? await prisma.location.findMany({ where: { collectionId: collection.id }, select: { id: true, parentLocationId: true, name: true, code: true } }) : []
   const matchingLocationIds = locationNodes
     .filter((location) => `${location.code} ${location.name}`.toLowerCase().includes(q.toLowerCase()))
@@ -129,7 +132,7 @@ export default async function SearchPage({
   const definitionWithCollectionWhere = { AND: [{ OR: [{ collectionId: collection.id }, { collectionId: null, isValidated: true }] }, definitionSearch, tagWhere] }
   const [instances, totalInstances, defs, totalDefinitions] = await Promise.all([
     prisma.plantInstance.findMany({
-      where: instanceWithCollectionWhere,
+      where: typographySearchWhere(instanceWithCollectionWhere),
       select: {
         id: true,
         plantId: true,
@@ -151,9 +154,9 @@ export default async function SearchPage({
       orderBy: { plantId: 'asc' },
       take: SEARCH_RESULT_LIMIT,
     }),
-    prisma.plantInstance.count({ where: instanceWithCollectionWhere }),
+    prisma.plantInstance.count({ where: typographySearchWhere(instanceWithCollectionWhere) }),
     prisma.plantDefinition.findMany({
-      where: definitionWithCollectionWhere,
+      where: typographySearchWhere(definitionWithCollectionWhere),
       select: {
         id: true,
         isValidated: true,
@@ -174,7 +177,7 @@ export default async function SearchPage({
       orderBy: [{ isValidated: 'desc' }, { genus: 'asc' }, { species: 'asc' }, { cultivarName: 'asc' }],
       take: SEARCH_RESULT_LIMIT,
     }),
-    prisma.plantDefinition.count({ where: definitionWithCollectionWhere }),
+    prisma.plantDefinition.count({ where: typographySearchWhere(definitionWithCollectionWhere) }),
   ])
   const treatmentResults = q && canSearchTreatments ? await prisma.treatmentDefinition.findMany({
     where: { collectionId: collection.id, OR: [{ name: contains(q) }, { description: contains(q) }, { targetSummary: contains(q) }, { instructions: contains(q) }, { products: { some: { product: { OR: [{ name: contains(q) }, { manufacturer: contains(q) }, { activeIngredient: contains(q) }] } } } }, { applications: { some: { notes: contains(q) } } }] },
@@ -245,7 +248,7 @@ export default async function SearchPage({
                 <Link className="font-bold underline" href={collectionPath(collection.slug, `/instances/${instance.id}`)}>
                   {instance.plantId}
                 </Link>{' '}
-                · {plantName(instance.plantDefinition)} · {plantInstanceTypeLabel(instance.instanceType)} · {instance.status} · {fmtDate(instance.propagationDate || instance.acquisitionDate)}
+                · {plantDisplayName(instance.plantDefinition)} · {plantInstanceTypeLabel(instance.instanceType)} · {instance.status} · {fmtDate(instance.propagationDate || instance.acquisitionDate)}
                 {instance.mergeConstituent && <> · merged into <Link className="font-semibold underline" href={collectionPath(collection.slug, `/instances/${instance.mergeConstituent.merge.survivingPlantInstanceId}`)}>{instance.mergeConstituent.merge.survivingPlantInstance.plantId}</Link></>}
               </p>
               <p className="w-full text-xs text-stone-600">Substrate: {substrateAssignmentLabel(instance.currentSubstrate)}</p>
@@ -267,14 +270,14 @@ export default async function SearchPage({
             <div key={definition.id} className="border-t border-stone-200 py-2 text-sm">
               <p>
                 <Link className="font-bold underline" href={collectionPath(collection.slug, definition.isValidated ? '/validated-definitions' : `/plants/${definition.id}/edit`)}>
-                  {plantName(definition)}
+                  {plantDisplayName(definition)}
                 </Link>{' '}
                 {definition.isValidated && <span className="rounded-full bg-[#edf3e6] px-2 py-0.5 text-xs font-semibold text-[#2f6b45]">Validated</span>}{' '}
                 · {definition._count.instances} instance(s) · {taxonomyLabel(definition.confidence)}
               </p>
               <PlantTagRow tags={definition.tags.map((item) => item.plantTag)} limit={5} />
               {definition.aliases.length > 0 && (
-                <p className="text-stone-600">Aliases: {definition.aliases.map((alias) => alias.name).join(', ')}</p>
+                <p className="text-stone-600">Aliases: {formatTypography(definition.aliases.map((alias) => alias.name).join(', '))}</p>
               )}
             </div>
           ))}

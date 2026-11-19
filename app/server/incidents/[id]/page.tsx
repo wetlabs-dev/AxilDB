@@ -1,3 +1,4 @@
+import { formatTypography } from '@/lib/typography'
 import Link from 'next/link'
 import { addServerIncidentNote, resolveServerIncident, updateServerIncident } from '@/app/server-actions'
 import { MetricChart } from '@/components/MetricChart'
@@ -56,7 +57,7 @@ export default async function ServerIncidentDetail({ params }: { params: Promise
     <div className="space-y-5">
       <div>
         <Link className="text-sm font-medium text-[#2f6b45] underline" href="/server/incidents">Incident History</Link>
-        <h2 className="mt-2 text-3xl font-bold">{incident.title}</h2>
+        <h2 className="mt-2 text-3xl font-bold">{formatTypography(incident.title)}</h2>
         <p className="mt-1 text-sm text-stone-600">
           {incidentLabel(incident.category)} · {incidentLabel(incident.severity)} · {incidentLabel(incident.status)}
         </p>
@@ -69,7 +70,7 @@ export default async function ServerIncidentDetail({ params }: { params: Promise
         <Card><p className="text-sm text-stone-600">Peak</p><p className="mt-2 font-semibold">{incident.peakValue != null ? `${incident.peakValue.toFixed(1)}${incident.metricType ? '%' : ''}` : '—'}</p></Card>
       </div>
 
-      {incident.description && <Card><p className="text-sm leading-6 text-stone-700">{incident.description}</p></Card>}
+      {incident.description && <Card><p className="text-sm leading-6 text-stone-700">{formatTypography(incident.description)}</p></Card>}
 
       {incident.metricType && (
         <MetricChart
@@ -124,7 +125,7 @@ export default async function ServerIncidentDetail({ params }: { params: Promise
         <div className="mt-5 grid gap-3">
           {incident.notes.map((note) => (
             <div key={note.id} className="rounded-lg border border-stone-200 bg-white/60 p-3">
-              <p className="text-sm whitespace-pre-wrap">{note.body}</p>
+              <p className="text-sm whitespace-pre-wrap">{formatTypography(note.body)}</p>
               <p className="mt-2 text-xs text-stone-500">{formatDateTime(note.createdAt, preferences?.timezone)} · {note.author?.email || 'server admin'}</p>
             </div>
           ))}

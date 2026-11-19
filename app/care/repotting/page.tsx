@@ -1,3 +1,5 @@
+import { formatTypography } from '@/lib/typography'
+import { plantDisplayName } from '@/lib/utils'
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import {
@@ -12,7 +14,7 @@ import {
   selectRepottingWindow,
 } from '@/lib/repotting-windows'
 import { timeZoneForPreference, formatDate } from '@/lib/time'
-import { plantName } from '@/lib/utils'
+
 import { Button, Card, Field, Select, TextArea } from '@/components/ui'
 export default async function Page({
   searchParams,
@@ -212,7 +214,7 @@ export default async function Page({
                             `/instances/${item.plantInstanceId}`
                           )}
                         >
-                          {item.plantInstance.plantId} · {plantName(d)}
+                          {item.plantInstance.plantId} · {plantDisplayName(d)}
                         </Link>
                       </label>
                       <p>
@@ -220,7 +222,7 @@ export default async function Page({
                           'No location'}{' '}
                         · {item.source} · Added {formatDate(item.requestedAt, tz)}
                       </p>
-                      {item.notes && <p>{item.notes}</p>}
+                      {item.notes && <p>{formatTypography(item.notes)}</p>}
                       {changed && (
                         <p role="status">
                           Definition windows changed; this booking has not

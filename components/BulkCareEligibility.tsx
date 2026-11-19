@@ -1,4 +1,5 @@
 'use client'
+import { formatTypography } from '@/lib/typography'
 import Link from 'next/link'
 import { useFormStatus } from 'react-dom'
 import { Button } from '@/components/ui'
@@ -62,7 +63,7 @@ export function BulkCareEligibility({ formId, collectionSlug, careType, scopeCou
     <div role="status" aria-live="polite">
       {preview ? <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {[["In scope", scopeCount], ["Selected", counts.total], ["Eligible", eligible], ["Already completed", already], ["Other exclusions", counts.total - preview.authorizedCount], ["Records to create", final]].map(([label, count]) => <div key={label}><dt className="text-stone-600">{label}</dt><dd className="text-lg font-semibold text-[#2f6b45]">{count}</dd></div>)}
-      </dl> : <p>{error || 'Checking same-day care…'}</p>}
+      </dl> : <p>{formatTypography(error) || 'Checking same-day care…'}</p>}
       {preview && counts.total - preview.authorizedCount > 0 && <p className="mt-2">{counts.total - preview.authorizedCount} excluded by selection or location eligibility.</p>}
       {preview && final === 0 && <p className="mt-2">No eligible plants. Enable repeat care below to include plants already completed on this date.</p>}
     </div>

@@ -139,7 +139,7 @@ export default async function AccountSecurity({
                 </div>
               </div>
               <form action={dismissRecoveryCodes}>
-                <Button>I've saved these recovery codes</Button>
+                <Button>I’ve saved these recovery codes</Button>
               </form>
             </div>
           ) : (

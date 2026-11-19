@@ -1,3 +1,4 @@
+import { formatTypography } from '@/lib/typography'
 import { assertMigrationOutboundReleased } from '@/lib/migration-hold'
 import nodemailer from 'nodemailer'
 
@@ -41,7 +42,7 @@ export async function sendEmail(message: OutboundEmail) {
       to: message.to,
       from,
       replyTo,
-      subject: message.subject,
+      subject: formatTypography(message.subject),
       text: message.text,
     })
     return { mode, messageId: `log-${Date.now()}` }
@@ -67,7 +68,7 @@ export async function sendEmail(message: OutboundEmail) {
     from,
     to: message.to,
     replyTo,
-    subject: message.subject,
+    subject: formatTypography(message.subject),
     text: message.text,
     html: message.html,
   })

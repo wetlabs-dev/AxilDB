@@ -1,3 +1,5 @@
+import path from 'node:path'
+import { formatTypography } from '@/lib/typography'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
@@ -8,7 +10,7 @@ import { careTaskLabel } from '@/lib/care-queue'
 import { attachCareSheetPhotos, careSheetModeLabel, sectionValuesForInstance } from '@/lib/care-sheets'
 import { prisma } from '@/lib/prisma'
 import { formatDate } from '@/lib/time'
-import { plantName } from '@/lib/utils'
+import { plantDisplayName } from '@/lib/utils'
 
 function contentLeft(doc: PDFKit.PDFDocument) {
   return doc.page.margins.left
@@ -24,7 +26,10 @@ function contentWidth(doc: PDFKit.PDFDocument) {
 
 function line(doc: PDFKit.PDFDocument, text: string, options: PDFKit.Mixins.TextOptions = {}) {
   doc.x = contentLeft(doc)
+  const prime = /[′″]/.test(text)
+  if (prime) doc.font('AxilTypographyBody')
   doc.text(text, { width: contentWidth(doc), ...options })
+  if (prime) doc.font('Helvetica')
 }
 
 function maybeValue(value: unknown) {
@@ -52,13 +57,13 @@ function drawChecklistTask(doc: PDFKit.PDFDocument, task: any) {
 
   doc.rect(left, startY + 2, checkboxSize, checkboxSize).stroke('#333')
   doc.font('Helvetica-Bold').fontSize(9.5).fillColor('#222')
-  doc.text(`${careTaskLabel(task.taskType as any)} · ${taskDate(task.dueAt)} · ${task.title}`, textX, startY - 1, { width: textWidth })
+  doc.text(`${careTaskLabel(task.taskType as any)} · ${taskDate(task.dueAt)} · ${formatTypography(task.title)}`, textX, startY - 1, { width: textWidth })
   doc.font('Helvetica').fontSize(9).fillColor('#555')
   if (plant) {
-    doc.text(`${plant.plantId} · ${plantName(plant.plantDefinition)}`, textX, doc.y, { width: textWidth })
+    doc.text(`${plant.plantId} · ${plantDisplayName(plant.plantDefinition)}`, textX, doc.y, { width: textWidth })
   }
   if (task.reason) {
-    doc.text(task.reason, textX, doc.y, { width: textWidth })
+    doc.text(formatTypography(task.reason), textX, doc.y, { width: textWidth })
   }
   doc.fillColor('#222')
   doc.x = left
@@ -102,11 +107,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const hydratedSheet = await attachCareSheetPhotos(prisma, sheet)
 
   const doc = new PDFDocument({ size: 'LETTER', margin: 42 })
+  doc.registerFont('AxilTypographyBody', path.join(process.cwd(), 'public/fonts/Inter-400.ttf'))
   const chunks: Buffer[] = []
   doc.on('data', (chunk) => chunks.push(chunk))
   const done = new Promise<Buffer>((resolve) => doc.on('end', () => resolve(Buffer.concat(chunks))))
 
-  doc.font('Times-Bold').fontSize(24).text(hydratedSheet.title)
+  doc.font('Times-Bold').fontSize(24).text(formatTypography(hydratedSheet.title))
   doc.moveDown(0.25)
   doc.font('Helvetica').fontSize(10).fillColor('#555')
   line(doc, `${hydratedSheet.collection.name} · ${careSheetModeLabel(hydratedSheet.mode)} · Generated ${formatDate(new Date())}`)
@@ -121,7 +127,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     doc.font('Times-Bold').fontSize(13).text('Instructions')
     doc.moveDown(0.25)
     doc.font('Helvetica').fontSize(10)
-    line(doc, String(settings.customInstructions))
+    line(doc, formatTypography(String(settings.customInstructions)))
     doc.moveDown(0.8)
   }
 
@@ -141,7 +147,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     ensureRoom(doc, 120)
     doc.font('Times-Bold').fontSize(13).fillColor('#222').text(instance.plantId)
     doc.font('Helvetica').fontSize(10).fillColor('#444')
-    line(doc, `${plantName(instance.plantDefinition)}${instance.currentLocation ? ` · ${instance.currentLocation.code} ${instance.currentLocation.name}` : ''}`)
+    line(doc, `${plantDisplayName(instance.plantDefinition)}${instance.currentLocation ? ` · ${instance.currentLocation.code} ${instance.currentLocation.name}` : ''}`)
     const guide = (instance.plantDefinition as any).resolvedHusbandryGuide || instance.plantDefinition.husbandryGuide
     const summaries = [
       maybeValue(instance.husbandryOverride?.summaryWater) || maybeValue(guide?.summaryWater),
@@ -149,7 +155,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       maybeValue(instance.husbandryOverride?.summaryToxicity) || maybeValue(guide?.summaryToxicity),
       maybeValue(instance.husbandryOverride?.summaryCare) || maybeValue(guide?.summaryCare),
     ].filter(Boolean)
-    if (summaries.length) line(doc, summaries.join(' · '))
+    if (summaries.length) line(doc, formatTypography(summaries.join(' · ')))
 
     const sections = sectionValuesForInstance(instance as any, hydratedSheet.sections as string[])
     for (const section of sections) {
@@ -160,7 +166,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       doc.font('Helvetica-Bold').fillColor('#2f6b45').text(section.title)
       doc.font('Helvetica').fillColor('#444')
       for (const field of values.slice(0, 5)) {
-        line(doc, `${field.label}: ${field.value}${field.overridden ? ' (local adjustment)' : ''}`)
+        line(doc, `${field.label}: ${formatTypography(field.value)}${field.overridden ? ' (local adjustment)' : ''}`)
       }
     }
     doc.moveDown(0.8)

@@ -1,3 +1,5 @@
+import { formatCultivar, formatTypography } from '@/lib/typography'
+import { plantDisplayName } from '@/lib/utils'
 import { CalibrationOverview } from '@/components/CalibrationOverview'
 import { saveCalibrationPolicy } from '@/app/calibration-actions'
 import { calibrationPolicy } from '@/lib/calibration-policy'
@@ -129,7 +131,7 @@ function contextHighlights(value: unknown) {
   const tags = Array.isArray(value.tags) ? value.tags : []
   const aliases = Array.isArray(value.aliases) ? value.aliases : []
   const references = isRecord(value.references) ? value.references : null
-  if (plantDefinition?.displayName) highlights.push(`Record: ${compactValue(plantDefinition.displayName)}`)
+  if (plantDefinition?.displayName) highlights.push(`Record: ${formatTypography(compactValue(plantDefinition.displayName), { mode: 'botanical-name' })}`)
   if (!plantDefinition?.displayName && taxonomy?.genus) highlights.push(`Record: ${compactValue(taxonomy.genus)}${taxonomy.species ? ` ${compactValue(taxonomy.species)}` : ''}`)
   if (collection?.name) highlights.push(`Collection: ${compactValue(collection.name)}`)
   if (counts?.instances) highlights.push(`${compactValue(counts.instances)} instance${Number(counts.instances) === 1 ? '' : 's'}`)
@@ -182,7 +184,7 @@ const husbandryFieldLabels = new Map<string, string>([
 function visibleHusbandryValue(value: unknown) {
   if (value === null || value === undefined || value === '') return null
   if (typeof value === 'number') return String(value)
-  return displayValue(value)
+  return formatTypography(displayValue(value))
 }
 
 function changedField(changedFields: Set<string> | undefined, field: string) {
@@ -205,14 +207,14 @@ function AliasListValue({ value, changedFields }: { value: unknown; changedField
         return (
           <li key={`${compactValue(alias.name)}-${index}`} className={`rounded-md border p-3 ${changed ? 'border-green-300 ax-status-success shadow-sm shadow-green-900/5' : 'border-stone-200 bg-white/60'}`}>
             <div className="flex flex-wrap items-start justify-between gap-2">
-              <p className="font-semibold text-stone-950">{compactValue(alias.name)}</p>
+              <p className="font-semibold text-stone-950">{formatTypography(compactValue(alias.name))}</p>
               <div className="flex flex-wrap gap-1.5">
                 {alias.aliasType ? <span className="rounded-full bg-white/75 px-2 py-0.5 text-xs font-medium text-stone-700">{displayValue(alias.aliasType)}</span> : null}
                 {alias.confidence ? <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium ax-text-success">{displayValue(alias.confidence)}</span> : null}
               </div>
             </div>
             {alias.source ? <p className="mt-1 text-sm text-stone-700">Source: {compactValue(alias.source)}</p> : null}
-            {alias.notes ? <p className="mt-1 text-sm leading-5 text-stone-700">{compactValue(alias.notes)}</p> : null}
+            {alias.notes ? <p className="mt-1 text-sm leading-5 text-stone-700">{formatTypography(compactValue(alias.notes))}</p> : null}
           </li>
         )
       })}
@@ -307,8 +309,8 @@ function SubstrateValue({ value, changedFields, contextValue }: { value: unknown
           <li key={`${versionId || title}-${index}`} className={`rounded-md border p-3 ${changed ? 'border-green-300 ax-status-success shadow-sm shadow-green-900/5' : 'border-stone-200 bg-white/60'}`}>
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
-                <p className="font-semibold text-stone-950">{Number(recommendation.rank || index + 1)}. {title}</p>
-                {recommendation.reason ? <p className="mt-1 text-sm leading-5 text-stone-700">{compactValue(recommendation.reason)}</p> : null}
+                <p className="font-semibold text-stone-950">{Number(recommendation.rank || index + 1)}. {formatTypography(title)}</p>
+                {recommendation.reason ? <p className="mt-1 text-sm leading-5 text-stone-700">{formatTypography(compactValue(recommendation.reason))}</p> : null}
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {recommendation.suitability ? <span className="rounded-full bg-white/75 px-2 py-0.5 text-xs font-medium text-stone-700">{substrateLabel(String(recommendation.suitability))}</span> : null}
@@ -340,15 +342,15 @@ function PrettyValue({ value, changedFields, targetField, contextValue, recipeNa
     const proposed = value as any, context = contextValue as any, current = context?.repottingWindowsCurrent || context?.repottingWindows || [], old = context?.repottingWindows || []
     return <div className="space-y-2">{(['primary','alternate'] as const).map(key => {
       const id = proposed?.[`${key}WindowId`], w = current.find((w:any) => w.id === id), prior = old.find((w:any) => w.id === id)
-      return <div key={key}><p className="font-semibold">{key === 'primary' ? 'Primary' : 'Alternate'}: {w ? `${w.name} · ${windowRange(w)}` : id ? 'Unavailable window' : 'Unresolved'}</p>{proposed?.[`${key}Confidence`] != null && <p>{Math.round(proposed[`${key}Confidence`] * 100)}% confidence</p>}<p>{proposed?.[`${key}Reasoning`]}</p>{w && prior && windowFingerprint(w) !== windowFingerprint(prior) && <p role="alert">Window dates or availability changed since research; approval is blocked. Research again.</p>}</div>
-    })}<p>{proposed?.researchAssumptions?.join(' · ')}</p><p className="text-xs">To accept only the primary, use Advanced edit and set alternateWindowId to null. Existing assignments are checked again at approval.</p></div>
+      return <div key={key}><p className="font-semibold">{key === 'primary' ? 'Primary' : 'Alternate'}: {w ? `${w.name} · ${windowRange(w)}` : id ? 'Unavailable window' : 'Unresolved'}</p>{proposed?.[`${key}Confidence`] != null && <p>{Math.round(proposed[`${key}Confidence`] * 100)}% confidence</p>}<p>{formatTypography(proposed?.[`${key}Reasoning`])}</p>{w && prior && windowFingerprint(w) !== windowFingerprint(prior) && <p role="alert">Window dates or availability changed since research; approval is blocked. Research again.</p>}</div>
+    })}<p>{formatTypography(proposed?.researchAssumptions?.join(' · '))}</p><p className="text-xs">To accept only the primary, use Advanced edit and set alternateWindowId to null. Existing assignments are checked again at approval.</p></div>
   }
   if (targetField === 'aliases') return <AliasListValue value={value} changedFields={changedFields} />
   if (targetField === 'husbandry') return <HusbandryValue value={value} changedFields={changedFields} />
   if (targetField === 'substrate') return <SubstrateValue value={value} changedFields={changedFields} contextValue={contextValue} />
   if (typeof value !== 'object') {
     const changed = Boolean(changedFields?.size)
-    return <p className={`whitespace-pre-wrap rounded-md border p-3 text-sm ${changed ? 'border-green-300 ax-status-success ax-text-success' : 'border-stone-200 bg-white/55 text-stone-800'}`}>{compactValue(value)}{changed && <span className="ml-2 rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold ax-text-success">Changed</span>}</p>
+    return <p className={`whitespace-pre-wrap rounded-md border p-3 text-sm ${changed ? 'border-green-300 ax-status-success ax-text-success' : 'border-stone-200 bg-white/55 text-stone-800'}`}>{['description', 'notes', 'rationale', 'reasoning'].includes(targetField || '') ? formatTypography(compactValue(value)) : compactValue(value)}{changed && <span className="ml-2 rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold ax-text-success">Changed</span>}</p>
   }
   if (Array.isArray(value)) {
     if (value.length === 0) return <p className="rounded-md border border-dashed border-stone-300 bg-white/45 p-3 text-sm italic text-stone-500">No items.</p>
@@ -371,7 +373,7 @@ function PrettyValue({ value, changedFields, targetField, contextValue, recipeNa
             <span>{key === 'fertilizerRecipeId' ? 'Fertilizer recipe' : fieldLabel(key)}</span>
             {changed && <span className="rounded-full bg-green-100 px-2 py-0.5 text-[0.65rem] normal-case tracking-normal ax-text-success">Changed</span>}
           </dt>
-          <dd className="mt-1 min-w-0 break-words text-sm text-stone-900">{key === 'fertilizerRecipeId' && typeof entryValue === 'string' && entryValue.trim() ? recipeNames?.get(entryValue) || 'Unavailable fertilizer recipe' : compactValue(entryValue)}</dd>
+          <dd className="mt-1 min-w-0 break-words text-sm text-stone-900">{key === 'fertilizerRecipeId' && typeof entryValue === 'string' && entryValue.trim() ? recipeNames?.get(entryValue) || 'Unavailable fertilizer recipe' : key === 'cultivarName' && typeof entryValue === 'string' && entryValue.trim() ? formatCultivar(entryValue) : /(?:description|notes|reason|summary|frequency|strength|type)/i.test(key) ? formatTypography(compactValue(entryValue)) : compactValue(entryValue)}</dd>
         </div>
         )
       })}
@@ -392,7 +394,7 @@ function ReviewSuggestionCard({ suggestion, recipeNames }: { suggestion: any; re
       <summary className="cursor-pointer list-none">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="font-semibold">{suggestion.title}</p>
+            <p className="font-semibold">{formatTypography(suggestion.title)}</p>
             <p className="mt-1 text-sm text-stone-600">{fieldLabel(suggestion.targetField)} · {confidenceText(suggestion.confidence)}</p>
           </div>
           <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${appliesDirectly ? 'border-green-200 ax-status-success ax-text-success' : 'border-amber-200 ax-status-warning ax-text-warning'}`}>
@@ -401,8 +403,8 @@ function ReviewSuggestionCard({ suggestion, recipeNames }: { suggestion: any; re
         </div>
       </summary>
       <div className="mt-3 grid gap-4">
-        {linkedOverride && <p className="rounded-md border border-amber-200 ax-status-warning p-3 text-sm">Proposed local override of linked care. Accept records manual follow-up and preserves the live link. Review the evidence below. To apply locally, open the definition and deliberately choose Make local copy first. Reason: {(suggestion.suggestedValue as any)?.localOverride?.reason} Evidence: {(suggestion.suggestedValue as any)?.localOverride?.evidence}</p>}
-        <p className="rounded-md border border-stone-200 bg-white/50 p-3 text-sm leading-6 text-stone-800">{suggestion.reasoning}</p>
+        {linkedOverride && <p className="rounded-md border border-amber-200 ax-status-warning p-3 text-sm">Proposed local override of linked care. Accept records manual follow-up and preserves the live link. Review the evidence below. To apply locally, open the definition and deliberately choose Make local copy first. Reason: {formatTypography((suggestion.suggestedValue as any)?.localOverride?.reason)} Evidence: {(suggestion.suggestedValue as any)?.localOverride?.evidence}</p>}
+        <p className="rounded-md border border-stone-200 bg-white/50 p-3 text-sm leading-6 text-stone-800">{formatTypography(suggestion.reasoning)}</p>
         {references.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {references.map((reference, index) => reference.url ? (
@@ -541,7 +543,7 @@ export default async function AiCuratorPage({
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-lg border border-stone-200 bg-white/55 p-3">
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-stone-500">Today&apos;s spend</p>
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-stone-500">Today’s spend</p>
             <p className="mt-1 text-2xl font-semibold">{money(dashboard.budget.todaySpend)}</p>
             <p className="text-xs text-stone-600">{money(dashboard.budget.remainingToday)} remaining of {money(dashboard.budget.dailyBudget)} · {budgetPct(dashboard.budget.todaySpend, dashboard.budget.dailyBudget)} used</p>
           </div>
@@ -631,7 +633,7 @@ export default async function AiCuratorPage({
               <div key={job.id} className="rounded-lg border border-amber-200 ax-status-warning p-3">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <p className="font-semibold">{job.plantDefinition ? plantName(job.plantDefinition) : job.collection.name}</p>
+                    <p className="font-semibold">{job.plantDefinition ? plantDisplayName(job.plantDefinition) : job.collection.name}</p>
                     <p className="text-sm ax-text-warning">{curatorFailureDescription(job.blockingReason)}</p>
                     {!isCuratorHistoryConflict(job.blockingReason) && (!isCuratorResponseFailure(job.blockingReason) || job.blockingReason?.includes('configured output limit')) && job.humanActionRequired && <p className="mt-1 text-sm text-stone-700">Suggested action: {job.humanActionRequired}</p>}
                     {!isCuratorHistoryConflict(job.blockingReason) && (!isCuratorResponseFailure(job.blockingReason) || job.blockingReason?.includes('configured output limit')) && job.retryConditions && <p className="mt-1 text-xs text-stone-600">Retry when: {job.retryConditions}</p>}
@@ -669,7 +671,7 @@ export default async function AiCuratorPage({
             <div key={group.key} className="rounded-lg border border-stone-200 bg-white/55 p-3">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <h4 className="font-serif text-lg font-semibold">{group.plantName}</h4>
+                  <h4 className="font-serif text-lg font-semibold">{formatTypography(group.plantName)}</h4>
                   <p className="text-sm text-stone-600">{group.collectionName} · {group.suggestions.length} suggestion(s)</p>
                 </div>
                 {group.plantDefinitionId && <LinkButton href={`/c/${group.collectionSlug}/plants/${group.plantDefinitionId}/edit`} className="px-3 py-1.5 text-xs">Open definition</LinkButton>}
@@ -690,7 +692,7 @@ export default async function AiCuratorPage({
             <div className="mt-2 grid gap-2">
               {dashboard.recentAccomplishments.length === 0 && <p className="text-sm text-stone-600">No completed Curator jobs yet.</p>}
               {dashboard.recentAccomplishments.map((job) => (
-                <p key={job.id} className="rounded-lg border border-stone-200 bg-white/55 p-2 text-sm">{job.resultSummary}</p>
+                <p key={job.id} className="rounded-lg border border-stone-200 bg-white/55 p-2 text-sm">{formatTypography(job.resultSummary)}</p>
               ))}
             </div>
           </div>

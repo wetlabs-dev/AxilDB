@@ -1,9 +1,10 @@
+import { plantDisplayName } from '@/lib/utils'
 import { updateValidatedPlantDefinition } from '@/app/actions'
 import { Button, Card, Field, Select, TextArea } from '@/components/ui'
 import { requireServerAdmin } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { confidenceOptions } from '@/lib/taxonomy'
-import { plantName } from '@/lib/utils'
+
 import Link from 'next/link'
 
 export default async function EditValidatedDefinition({
@@ -28,11 +29,11 @@ export default async function EditValidatedDefinition({
       </div>
 
       <Card>
-        <h3 className="font-serif text-2xl font-semibold">{plantName(definition)}</h3>
+        <h3 className="font-serif text-2xl font-semibold">{plantDisplayName(definition)}</h3>
         <form action={updateValidatedPlantDefinition} className="mt-4 grid gap-x-3 gap-y-3 md:grid-cols-2">
           <input type="hidden" name="id" value={definition.id} />
           <Field label="Genus" name="genus" defaultValue={definition.genus} required />
-          <Field label="Species" help="Species epithet. Leave blank when the accepted horticultural name intentionally omits species (for example, Begonia 'Looking Glass'). Use sp. only when the species is genuinely unknown." name="species" defaultValue={definition.species || ''} />
+          <Field label="Species" help="Species epithet. Leave blank when the accepted horticultural name intentionally omits species (for example, Begonia ‘Looking Glass’). Use sp. only when the species is genuinely unknown." name="species" defaultValue={definition.species || ''} />
           <Field label="Hybrid notation" name="hybridNotation" defaultValue={definition.hybridNotation || ''} />
           <Field label="Cultivar name" name="cultivarName" defaultValue={definition.cultivarName || ''} />
           <Field label="Authority" name="authority" defaultValue={definition.authority || ''} />

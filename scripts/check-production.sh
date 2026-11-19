@@ -4,6 +4,9 @@ set -eu
 echo "==> Checking TypeScript"
 npx tsc --noEmit --pretty false
 
+echo "==> Checking typography and literal-content protections"
+npm run check:typography
+
 echo "==> Checking workflow invariants"
 npm run check:workflows
 

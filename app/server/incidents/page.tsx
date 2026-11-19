@@ -1,3 +1,4 @@
+import { formatTypography } from '@/lib/typography'
 import Link from 'next/link'
 import { createManualServerIncident } from '@/app/server-actions'
 import { Button, Card, Field, Select, TextArea } from '@/components/ui'
@@ -131,7 +132,7 @@ export default async function ServerIncidentHistory({
                   <td className="px-4 py-3"><span className={`rounded-full border px-2 py-1 text-xs font-semibold ${severityClass(incident.severity)}`}>{incidentLabel(incident.severity)}</span></td>
                   <td className="px-4 py-3">{incidentLabel(incident.category)}</td>
                   <td className="px-4 py-3">
-                    <Link className="font-semibold text-[#2f6b45] underline" href={`/server/incidents/${incident.id}`}>{incident.title}</Link>
+                    <Link className="font-semibold text-[#2f6b45] underline" href={`/server/incidents/${incident.id}`}>{formatTypography(incident.title)}</Link>
                     <p className="mt-1 text-xs text-stone-500">{incident._count.notes} note{incident._count.notes === 1 ? '' : 's'} · {incident.notifications.length} notification{incident.notifications.length === 1 ? '' : 's'}</p>
                   </td>
                   <td className="px-4 py-3">{formatDateTime(incident.detectedAt, preferences?.timezone)}</td>

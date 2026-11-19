@@ -1,3 +1,4 @@
+import { formatTypography } from '@/lib/typography'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
@@ -9,7 +10,7 @@ import { getCurrentUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { isServerAdminRole } from '@/lib/roles'
 import { formatDate } from '@/lib/time'
-import { plantName } from '@/lib/utils'
+import { plantName, plantDisplayName } from '@/lib/utils'
 import { canBrowseWishlist, isPublicWishlistVisitor, loadWishlistEntries, normalizeWishlistPublicSettings, wishlistEnvironmentSummary, wishlistPriceRange } from '@/lib/wishlist'
 
 function csvCell(value: unknown) {
@@ -59,7 +60,7 @@ function privateRows(entries: Awaited<ReturnType<typeof loadWishlistEntries>>) {
   })
 }
 
-async function pdfBuffer(collectionName: string, rows: ReturnType<typeof publicRows> | ReturnType<typeof privateRows>) {
+async function pdfBuffer(collectionName: string, rows: Array<ReturnType<typeof publicRows>[number] | ReturnType<typeof privateRows>[number]>) {
   const doc = new PDFDocument({ size: 'LETTER', margins: { top: 54, right: 48, bottom: 54, left: 48 }, bufferPages: true })
   const chunks: Buffer[] = []
   doc.on('data', (chunk) => chunks.push(Buffer.from(chunk)))
@@ -81,7 +82,7 @@ async function pdfBuffer(collectionName: string, rows: ReturnType<typeof publicR
   doc.moveDown(1)
   for (const row of rows) {
     const visible = Object.entries(row).filter(([key, value]) => key !== 'name' && value !== '' && value != null)
-    const body = visible.map(([key, value]) => `${key.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase())}: ${value}`).join('\n')
+    const body = visible.map(([key, value]) => `${key.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase())}: ${key === 'desiredSize' ? formatTypography(String(value), { mode: 'measurement' }) : /^(?:publicSummary|interestNotes|environment|catSafety|difficulty)$/.test(key) ? formatTypography(String(value)) : value}`).join('\n')
     doc.font(SANS).fontSize(8.5)
     const height = Math.max(62, doc.heightOfString(body, { width: 450 }) + 40)
     if (doc.y + height > 720) { doc.addPage(); addBackground(); doc.y = 54 }
@@ -113,7 +114,7 @@ export async function GET(request: Request) {
   const format = url.searchParams.get('format') || 'csv'
   const filename = `${collection.slug}-wishlist`
   if (format === 'pdf') {
-    const body = await pdfBuffer(collection.name, rows)
+    const body = await pdfBuffer(collection.name, rows.map((row, index) => ({ ...row, name: plantDisplayName(entries[index]) })))
     return new NextResponse(new Uint8Array(body), { headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="${filename}.pdf"` } })
   }
   const keys = Array.from(new Set(rows.flatMap((row) => Object.keys(row))))

@@ -9,7 +9,7 @@ import { collectionPath } from '@/lib/collections'
 import { effectiveFertilizerAssignment, fertilizerRecipeSummary } from '@/lib/fertilizers'
 import { nextOccurrence, reminderCategoryLabel } from '@/lib/reminders'
 import { addCalendarDays, calendarDayIndexInTimeZone, endOfDayInTimeZone, startOfDayInTimeZone, dateInputValue } from '@/lib/time'
-import { plantName } from '@/lib/utils'
+import { plantDisplayName as formatPlantDisplayName } from '@/lib/utils'
 import { defaultLifecycleDateForType, isTransitionalPlantInstanceType, plantInstanceTypeLabel } from '@/lib/plant-instance-types'
 import { locationPathWithCodes, type LocationNode } from '@/lib/locations'
 
@@ -399,7 +399,7 @@ export async function getCareQueue(
 
   for (const instance of instances) {
     const guide = { ...(instance.plantDefinition.husbandryGuide || {}), ...(instance.husbandryOverride || {}) } as any
-    const plantDisplayName = plantName(instance.plantDefinition)
+    const plantDisplayName = formatPlantDisplayName(instance.plantDefinition)
     const baseDate = instance.propagationDate || instance.acquisitionDate || instance.createdAt
     const image = photosByInstance[instance.id]
 
@@ -523,7 +523,7 @@ export async function getCareQueue(
       basePriority: 70,
       plantInstanceId: bloom.plantInstanceId,
       plantId: bloom.plantInstance.plantId,
-      plantName: plantName(bloom.plantInstance.plantDefinition),
+      plantName: formatPlantDisplayName(bloom.plantInstance.plantDefinition),
       ...itemLocation(bloom.plantInstance),
       image: photosByInstance[bloom.plantInstanceId],
       bloomEventId: bloom.id,
@@ -542,7 +542,7 @@ export async function getCareQueue(
       basePriority: 160,
       plantInstanceId: quarantine.plantInstanceId,
       plantId: quarantine.plantInstance.plantId,
-      plantName: plantName(quarantine.plantInstance.plantDefinition),
+      plantName: formatPlantDisplayName(quarantine.plantInstance.plantDefinition),
       ...itemLocation(quarantine.plantInstance),
       image: photosByInstance[quarantine.plantInstanceId],
     })
@@ -575,7 +575,7 @@ export async function getCareQueue(
       overdueDays,
       plantInstanceId: instance.id,
       plantId: instance.plantId,
-      plantName: plantName(instance.plantDefinition),
+      plantName: formatPlantDisplayName(instance.plantDefinition),
       ...itemLocation(instance),
       image: photosByInstance[instance.id],
       href: collectionPath(collectionSlug, `/treatments/plans/${step.plan.id}#step-${step.id}`),
@@ -627,7 +627,7 @@ export async function getCareQueue(
       reminderId: reminder.id,
       plantInstanceId: reminderInstance?.id || (reminder.entityType === 'PLANT_INSTANCE' ? reminder.entityId || undefined : undefined),
       plantId: reminderInstance?.plantId,
-      plantName: reminderInstance ? plantName(reminderInstance.plantDefinition) : undefined,
+      plantName: reminderInstance ? formatPlantDisplayName(reminderInstance.plantDefinition) : undefined,
       ...itemLocation(reminderInstance),
       image: reminderInstance ? photosByInstance[reminderInstance.id] : undefined,
       completedAt: reminder.completedAt,

@@ -1,0 +1,170 @@
+{
+  "startingRevision": "fb61035f97d6daf9fe410163af699b936d786091",
+  "productionBuild": "passed",
+  "typecheck": "passed",
+  "typographyAudit": "passed; 377 app/component/library source files",
+  "proseFixtures": 30,
+  "browser": {
+    "before": {
+      "phase": "before",
+      "results": [
+        {
+          "surface": "care",
+          "theme": "light",
+          "width": 1440
+        },
+        {
+          "surface": "care",
+          "theme": "light",
+          "width": 390
+        },
+        {
+          "surface": "care",
+          "theme": "dark",
+          "width": 1440
+        },
+        {
+          "surface": "care",
+          "theme": "dark",
+          "width": 390
+        },
+        {
+          "surface": "definitions"
+        },
+        {
+          "surface": "instance"
+        },
+        {
+          "surface": "editor"
+        },
+        {
+          "surface": "splash"
+        },
+        {
+          "surface": "labels"
+        }
+      ],
+      "errors": []
+    },
+    "after": {
+      "phase": "after",
+      "results": [
+        {
+          "surface": "care",
+          "theme": "light",
+          "width": 1440
+        },
+        {
+          "surface": "care",
+          "theme": "light",
+          "width": 390
+        },
+        {
+          "surface": "care",
+          "theme": "dark",
+          "width": 1440
+        },
+        {
+          "surface": "care",
+          "theme": "dark",
+          "width": 390
+        },
+        {
+          "surface": "definitions"
+        },
+        {
+          "surface": "instance"
+        },
+        {
+          "surface": "editor"
+        },
+        {
+          "surface": "splash"
+        },
+        {
+          "surface": "labels"
+        },
+        {
+          "surface": "public-exhibit"
+        },
+        {
+          "surface": "curator"
+        }
+      ],
+      "errors": []
+    }
+  },
+  "pdf": {
+    "finalCases": 15,
+    "glyphExtraction": "passed",
+    "pageBounds": "passed",
+    "fixedSheetBrotherGeometry": "passed",
+    "QRImageEmbedding": "passed",
+    "exhibitCareProse": "passed",
+    "wishlistMeasurementPrimes": "passed",
+    "cases": [
+      "labels-long-prime-sheet-portrait.pdf",
+      "wishlist.pdf",
+      "labels-long-prime-brother-dk-2210-portrait.pdf",
+      "labels-long-prime-fixed-portrait.pdf",
+      "labels-fixed-landscape.pdf",
+      "exhibit.pdf",
+      "labels-brother-dk-2210-landscape.pdf",
+      "labels-sheet-landscape.pdf",
+      "labels-brother-dk-2210-portrait.pdf",
+      "labels-sheet-portrait.pdf",
+      "labels-long-prime-brother-dk-2210-landscape.pdf",
+      "labels-long-prime-sheet-landscape.pdf",
+      "care-sheet.pdf",
+      "labels-fixed-portrait.pdf",
+      "labels-long-prime-fixed-landscape.pdf"
+    ]
+  },
+  "literalProtections": [
+    "Raw cultivar and size inputs unchanged",
+    "Header follows raw edits without modifying input values",
+    "Stored description, husbandry and cultivar values unchanged",
+    "CSV botanical names and measurement markers unchanged",
+    "Straight/curly searches find the same records",
+    "Preview has separate displayName and canonical botanicalName",
+    "Deployment log viewer retained unchanged"
+  ],
+  "productionSuiteLimitation": "check:collection-scope reports the same ten pre-existing call sites as starting revision; default-collection check and production build pass separately",
+  "lint": "No new core-web-vitals findings compared with starting revision",
+  "fullGallery": "/Users/dcurry/.codex/visualizations/2026/10/22/01a16439-2af8-7021-8687-9b642a4e911e/axildb-typography-2026-11-19/review.html",
+  "screenshots": [
+    "botanical-comparison.jpg",
+    "care-dark-1440-after.jpg",
+    "care-dark-1440-before.jpg",
+    "care-dark-390-after.jpg",
+    "care-dark-390-before.jpg",
+    "care-light-1440-after.jpg",
+    "care-light-1440-before.jpg",
+    "care-light-390-after.jpg",
+    "care-light-390-before.jpg",
+    "comparison.jpg",
+    "curator-after.jpg",
+    "definitions-after.jpg",
+    "definitions-before.jpg",
+    "editor-after.jpg",
+    "editor-before.jpg",
+    "instance-after.jpg",
+    "instance-before.jpg",
+    "labels-after.jpg",
+    "labels-before.jpg",
+    "public-comparison.jpg",
+    "public-exhibit-after.jpg",
+    "semantic-and-literal-after.jpg",
+    "splash-after.jpg",
+    "splash-before.jpg",
+    "surface-review.jpg"
+  ],
+  "deployment": "Web deployment; no migrations, host agent or infrastructure changes",
+  "limits": [
+    "Representative Chrome coverage, not every conditional state",
+    "No Safari/Firefox or screen-reader testing",
+    "No physical printer testing",
+    "Existing compact-label limits retained for arbitrarily long names",
+    "Full Markdown engine not introduced; technical/ambiguous content remains literal"
+  ]
+}

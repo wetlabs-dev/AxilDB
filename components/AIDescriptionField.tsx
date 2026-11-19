@@ -1,4 +1,5 @@
 'use client'
+import { formatTypography } from '@/lib/typography'
 
 import { useEffect, useRef, useState } from 'react'
 import { Sparkles } from 'lucide-react'
@@ -302,7 +303,7 @@ export function AIMagicFillButton({
         <section className="rounded-lg border border-[#c7d8bd] bg-[#f7f8ee] p-3 text-left text-sm text-stone-700">
           <div className="flex flex-wrap items-start justify-between gap-2"><div><p className="text-xs font-bold uppercase tracking-[0.14em] text-[#2f6b45]">Acquisition planning draft</p><p className="mt-1 text-xs text-stone-600">{acquisitionDraft.confidence || 'Uncertain'} · review only · wishlist status and priority are never changed</p></div></div>
           <dl className="mt-3 grid gap-2 sm:grid-cols-2">
-            {[['Cat safety', acquisitionDraft.catSafety], ['Difficulty', acquisitionDraft.difficulty], ['Suggested size', acquisitionDraft.desiredSpecimenSize], ['Approximate market range', acquisitionDraft.approximatePriceRange], ['Environment fit', acquisitionDraft.environmentSuitability], ['Sensitivities', acquisitionDraft.sensitivities], ['Location needs', acquisitionDraft.locationCharacteristics], ['Location compatibility', acquisitionDraft.locationCompatibility], ['Warnings', acquisitionDraft.warnings], ['Research summary', acquisitionDraft.researchSummary]].filter(([, value]) => value).map(([label, value]) => <div key={label} className="rounded-md border border-stone-200 bg-white/60 p-2"><dt className="text-[0.65rem] font-bold uppercase tracking-wide text-stone-500">{label}</dt><dd className="mt-1 leading-5">{value}</dd></div>)}
+            {[['Cat safety', acquisitionDraft.catSafety], ['Difficulty', acquisitionDraft.difficulty], ['Suggested size', acquisitionDraft.desiredSpecimenSize], ['Approximate market range', acquisitionDraft.approximatePriceRange], ['Environment fit', acquisitionDraft.environmentSuitability], ['Sensitivities', acquisitionDraft.sensitivities], ['Location needs', acquisitionDraft.locationCharacteristics], ['Location compatibility', acquisitionDraft.locationCompatibility], ['Warnings', acquisitionDraft.warnings], ['Research summary', acquisitionDraft.researchSummary]].filter(([, value]) => value).map(([label, value]) => <div key={label} className="rounded-md border border-stone-200 bg-white/60 p-2"><dt className="text-[0.65rem] font-bold uppercase tracking-wide text-stone-500">{label}</dt><dd className="mt-1 leading-5">{formatTypography(String(value), { mode: label === 'Suggested size' ? 'measurement' : 'prose' })}</dd></div>)}
           </dl>
           {Array.isArray(acquisitionDraft.sources) && acquisitionDraft.sources.length > 0 && <div className="mt-3 flex flex-wrap gap-2">{acquisitionDraft.sources.map((source: string) => <a key={source} href={source} target="_blank" rel="noreferrer" className="text-xs font-semibold text-[#2f6b45] underline">Source</a>)}</div>}
           <div className="mt-3 flex flex-wrap items-center gap-3">

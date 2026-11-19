@@ -1,3 +1,4 @@
+import { formatCultivar, formatTypography } from '@/lib/typography'
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import { dateInputValue, formatDate } from '@/lib/time'
@@ -23,3 +24,13 @@ export function taxonomyLabel(value?: string | null) {
 export function fmtDate(d?: Date | string | null, timezone?: string | null) { return formatDate(d, timezone || undefined) }
 export function dateInput(d?: Date | string | null, timezone?: string | null) { return dateInputValue(d, timezone || undefined) }
 export function money(v?: any) { return v === null || v === undefined || v === '' ? '—' : `$${Number(v).toFixed(2)}` }
+
+/** Presentation only. plantName/acceptedPlantName remain canonical for persistence and exports. */
+export function acceptedPlantDisplayName(p: BotanicalNameInput, options: { includeAuthority?: boolean } = {}) {
+  const core = [p.genus?.trim(), p.hybridNotation?.trim(), p.species?.trim()].filter(Boolean).join(' ')
+  return [core, formatCultivar(p.cultivarName), options.includeAuthority ? p.authority?.trim() : ''].filter(Boolean).join(' ')
+}
+export function plantDisplayName(p: BotanicalNameInput & { provisionalTaxon?: string | null; identificationStatus?: string | null }, options: { includeAuthority?: boolean } = {}) {
+  return p.identificationStatus === 'PROVISIONAL' && p.provisionalTaxon?.trim()
+    ? formatTypography(p.provisionalTaxon, { mode: 'botanical-name' }) : acceptedPlantDisplayName(p, options)
+}

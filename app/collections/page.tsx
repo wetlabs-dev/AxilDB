@@ -1,3 +1,4 @@
+import { formatTypography } from '@/lib/typography'
 import Link from 'next/link'
 import { requestCollection, requestMembership } from '@/app/collection-actions'
 import { AddPanel, Button, Card, Field, LinkButton, Select, TextArea } from '@/components/ui'
@@ -93,7 +94,7 @@ export default async function CollectionsPage({
                   <h3 className="font-serif text-xl font-semibold">{collection.name}</h3>
                   <span className="rounded-full border border-stone-200 bg-white/70 px-2 py-1 text-xs">{collection.visibility.toLowerCase()}</span>
                 </div>
-                <p className="mt-2 text-sm text-stone-600">{collection.description || 'No description yet.'}</p>
+                <p className="mt-2 text-sm text-stone-600">{formatTypography(collection.description) || 'No description yet.'}</p>
                 {membership && <p className="mt-2 text-xs uppercase tracking-[0.14em] text-[#2f6b45]">{membership.status} · {membership.role}</p>}
               </div>
               <div className="mt-auto flex flex-wrap gap-2">

@@ -1,5 +1,5 @@
-
 'use client'
+import { normalizeTypographySearch } from '@/lib/typography'
 import Link from 'next/link'
 import { careFilterPresentation } from '@/lib/care-category-presentation'
 import { CareForecast } from '@/components/CareForecast'
@@ -38,13 +38,13 @@ export function CareQueueView({ collectionSlug, canAct, timezone, filter, search
   const summary = careQueueSummary(allItems, new Date(), timezone)
   const careTypeItems = filterCareQueue(allItems, filter, new Date(), timezone)
   const filteredItems = search
-    ? careTypeItems.filter((item) => `${item.plantId || ''} ${item.plantName || ''} ${item.title} ${item.reason} ${item.locationPath || ''}`.toLowerCase().includes(search.toLowerCase()))
+    ? careTypeItems.filter((item) => normalizeTypographySearch(`${item.plantId || ''} ${item.plantName || ''} ${item.title} ${item.reason} ${item.locationPath || ''}`).toLowerCase().includes(normalizeTypographySearch(search).toLowerCase()))
     : careTypeItems
   const locationFilters = careQueueLocationFilters(filteredItems, locations, grouping)
   const selectedLocation = locations.some((location) => location.id === params.location) ? params.location! : ''
   const selectedLocationIds = selectedLocation ? new Set([selectedLocation, ...descendantLocationIds(selectedLocation, locations)]) : null
   const items = selectedLocationIds ? filteredItems.filter((item) => item.locationId && selectedLocationIds.has(item.locationId)) : filteredItems
-  const renderFiltered = filterCareQueue(authoritativeItems, filter, new Date(), timezone).filter(item => !search || `${item.plantId || ''} ${item.plantName || ''} ${item.title} ${item.reason} ${item.locationPath || ''}`.toLowerCase().includes(search.toLowerCase()))
+  const renderFiltered = filterCareQueue(authoritativeItems, filter, new Date(), timezone).filter(item => !search || normalizeTypographySearch(`${item.plantId || ''} ${item.plantName || ''} ${item.title} ${item.reason} ${item.locationPath || ''}`).toLowerCase().includes(normalizeTypographySearch(search).toLowerCase()))
   const renderItems = selectedLocationIds ? renderFiltered.filter(item => item.locationId && selectedLocationIds.has(item.locationId)) : renderFiltered
   const sections = careQueueLocationSections(renderItems, locations, grouping, locationSort)
   const locationCount = new Set(filteredItems.map((item) => item.locationId).filter(Boolean)).size
@@ -60,7 +60,7 @@ export function CareQueueView({ collectionSlug, canAct, timezone, filter, search
     <div className="space-y-5" data-care-queue-root>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-3xl font-bold">Today&apos;s Care</h2>
+          <h2 className="text-3xl font-bold">Today’s Care</h2>
           <p className="text-sm text-stone-600">{formatDate(new Date(), timezone)} · Calendar-day care, available from local midnight.</p>
         </div>
         <div className="flex flex-wrap items-end justify-end gap-2">

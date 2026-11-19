@@ -1,3 +1,4 @@
+import { formatTypography } from '@/lib/typography'
 import Link from 'next/link'
 import { Droplets, PencilLine, Skull, Sparkles, Sun } from 'lucide-react'
 import {
@@ -110,7 +111,7 @@ function HusbandrySummaryControl({
       <option value="">Clear this field</option>
       {husbandrySummaryChoices[field].map((option) => (
         <option key={option.value} value={option.value}>
-          {option.label} - {option.description}
+          {option.label} - {formatTypography(option.description)}
         </option>
       ))}
     </select>
@@ -136,7 +137,7 @@ export function HusbandryBadges({
         return (
           <span key={`${badge.field}-${badge.label}`} className={cn('inline-flex items-center gap-1.5 rounded-full border px-2 py-1', summaryToneClasses[badge.tone])}>
             <Icon className="h-3.5 w-3.5 shrink-0" />
-            {badge.label}
+            {formatTypography(badge.label)}
           </span>
         )
       })}
@@ -191,8 +192,8 @@ export function HusbandryGuideView({
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="font-serif text-2xl font-semibold">{title}</h3>
-        {sourceLabel && <p className="mt-1 text-sm text-stone-600">{sourceLabel}</p>}
+        <h3 className="font-serif text-2xl font-semibold">{formatTypography(title)}</h3>
+        {sourceLabel && <p className="mt-1 text-sm text-stone-600">{formatTypography(sourceLabel)}</p>}
         {!hasAny && <p className="mt-2 text-sm text-stone-600">No husbandry guide has been added yet.</p>}
       </div>
       <div className="grid gap-3 lg:grid-cols-2">
@@ -266,9 +267,9 @@ export function HusbandryGuideView({
                         </details>
                       )}
                     </dt>
-                    <dd className={cn('text-stone-700', !values?.[field] && 'text-stone-400')}>{values?.[field] || '—'}</dd>
-                    {field === 'repottingInterval' && legacyInterval && legacyInterval !== repottingIntervalLabel && <dd className="text-xs">Preserved legacy guidance: {legacyInterval}</dd>}
-                    {differences.has(field) && baseValues?.[field] && <dd className="text-xs text-stone-500">Inherited: {baseValues[field]}</dd>}
+                    <dd className={cn('text-stone-700', !values?.[field] && 'text-stone-400')}>{formatTypography(values?.[field]) || '—'}</dd>
+                    {field === 'repottingInterval' && legacyInterval && legacyInterval !== repottingIntervalLabel && <dd className="text-xs">Preserved legacy guidance: {formatTypography(legacyInterval)}</dd>}
+                    {differences.has(field) && baseValues?.[field] && <dd className="text-xs text-stone-500">Inherited: {formatTypography(baseValues[field])}</dd>}
                   </div>
                 ))}
               </dl>

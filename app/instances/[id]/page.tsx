@@ -1,3 +1,5 @@
+import { formatTypography } from '@/lib/typography'
+import { plantDisplayName, acceptedPlantDisplayName } from '@/lib/utils'
 import { PlantPhotoUploadForm } from '@/components/PlantPhotoUploadForm'
 import { repottingCadenceLabel } from '@/lib/repotting-label'
 import { InstanceRepotting } from '@/components/Repotting'
@@ -64,7 +66,7 @@ import { sunshineCounts, sunshineKey, sunshineStateForUser } from '@/lib/sunshin
 import { addCalendarDays, formatDateTime, startOfDayInTimeZone } from '@/lib/time'
 import { collectPlantTimelineEvents, getPlantTimelineMetrics } from '@/lib/timeline/plantTimeline'
 import { allowedEventVisibilities } from '@/lib/events/visibility'
-import { acceptedPlantName, dateInput, fmtDate, plantName, plantNeedsIdentification, taxonomyLabel } from '@/lib/utils'
+import { dateInput, fmtDate, plantName, plantNeedsIdentification, taxonomyLabel } from '@/lib/utils'
 import { ensureStarterWorkflowTemplates } from '@/lib/workflows'
 import Link from 'next/link'
 import QRCode from 'qrcode'
@@ -482,11 +484,11 @@ export default async function InstanceDetail({
         {photos.map((p) => (
           <figure key={p.id} id={`photo-${p.id}`} className="scroll-mt-24 overflow-hidden rounded-lg border border-stone-200 bg-white/70">
             <div className="aspect-[4/3] overflow-hidden">
-              <PlantImage src={p} alt={p.caption || 'Plant photo'} />
+              <PlantImage src={p} alt={formatTypography(p.caption) || 'Plant photo'} />
             </div>
             <figcaption className="space-y-3 p-3 text-xs">
               <div>
-                <p className="font-medium">{p.caption || 'Untitled photo'}</p>
+                <p className="font-medium">{formatTypography(p.caption) || 'Untitled photo'}</p>
                 <p className="text-stone-600">
                   {p.isCover ? 'Cover photo' : 'Not cover'} · {p.isType ? 'Type photo' : 'Not type'}
                 </p>
@@ -646,7 +648,7 @@ export default async function InstanceDetail({
               <div key={condition.id} className="rounded-lg border border-stone-200 bg-white/60 p-3 text-sm">
                 <p className="font-medium">{condition.category.replaceAll('_', ' ').toLowerCase()} · {condition.severity.toLowerCase()} · {condition.status.toLowerCase()}</p>
                 <p className="text-xs text-stone-600">Observed {fmtDate(condition.observedAt, timezone)}</p>
-                {condition.notes && <p className="mt-1 whitespace-pre-wrap text-stone-700">{condition.notes}</p>}
+                {condition.notes && <p className="mt-1 whitespace-pre-wrap text-stone-700">{formatTypography(condition.notes)}</p>}
               </div>
             )
           ))}
@@ -656,7 +658,7 @@ export default async function InstanceDetail({
       {canViewTreatmentRecords && <div id="treatments" className="mt-4 border-t border-stone-200 pt-4">
         <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-sm font-semibold">Treatment history</p><p className="text-xs text-stone-600">Plans, applications, safety snapshots, and outcomes for this specimen.</p></div>{canCreateRecords && <div className="flex gap-2"><Link className="rounded-md border border-stone-300 bg-white/70 px-3 py-1.5 text-xs font-semibold" href={collectionPath(collection.slug, `/treatments/apply?plant=${id}`)}>One-off application</Link><Link className="rounded-md bg-[#2f6b45] px-3 py-1.5 text-xs font-semibold text-white" href={collectionPath(collection.slug, `/treatments?plant=${id}`)}>Start plan</Link></div>}</div>
         <div className="mt-3 grid gap-2 md:grid-cols-2">
-          {treatmentPlans.map((plan) => <Link key={plan.id} href={collectionPath(collection.slug, `/treatments/plans/${plan.id}`)} className="rounded-md border border-stone-200 bg-white/60 p-3 text-sm"><p className="font-semibold">{plan.title}</p><p className="text-xs text-stone-600">{labelizeTreatment(plan.status)} · {plan.steps.filter((step) => step.status === 'COMPLETED').length}/{plan.steps.length} steps{plan.condition ? ` · ${labelizeTreatment(plan.condition.category)}` : ''}</p></Link>)}
+          {treatmentPlans.map((plan) => <Link key={plan.id} href={collectionPath(collection.slug, `/treatments/plans/${plan.id}`)} className="rounded-md border border-stone-200 bg-white/60 p-3 text-sm"><p className="font-semibold">{formatTypography(plan.title)}</p><p className="text-xs text-stone-600">{labelizeTreatment(plan.status)} · {plan.steps.filter((step) => step.status === 'COMPLETED').length}/{plan.steps.length} steps{plan.condition ? ` · ${labelizeTreatment(plan.condition.category)}` : ''}</p></Link>)}
           {treatmentApplications.map((application) => <div key={application.id} className="rounded-md border border-stone-200 bg-white/60 p-3 text-sm"><p className="font-semibold">{application.treatmentNameSnapshot}</p><p className="text-xs text-stone-600">Applied {fmtDate(application.appliedAt, timezone)}{application.productNameSnapshot ? ` · ${application.productNameSnapshot}` : ''}</p><p className="mt-1 text-xs">{application.doseAmount != null ? `${application.doseAmount} ${labelizeTreatment(application.doseUnit)}` : 'Dose not recorded'}{application.outcomes[0] ? ` · ${labelizeTreatment(application.outcomes[0].effectiveness)} outcome` : ' · outcome pending'}</p></div>)}
           {treatmentPlans.length === 0 && treatmentApplications.length === 0 && <p className="text-sm text-stone-600">No treatment records yet.</p>}
         </div>
@@ -706,7 +708,7 @@ export default async function InstanceDetail({
                     <ConfirmDeleteButton
                       className="border border-[#9a3f35] bg-white/70 px-2 py-1 text-xs text-[#9a3f35] hover:bg-red-50"
                       title="Delete Green Thumb care note?"
-                      message="This removes the AI care response from this specimen's care history."
+                      message="This removes the AI care response from this specimen’s care history."
                       confirmLabel="Delete note"
                     >
                       Delete
@@ -714,7 +716,7 @@ export default async function InstanceDetail({
                   </form>
                 )}
               </div>
-              {event.notes && <p className="mt-1 whitespace-pre-wrap text-stone-700">{event.notes}</p>}
+              {event.notes && <p className="mt-1 whitespace-pre-wrap text-stone-700">{formatTypography(event.notes)}</p>}
             </div>
           )
         })}
@@ -767,7 +769,7 @@ export default async function InstanceDetail({
       {activeQuarantine ? (
         <div className="mt-4 grid gap-3 lg:grid-cols-2">
           <div className="rounded-lg border border-stone-200 bg-white/60 p-3 text-sm">
-            <p><span className="font-semibold">Reason:</span> {activeQuarantine.reason}</p>
+            <p><span className="font-semibold">Reason:</span> {formatTypography(activeQuarantine.reason)}</p>
             <p><span className="font-semibold">Risk:</span> {activeQuarantine.riskLevel}</p>
             <p><span className="font-semibold">Started:</span> {fmtDate(activeQuarantine.startDate, timezone)}</p>
             <p>
@@ -779,7 +781,7 @@ export default async function InstanceDetail({
               )}
             </p>
             <p><span className="font-semibold">Location:</span> {activeQuarantine.quarantineLocation ? `${activeQuarantine.quarantineLocation.code} · ${activeQuarantine.quarantineLocation.name}` : i.currentLocation ? `${i.currentLocation.code} · ${i.currentLocation.name}` : 'Not set'}</p>
-            {activeQuarantine.notes && <p className="mt-2 whitespace-pre-wrap text-stone-700">{activeQuarantine.notes}</p>}
+            {activeQuarantine.notes && <p className="mt-2 whitespace-pre-wrap text-stone-700">{formatTypography(activeQuarantine.notes)}</p>}
           </div>
 
           {canEditRecords && (
@@ -865,7 +867,7 @@ export default async function InstanceDetail({
           <div className="mt-2 grid gap-2">
             {quarantineHistory.map((entry) => (
               <p key={entry.id} className="rounded-md border border-stone-200 bg-white/60 p-2">
-                {entry.status.toLowerCase()} · {fmtDate(entry.updatedAt, timezone)} · {entry.reason}
+                {entry.status.toLowerCase()} · {fmtDate(entry.updatedAt, timezone)} · {formatTypography(entry.reason)}
               </p>
             ))}
           </div>
@@ -922,7 +924,7 @@ export default async function InstanceDetail({
               </form>
             )}
           </div>
-          <p>{plantName(i.plantDefinition)}</p>
+          <p>{plantDisplayName(i.plantDefinition)}</p>
           <div className="mt-3 flex flex-wrap gap-3 text-sm font-semibold">
             {canEditRecords && <Link className="min-h-11 rounded-md border border-stone-300 px-3 py-2" href={collectionPath(collection.slug, `/instances/${i.id}/edit`)}>Edit Instance</Link>}
             <Link className="min-h-11 rounded-md border border-stone-300 px-3 py-2" href={collectionPath(collection.slug, `/plants/${i.plantDefinitionId}/husbandry`)}>View Plant Definition</Link>
@@ -958,7 +960,7 @@ export default async function InstanceDetail({
           <p className="text-xs font-bold uppercase tracking-[0.15em] text-amber-800">Historical constituent</p>
           <h3 className="mt-1 text-xl font-bold">Merged into {i.mergeConstituent.merge.survivingPlantInstance.plantId}</h3>
           <p className="mt-1 text-sm">This Plant ID and QR code remain valid as an immutable historical record. New care, photos, notes, reminders, and edits belong on the surviving specimen.</p>
-          <p className="mt-2 text-sm text-stone-700">{plantInstanceMergeReasonLabel(i.mergeConstituent.merge.reason)} · {fmtDate(i.mergeConstituent.merge.mergeDate, timezone)}{i.mergeConstituent.merge.notes ? ` · ${i.mergeConstituent.merge.notes}` : ''}</p>
+          <p className="mt-2 text-sm text-stone-700">{plantInstanceMergeReasonLabel(i.mergeConstituent.merge.reason)} · {fmtDate(i.mergeConstituent.merge.mergeDate, timezone)}{i.mergeConstituent.merge.notes ? ` · ${formatTypography(i.mergeConstituent.merge.notes)}` : ''}</p>
           <Link className="mt-3 inline-block rounded-md bg-[#2f6b45] px-3 py-2 text-sm font-semibold text-white" href={collectionPath(collection.slug, `/instances/${i.mergeConstituent.merge.survivingPlantInstanceId}`)}>Open surviving specimen</Link>
         </Card>
       )}
@@ -971,7 +973,7 @@ export default async function InstanceDetail({
             {i.survivingMerges.map((merge) => (
               <div key={merge.id} className="rounded-md border border-stone-200 bg-white/55 p-3">
                 <p className="text-sm font-semibold">{plantInstanceMergeReasonLabel(merge.reason)} · {fmtDate(merge.mergeDate, timezone)}</p>
-                {merge.notes && <p className="text-sm text-stone-700">{merge.notes}</p>}
+                {merge.notes && <p className="text-sm text-stone-700">{formatTypography(merge.notes)}</p>}
                 <div className="mt-2 flex flex-wrap gap-2">
                   {merge.constituents.map(({ plantInstance }) => <Link key={plantInstance.id} className="rounded-full border border-[#c7d8bd] bg-[#f5fbf0] px-3 py-1 text-xs font-semibold text-[#2f6b45] underline" href={collectionPath(collection.slug, `/instances/${plantInstance.id}`)}>{plantInstance.plantId}</Link>)}
                 </div>
@@ -997,13 +999,13 @@ export default async function InstanceDetail({
       <div className="grid gap-4 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.35fr)]">
         <Card>
           <h3 className="font-bold">Identity</h3>
-          <p className="font-medium">{plantName(i.plantDefinition)}</p>
+          <p className="font-medium">{plantDisplayName(i.plantDefinition)}</p>
           <p>Confidence: {taxonomyLabel(i.plantDefinition.confidence)}</p>
           {plantNeedsIdentification(i.plantDefinition) && (
             <div className="my-2 rounded-md border border-amber-300 bg-amber-50 p-2 text-amber-950">
               <p className="font-semibold">Needs identification review</p>
-              <p>Provisional identity: {plantName(i.plantDefinition)}</p>
-              <p>Working placement: {acceptedPlantName(i.plantDefinition)}</p>
+              <p>Provisional identity: {plantDisplayName(i.plantDefinition)}</p>
+              <p>Working placement: {acceptedPlantDisplayName(i.plantDefinition)}</p>
             </div>
           )}
           <p>Author citation: {i.plantDefinition.authority || '—'}</p>
@@ -1034,7 +1036,7 @@ export default async function InstanceDetail({
               <p className="font-medium">Aliases</p>
               {i.plantDefinition.aliases.map((alias) => (
                 <p key={alias.id}>
-                  {alias.name} · {taxonomyLabel(alias.aliasType)} · {taxonomyLabel(alias.confidence)}
+                  {formatTypography(alias.name)} · {taxonomyLabel(alias.aliasType)} · {taxonomyLabel(alias.confidence)}
                 </p>
               ))}
             </div>
@@ -1065,8 +1067,8 @@ export default async function InstanceDetail({
             <Link className="text-sm font-semibold text-[#2f6b45] underline" href={collectionPath(collection.slug, '/substrates')}>Substrate library</Link>
           </div>
           {i.currentSubstrate?.recipeVersion ? <SubstrateCompositionBar className="mt-2 max-w-3xl" items={i.currentSubstrate.recipeVersion.components} mode="compact" /> : i.currentSubstrate && <SubstrateStateStrip mode={i.currentSubstrate.substrateMode} label={substrateAssignmentLabel(i.currentSubstrate)} />}
-          {i.currentSubstrate?.receivedSubstrateDescription && <p className="mt-2 whitespace-pre-wrap text-sm text-stone-700">{i.currentSubstrate.receivedSubstrateDescription}</p>}
-          {i.currentSubstrate?.notes && <p className="mt-2 whitespace-pre-wrap text-sm text-stone-600">{i.currentSubstrate.notes}</p>}
+          {i.currentSubstrate?.receivedSubstrateDescription && <p className="mt-2 whitespace-pre-wrap text-sm text-stone-700">{formatTypography(i.currentSubstrate.receivedSubstrateDescription)}</p>}
+          {i.currentSubstrate?.notes && <p className="mt-2 whitespace-pre-wrap text-sm text-stone-600">{formatTypography(i.currentSubstrate.notes)}</p>}
           {canCreateRecords && <details className="mt-3 rounded-md border border-stone-200 bg-white/55">
             <summary className="cursor-pointer p-3 text-sm font-semibold">Record substrate change</summary>
             <form action={assignPlantSubstrate} className="grid gap-3 border-t border-stone-200 p-3 sm:grid-cols-2">
@@ -1086,7 +1088,7 @@ export default async function InstanceDetail({
             <summary className="cursor-pointer p-3 text-sm font-semibold">Substrate history ({i.substrateHistory.length})</summary>
             <div className="grid gap-2 border-t border-stone-200 p-3">
               {i.substrateHistory.length === 0 && <p className="text-sm text-stone-600">No substrate history has been recorded.</p>}
-              {i.substrateHistory.map((entry) => <article key={entry.id} className="rounded-md border border-stone-200 bg-white/70 p-3 text-sm"><p className="font-semibold">{entry.newMode === 'RECIPE' ? `${entry.newRecipeVersion?.recipe.name || 'Recipe'} v${entry.newRecipeVersion?.versionNumber || '?'}` : substrateLabel(entry.newMode)}</p><p className="text-stone-600">{fmtDate(entry.changedAt, timezone)}{entry.reason ? ` · ${entry.reason}` : ''}</p>{entry.newRecipeVersion ? <SubstrateCompositionBar className="mt-2" items={entry.newRecipeVersion.components} mode="tiny" /> : <SubstrateStateStrip mode={entry.newMode} />}{entry.newDescription && <p className="mt-1 whitespace-pre-wrap text-stone-700">{entry.newDescription}</p>}{entry.notes && <p className="mt-1 whitespace-pre-wrap text-stone-600">{entry.notes}</p>}</article>)}
+              {i.substrateHistory.map((entry) => <article key={entry.id} className="rounded-md border border-stone-200 bg-white/70 p-3 text-sm"><p className="font-semibold">{entry.newMode === 'RECIPE' ? `${entry.newRecipeVersion?.recipe.name || 'Recipe'} v${entry.newRecipeVersion?.versionNumber || '?'}` : substrateLabel(entry.newMode)}</p><p className="text-stone-600">{fmtDate(entry.changedAt, timezone)}{entry.reason ? ` · ${formatTypography(entry.reason)}` : ''}</p>{entry.newRecipeVersion ? <SubstrateCompositionBar className="mt-2" items={entry.newRecipeVersion.components} mode="tiny" /> : <SubstrateStateStrip mode={entry.newMode} />}{entry.newDescription && <p className="mt-1 whitespace-pre-wrap text-stone-700">{formatTypography(entry.newDescription)}</p>}{entry.notes && <p className="mt-1 whitespace-pre-wrap text-stone-600">{formatTypography(entry.notes)}</p>}</article>)}
             </div>
           </details>
         </Card>
@@ -1120,7 +1122,7 @@ export default async function InstanceDetail({
               {activeWorkflowRuns.length === 0 && <p className="text-sm text-stone-600">No active workflow runs include this plant.</p>}
               {activeWorkflowRuns.map((run) => (
                 <Link key={run.id} href={collectionPath(collection.slug, `/workflows/runs/${run.id}`)} className="rounded-lg border border-stone-200 bg-white/55 p-3 text-sm underline">
-                  {run.title} · {run.steps.filter((step) => step.status !== 'PENDING').length}/{run.steps.length} steps · assigned to {run.assignedTo?.email || 'no one'}
+                  {formatTypography(run.title)} · {run.steps.filter((step) => step.status !== 'PENDING').length}/{run.steps.length} steps · assigned to {run.assignedTo?.email || 'no one'}
                 </Link>
               ))}
             </div>
@@ -1134,11 +1136,11 @@ export default async function InstanceDetail({
           {baseHusbandryGuide ? (
             <>
               <p className="mt-1 text-sm text-stone-600">
-                {sourceHusbandryGuide ? `Inherited from ${plantName(sourceHusbandryGuide.plantDefinition)}.` : 'Inherited from this plant definition.'}
+                {sourceHusbandryGuide ? `Inherited from ${plantDisplayName(sourceHusbandryGuide.plantDefinition)}.` : 'Inherited from this plant definition.'}
                 {i.husbandryOverride && hasHusbandryData(i.husbandryOverride as any) ? ' Local adjustments are applied.' : ''}
               </p>
               <HusbandryBadges values={effectiveHusbandry} />
-              {effectiveHusbandry.summaryCare && <p className="mt-2 text-sm text-stone-700">{effectiveHusbandry.summaryCare}</p>}
+              {effectiveHusbandry.summaryCare && <p className="mt-2 text-sm text-stone-700">{formatTypography(effectiveHusbandry.summaryCare)}</p>}
               <div id="environment-compatibility" className="mt-4 grid gap-3">
                 {locationCompatibility ? (
                   <PlantLocationCompatibilityPanel result={locationCompatibility} unitPreferences={unitPreferences} />
@@ -1224,7 +1226,7 @@ export default async function InstanceDetail({
         <Card className="xl:order-3">
           <h3 className="font-bold">Sport / mutation</h3>
           <p>Status: {i.sportStatus}</p>
-          <p className="text-sm text-stone-700">{i.sportDescription || 'No sport observations yet.'}</p>
+          <p className="text-sm text-stone-700">{formatTypography(i.sportDescription) || 'No sport observations yet.'}</p>
           {canCreateInCollection(user, context) && i.sportStatus === 'NONE' && (
             <form action={markSportCandidate} className="mt-4 grid gap-2 rounded-lg border border-stone-200 bg-white/60 p-3">
               <input type="hidden" name="id" value={id} />
@@ -1276,7 +1278,7 @@ export default async function InstanceDetail({
                 <p className="text-xs text-stone-600">
                   {relationship.role.replaceAll('_', ' ').toLowerCase()} · {relationship.event.method} · {fmtDate(relationship.event.date, timezone)}
                 </p>
-                <p className="text-xs text-stone-700">{plantName(relationship.plant.plantDefinition)}</p>
+                <p className="text-xs text-stone-700">{plantDisplayName(relationship.plant.plantDefinition)}</p>
               </div>
             ))}
           </div>
@@ -1294,7 +1296,7 @@ export default async function InstanceDetail({
                 <p className="text-xs text-stone-600">
                   {relationship.event.method} · {fmtDate(relationship.event.date, timezone)}
                 </p>
-                <p className="text-xs text-stone-700">{plantName(relationship.plant.plantDefinition)}</p>
+                <p className="text-xs text-stone-700">{plantDisplayName(relationship.plant.plantDefinition)}</p>
               </div>
             ))}
           </div>
@@ -1319,7 +1321,7 @@ export default async function InstanceDetail({
             <p className="mt-3 border-t pt-3 text-sm" key={n.id}>
               {formatDateTime(n.createdAt, timezone)}
               <br />
-              {n.note}
+              {formatTypography(n.note)}
             </p>
           ))}
         </Card>
@@ -1362,11 +1364,11 @@ export default async function InstanceDetail({
             {instanceReminders.length === 0 && <p className="text-sm text-stone-600">No reminders for this plant yet.</p>}
             {instanceReminders.map((reminder) => (
               <div key={reminder.id} className="rounded-lg border border-stone-200 bg-white/60 p-3 text-sm">
-                <p className="font-medium">{reminder.title}</p>
+                <p className="font-medium">{formatTypography(reminder.title)}</p>
                 <p className="text-stone-600">
                   {reminderCategoryLabel(reminder.category)} · Due {fmtDate(reminder.nextSendAt || reminder.dueAt, timezone)} · {recurrenceLabel(reminder.rrule)}
                 </p>
-                {reminder.body && <p className="mt-1 whitespace-pre-wrap text-stone-700">{reminder.body}</p>}
+                {reminder.body && <p className="mt-1 whitespace-pre-wrap text-stone-700">{formatTypography(reminder.body)}</p>}
                 <div className="mt-3 flex flex-wrap gap-2">
                   {!reminder.completedAt && !reminder.pausedAt && (
                     <>
@@ -1444,7 +1446,7 @@ export default async function InstanceDetail({
                   </p>
 
                   {b.firstBloom && <p className="mt-2 text-sm font-medium">First bloom</p>}
-                  {b.notes && <p className="mt-2 text-sm whitespace-pre-wrap">{b.notes}</p>}
+                  {b.notes && <p className="mt-2 text-sm whitespace-pre-wrap">{formatTypography(b.notes)}</p>}
 
                   {canEditInCollection(user, context) && !b.peakBloomDate && (
                     <form action={updateBloomPeak} className="mt-4 grid gap-2 rounded-xl ax-surface-inset p-3">
@@ -1506,7 +1508,7 @@ export default async function InstanceDetail({
                         <div className="mt-3 space-y-2 border-t border-stone-200 pt-3">
                           {(remindersByBloomId[b.id] || []).map((reminder) => (
                             <div key={reminder.id} className="text-sm">
-                              <p className="font-medium">{reminder.title}</p>
+                              <p className="font-medium">{formatTypography(reminder.title)}</p>
                               <p className="text-stone-600">
                                 Due {fmtDate(reminder.nextSendAt || reminder.dueAt, timezone)} · {recurrenceLabel(reminder.rrule)}
                               </p>
@@ -1522,10 +1524,10 @@ export default async function InstanceDetail({
                       {(photosByBloomId[b.id] || []).map((p) => (
                         <figure key={p.id} className="overflow-hidden rounded-xl border border-stone-200 bg-white/70">
                           <div className="aspect-[4/3] overflow-hidden">
-                            <PlantImage src={p} alt={p.caption || 'Bloom photo'} />
+                            <PlantImage src={p} alt={formatTypography(p.caption) || 'Bloom photo'} />
                           </div>
                           <figcaption className="space-y-2 p-2 text-xs">
-                            <p>{p.caption || 'Untitled bloom photo'}</p>
+                            <p>{formatTypography(p.caption) || 'Untitled bloom photo'}</p>
                             {canEditInCollection(user, context) && (
                               <>
                                 <details className="group rounded-lg border border-stone-200 bg-white/60">

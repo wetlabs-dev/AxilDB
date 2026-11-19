@@ -1,3 +1,4 @@
+import { formatTypography } from '@/lib/typography'
 import { populateDemoData } from '@/app/actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { Card, LinkButton } from '@/components/ui'
@@ -85,7 +86,7 @@ export default async function AdminToolsPage() {
         {demoBatches.length === 0 && <p className="mt-2 text-sm text-stone-600">No demo batches have been created yet.</p>}
         {demoBatches.map((batch) => (
           <p key={batch.id} className="mt-2 border-t border-stone-200 pt-2 text-sm">
-            {formatDateTime(batch.createdAt)} · {batch.summary}
+            {formatDateTime(batch.createdAt)} · {formatTypography(batch.summary)}
           </p>
         ))}
       </Card>

@@ -1,3 +1,5 @@
+import { normalizeTypographySearch } from '@/lib/typography'
+import { formatTypography } from '@/lib/typography'
 import { Button, Card, DangerButton, Field, Select, TextArea } from '@/components/ui'
 import { getCurrentUser } from '@/lib/auth'
 import { canEditInCollection, canManageCollection, requireCollectionViewer } from '@/lib/collections'
@@ -22,7 +24,7 @@ import {
 
 const option = (name: string) => <option key={name} value={name}>{provenanceLabel(name)}</option>
 const aliases = (value: unknown) => Array.isArray(value) ? value.map(String) : []
-const searchable = (...values: unknown[]) => values.flatMap((item) => Array.isArray(item) ? item : [item]).filter(Boolean).join(' ').toLowerCase()
+const searchable = (...values: unknown[]) => normalizeTypographySearch(values.flatMap((item) => Array.isArray(item) ? item : [item]).filter(Boolean).join(' ')).toLowerCase()
 
 export default async function ProvenancePage({ searchParams }: { searchParams: Promise<{ q?: string; status?: string }> }) {
   const context = await requireCollectionViewer()
@@ -48,8 +50,8 @@ export default async function ProvenancePage({ searchParams }: { searchParams: P
       where: { collectionId: collection.id, active: true }, include: { distributor: true, _count: { select: { acquisitions: true, observations: true, acquisitionBatches: true } } }, orderBy: { name: 'asc' },
     }),
   ])
-  const sources = sourceRows.filter((source) => !q || searchable(source.name, source.websiteUrl, source.locality, source.region, source.country, aliases(source.aliasesJson)).includes(q))
-  const sellers = sellerRows.filter((seller) => !q || searchable(seller.name, seller.websiteUrl, seller.region, seller.country, aliases(seller.aliasesJson), seller.storefronts.map((channel) => `${channel.handleOrName} ${channel.profileUrl || ''} ${channel.salesChannelType?.name || ''}`)).includes(q))
+  const sources = sourceRows.filter((source) => !q || searchable(source.name, source.websiteUrl, source.locality, source.region, source.country, aliases(source.aliasesJson)).includes(normalizeTypographySearch(q)))
+  const sellers = sellerRows.filter((seller) => !q || searchable(seller.name, seller.websiteUrl, seller.region, seller.country, aliases(seller.aliasesJson), seller.storefronts.map((channel) => `${channel.handleOrName} ${channel.profileUrl || ''} ${channel.salesChannelType?.name || ''}`)).includes(normalizeTypographySearch(q)))
   const activeSources = sourceRows.filter((item) => item.active)
   const activeSellers = sellerRows.filter((item) => item.active)
   const channels = sellerRows.flatMap((seller) => seller.storefronts.map((channel) => ({ ...channel, name: `${seller.name} · ${channel.handleOrName}` })))
@@ -93,7 +95,7 @@ export default async function ProvenancePage({ searchParams }: { searchParams: P
     <section className="space-y-3">
       <div><h3 className="font-serif text-2xl font-semibold">Sources</h3><p className="text-sm text-stone-600">Breeders, originators, growers, propagators, importers, and other upstream sources.</p></div>
       {canEdit && <details className="rounded-lg border border-stone-200 p-3"><summary className="cursor-pointer font-semibold text-[#2f6b45]">Add source</summary><SourceForm collectionSlug={collection.slug} /></details>}
-      <div className="grid gap-3 lg:grid-cols-2">{sources.map((source) => <Card key={source.id} className={!source.active ? 'opacity-70' : ''}><h4 className="font-semibold">{source.name}</h4><p className="text-xs text-stone-600">{provenanceLabel(source.sourceType)} · {source._count.acquisitions} acquisition link(s){!source.active ? ' · archived' : ''}</p>{source.description && <p className="mt-2 text-sm">{source.description}</p>}{canEdit && <details className="mt-3"><summary className="cursor-pointer text-sm font-semibold text-[#2f6b45]">Edit source</summary><SourceForm collectionSlug={collection.slug} source={source} /><form action={toggleSourceArchive} className="mt-2"><input type="hidden" name="collectionSlug" value={collection.slug} /><input type="hidden" name="id" value={source.id} /><Button>{source.active ? 'Archive source' : 'Restore source'}</Button></form>{canManage && source._count.acquisitions === 0 && <DeleteForm collectionSlug={collection.slug} id={source.id} recordType="SOURCE" />}</details>}</Card>)}</div>
+      <div className="grid gap-3 lg:grid-cols-2">{sources.map((source) => <Card key={source.id} className={!source.active ? 'opacity-70' : ''}><h4 className="font-semibold">{source.name}</h4><p className="text-xs text-stone-600">{provenanceLabel(source.sourceType)} · {source._count.acquisitions} acquisition link(s){!source.active ? ' · archived' : ''}</p>{source.description && <p className="mt-2 text-sm">{formatTypography(source.description)}</p>}{canEdit && <details className="mt-3"><summary className="cursor-pointer text-sm font-semibold text-[#2f6b45]">Edit source</summary><SourceForm collectionSlug={collection.slug} source={source} /><form action={toggleSourceArchive} className="mt-2"><input type="hidden" name="collectionSlug" value={collection.slug} /><input type="hidden" name="id" value={source.id} /><Button>{source.active ? 'Archive source' : 'Restore source'}</Button></form>{canManage && source._count.acquisitions === 0 && <DeleteForm collectionSlug={collection.slug} id={source.id} recordType="SOURCE" />}</details>}</Card>)}</div>
     </section>
 
     {canManage && <section className="space-y-3"><div><h3 className="font-serif text-2xl font-semibold">Sales Channel Types</h3><p className="text-sm text-stone-600">Reusable labels for websites, marketplaces, stores, nurseries, shows, and custom channels.</p></div><Card><div className="flex flex-wrap gap-2">{channelTypes.map((type) => <span key={type.id} className="rounded-full border border-[#c7d8bd] bg-[#edf3e6] px-3 py-1 text-sm">{type.name} · {type._count.channels}{!type.active ? ' · archived' : ''}</span>)}</div><form action={saveSalesChannelType} className="mt-4 flex flex-wrap items-end gap-2"><input type="hidden" name="collectionSlug" value={collection.slug} /><Field label="Custom channel type" name="name" required /><Button>Add type</Button></form>{channelTypes.filter((type) => !type.isBuiltIn).map((type) => <form key={type.id} action={toggleSalesChannelTypeArchive} className="mt-2 inline-block pr-2"><input type="hidden" name="collectionSlug" value={collection.slug} /><input type="hidden" name="id" value={type.id} /><button className="text-xs font-semibold text-[#2f6b45] underline">{type.active ? `Archive ${type.name}` : `Restore ${type.name}`}</button></form>)}</Card></section>}

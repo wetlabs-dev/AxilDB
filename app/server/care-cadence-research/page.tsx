@@ -1,3 +1,5 @@
+import { formatTypography } from '@/lib/typography'
+import { plantDisplayName } from '@/lib/utils'
 import { CalibrationEvidence } from '@/components/ObservedCare'
 import { isActionableCadenceProposal, needsCadenceAttention } from '@/lib/cadence-review'
 import { notFound } from 'next/navigation'
@@ -167,7 +169,7 @@ export default async function CadenceResearchPage({
           · {p.researchedAt.toISOString().slice(0, 10)}
           {p.model && ` · ${p.model}`}
         </p>
-        <p>{p.rationale}</p>
+        <p>{formatTypography(p.rationale)}</p>
         <div className="flex flex-wrap gap-3">
           {(Array.isArray(p.sourceReferences) ? p.sourceReferences : []).map(
             (r: any, i) =>
@@ -300,7 +302,7 @@ export default async function CadenceResearchPage({
                 className="flex flex-wrap gap-3 rounded-lg border p-3"
               >
                 <span>
-                  {plantName(
+                  {plantDisplayName(
                     definitions.find((d) => d.id === j.plantDefinitionId) || {
                       genus: 'Deleted definition',
                     }
@@ -309,7 +311,7 @@ export default async function CadenceResearchPage({
                 </span>
                 <span>{j.status === 'COMPLETED' && all.some(p => p.jobId === j.id)
                   ? `${all.filter(p => p.jobId === j.id).length} research outcomes: ${all.filter(p => p.jobId === j.id && ['RECOMMENDED', 'NOT_APPLICABLE'].includes(p.applicability)).length} interval/N/A recommendations; ${all.filter(p => p.jobId === j.id && !['RECOMMENDED', 'NOT_APPLICABLE'].includes(p.applicability)).length} unresolved findings. See Review for current items and History for previous outcomes.`
-                  : j.resultSummary || j.blockingReason}</span>
+                  : formatTypography(j.resultSummary) || j.blockingReason}</span>
                 <form action={manageCadenceJob}>
                   <input type="hidden" name="id" value={j.id} />
                   {['WAITING_FOR_HUMAN', 'CANCELLED', 'EXPIRED'].includes(
@@ -346,7 +348,7 @@ export default async function CadenceResearchPage({
                 <option value="">Choose definition</option>
                 {enabled.map((d) => (
                   <option value={d.id} key={d.id}>
-                    {plantName(d)}
+                    {plantDisplayName(d)}
                   </option>
                 ))}
               </select>
@@ -367,7 +369,7 @@ export default async function CadenceResearchPage({
                 <option value="">All</option>
                 {definitions.map((d) => (
                   <option key={d.id} value={d.id}>
-                    {plantName(d)}
+                    {plantDisplayName(d)}
                   </option>
                 ))}
               </select>
@@ -435,7 +437,7 @@ export default async function CadenceResearchPage({
                 <tbody>
                   {rows.map((p) => (
                     <tr key={p.id}>
-                      <td className="p-2">{plantName(p.definition)}</td>
+                      <td className="p-2">{plantDisplayName(p.definition)}</td>
                       <td>{p.activity.replaceAll('_', ' ')}</td>
                       <td>
                         {p.applicability === 'NOT_APPLICABLE'
@@ -471,10 +473,10 @@ export default async function CadenceResearchPage({
                           `/plants/${d.id}/husbandry`
                         )}
                       >
-                        {plantName(d)}
+                        {plantDisplayName(d)}
                       </Link>
                     ) : (
-                      plantName(d)
+                      plantDisplayName(d)
                     )}
                   </h2>
                   {rows

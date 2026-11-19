@@ -1,4 +1,5 @@
 'use client'
+import { normalizeTypographySearch } from '@/lib/typography'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Search } from 'lucide-react'
@@ -29,7 +30,7 @@ export function PlantTagPicker({ tags, selectedIds = [] }: { tags: PickerTag[]; 
     window.addEventListener('axildb:add-plant-tags', listener)
     return () => window.removeEventListener('axildb:add-plant-tags', listener)
   }, [])
-  const visible = useMemo(() => availableTags.filter((tag) => `${tag.name} ${tag.description || ''} ${tag.category || ''}`.toLowerCase().includes(query.toLowerCase())), [query, availableTags])
+  const visible = useMemo(() => availableTags.filter((tag) => normalizeTypographySearch(`${tag.name} ${tag.description || ''} ${tag.category || ''}`).toLowerCase().includes(normalizeTypographySearch(query).toLowerCase())), [query, availableTags])
   const grouped = visible.reduce<Map<string, PickerTag[]>>((groups, tag) => {
     const category = tagCategoryLabel(tag.category)
     groups.set(category, [...(groups.get(category) || []), tag])

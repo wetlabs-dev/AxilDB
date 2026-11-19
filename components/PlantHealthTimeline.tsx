@@ -1,5 +1,6 @@
 'use client'
 
+import { formatTypography } from '@/lib/typography'
 import { PlantImage } from '@/components/PlantImage'
 import { PlantIdPreviewLink } from '@/components/PlantIdPreviewLink'
 import { Card } from '@/components/ui'
@@ -130,7 +131,7 @@ function EventDetails({
           <PlantIdPreviewLink key={`${link.id}-${index}`} collectionSlug={collectionSlug} plantId={link.plantId} href={link.href}>
             {link.plantId}
           </PlantIdPreviewLink>
-        ) : part
+        ) : formatTypography(part)
       })
     : event.summary
   const content = (
@@ -142,9 +143,9 @@ function EventDetails({
           </div>
         )}
         <div className="min-w-0">
-          <p className="font-semibold text-[var(--ax-heading)]">{event.title}</p>
+          <p className="font-semibold text-[var(--ax-heading)]">{formatTypography(event.title)}</p>
           <p className="text-xs text-[var(--ax-muted)]">{fmtDate(event.date, timezone)} · {event.category}</p>
-          <p className="mt-1 text-sm text-[var(--ax-text)]">{summary}</p>
+          <p className="mt-1 text-sm text-[var(--ax-text)]">{typeof summary === 'string' ? formatTypography(summary) : summary}</p>
           {(event.status || event.severity) && (
             <p className="mt-1 text-xs text-[var(--ax-muted)]">
               {[event.severity, event.status].filter(Boolean).join(' · ')}
@@ -239,10 +240,10 @@ export function PlantHealthTimeline({
                     isOpen && 'ring-2 ring-[var(--ax-focus)]',
                     styles.dot,
                   )}
-                  title={`${event.title} · ${fmtDate(event.date, timezone)}`}
+                  title={`${formatTypography(event.title)} · ${fmtDate(event.date, timezone)}`}
                 >
                   <span aria-hidden="true">{event.icon}</span>
-                  <span className="sr-only">{event.title}</span>
+                  <span className="sr-only">{formatTypography(event.title)}</span>
                 </button>
                 {isOpen && (
                   <div

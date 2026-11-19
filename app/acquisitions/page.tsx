@@ -1,3 +1,5 @@
+import { formatTypography } from '@/lib/typography'
+import { plantDisplayName, acceptedPlantDisplayName } from '@/lib/utils'
 import Link from 'next/link'
 import {
   createAcquisitionResearchEntry,
@@ -19,7 +21,7 @@ import { locationPath } from '@/lib/locations'
 import { evaluatePlantLocationCompatibility, getEffectiveLocationEnvironment, getEffectivePlantEnvironmentRequirements } from '@/lib/location-compatibility'
 import { prisma } from '@/lib/prisma'
 import { formatDate } from '@/lib/time'
-import { acceptedPlantName, cn, plantName, plantNeedsIdentification } from '@/lib/utils'
+import { cn, plantName, plantNeedsIdentification } from '@/lib/utils'
 import { getCurrentUser } from '@/lib/auth'
 import { acquisitionProvenanceDisplay, sourceChainDisplay } from '@/lib/provenance'
 import { getUserUnitPreferences } from '@/lib/units'
@@ -247,7 +249,7 @@ export default async function AcquisitionPipelinePage({
         <h3 className="font-serif text-xl font-semibold">Purchase History</h3>
         <p className="mt-1 text-sm text-stone-600">Canonical acquisition records are kept here; wishlist and research tools below are planning aids.</p>
         <div className="mt-3 grid gap-2 lg:grid-cols-2">
-          {purchaseHistory.map((record) => <article key={record.id} className="rounded-lg border border-stone-200 bg-white/50 p-3 text-sm"><p className="text-xs text-stone-500">{formatDate(record.acquiredAt)} · {record.quantity} specimen{record.quantity === 1 ? '' : 's'}</p><h4 className="font-semibold">{plantName(record.plantDefinition)}</h4><p>{record.seller?.name || 'Seller unknown'}{record.sellerStorefront ? ` · ${record.sellerStorefront.handleOrName}` : ''} · {money(record.price, record.currency)}</p><p className="text-xs text-stone-600">Sources: {sourceChainDisplay(record.sources)}</p>{record.plantInstances.length > 0 && <div className="mt-2 flex flex-wrap gap-2">{record.plantInstances.map(({ plantInstance }) => <Link key={plantInstance.id} className="font-mono text-xs font-semibold text-[#2f6b45] underline" href={collectionPath(collection.slug, `/instances/${plantInstance.id}/acquisition`)}>{plantInstance.plantId}</Link>)}</div>}</article>)}
+          {purchaseHistory.map((record) => <article key={record.id} className="rounded-lg border border-stone-200 bg-white/50 p-3 text-sm"><p className="text-xs text-stone-500">{formatDate(record.acquiredAt)} · {record.quantity} specimen{record.quantity === 1 ? '' : 's'}</p><h4 className="font-semibold">{plantDisplayName(record.plantDefinition)}</h4><p>{record.seller?.name || 'Seller unknown'}{record.sellerStorefront ? ` · ${record.sellerStorefront.handleOrName}` : ''} · {money(record.price, record.currency)}</p><p className="text-xs text-stone-600">Sources: {sourceChainDisplay(record.sources)}</p>{record.plantInstances.length > 0 && <div className="mt-2 flex flex-wrap gap-2">{record.plantInstances.map(({ plantInstance }) => <Link key={plantInstance.id} className="font-mono text-xs font-semibold text-[#2f6b45] underline" href={collectionPath(collection.slug, `/instances/${plantInstance.id}/acquisition`)}>{plantInstance.plantId}</Link>)}</div>}</article>)}
           {!purchaseHistory.length && <p className="text-sm text-stone-600">No purchases recorded yet.</p>}
         </div>
       </Card>
@@ -257,7 +259,7 @@ export default async function AcquisitionPipelinePage({
           <form action={createAcquisitionTarget} className="grid gap-3 md:grid-cols-4">
             <input type="hidden" name="collectionSlug" value={collection.slug} />
             <Field label="Genus" help="Required unless you provide a provisional taxon." name="genus" />
-            <Field label="Species" help="Species epithet. Leave blank when the accepted horticultural name intentionally omits species (for example, Begonia 'Looking Glass'). Use sp. only when the species is genuinely unknown." name="species" autoCapitalize="none" />
+            <Field label="Species" help="Species epithet. Leave blank when the accepted horticultural name intentionally omits species (for example, Begonia ‘Looking Glass’). Use sp. only when the species is genuinely unknown." name="species" autoCapitalize="none" />
             <Field label="Cultivar" name="cultivarName" />
             <Field label="Provisional / working taxon" help="Use an unresolved seller name or suspected identity. It will be displayed prominently and marked for identification review." name="provisionalTaxon" />
             <Select label="Status" name="acquisitionStatus" defaultValue="WISHLIST">
@@ -266,7 +268,7 @@ export default async function AcquisitionPipelinePage({
             <Select label="Priority" name="acquisitionPriority" defaultValue="3">
               {[5, 4, 3, 2, 1].map((value) => <option key={value} value={value}>{stars(value)} {value}</option>)}
             </Select>
-            <Field label="Desired size" name="desiredSpecimenSize" placeholder={'4", plug, mature'} />
+            <Field label="Desired size" name="desiredSpecimenSize" placeholder="4″, plug, mature" />
             <Field label="Ideal price" name="idealPurchasePrice" type="number" step="0.01" />
             <Field label="Maximum price" name="maximumPurchasePrice" type="number" step="0.01" />
             <Select label="Desired location" name="desiredLocationId" defaultValue="" wrapperClassName="md:col-span-2">
@@ -315,8 +317,8 @@ export default async function AcquisitionPipelinePage({
                 )}
               >
                 <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#2f6b45]">{statusLabel(definition.acquisitionStatus)}</p>
-                <h3 className="mt-1 font-serif text-xl font-semibold leading-tight">{plantName(definition)}</h3>
-                {plantNeedsIdentification(definition) && <p className="mt-1 text-xs font-semibold text-amber-800">Needs identification review · working placement {acceptedPlantName(definition)}</p>}
+                <h3 className="mt-1 font-serif text-xl font-semibold leading-tight">{plantDisplayName(definition)}</h3>
+                {plantNeedsIdentification(definition) && <p className="mt-1 text-xs font-semibold text-amber-800">Needs identification review · working placement {acceptedPlantDisplayName(definition)}</p>}
                 <p className="mt-1 font-mono text-xs text-[#2f6b45]">{stars(definition.acquisitionPriority)}</p>
                 <p className="mt-2 text-xs text-stone-600">
                   {definition.instances.length ? `Already owned (${definition.instances.length})` : 'Not yet owned'}
@@ -337,21 +339,21 @@ export default async function AcquisitionPipelinePage({
               <div className="grid gap-4 lg:grid-cols-[14rem_1fr]">
                 <div className="overflow-hidden rounded-lg border border-stone-200 bg-white/60">
                   <div className="aspect-[4/3]">
-                    <PlantImage src={selectedPhoto} alt={plantName(selected)} />
+                    <PlantImage src={selectedPhoto} alt={plantDisplayName(selected)} />
                   </div>
                 </div>
                 <div>
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#2f6b45]">{statusLabel(selected.acquisitionStatus)} · {stars(selected.acquisitionPriority)}</p>
-                      <h3 className="font-serif text-3xl font-semibold">{plantName(selected)}</h3>
-                      {plantNeedsIdentification(selected) && <p className="mt-1 text-sm font-semibold text-amber-800">Needs identification review · working placement {acceptedPlantName(selected)}</p>}
+                      <h3 className="font-serif text-3xl font-semibold">{plantDisplayName(selected)}</h3>
+                      {plantNeedsIdentification(selected) && <p className="mt-1 text-sm font-semibold text-amber-800">Needs identification review · working placement {acceptedPlantDisplayName(selected)}</p>}
                       <p className="mt-1 text-sm text-stone-600">{ownedCount ? `Already owned (${ownedCount} active specimen${ownedCount === 1 ? '' : 's'})` : 'Not yet owned'}</p>
                     </div>
                     <LinkButton href={collectionPath(collection.slug, `/plants/${selected.id}/edit`)}>Open definition</LinkButton>
                   </div>
                   <div className="mt-4 grid gap-3 text-sm md:grid-cols-3">
-                    <div className="rounded-lg border border-stone-200 bg-white/50 p-3"><dt className="text-xs uppercase tracking-wide text-stone-500">Desired size</dt><dd className="font-semibold">{selected.desiredSpecimenSize || '—'}</dd></div>
+                    <div className="rounded-lg border border-stone-200 bg-white/50 p-3"><dt className="text-xs uppercase tracking-wide text-stone-500">Desired size</dt><dd className="font-semibold">{formatTypography(selected.desiredSpecimenSize, { mode: 'measurement' }) || '—'}</dd></div>
                     <div className="rounded-lg border border-stone-200 bg-white/50 p-3"><dt className="text-xs uppercase tracking-wide text-stone-500">Ideal / max</dt><dd className="font-semibold">{money(selected.idealPurchasePrice)} / {money(selected.maximumPurchasePrice)}</dd></div>
                     <div className="rounded-lg border border-stone-200 bg-white/50 p-3"><dt className="text-xs uppercase tracking-wide text-stone-500">Desired location</dt><dd className="font-semibold">{selected.desiredLocation ? `${selected.desiredLocation.code} · ${locationPath(selected.desiredLocation.id, locationNodes)}` : '—'}</dd></div>
                     <div className="rounded-lg border border-stone-200 bg-white/50 p-3"><dt className="text-xs uppercase tracking-wide text-stone-500">Observations</dt><dd className="font-semibold">{selected.plantObservations.length}</dd></div>
@@ -369,7 +371,7 @@ export default async function AcquisitionPipelinePage({
                       </dd>
                     </div>
                   </div>
-                  {selected.acquisitionResearchSummary && <p className="mt-4 rounded-lg border border-[#d6dfc9] bg-[#f7f4e8]/80 p-3 text-sm">{selected.acquisitionResearchSummary}</p>}
+                  {selected.acquisitionResearchSummary && <p className="mt-4 rounded-lg border border-[#d6dfc9] bg-[#f7f4e8]/80 p-3 text-sm">{formatTypography(selected.acquisitionResearchSummary)}</p>}
                 </div>
               </div>
             </Card>
@@ -458,7 +460,7 @@ export default async function AcquisitionPipelinePage({
                       {availabilities.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                     </Select>
                     <TextArea label="Notes" name="notes" />
-                    <label className="flex items-start gap-2 rounded-md border border-stone-200 bg-white/55 p-3 text-sm"><input className="mt-1" type="checkbox" name="isPublic" /><span><span className="block font-semibold">Public observation</span><span className="block text-xs text-stone-600">Allow its date, price, size, condition, and availability in public-safe summaries. Seller and channel identity still follow the collection's separate visibility settings.</span></span></label>
+                    <label className="flex items-start gap-2 rounded-md border border-stone-200 bg-white/55 p-3 text-sm"><input className="mt-1" type="checkbox" name="isPublic" /><span><span className="block font-semibold">Public observation</span><span className="block text-xs text-stone-600">Allow its date, price, size, condition, and availability in public-safe summaries. Seller and channel identity still follow the collection’s separate visibility settings.</span></span></label>
                     <Button>Add observation</Button>
                   </form>
                 </Card>
@@ -527,8 +529,8 @@ export default async function AcquisitionPipelinePage({
                   {selected.acquisitionResearchEntries.map((entry) => (
                     <article key={entry.id} className="rounded-lg border border-stone-200 bg-white/50 p-3 text-sm">
                       <p className="text-xs text-stone-500">{formatDate(entry.occurredAt)}</p>
-                      <h4 className="font-semibold">{entry.title}</h4>
-                      <p className="mt-1 whitespace-pre-wrap">{entry.body}</p>
+                      <h4 className="font-semibold">{formatTypography(entry.title)}</h4>
+                      <p className="mt-1 whitespace-pre-wrap">{formatTypography(entry.body)}</p>
                       {entry.sourceCitation && <p className="mt-2 text-xs text-stone-600">Source: {entry.sourceCitation}</p>}
                       {urlList(entry.urlsJson).length > 0 && (
                         <div className="mt-2 flex flex-wrap gap-2">
@@ -547,9 +549,9 @@ export default async function AcquisitionPipelinePage({
                     <article key={observation.id} className="rounded-lg border border-stone-200 bg-white/50 p-3 text-sm">
                       <p className="text-xs text-stone-500">{formatDate(observation.observedAt)} · {observation.availability.toLowerCase().replaceAll('_', ' ')}</p>
                       <h4 className="font-semibold">{acquisitionProvenanceDisplay({ seller: observation.seller, storefront: observation.sellerStorefront, distributor: observation.distributor, outlet: observation.distributorOutlet, legacy: observation.vendor })}</h4>
-                      <p>{money(observation.observedPrice, observation.currency)} · {observation.specimenSize || 'size not recorded'}</p>
+                      <p>{money(observation.observedPrice, observation.currency)} · {formatTypography(observation.specimenSize, { mode: 'measurement' }) || 'size not recorded'}</p>
                       {observation.condition && <p className="text-stone-600">Condition: {observation.condition}</p>}
-                      {observation.notes && <p className="mt-1 whitespace-pre-wrap">{observation.notes}</p>}
+                      {observation.notes && <p className="mt-1 whitespace-pre-wrap">{formatTypography(observation.notes)}</p>}
                       {canEdit && <Link className="mt-2 inline-block text-xs font-semibold text-[#2f6b45] underline" href={collectionPath(collection.slug, `/acquisitions?definition=${selected.id}&observation=${observation.id}`)}>Acquire from this observation</Link>}
                     </article>
                   ))}
@@ -565,7 +567,7 @@ export default async function AcquisitionPipelinePage({
                       <h4 className="font-semibold">{acquisitionProvenanceDisplay({ seller: record.seller, storefront: record.sellerStorefront, distributor: record.distributor, outlet: record.distributorOutlet, legacy: record.vendor })}</h4>
                       <p>{record.quantity} item{record.quantity === 1 ? '' : 's'} · {money(record.price, record.currency)}</p>
                       <p className="mt-1 text-xs text-stone-600">Produced by: {sourceChainDisplay(record.sources, record.plantInstances[0]?.plantInstance.source)}</p>
-                      {record.notes && <p className="mt-1 whitespace-pre-wrap">{record.notes}</p>}
+                      {record.notes && <p className="mt-1 whitespace-pre-wrap">{formatTypography(record.notes)}</p>}
                       {record.plantInstances.length > 0 && (
                         <div className="mt-2 flex flex-wrap gap-2">
                           {record.plantInstances.map(({ plantInstance }) => (

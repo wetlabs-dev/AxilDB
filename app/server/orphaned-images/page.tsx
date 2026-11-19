@@ -1,3 +1,4 @@
+import { formatTypography } from '@/lib/typography'
 import { deleteOrphanedImages } from '@/app/server-actions'
 import { Button, Card, LinkButton } from '@/components/ui'
 import { scanOrphanedImages } from '@/lib/admin/orphanedImages'
@@ -44,7 +45,7 @@ export default async function OrphanedImageCleanup({
       </div>
 
       {message && (
-        <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm font-medium text-amber-950">{message}</p>
+        <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm font-medium text-amber-950">{formatTypography(message)}</p>
       )}
 
       <Card>

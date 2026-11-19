@@ -1,3 +1,4 @@
+import { formatTypography } from '@/lib/typography'
 import {
   BadgeCheck,
   Bell,
@@ -217,7 +218,7 @@ export default function SplashPage() {
               <div className="mt-5 grid gap-3 text-sm">
                 <p><span className="font-medium">Acquired as:</span> Sansevieria zeylanica</p>
                 <p><span className="font-medium">Provisional taxon:</span> Dracaena zeylanica</p>
-                <p><span className="font-medium">Aliases:</span> Snake Plant, Mother-in-law&apos;s Tongue, Sansevieria trifasciata</p>
+                <p><span className="font-medium">Aliases:</span> Snake Plant, Mother-in-law’s Tongue, Sansevieria trifasciata</p>
                 <p><span className="font-medium">Notes:</span> Awaiting morphological confirmation from bloom and leaf traits.</p>
               </div>
             </div>
@@ -242,7 +243,7 @@ export default function SplashPage() {
                 <Icon className="h-6 w-6 shrink-0 text-[#2f6b45]" />
                 <span className="rounded-md border border-[#d6dfc9] bg-[#fffdf7] px-2.5 py-1 text-xs font-medium text-[#2f6b45]">{group}</span>
               </div>
-              <h3 className="font-serif text-xl leading-7">{title}</h3>
+              <h3 className="font-serif text-xl leading-7">{formatTypography(title)}</h3>
               <p className="mt-3 text-sm leading-6 text-stone-700">{text}</p>
             </article>
           ))}
@@ -256,7 +257,7 @@ export default function SplashPage() {
               </div>
               <div className="p-5">
                 <Icon className="mb-4 h-6 w-6 text-[#2f6b45]" />
-                <h3 className="font-serif text-xl">{title}</h3>
+                <h3 className="font-serif text-xl">{formatTypography(title)}</h3>
                 <p className="mt-2 text-sm leading-6 text-stone-700">{text}</p>
               </div>
             </article>
@@ -269,14 +270,14 @@ export default function SplashPage() {
           <div className="mb-8 max-w-3xl">
             <h2 className="text-3xl">From label to accession</h2>
             <p className="mt-3 text-stone-700">
-              Keep the seller&apos;s label, your current interpretation, photos, notes, reminders, sport evidence, and propagation history together.
+              Keep the seller’s label, your current interpretation, photos, notes, reminders, sport evidence, and propagation history together.
             </p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {workflow.map(([title, text], index) => (
               <div key={title} className="rounded-lg border border-stone-200 bg-[#fffaf0]/80 p-5">
                 <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-md bg-[#2f6b45] text-sm font-semibold text-white">{index + 1}</div>
-                <h3 className="font-serif text-xl">{title}</h3>
+                <h3 className="font-serif text-xl">{formatTypography(title)}</h3>
                 <p className="mt-2 text-sm leading-6 text-stone-700">{text}</p>
               </div>
             ))}
@@ -291,7 +292,7 @@ export default function SplashPage() {
             <h2 className="text-3xl">Named for the place new growth begins</h2>
             <p className="mt-4 leading-7 text-stone-700">
               An axil is the little junction where a leaf meets a stem, the tucked-away spot where buds, blooms, and branches often start.
-              AxilDB borrows that idea for collection records: a small point of context where the next part of the plant&apos;s story can emerge.
+              AxilDB borrows that idea for collection records: a small point of context where the next part of the plant’s story can emerge.
             </p>
           </div>
           <div className="flex min-h-80 items-center justify-center bg-[#fffdf7] p-4">

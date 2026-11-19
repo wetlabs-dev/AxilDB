@@ -1,3 +1,4 @@
+import { formatTypography } from '@/lib/typography'
 import {
   completeReminder,
   createReminder,
@@ -124,8 +125,8 @@ export default async function RemindersPage() {
                   <span>·</span>
                   <span>{reminderStatus(reminder)}</span>
                 </div>
-                <h3 className="mt-2 font-serif text-xl font-bold">{reminder.title}</h3>
-                {reminder.body && <p className="mt-2 whitespace-pre-wrap text-sm text-stone-700">{reminder.body}</p>}
+                <h3 className="mt-2 font-serif text-xl font-bold">{formatTypography(reminder.title)}</h3>
+                {reminder.body && <p className="mt-2 whitespace-pre-wrap text-sm text-stone-700">{formatTypography(reminder.body)}</p>}
                 <p className="mt-3 text-sm text-stone-600">
                   Due {fmtDate(reminder.nextSendAt || reminder.dueAt, timezone)} · {recurrenceLabel(reminder.rrule)} · {entityLabel(reminder.entityType)}
                 </p>
@@ -141,7 +142,7 @@ export default async function RemindersPage() {
                     {reminder.deliveries.map((delivery) => (
                       <p key={delivery.id}>
                         {delivery.status} · {delivery.recipient} · {delivery.sentAt ? fmtDate(delivery.sentAt, timezone) : fmtDate(delivery.createdAt, timezone)}
-                        {delivery.error ? ` · ${delivery.error}` : ''}
+                        {delivery.error ? ` · ${formatTypography(delivery.error)}` : ''}
                       </p>
                     ))}
                   </div>

@@ -1,3 +1,4 @@
+import { formatTypography } from '@/lib/typography'
 import { assertMigrationOutboundReleased } from '@/lib/migration-hold'
 import webPush from 'web-push'
 import type { PrismaClient, PushSubscription as DbPushSubscription } from '@prisma/client'
@@ -92,8 +93,8 @@ function publicUrl(url: string) {
 
 function safePayload(notification: SafePushNotification) {
   return JSON.stringify({
-    title: notification.title.slice(0, 80),
-    body: (notification.body || 'Open AxilDB for details.').slice(0, 140),
+    title: formatTypography(notification.title).slice(0, 80),
+    body: formatTypography(notification.body || 'Open AxilDB for details.').slice(0, 140),
     url: publicUrl(notification.url),
     tag: notification.tag,
   })

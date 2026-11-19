@@ -1,10 +1,12 @@
+import { formatTypography } from '@/lib/typography'
+import { plantDisplayName } from '@/lib/utils'
 import Link from 'next/link'
 import { createWorkflowTemplate, startWorkflowRun } from '@/app/workflow-actions'
 import { Button, Card, Field, LinkButton, Select, TextArea } from '@/components/ui'
 import { canCreateInCollection, canManageCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
 import { ensureStarterWorkflowTemplates, workflowProgress, workflowRunStatusLabel, workflowScopeLabel } from '@/lib/workflows'
-import { plantName } from '@/lib/utils'
+
 
 function statusClass(status: string) {
   if (status === 'ACTIVE') return 'border-amber-200 bg-amber-50 text-amber-900'
@@ -87,7 +89,7 @@ export default async function WorkflowsPage({ searchParams }: { searchParams: Pr
                   <div className="min-w-0">
                     <p className="text-xs font-semibold uppercase tracking-wide text-[#2f6b45]">{template.category || 'Workflow'}{template.isBuiltIn ? ' · Starter' : ''}</p>
                     <Link href={collectionPath(collection.slug, `/workflows/templates/${template.id}`)} className="font-serif text-xl font-semibold underline">{template.name}</Link>
-                    {template.description && <p className="mt-1 text-sm text-stone-600">{template.description}</p>}
+                    {template.description && <p className="mt-1 text-sm text-stone-600">{formatTypography(template.description)}</p>}
                     <p className="mt-2 text-xs text-stone-500">{template._count.steps} step{template._count.steps === 1 ? '' : 's'} · {template._count.runs} run{template._count.runs === 1 ? '' : 's'}</p>
                   </div>
                   <LinkButton href={collectionPath(collection.slug, `/workflows/templates/${template.id}`)} className="justify-self-start px-3 py-1.5 sm:justify-self-end">Open</LinkButton>
@@ -133,7 +135,7 @@ export default async function WorkflowsPage({ searchParams }: { searchParams: Pr
                       <input type="checkbox" name="plantInstanceId" value={plant.id} />
                       <span>
                         <span className="block font-mono text-xs font-semibold text-[#2f6b45]">{plant.plantId}</span>
-                        <span className="block">{plantName(plant.plantDefinition)}</span>
+                        <span className="block">{plantDisplayName(plant.plantDefinition)}</span>
                         <span className="block text-xs text-stone-500">{plant.currentLocation ? `${plant.currentLocation.code} · ${plant.currentLocation.name}` : 'No location'}</span>
                       </span>
                     </label>
@@ -158,7 +160,7 @@ export default async function WorkflowsPage({ searchParams }: { searchParams: Pr
               <Link key={run.id} href={collectionPath(collection.slug, `/workflows/runs/${run.id}`)} className="rounded-lg border border-stone-200 bg-white/60 p-3 transition hover:border-[#8fa58f]">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <p className="font-serif text-xl font-semibold">{run.title}</p>
+                    <p className="font-serif text-xl font-semibold">{formatTypography(run.title)}</p>
                     <p className="text-sm text-stone-600">
                       {workflowScopeLabel(run.scopeType)} · {run.location ? `${run.location.code} ${run.location.name}` : `${run.plants.length} selected plant${run.plants.length === 1 ? '' : 's'}`} · assigned to {run.assignedTo?.email || 'no one'}
                     </p>
@@ -181,7 +183,7 @@ export default async function WorkflowsPage({ searchParams }: { searchParams: Pr
           {completedRuns.length === 0 && <p className="text-sm text-stone-600">No completed or cancelled runs yet.</p>}
           {completedRuns.map((run) => (
             <Link key={run.id} href={collectionPath(collection.slug, `/workflows/runs/${run.id}`)} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-stone-200 bg-white/60 p-3 text-sm underline">
-              <span>{run.title} · {workflowScopeLabel(run.scopeType)} · {run.steps.filter((step) => step.status !== 'PENDING').length}/{run.steps.length} steps</span>
+              <span>{formatTypography(run.title)} · {workflowScopeLabel(run.scopeType)} · {run.steps.filter((step) => step.status !== 'PENDING').length}/{run.steps.length} steps</span>
               <span className={`rounded-full border px-2 py-1 text-xs font-semibold no-underline ${statusClass(run.status)}`}>{workflowRunStatusLabel(run.status)}</span>
             </Link>
           ))}

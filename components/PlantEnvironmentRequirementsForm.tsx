@@ -1,3 +1,4 @@
+import { formatTypography } from '@/lib/typography'
 import { Button, Field, TextArea } from '@/components/ui'
 import { defaultUnitPreferences, lightInputValue, lightSymbol, temperatureInputValue, temperatureSymbol, type UnitPreferences } from '@/lib/units'
 
@@ -15,7 +16,7 @@ function label(value: string) {
 function EnvironmentSelect({ name, title, values, defaultValue }: { name: string; title: string; values: string[]; defaultValue?: string | null }) {
   return (
     <label className="grid gap-1 text-sm font-medium text-stone-800">
-      {title}
+      {formatTypography(title)}
       <select className={selectClass} name={name} defaultValue={defaultValue || ''}>
         <option value="">Not specified / inherit</option>
         {values.map((value) => <option key={value} value={value}>{label(value)}</option>)}

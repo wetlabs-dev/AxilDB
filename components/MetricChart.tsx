@@ -1,3 +1,4 @@
+import { formatTypography } from '@/lib/typography'
 import { cn } from '@/lib/utils'
 
 type MetricPoint = {
@@ -70,12 +71,12 @@ export function MetricChart({ title, value, subtitle, points, markers = [], clas
     <div className={cn('ax-metric-chart min-w-0 overflow-hidden rounded-lg border border-[color:var(--ax-border)] p-4 shadow-[0_8px_30px_rgba(47,38,24,0.12)]', className)}>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="ax-chart-title text-sm font-semibold">{title}</h3>
+          <h3 className="ax-chart-title text-sm font-semibold">{formatTypography(title)}</h3>
           {subtitle && <p className="ax-chart-muted mt-1 text-xs">{subtitle}</p>}
         </div>
         <p className="text-right font-mono text-lg font-semibold">{value}</p>
       </div>
-      <svg viewBox={`0 0 ${width} ${height}`} className="mt-4 h-36 w-full" role="img" aria-label={`${title} chart`}>
+      <svg viewBox={`0 0 ${width} ${height}`} className="mt-4 h-36 w-full" role="img" aria-label={`${formatTypography(title)} chart`}>
         <defs>
           <linearGradient id={`metric-fill-${title.replace(/\W+/g, '-')}`} x1="0" x2="0" y1="0" y2="1">
             <stop offset="0%" stopColor="var(--ax-chart-fill)" stopOpacity="0.55" />

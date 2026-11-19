@@ -1,3 +1,4 @@
+import { formatTypography } from '@/lib/typography'
 import { resendOwnVerificationEmail, updateAccount, updateEmailPreferences, updateUnitPreferences } from '@/app/auth-actions'
 import { resolveImageModerationReview } from '@/app/actions'
 import Link from 'next/link'
@@ -121,17 +122,17 @@ export default async function Account({
               return (
                 <div key={item.id} className="grid gap-3 rounded-lg border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] p-3 sm:grid-cols-[6rem_minmax(0,1fr)]">
                   <div className="aspect-square overflow-hidden rounded-md border border-[color:var(--ax-border)] bg-[var(--ax-primary-wash)]">
-                    <PlantImage src={item.photo} alt={item.photo.caption || 'Uploaded image'} />
+                    <PlantImage src={item.photo} alt={formatTypography(item.photo.caption) || 'Uploaded image'} />
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-[var(--ax-heading)]">{item.collection?.name || 'Collection image'}</p>
                     <p className="mt-1 text-sm text-[var(--ax-text)]">
                       {uncertain
-                        ? "We're not sure this image contains a plant. Continue anyway?"
+                        ? "We’re not sure this image contains a plant. Continue anyway?"
                         : 'No plant detected. Are you sure this is the image you wanted to upload?'}
                     </p>
-                    {item.photo.caption && <p className="mt-1 line-clamp-2 text-sm text-[var(--ax-text)]">{item.photo.caption}</p>}
-                    {item.reason && <p className="mt-1 text-xs text-[var(--ax-warning)]">Review note: {item.reason}</p>}
+                    {item.photo.caption && <p className="mt-1 line-clamp-2 text-sm text-[var(--ax-text)]">{formatTypography(item.photo.caption)}</p>}
+                    {item.reason && <p className="mt-1 text-xs text-[var(--ax-warning)]">Review note: {formatTypography(item.reason)}</p>}
                     <div className="mt-3 flex flex-wrap gap-2">
                       <form action={resolveImageModerationReview}>
                         <input type="hidden" name="reviewId" value={item.id} />

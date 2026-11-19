@@ -1,9 +1,11 @@
+import { formatTypography } from '@/lib/typography'
+import { plantDisplayName } from '@/lib/utils'
 import Link from 'next/link'
 import { CollectionExhibitAccessMode } from '@prisma/client'
 import { subscribeToCollectionExhibit } from '@/app/exhibit-actions'
 import { PlantImage } from '@/components/PlantImage'
 import { PlantTagRow } from '@/components/PlantTagChip'
-import { cn, plantName, taxonomyLabel } from '@/lib/utils'
+import { cn, taxonomyLabel } from '@/lib/utils'
 import { formatDate } from '@/lib/time'
 import { distributorDisplay, sourceChainDisplay } from '@/lib/provenance'
 import { wishlistEnvironmentSummary, wishlistPriceRange } from '@/lib/wishlist'
@@ -12,14 +14,18 @@ type DisplayExhibit = Awaited<ReturnType<typeof import('@/lib/exhibits').loadExh
 
 function simpleMarkdown(text?: string | null) {
   if (!text) return null
+  let fence: string | null = null
   return text.split('\n').map((line, index) => {
     const trimmed = line.trim()
+    const marker = trimmed.match(/^(`{3,}|~{3,})/)?.[1]
+    if (marker && (!fence || marker[0] === fence[0] && marker.length >= fence.length)) { fence = fence ? null : marker; return null }
+    if (fence) return <pre key={index} className="overflow-x-auto whitespace-pre-wrap font-mono text-sm"><code>{line}</code></pre>
     if (!trimmed) return <div key={index} className="h-2" />
     const heading = trimmed.match(/^#{1,4}\s+(.+)$/)
-    if (heading) return <h3 key={index} className="mt-5 font-serif text-2xl font-semibold first:mt-0">{heading[1]}</h3>
+    if (heading) return <h3 key={index} className="mt-5 font-serif text-2xl font-semibold first:mt-0">{formatTypography(heading[1])}</h3>
     const bullet = trimmed.match(/^[-*]\s+(.+)$/)
-    if (bullet) return <p key={index} className="pl-4 text-sm leading-6">- {bullet[1]}</p>
-    return <p key={index} className="text-sm leading-6">{trimmed}</p>
+    if (bullet) return <p key={index} className="pl-4 text-sm leading-6">- {formatTypography(bullet[1])}</p>
+    return <p key={index} className="text-sm leading-6">{formatTypography(trimmed)}</p>
   })
 }
 
@@ -40,9 +46,9 @@ function PhotoStrip({ photos, label }: { photos: any[]; label: string }) {
         {photos.map((photo) => (
           <figure key={photo.id} className="overflow-hidden rounded-md border border-stone-200 bg-white/70">
             <div className="aspect-[4/3] bg-[#e8efdf]">
-              <PlantImage src={photo} alt={photo.caption || label} className="h-full w-full object-cover" />
+              <PlantImage src={photo} alt={formatTypography(photo.caption) || label} className="h-full w-full object-cover" />
             </div>
-            {photo.caption && <figcaption className="px-2 py-1 text-xs text-stone-600">{photo.caption}</figcaption>}
+            {photo.caption && <figcaption className="px-2 py-1 text-xs text-stone-600">{formatTypography(photo.caption)}</figcaption>}
           </figure>
         ))}
       </div>
@@ -58,7 +64,7 @@ function DetailList({ items }: { items: Array<[string, string | null | undefined
       {rows.map(([label, value]) => (
         <div key={label} className="rounded-md border border-stone-200 bg-white/45 px-3 py-2">
           <dt className="text-[0.65rem] font-bold uppercase tracking-[0.16em] text-stone-500">{label}</dt>
-          <dd className="mt-1 text-stone-800">{value}</dd>
+          <dd className="mt-1 text-stone-800">{formatTypography(value)}</dd>
         </div>
       ))}
     </dl>
@@ -90,8 +96,8 @@ function PlantCard({ entry, settings, collectionSlug, visibility }: { entry: any
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="font-mono text-xs font-semibold uppercase tracking-[0.08em] text-[#2f6b45]">{plant.plantId}</p>
-          <h4 className="mt-1 font-serif text-2xl font-semibold">{plantName(plant.plantDefinition)}</h4>
-          {entry.customCaption && <p className="mt-1 text-sm text-stone-700">{entry.customCaption}</p>}
+          <h4 className="mt-1 font-serif text-2xl font-semibold">{plantDisplayName(plant.plantDefinition)}</h4>
+          {entry.customCaption && <p className="mt-1 text-sm text-stone-700">{formatTypography(entry.customCaption)}</p>}
         </div>
         <div className="flex flex-wrap gap-2 text-xs">
           {entry.featured && <span className="rounded-full border border-[#2f6b45]/25 bg-[#e8efdf] px-2 py-1 font-semibold text-[#2f6b45]">Featured</span>}
@@ -141,7 +147,7 @@ function PlantCard({ entry, settings, collectionSlug, visibility }: { entry: any
         <section className="grid gap-1 text-sm">
           <h5 className="font-semibold">Recent care</h5>
           {plant.careEvents.slice(0, 4).map((event: any) => (
-            <p key={event.id} className="text-stone-700">{event.eventType.toLowerCase()} - {formatDate(event.performedAt)}{event.notes ? ` - ${event.notes}` : ''}</p>
+            <p key={event.id} className="text-stone-700">{event.eventType.toLowerCase()} - {formatDate(event.performedAt)}{event.notes ? ` - ${formatTypography(event.notes)}` : ''}</p>
           ))}
         </section>
       )}
@@ -150,7 +156,7 @@ function PlantCard({ entry, settings, collectionSlug, visibility }: { entry: any
         <section className="grid gap-1 text-sm">
           <h5 className="font-semibold">Notes</h5>
           {entry.notes.slice(0, 3).map((note: any) => (
-            <p key={note.id} className="text-stone-700">{note.note}</p>
+            <p key={note.id} className="text-stone-700">{formatTypography(note.note)}</p>
           ))}
         </section>
       )}
@@ -194,8 +200,8 @@ function DefinitionGroup({ group, settings, collectionSlug, visibility }: { grou
       <div className="grid gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-stone-500">{group.entries.length} selected specimens</p>
-          <h2 className="font-serif text-3xl font-semibold">{plantName(definition)}</h2>
-          {definition.description && <p className="mt-2 text-sm leading-6 text-stone-700">{definition.description}</p>}
+          <h2 className="font-serif text-3xl font-semibold">{plantDisplayName(definition)}</h2>
+          {definition.description && <p className="mt-2 text-sm leading-6 text-stone-700">{formatTypography(definition.description)}</p>}
           {settings.plantTags && <div className="mt-2"><PlantTagRow tags={definition.tags.map((item: any) => item.plantTag)} limit={8} compact={false} /></div>}
         </div>
         {settings.typeImages && <PhotoStrip photos={group.typePhotos} label="Definition images" />}
@@ -210,7 +216,7 @@ function DefinitionGroup({ group, settings, collectionSlug, visibility }: { grou
             ]}
           />
         )}
-        {settings.aliases && aliases.length > 0 && <p className="text-sm text-stone-700"><span className="font-semibold">Also known as:</span> {aliases.join(', ')}</p>}
+        {settings.aliases && aliases.length > 0 && <p className="text-sm text-stone-700"><span className="font-semibold">Also known as:</span> {formatTypography(aliases.join(', '))}</p>}
         {settings.husbandry && guide && (
           <DetailList
             items={[
@@ -258,19 +264,19 @@ function WishlistSection({ items, heading }: { items: any[]; heading: string }) 
           const range = wishlistPriceRange(definition.plantObservations)
           return (
             <article key={entry.id} className="overflow-hidden rounded-lg border border-stone-200 bg-white/75">
-              {entry.typePhotos[0] && <div className="aspect-[4/3]"><PlantImage src={entry.typePhotos[0]} alt={plantName(definition)} className="h-full w-full object-cover" /></div>}
+              {entry.typePhotos[0] && <div className="aspect-[4/3]"><PlantImage src={entry.typePhotos[0]} alt={plantDisplayName(definition)} className="h-full w-full object-cover" /></div>}
               <div className="p-4">
                 <div className="flex flex-wrap items-center gap-2 text-xs"><span className="font-bold uppercase tracking-wide text-[#2f6b45]">Planned acquisition</span>{entry.featured && <span className="rounded-full border border-[#b7caa9] bg-[#edf3e6] px-2 py-0.5 font-semibold">Featured</span>}</div>
-                <h3 className="mt-1 font-serif text-2xl font-semibold">{plantName(definition)}</h3>
-                {entry.customCaption && <p className="mt-2 text-sm text-stone-700">{entry.customCaption}</p>}
+                <h3 className="mt-1 font-serif text-2xl font-semibold">{plantDisplayName(definition)}</h3>
+                {entry.customCaption && <p className="mt-2 text-sm text-stone-700">{formatTypography(entry.customCaption)}</p>}
                 <DetailList items={[
                   ['Status', formatStatus(definition.acquisitionStatus || 'wishlist')],
-                  ['Desired size', definition.desiredSpecimenSize],
+                  ['Desired size', formatTypography(definition.desiredSpecimenSize, { mode: 'measurement' })],
                   ['Environment', wishlistEnvironmentSummary(definition.husbandryGuide)],
                   ['Owned specimens', String(definition.instances.length)],
                   ['Public observations', range ? `${range.low}-${range.high} ${range.currency}` : null],
                 ]} />
-                {definition.acquisitionResearchSummary && <p className="mt-3 text-sm leading-6 text-stone-700">{definition.acquisitionResearchSummary}</p>}
+                {definition.acquisitionResearchSummary && <p className="mt-3 text-sm leading-6 text-stone-700">{formatTypography(definition.acquisitionResearchSummary)}</p>}
               </div>
             </article>
           )
@@ -309,8 +315,8 @@ export function CollectionExhibitView({
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#2f6b45]">{exhibit.collection.name}</p>
-              <h1 className="mt-2 font-serif text-4xl font-semibold">{exhibit.title}</h1>
-              {exhibit.description && <p className="mt-2 max-w-3xl text-stone-700">{exhibit.description}</p>}
+              <h1 className="mt-2 font-serif text-4xl font-semibold">{formatTypography(exhibit.title)}</h1>
+              {exhibit.description && <p className="mt-2 max-w-3xl text-stone-700">{formatTypography(exhibit.description)}</p>}
             </div>
             <div className="flex flex-wrap gap-2 print:hidden">
               <Link className="rounded-md border border-stone-300 bg-white/70 px-3 py-2 text-sm font-semibold text-stone-800" href={`/exhibit/${exhibit.slug}/print${tokenValue ? `?token=${encodeURIComponent(tokenValue)}` : ''}`}>

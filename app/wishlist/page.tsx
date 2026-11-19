@@ -1,3 +1,5 @@
+import { normalizeTypographySearch, formatTypography } from '@/lib/typography'
+import { plantDisplayName } from '@/lib/utils'
 import Link from 'next/link'
 import { PlantImage } from '@/components/PlantImage'
 import { collectionPath, getCollectionContext, canCreateInCollection } from '@/lib/collections'
@@ -63,7 +65,7 @@ export default async function WishlistPage({ searchParams }: {
   const priority = Number(sp.priority || 0)
   const filtered = allEntries.filter((entry) => {
     const haystack = [plantName(entry), entry.provisionalTaxon, ...entry.aliases.map((alias) => alias.name), entry.desiredSpecimenSize].filter(Boolean).join(' ').toLowerCase()
-    if (query && !haystack.includes(query)) return false
+    if (query && !normalizeTypographySearch(haystack).includes(normalizeTypographySearch(query))) return false
     if (sp.status && entry.acquisitionStatus !== sp.status) return false
     if (priority && entry.acquisitionPriority !== priority) return false
     if (sp.genus && entry.genus.toLowerCase() !== sp.genus.toLowerCase()) return false
@@ -123,10 +125,10 @@ export default async function WishlistPage({ searchParams }: {
           <select className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm" name="genus" defaultValue={sp.genus || ''}><option value="">All genera</option>{genera.map((genus) => <option key={genus}>{genus}</option>)}</select>
           {(!publicVisitor || settings.showPriority) && <select className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm" name="priority" defaultValue={sp.priority || ''}><option value="">All priorities</option>{[5, 4, 3, 2, 1].map((value) => <option key={value} value={value}>Priority {value}</option>)}</select>}
           <select className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm" name="owned" defaultValue={sp.owned || ''}><option value="">Owned or unowned</option><option value="yes">Already owned</option><option value="no">Not owned</option></select>
-          {(!publicVisitor || settings.showCatSafety) && catSafetyOptions.length > 0 && <select className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm" name="catSafety" defaultValue={sp.catSafety || ''}><option value="">All cat-safety guidance</option>{catSafetyOptions.map((value) => <option key={value}>{value}</option>)}</select>}
-          {(!publicVisitor || settings.showDifficulty) && difficultyOptions.length > 0 && <select className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm" name="difficulty" defaultValue={sp.difficulty || ''}><option value="">All difficulty levels</option>{difficultyOptions.map((value) => <option key={value}>{value}</option>)}</select>}
-          {(!publicVisitor || settings.showDesiredSize) && sizeOptions.length > 0 && <select className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm" name="size" defaultValue={sp.size || ''}><option value="">All desired sizes</option>{sizeOptions.map((value) => <option key={value}>{value}</option>)}</select>}
-          {(!publicVisitor || settings.showPlannedLocationCategory) && locationTypeOptions.length > 0 && <select className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm" name="locationType" defaultValue={sp.locationType || ''}><option value="">All planned settings</option>{locationTypeOptions.map((value) => <option key={value}>{value}</option>)}</select>}
+          {(!publicVisitor || settings.showCatSafety) && catSafetyOptions.length > 0 && <select className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm" name="catSafety" defaultValue={sp.catSafety || ''}><option value="">All cat-safety guidance</option>{catSafetyOptions.map((value) => <option key={value} value={value}>{formatTypography(value, { mode: 'measurement' })}</option>)}</select>}
+          {(!publicVisitor || settings.showDifficulty) && difficultyOptions.length > 0 && <select className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm" name="difficulty" defaultValue={sp.difficulty || ''}><option value="">All difficulty levels</option>{difficultyOptions.map((value) => <option key={value} value={value}>{formatTypography(value, { mode: 'measurement' })}</option>)}</select>}
+          {(!publicVisitor || settings.showDesiredSize) && sizeOptions.length > 0 && <select className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm" name="size" defaultValue={sp.size || ''}><option value="">All desired sizes</option>{sizeOptions.map((value) => <option key={value} value={value}>{formatTypography(value, { mode: 'measurement' })}</option>)}</select>}
+          {(!publicVisitor || settings.showPlannedLocationCategory) && locationTypeOptions.length > 0 && <select className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm" name="locationType" defaultValue={sp.locationType || ''}><option value="">All planned settings</option>{locationTypeOptions.map((value) => <option key={value} value={value}>{formatTypography(value, { mode: 'measurement' })}</option>)}</select>}
           {(!publicVisitor || settings.showTags) && availableTags.length > 0 && <select className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm" name="tag" defaultValue={sp.tag || ''}><option value="">All plant tags</option>{availableTags.map((tag) => <option key={tag.id} value={tag.id}>{tag.name}</option>)}</select>}
           <label className="flex items-center gap-2 rounded-md border border-stone-300 bg-white px-3 py-2 text-sm"><input type="checkbox" name="recent" value="1" defaultChecked={sp.recent === '1'} /> Added in last 90 days</label>
           <select className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm" name="sort" defaultValue={sp.sort || 'priority'}><option value="priority">Highest priority</option><option value="newest">Newest added</option><option value="name">Botanical name</option><option value="observed">Recently observed</option>{(!publicVisitor || settings.showObservedPriceRange) && <option value="price">Lowest observed price</option>}<option value="status">Status</option></select>
@@ -145,15 +147,15 @@ export default async function WishlistPage({ searchParams }: {
                 : null
               const primaryFacts = compactFacts([
                 (!publicVisitor || settings.showPriority) && priorityLabel(entry.acquisitionPriority),
-                (!publicVisitor || settings.showDesiredSize) && entry.desiredSpecimenSize ? `Size: ${entry.desiredSpecimenSize}` : null,
+                (!publicVisitor || settings.showDesiredSize) && entry.desiredSpecimenSize ? `Size: ${formatTypography(entry.desiredSpecimenSize, { mode: 'measurement' })}` : null,
                 (!publicVisitor || settings.showPlannedLocationCategory) && entry.desiredLocation?.locationType ? `Setting: ${entry.desiredLocation.locationType.name}` : null,
                 !publicVisitor && entry.idealPurchasePrice ? `Target ${money(Number(entry.idealPurchasePrice), 'USD')}` : null,
                 (!publicVisitor || settings.showObservedPriceRange) && observedPrice,
                 (!publicVisitor || settings.showOwnedCount) ? (entry.instances.length > 0 ? `${entry.instances.length} owned` : 'Not owned') : null,
               ]).slice(0, 6)
               const careFacts = compactFacts([
-                (!publicVisitor || settings.showCatSafety) && entry.husbandryGuide?.toxicityPets ? `Pet safety: ${entry.husbandryGuide.toxicityPets}` : null,
-                (!publicVisitor || settings.showDifficulty) && entry.husbandryGuide?.propagationDifficulty ? `Difficulty: ${entry.husbandryGuide.propagationDifficulty}` : null,
+                (!publicVisitor || settings.showCatSafety) && entry.husbandryGuide?.toxicityPets ? `Pet safety: ${formatTypography(entry.husbandryGuide.toxicityPets)}` : null,
+                (!publicVisitor || settings.showDifficulty) && entry.husbandryGuide?.propagationDifficulty ? `Difficulty: ${formatTypography(entry.husbandryGuide.propagationDifficulty)}` : null,
                 !publicVisitor && entry.maximumPurchasePrice ? `Ceiling ${money(Number(entry.maximumPurchasePrice), 'USD')}` : null,
               ]).slice(0, 3)
               const preferred = !publicVisitor ? [
@@ -165,17 +167,17 @@ export default async function WishlistPage({ searchParams }: {
               return (
                 <article key={entry.id} className={`relative min-w-0 overflow-hidden rounded-lg border border-stone-200 bg-white/80 shadow-sm ${compact ? 'grid grid-cols-[6rem_minmax(0,1fr)]' : ''}`}>
                   <div className={compact ? 'h-full min-h-32 overflow-hidden bg-[#edf3e6]' : 'aspect-[16/11] max-h-64 overflow-hidden bg-[#edf3e6]'}>
-                    <PlantImage src={entry.coverPhoto} alt={plantName(entry)} className="h-full w-full object-cover" />
+                    <PlantImage src={entry.coverPhoto} alt={plantDisplayName(entry)} className="h-full w-full object-cover" />
                   </div>
                   <div className="min-w-0 p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#2f6b45]">{statusLabels[entry.acquisitionStatus || '']}</p>
-                        <h2 className="mt-1 font-serif text-xl font-semibold leading-tight">{plantName(entry)}</h2>
+                        <h2 className="mt-1 font-serif text-xl font-semibold leading-tight">{plantDisplayName(entry)}</h2>
                         {entry.aliases.length > 0 && <p className="mt-1 line-clamp-1 text-xs text-stone-500">{entry.aliases.slice(0, 3).map((alias) => alias.name).join(', ')}</p>}
                         {(!publicVisitor || settings.showTags) && <div className="mt-2"><PlantTagRow tags={entry.tags.map((item) => item.plantTag)} limit={4} /></div>}
                       </div>
-                      {canAcquire && <input aria-label={`Select ${plantName(entry)}`} type="checkbox" name="definition" value={entry.id} className="h-5 w-5 shrink-0" />}
+                      {canAcquire && <input aria-label={`Select ${plantDisplayName(entry)}`} type="checkbox" name="definition" value={entry.id} className="h-5 w-5 shrink-0" />}
                     </div>
                     {primaryFacts.length > 0 && (
                       <div className="mt-3 flex flex-wrap gap-1.5">
@@ -191,8 +193,8 @@ export default async function WishlistPage({ searchParams }: {
                         ))}
                       </div>
                     )}
-                    {(!publicVisitor || settings.showPublicResearchSummary) && entry.acquisitionResearchSummary && <p className="mt-3 line-clamp-3 text-sm leading-5 text-stone-700">{entry.acquisitionResearchSummary}</p>}
-                    {environment && <p className="mt-2 line-clamp-2 text-xs leading-5 text-stone-500">Environment: {environment}</p>}
+                    {(!publicVisitor || settings.showPublicResearchSummary) && entry.acquisitionResearchSummary && <p className="mt-3 line-clamp-3 text-sm leading-5 text-stone-700">{formatTypography(entry.acquisitionResearchSummary)}</p>}
+                    {environment && <p className="mt-2 line-clamp-2 text-xs leading-5 text-stone-500">Environment: {formatTypography(environment)}</p>}
                     {preferred.length > 0 && <p className="mt-2 line-clamp-2 text-xs leading-5 text-stone-600"><span className="font-semibold">Preferred:</span> {preferred.join(', ')}</p>}
                     {(!publicVisitor || settings.showLatestPublicObservation) && latest && <p className="mt-2 text-xs text-stone-500">Last observed {formatDate(latest.observedAt)} · {latest.availability.toLowerCase().replaceAll('_', ' ')}</p>}
                   </div>

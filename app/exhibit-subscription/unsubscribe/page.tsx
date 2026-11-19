@@ -1,3 +1,4 @@
+import { formatTypography } from '@/lib/typography'
 import Link from 'next/link'
 import { CollectionExhibitSubscriberStatus } from '@prisma/client'
 import { audit } from '@/lib/auth'
@@ -36,8 +37,8 @@ export default async function UnsubscribeExhibitPage({ searchParams }: { searchP
     <main className="ax-public-light min-h-screen bg-[#f8f3e6] px-4 py-10 text-stone-900">
       <section className="mx-auto grid max-w-xl gap-4 rounded-lg border border-stone-200 bg-white/85 p-6 shadow-sm">
         <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#2f6b45]">Collection exhibit</p>
-        <h1 className="font-serif text-3xl font-semibold">{title}</h1>
-        <p className="text-stone-700">{message}</p>
+        <h1 className="font-serif text-3xl font-semibold">{formatTypography(title)}</h1>
+        <p className="text-stone-700">{formatTypography(message)}</p>
         <Link className="inline-flex w-fit rounded-md bg-[#2f6b45] px-4 py-2 text-sm font-medium text-white" href={href}>
           Return to exhibit
         </Link>

@@ -1,4 +1,5 @@
 'use client'
+import { formatTypography } from '@/lib/typography'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { collectionPath } from '@/lib/collection-path'
@@ -37,7 +38,7 @@ export function QuietDaysManager({ collectionSlug, locationId, readOnly = false 
   return <section className="space-y-4" aria-label="Quiet Days management">
     <h3 className="font-serif text-xl font-semibold">Quiet Days</h3>
     <p className="text-sm text-stone-600">Manage collection-wide and location-specific care-free days. Collection restrictions always apply. Location rules apply to directly assigned plants.</p>
-    {error && <p role="alert">{error}</p>}
+    {error && <p role="alert">{formatTypography(error)}</p>}
     {!locationId && <div className="flex flex-wrap gap-3 text-sm">{locations.map(location => <Link className="underline" key={location.id} href={collectionPath(collectionSlug, `/locations/${location.id}`)}>{location.name} · {rules.filter(rule => rule.active && rule.locationId === location.id && rule.quietType === 'WEEKLY_RECURRING').map(rule => weekdays[rule.dayOfWeek!].slice(0, 3)).join(', ') || 'Collection schedule'}{rules.some(rule => rule.locationId === location.id && rule.quietType !== 'WEEKLY_RECURRING') ? ' · Dates / ranges' : ''}</Link>)}</div>}
     <label className="flex flex-wrap items-center gap-2 text-sm">Scope <select aria-label="Scope" className={inputClass} value={scope} disabled={!!locationId} onChange={event => { setScope(event.target.value); setEditing(null) }}><option value="">Collection-wide · All locations</option>{locations.map(location => <option key={location.id} value={location.id}>{location.name}</option>)}</select></label>
     {scope && <div className="rounded border border-stone-200 p-3 text-sm"><b>Inherited from collection</b><p>{inherited.length ? inherited.map(rule => rule.quietType === 'WEEKLY_RECURRING' ? `${weekdays[rule.dayOfWeek!]} · Every week` : `${rule.name} · ${format(rule.date || rule.startDate)}${rule.endDate ? ` – ${format(rule.endDate)}` : ''}`).join('; ') : 'No collection-wide restrictions.'}</p><p>Effective recurring days: {[1,2,3,4,5,6,0].filter(day => selected.includes(day) || inherited.some(rule => rule.quietType === 'WEEKLY_RECURRING' && rule.dayOfWeek === day)).map(day => weekdays[day]).join(', ') || 'None'}</p><Link className="underline" href={collectionPath(collectionSlug, '/collection-settings')}>Manage collection Quiet Days</Link></div>}

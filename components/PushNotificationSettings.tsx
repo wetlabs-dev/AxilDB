@@ -1,5 +1,6 @@
 'use client'
 
+import { formatTypography } from '@/lib/typography'
 import { useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui'
 
@@ -176,7 +177,7 @@ export function PushNotificationSettings({ enabled, publicKey, devices }: Props)
         </Button>
       </div>
 
-      {message && <p className="rounded-lg border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] p-3 text-sm text-[var(--ax-text)]">{message}</p>}
+      {message && <p className="rounded-lg border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] p-3 text-sm text-[var(--ax-text)]">{formatTypography(message)}</p>}
 
       <div>
         <h4 className="text-sm font-semibold">Registered devices</h4>

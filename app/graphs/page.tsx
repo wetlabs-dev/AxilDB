@@ -1,8 +1,10 @@
+import { typographySearchWhere } from '@/lib/typography-search'
+import { plantDisplayName } from '@/lib/utils'
 import LineageGraph from '@/components/LineageGraph'
 import { Card } from '@/components/ui'
 import { getLineageGraph } from '@/lib/lineage'
 import { prisma } from '@/lib/prisma'
-import { plantName } from '@/lib/utils'
+
 import Link from 'next/link'
 import { collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { descendantLocationIds } from '@/lib/locations'
@@ -20,7 +22,7 @@ export default async function Graphs({
   const locations = q ? await prisma.location.findMany({ where: { collectionId: collection.id }, select: { id: true, parentLocationId: true, name: true, code: true } }) : []
   const matchingLocationIds = locations.filter((location) => `${location.code} ${location.name}`.toLowerCase().includes(q.toLowerCase())).flatMap((location) => [location.id, ...descendantLocationIds(location.id, locations)])
   const roots = await prisma.plantInstance.findMany({
-    where: {
+    where: typographySearchWhere({
       collectionId: collection.id,
       status: 'ACTIVE',
       ...(q
@@ -34,7 +36,7 @@ export default async function Graphs({
             ],
           }
         : {}),
-    },
+    }),
     include: { plantDefinition: true },
     orderBy: { plantId: 'asc' },
   })
@@ -86,7 +88,7 @@ export default async function Graphs({
                     href={`${collectionPath(collection.slug, '/graphs')}?root=${item.id}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
                   >
                     <span className="block font-semibold">{item.plantId}</span>
-                    <span className="line-clamp-2 text-xs text-stone-600">{plantName(item.plantDefinition)}</span>
+                    <span className="line-clamp-2 text-xs text-stone-600">{plantDisplayName(item.plantDefinition)}</span>
                   </Link>
                 )
               })}
@@ -102,7 +104,7 @@ export default async function Graphs({
               <Link className="font-semibold text-[#2f6b45] underline decoration-[#8fa58f] underline-offset-2" href={collectionPath(collection.slug, `/instances/${selected.id}`)}>
                 {selected.plantId}
               </Link>{' '}
-              · {plantName(selected.plantDefinition)}
+              · {plantDisplayName(selected.plantDefinition)}
             </div>
           )}
           {root ? <LineageGraph nodes={graph.nodes} edges={graph.edges} selectedId={root} /> : <Card>No plants yet.</Card>}

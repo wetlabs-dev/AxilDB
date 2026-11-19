@@ -1,3 +1,4 @@
+import { formatTypography } from '@/lib/typography'
 import { BackupStoragePanel } from '@/components/BackupStoragePanel'
 import { DeleteBackupForm } from '@/components/DeleteBackupForm'
 import { runtimeDiagnostics } from '@/lib/runtime-diagnostics'
@@ -365,14 +366,14 @@ export default async function ServerDashboard({
           </div>
           <div className="rounded-lg border border-stone-200 bg-white/60 p-3 dark:border-[color:var(--ax-border)] dark:bg-[color:var(--ax-surface-muted)]">
             <p className="text-sm text-stone-600 dark:text-[color:var(--ax-muted)]">Last resolved</p>
-            <p className="mt-1 truncate font-semibold text-stone-950 dark:text-[color:var(--ax-heading)]">{incidentStats.lastResolved?.title || 'None recorded'}</p>
+            <p className="mt-1 truncate font-semibold text-stone-950 dark:text-[color:var(--ax-heading)]">{formatTypography(incidentStats.lastResolved?.title) || 'None recorded'}</p>
           </div>
         </div>
         {recentIncidents.length > 0 && (
           <div className="mt-4 grid gap-2">
             {recentIncidents.slice(0, 4).map((incident) => (
               <Link key={incident.id} href={`/server/incidents/${incident.id}`} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-stone-200 bg-white/50 px-3 py-2 text-sm transition hover:bg-white dark:border-[color:var(--ax-border)] dark:bg-[color:var(--ax-surface-muted)] dark:hover:bg-[color:var(--ax-primary-wash)]">
-                <span className="font-semibold text-stone-900 dark:text-[color:var(--ax-heading)]">{incident.title}</span>
+                <span className="font-semibold text-stone-900 dark:text-[color:var(--ax-heading)]">{formatTypography(incident.title)}</span>
                 <span className="text-stone-600 dark:text-[color:var(--ax-muted)]">{incident.severity.toLowerCase()} · {incident.status.toLowerCase()} · {formatIncidentDuration(incident.durationSeconds)}</span>
               </Link>
             ))}
@@ -398,8 +399,8 @@ export default async function ServerDashboard({
                 <div>
                   <h4 className="font-serif text-lg font-semibold">{request.requestedName}</h4>
                   <p className="text-sm text-stone-600">/{request.requestedSlug} · {request.visibility.toLowerCase()} · requested by {request.requestedBy.email}</p>
-                  {request.description && <p className="mt-2 text-sm text-stone-700">{request.description}</p>}
-                  {request.rationale && <p className="mt-2 text-sm text-stone-600">Reason: {request.rationale}</p>}
+                  {request.description && <p className="mt-2 text-sm text-stone-700">{formatTypography(request.description)}</p>}
+                  {request.rationale && <p className="mt-2 text-sm text-stone-600">Reason: {formatTypography(request.rationale)}</p>}
                 </div>
               </div>
               <div className="mt-3 grid gap-2 lg:grid-cols-2">
@@ -439,7 +440,7 @@ export default async function ServerDashboard({
                   <p className="text-sm text-stone-600">
                     /{request.collection.slug} · AI currently {request.collection.aiFeaturesEnabled ? 'enabled' : 'disabled'} · requested by {request.requestedBy.email}
                   </p>
-                  {request.rationale && <p className="mt-2 text-sm text-stone-700">Reason: {request.rationale}</p>}
+                  {request.rationale && <p className="mt-2 text-sm text-stone-700">Reason: {formatTypography(request.rationale)}</p>}
                 </div>
               </div>
               <div className="mt-3 grid gap-2 lg:grid-cols-2">
@@ -679,7 +680,7 @@ export default async function ServerDashboard({
         {sp.backup === 'cleanup-queued' && <p className="mt-3 text-sm">{sp.queued} deletion requests queued; {sp.failed} protected or failed validation. No reclaimed space is claimed until worker measurements complete.</p>}
         {sp.backup === 'deleted' && <p className="mt-3 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900">Backup folder deleted.</p>}
         {sp.backup === 'delete-confirmation-required' && <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">Type the exact backup folder name before deleting.</p>}
-        {sp.backup === 'delete-failed' && <p className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">Backup deletion failed{sp.reason ? `: ${sp.reason}` : '.'}</p>}
+        {sp.backup === 'delete-failed' && <p className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">Backup deletion failed{sp.reason ? `: ${formatTypography(sp.reason)}` : '.'}</p>}
         {sp.backup === 'invalid-delete' && <p className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">That backup folder is not valid under the configured backup root.</p>}
         {sp.backup === 'cleanup-confirmation-required' && <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">Preview old backups first, then type the confirmation phrase to delete.</p>}
         {sp.backup === 'cleanup-done' && (
@@ -857,7 +858,7 @@ export default async function ServerDashboard({
                     <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-950">
                       <p className="font-semibold">Warnings</p>
                       <ul className="mt-1 list-disc pl-5">
-                        {selectedBackup.warnings.map((warning) => <li key={warning}>{warning}</li>)}
+                        {selectedBackup.warnings.map((warning) => <li key={warning}>{formatTypography(warning)}</li>)}
                       </ul>
                     </div>
                   )}

@@ -1,3 +1,5 @@
+import { formatTypography } from '@/lib/typography'
+import { plantDisplayName } from '@/lib/utils'
 import Link from 'next/link'
 import {
   acceptPlantDefinitionShareRequest,
@@ -14,7 +16,7 @@ import {
 } from '@/app/transfer-actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { PlantImage } from '@/components/PlantImage'
-import { Button, Card, Field, Select, TextArea } from '@/components/ui'
+import { Button, Card, Field, TextArea } from '@/components/ui'
 import { collectionPath, requireCollectionGardener } from '@/lib/collections'
 import { collectionRoleAtLeast } from '@/lib/roles'
 import { prisma } from '@/lib/prisma'
@@ -198,7 +200,7 @@ export default async function CollectionTransfersPage({ searchParams }: { search
               : 'border-amber-200 bg-amber-50 text-amber-950'
           }`}
         >
-          {transferStatus.message}
+          {formatTypography(transferStatus.message)}
         </div>
       )}
 
@@ -344,7 +346,7 @@ export default async function CollectionTransfersPage({ searchParams }: { search
               <div key={request.id} className="rounded-lg border border-stone-200 bg-white/60 p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <p className="font-semibold">{preview.plantName || plantName(request.sourcePlantDefinition)}</p>
+                    <p className="font-semibold">{formatTypography(preview.plantName) || plantDisplayName(request.sourcePlantDefinition)}</p>
                     <p className="text-sm text-stone-600">From {request.sourceCollection.name} · requested {fmtDate(request.requestedAt)} by {request.requestedBy.email}</p>
                     {preview.definition?.taxonomicAuthority && <p className="text-sm text-stone-600">Taxonomic Authority: {preview.definition.taxonomicAuthority}</p>}
                   </div>
@@ -393,15 +395,15 @@ export default async function CollectionTransfersPage({ searchParams }: { search
             <div key={definition.id} className="rounded-lg border border-stone-200 bg-white/60 p-3 text-sm">
               <div className="flex gap-3">
                 <div className="h-20 w-20 shrink-0 overflow-hidden rounded-md border border-stone-200">
-                  <PlantImage src={typePhotoByDefinition[definition.id]} alt={plantName(definition)} />
+                  <PlantImage src={typePhotoByDefinition[definition.id]} alt={plantDisplayName(definition)} />
                 </div>
                 <div className="min-w-0">
-                  <p className="font-semibold">{plantName(definition)}</p>
+                  <p className="font-semibold">{plantDisplayName(definition)}</p>
                   <p className="text-stone-600">{definition.collection?.name} · {definition.taxonomicAuthority?.abbreviation || definition.taxonomicAuthority?.name || 'No taxonomic authority'}</p>
                   <p className="mt-2 text-stone-600">Aliases: {definition.aliases.length} · Instances: {definition._count.instances}</p>
                 </div>
               </div>
-              {definition.description && <p className="mt-3 line-clamp-2 text-stone-700">{definition.description}</p>}
+              {definition.description && <p className="mt-3 line-clamp-2 text-stone-700">{formatTypography(definition.description)}</p>}
               <form action={copyConnectedPlantDefinition} className="mt-3">
                 <input type="hidden" name="collectionSlug" value={collection.slug} />
                 <input type="hidden" name="sourceCollectionId" value={definition.collectionId || ''} />
@@ -421,7 +423,7 @@ export default async function CollectionTransfersPage({ searchParams }: { search
             <div key={request.id} className="rounded-lg border border-stone-200 bg-white/60 p-3 text-sm">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="font-semibold">{plantName(request.sourcePlantDefinition)} to {request.targetCollection.name}</p>
+                  <p className="font-semibold">{plantDisplayName(request.sourcePlantDefinition)} to {request.targetCollection.name}</p>
                   <p className="text-stone-600">Requested {fmtDate(request.requestedAt)}</p>
                 </div>
                 <span className={statusBadge(request.status)}>{request.status.toLowerCase()}</span>
@@ -454,7 +456,7 @@ export default async function CollectionTransfersPage({ searchParams }: { search
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="font-semibold">{preview.sourcePlantId || request.sourcePlantInstance.plantId}</p>
-                    <p className="text-stone-700">{preview.plantName || 'Plant transfer'}</p>
+                    <p className="text-stone-700">{formatTypography(preview.plantName) || 'Plant transfer'}</p>
                     <p className="text-sm text-stone-600">From {request.sourceCollection.name} · requested {fmtDate(request.requestedAt)} by {request.requestedBy.email}</p>
                   </div>
                   <span className={statusBadge(request.status)}>{request.status.toLowerCase()}</span>

@@ -1,3 +1,4 @@
+import { formatTypography } from '@/lib/typography'
 import { PlantImage, type PlantImageFrame } from '@/components/PlantImage'
 import { regenerateCollectionBriefing } from '@/app/collection-actions'
 import { startWorkflowRun } from '@/app/workflow-actions'
@@ -143,7 +144,7 @@ function ActivityCard({
           </span>
           <span className="text-xs font-medium text-stone-500">{fmtDate(item.date, timezone)}</span>
         </div>
-        <h4 className="mt-2 truncate font-serif text-lg leading-tight">{item.title}</h4>
+        <h4 className="mt-2 truncate font-serif text-lg leading-tight">{formatTypography(item.title)}</h4>
         <p className="mt-1 truncate text-sm text-stone-700">{item.subtitle}</p>
         {item.detail && <p className="mt-2 line-clamp-2 text-xs leading-5 text-stone-600">{item.detail}</p>}
       </div>
@@ -167,13 +168,14 @@ function renderBriefingPlantLink(collectionSlug: string, link: BriefingPlantLink
   )
 }
 
-function renderLinkedText(text: string, plantLinks: BriefingPlantLink[], keyPrefix: string, collectionSlug: string): ReactNode[] {
-  if (!plantLinks.length || !text) return [text]
+function renderLinkedText(text: string, plantLinks: BriefingPlantLink[], keyPrefix: string, collectionSlug: string, literal = false): ReactNode[] {
+  const display = (value: string) => literal ? value : formatTypography(value)
+  if (!plantLinks.length || !text) return [display(text)]
 
   const tokens = plantLinks.flatMap((link) => [link.plantId, ...link.aliases].map((value) => ({ value, link })))
     .filter((item) => item.value)
     .sort((a, b) => b.value.length - a.value.length)
-  if (!tokens.length) return [text]
+  if (!tokens.length) return [display(text)]
 
   const plantById = new Map(plantLinks.map((link) => [link.plantId, link]))
   const pattern = new RegExp(`(${tokens.map((item) => escapeRegExp(item.value)).join('|')})`, 'g')
@@ -183,7 +185,7 @@ function renderLinkedText(text: string, plantLinks: BriefingPlantLink[], keyPref
   for (const match of text.matchAll(pattern)) {
     const value = match[0]
     const index = match.index ?? 0
-    if (index > lastIndex) nodes.push(text.slice(lastIndex, index))
+    if (index > lastIndex) nodes.push(display(text.slice(lastIndex, index)))
 
     const link = tokens.find((item) => item.value === value)?.link
     nodes.push(
@@ -205,7 +207,7 @@ function renderLinkedText(text: string, plantLinks: BriefingPlantLink[], keyPref
     }
   }
 
-  if (lastIndex < text.length) nodes.push(text.slice(lastIndex))
+  if (lastIndex < text.length) nodes.push(display(text.slice(lastIndex)))
   return nodes
 }
 
@@ -227,7 +229,7 @@ function renderInlineBriefingMarkdown(text: string, plantLinks: BriefingPlantLin
       )
     } else if (token.startsWith('`')) {
       const codeText = token.slice(1, -1)
-      const linkedCode = renderLinkedText(codeText, plantLinks, `${keyPrefix}-code-${index}`, collectionSlug)
+      const linkedCode = renderLinkedText(codeText, plantLinks, `${keyPrefix}-code-${index}`, collectionSlug, true)
       if (linkedCode.some((node) => typeof node !== 'string')) {
         nodes.push(...linkedCode)
         lastIndex = index + token.length
@@ -261,8 +263,12 @@ function renderBriefingMarkdown(markdown: string, links: BriefingPlantLink[], co
     .filter((link) => [link.plantId, ...link.aliases].some((value) => markdown.includes(value)))
     .sort((a, b) => Math.max(b.plantId.length, ...b.aliases.map((value) => value.length)) - Math.max(a.plantId.length, ...a.aliases.map((value) => value.length)))
 
+  let fence: string | null = null
   return markdown.split('\n').map((line, index) => {
     const trimmed = line.trim()
+    const marker = trimmed.match(/^(`{3,}|~{3,})/)?.[1]
+    if (marker && (!fence || marker[0] === fence[0] && marker.length >= fence.length)) { fence = fence ? null : marker; return null }
+    if (fence) return <pre key={index} className="overflow-x-auto whitespace-pre-wrap font-mono text-sm"><code>{line}</code></pre>
     if (!trimmed) return <div key={index} className="h-2" />
 
     const heading = trimmed.match(/^(#{1,4})\s+(.+)$/)
@@ -647,7 +653,7 @@ export default async function Dashboard({
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div><h2 className="text-3xl font-bold">Dashboard</h2>
-        <p className="mt-1 text-sm text-stone-600">Welcome back. Here&apos;s what&apos;s growing on.</p></div>
+        <p className="mt-1 text-sm text-stone-600">Welcome back. Here’s what’s growing on.</p></div>
         <Link className="rounded-md border border-stone-300 bg-white/70 px-3 py-2 text-sm font-semibold" href={collectionPath(collection.slug, '/activity')}>Collection Activity</Link>
       </div>
 
@@ -678,7 +684,7 @@ export default async function Dashboard({
         <Card>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h3 className="font-serif text-2xl font-semibold">{briefing.title}</h3>
+              <h3 className="font-serif text-2xl font-semibold">{formatTypography(briefing.title)}</h3>
               <p className="mt-1 text-sm text-stone-600">
                 {briefing.status === 'READY' ? 'AI generated' : briefing.status === 'FAILED' ? 'Fallback after AI failure' : 'Fallback summary'} ·{' '}
                 {fmtDate(briefing.generatedAt, briefing.timezone)} · {briefing.localDate} ({briefing.timezone})
@@ -692,11 +698,11 @@ export default async function Dashboard({
                 <form action={regenerateCollectionBriefing}>
                   <input type="hidden" name="collectionSlug" value={collection.slug} />
                   <ConfirmDeleteButton
-                    title="Regenerate today's briefing?"
-                    message="This replaces today's cached briefing for the collection. It may use one AI briefing request if AI briefing generation is enabled and available."
+                    title="Regenerate today’s briefing?"
+                    message="This replaces today’s cached briefing for the collection. It may use one AI briefing request if AI briefing generation is enabled and available."
                     confirmLabel="Regenerate"
                     pendingLabel="Regenerating..."
-                    pendingMessage="Regenerating today's Collection Briefing. The AI request can take a few moments."
+                    pendingMessage="Regenerating today’s Collection Briefing. The AI request can take a few moments."
                     className="px-3 py-1.5 text-xs"
                   >
                     Regenerate today
@@ -749,7 +755,7 @@ export default async function Dashboard({
               const progress = workflowProgress(run)
               return (
                 <Link key={run.id} href={collectionPath(collection.slug, `/workflows/runs/${run.id}`)} className="rounded-lg border border-stone-200 bg-white/55 p-3 text-sm transition hover:border-[#8fa58f]">
-                  <span className="font-serif text-lg font-semibold">{run.title}</span>
+                  <span className="font-serif text-lg font-semibold">{formatTypography(run.title)}</span>
                   <span className="mt-1 block text-stone-600">{workflowScopeLabel(run.scopeType)} · {run.location ? `${run.location.code} ${run.location.name}` : `${run.plants.length} selected plant${run.plants.length === 1 ? '' : 's'}`} · {progress.completed}/{progress.total} steps</span>
                 </Link>
               )

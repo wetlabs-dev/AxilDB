@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { plantName, type BotanicalNameInput } from '@/lib/utils'
+import { plantDisplayName, type BotanicalNameInput } from '@/lib/utils'
 
 type Identity = BotanicalNameInput & { provisionalTaxon?: string | null; identificationStatus?: string | null }
 const sections = [
@@ -12,7 +12,7 @@ const sections = [
 ] as const
 
 export function PlantDefinitionEditorHeader({ identity, formId }: { identity: Identity; formId: string }) {
-  const [name, setName] = useState(plantName(identity) || 'Untitled Plant Definition')
+  const [name, setName] = useState(plantDisplayName(identity) || 'Untitled Plant Definition')
   const [compact, setCompact] = useState(false)
   const heading = useRef<HTMLElement>(null)
   useEffect(() => {
@@ -22,7 +22,7 @@ export function PlantDefinitionEditorHeader({ identity, formId }: { identity: Id
       const values = new FormData(form)
       const value = (key: string) => String(values.get(key) || '')
       const provisionalTaxon = value('provisionalTaxon')
-      setName(plantName({ genus: value('genus'), species: value('species'), hybridNotation: value('hybridNotation'), cultivarName: value('cultivarName'), provisionalTaxon, identificationStatus: provisionalTaxon.trim() ? 'PROVISIONAL' : 'IDENTIFIED' }) || 'Untitled Plant Definition')
+      setName(plantDisplayName({ genus: value('genus'), species: value('species'), hybridNotation: value('hybridNotation'), cultivarName: value('cultivarName'), provisionalTaxon, identificationStatus: provisionalTaxon.trim() ? 'PROVISIONAL' : 'IDENTIFIED' }) || 'Untitled Plant Definition')
     }
     const changed = (event: Event) => {
       const control = event.target

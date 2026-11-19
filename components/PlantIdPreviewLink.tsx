@@ -1,4 +1,5 @@
 'use client'
+import { formatTypography } from '@/lib/typography'
 
 import Link from 'next/link'
 import { BoundedCache } from '@/lib/bounded-cache'
@@ -134,7 +135,7 @@ function PreviewCard({
             </div>
             <div className="min-w-0">
               <p className="break-words font-mono text-sm font-bold leading-snug text-[var(--ax-primary)]">{preview.plantId}</p>
-              <p className="mt-1 line-clamp-2 font-serif text-lg font-semibold leading-tight text-[var(--ax-heading)]">{preview.displayName}</p>
+              <p className="mt-1 line-clamp-2 font-serif text-lg font-semibold leading-tight text-[var(--ax-heading)]">{formatTypography(preview.displayName, { mode: 'botanical-name' })}</p>
               {preview.acquisitionLabel && <p className="mt-1 line-clamp-2 text-xs text-[var(--ax-muted)]">{preview.acquisitionLabel}</p>}
             </div>
           </div>

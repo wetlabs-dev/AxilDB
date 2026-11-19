@@ -1,3 +1,4 @@
+import { formatTypography } from '@/lib/typography'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
@@ -8,7 +9,7 @@ import PDFDocument from 'pdfkit'
 import { isPublishedExhibitVisible, loadExhibitForDisplay } from '@/lib/exhibits'
 import { prisma } from '@/lib/prisma'
 import { formatDate } from '@/lib/time'
-import { plantName, taxonomyLabel } from '@/lib/utils'
+import { plantDisplayName, taxonomyLabel } from '@/lib/utils'
 import { distributorDisplay, sourceChainDisplay } from '@/lib/provenance'
 import { wishlistEnvironmentSummary, wishlistPriceRange } from '@/lib/wishlist'
 
@@ -121,8 +122,8 @@ function drawPhoto(doc: PDFKit.PDFDocument, photo: any, x: number, y: number, w:
   doc.restore()
 }
 
-function detailGrid(doc: PDFKit.PDFDocument, rows: Array<[string, string | null | undefined]>, columns = 2, title?: string) {
-  const visible = rows.filter(([, value]) => clean(value))
+function detailGrid(doc: PDFKit.PDFDocument, rows: Array<[string, string | null | undefined]>, columns = 2, title?: string, proseValues = false) {
+  const visible = rows.filter(([, value]) => clean(value)).map(([label, value]) => [label, proseValues ? formatTypography(value) : value] as const)
   if (!visible.length) return
   const gap = 8
   const colW = (width(doc) - gap * (columns - 1)) / columns
@@ -173,7 +174,7 @@ function writeParagraph(doc: PDFKit.PDFDocument, value?: string | null, fontSize
   if (!body) return
   ensureRoom(doc, 38, title)
   doc.font(FONT.sans).fontSize(fontSize).fillColor(INK)
-  text(doc, body, { lineGap: 2 })
+  text(doc, formatTypography(body), { lineGap: 2 })
   doc.moveDown(0.55)
 }
 
@@ -189,7 +190,7 @@ function drawDefinitionSection(
   doc.font(FONT.sansBold).fontSize(8.5).fillColor(GREEN).text(`${group.entries.length} selected specimen${group.entries.length === 1 ? '' : 's'}`.toUpperCase(), left(doc), doc.y, { characterSpacing: 1.1 })
   doc.moveDown(0.18)
   doc.font(FONT.serifBold).fontSize(25).fillColor(INK)
-  text(doc, plantName(group.definition))
+  text(doc, plantDisplayName(group.definition))
   doc.moveDown(0.35)
   writeParagraph(doc, group.definition.description, 10, data.exhibit.title)
   if (data.settings.plantTags && group.definition.tags.length) {
@@ -204,7 +205,7 @@ function drawDefinitionSection(
     group.typePhotos.slice(0, 4).forEach((photo: any, index: number) => {
       drawPhoto(doc, photo, left(doc) + index * 122, y, 112, 78)
       if (photo.caption) {
-        doc.font(FONT.sans).fontSize(7.5).fillColor(MUTED).text(photo.caption, left(doc) + index * 122, y + 82, { width: 112, height: 16, ellipsis: true })
+        doc.font(FONT.sans).fontSize(7.5).fillColor(MUTED).text(formatTypography(photo.caption), left(doc) + index * 122, y + 82, { width: 112, height: 16, ellipsis: true })
       }
     })
     doc.y = y + 104
@@ -224,7 +225,7 @@ function drawDefinitionSection(
     ensureRoom(doc, 32, data.exhibit.title)
     doc.font(FONT.sansBold).fontSize(8.5).fillColor(INK).text('Also known as', left(doc), doc.y)
     doc.font(FONT.sans).fontSize(9).fillColor(INK)
-    text(doc, group.definition.aliases.map((alias: any) => alias.name).join(', '))
+    text(doc, formatTypography(group.definition.aliases.map((alias: any) => alias.name).join(', ')))
     doc.moveDown(0.55)
   }
 
@@ -237,7 +238,7 @@ function drawDefinitionSection(
       ['Medium', guide.mediumPreferred],
       ['Bloom', guide.bloomSeason],
       ['Propagation', guide.propagationMethods],
-    ], 2, data.exhibit.title)
+    ], 2, data.exhibit.title, true)
   }
 
   if (data.settings.referenceLinks) {
@@ -285,7 +286,7 @@ function specimenSections(data: NonNullable<Awaited<ReturnType<typeof loadExhibi
     })
   }
   if (data.settings.quarantineStatus && activeQuarantine) {
-    sections.push({ title: 'Quarantine', lines: [activeQuarantine.reason || `Started ${formatDate(activeQuarantine.startedAt)}`] })
+    sections.push({ title: 'Quarantine', lines: [formatTypography(activeQuarantine.reason) || `Started ${formatDate(activeQuarantine.startedAt)}`] })
   }
   if (data.settings.conditions && openConditions.length) {
     sections.push({
@@ -296,11 +297,11 @@ function specimenSections(data: NonNullable<Awaited<ReturnType<typeof loadExhibi
   if (data.settings.careNotes && plant.careEvents.length) {
     sections.push({
       title: 'Recent care',
-      lines: plant.careEvents.slice(0, 4).map((event: any) => `${String(event.eventType).toLowerCase()} - ${formatDate(event.performedAt)}${event.notes ? ` - ${event.notes}` : ''}`),
+      lines: plant.careEvents.slice(0, 4).map((event: any) => `${String(event.eventType).toLowerCase()} - ${formatDate(event.performedAt)}${event.notes ? ` - ${formatTypography(event.notes)}` : ''}`),
     })
   }
   if (data.settings.notes && entry.notes.length) {
-    sections.push({ title: 'Notes', lines: entry.notes.slice(0, 3).map((note: any) => note.note) })
+    sections.push({ title: 'Notes', lines: entry.notes.slice(0, 3).map((note: any) => formatTypography(note.note)) })
   }
   if ((data.settings.lineage || data.settings.miniLineage || data.settings.propagationHistory) && lineageItems.length) {
     sections.push({
@@ -335,7 +336,7 @@ function drawSpecimenCard(doc: PDFKit.PDFDocument, data: NonNullable<Awaited<Ret
   doc.roundedRect(x, y, width(doc), cardH, 10).fillAndStroke(CARD, BORDER)
 
   doc.font(FONT.mono).fontSize(8.2).fillColor(GREEN).text(plant.plantId, textX, y + 14, { width: textW })
-  doc.font(FONT.serifBold).fontSize(15).fillColor(INK).text(plantName(plant.plantDefinition), textX, doc.y + 2, { width: textW })
+  doc.font(FONT.serifBold).fontSize(15).fillColor(INK).text(plantDisplayName(plant.plantDefinition), textX, doc.y + 2, { width: textW })
   doc.font(FONT.sans).fontSize(8.7).fillColor('#4d463c')
   const meta = [
     data.settings.location ? entry.locationPath || 'No location set' : null,
@@ -347,7 +348,7 @@ function drawSpecimenCard(doc: PDFKit.PDFDocument, data: NonNullable<Awaited<Ret
     data.settings.sunshine ? `Sunshine: ${entry.sunshineCount || 0}` : null,
   ].filter(Boolean)
   doc.text(meta.join(' - '), textX, doc.y + 5, { width: textW, lineGap: 2 })
-  if (entry.customCaption) doc.text(entry.customCaption, textX, doc.y + 5, { width: textW, lineGap: 2 })
+  if (entry.customCaption) doc.text(formatTypography(entry.customCaption), textX, doc.y + 5, { width: textW, lineGap: 2 })
 
   let sectionY = Math.max(doc.y + 8, y + 74)
   for (const section of sections) {
@@ -392,7 +393,7 @@ function drawWishlistSection(doc: PDFKit.PDFDocument, data: NonNullable<Awaited<
     const y = doc.y
     doc.roundedRect(left(doc), y, width(doc), cardH, 8).fillAndStroke(CARD, BORDER)
     doc.font(FONT.sansBold).fontSize(7.5).fillColor(GREEN).text('PLANNED ACQUISITION', left(doc) + 14, y + 12, { characterSpacing: 0.8 })
-    doc.font(FONT.serifBold).fontSize(16).fillColor(INK).text(plantName(definition), left(doc) + 14, y + 27, { width: width(doc) - 28 })
+    doc.font(FONT.serifBold).fontSize(16).fillColor(INK).text(plantDisplayName(definition), left(doc) + 14, y + 27, { width: width(doc) - 28 })
     doc.font(FONT.sans).fontSize(8.5).fillColor('#4d463c').text(body, left(doc) + 14, doc.y + 5, { width: width(doc) - 28, lineGap: 2 })
     doc.y = y + cardH + 10
   }

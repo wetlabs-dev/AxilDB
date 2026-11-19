@@ -1,3 +1,5 @@
+import { formatTypography } from '@/lib/typography'
+import { plantDisplayName } from '@/lib/utils'
 import { PlantImage } from '@/components/PlantImage'
 import { SortControl } from '@/components/SortControl'
 import { Card } from '@/components/ui'
@@ -5,7 +7,7 @@ import { getCurrentUser } from '@/lib/auth'
 import { collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
 import { compareText, sortPreference, timeValue, type SortOption } from '@/lib/sort-preferences'
-import { fmtDate, plantName } from '@/lib/utils'
+import { fmtDate } from '@/lib/utils'
 import { Flower2, Sprout } from 'lucide-react'
 import Link from 'next/link'
 
@@ -107,11 +109,11 @@ export default async function Blooms() {
                 <div className="min-h-0 flex-1 overflow-hidden p-3">
                   <p className="text-xs font-medium uppercase tracking-[0.12em] text-[#2f6b45]">{status} · {fmtDate(bloom.bloomStartDate)}</p>
                   <h3 className="mt-1 line-clamp-2 text-sm font-bold leading-tight">{bloom.plantInstance.plantId}</h3>
-                  <p className="mt-1 line-clamp-2 text-xs text-stone-700">{plantName(bloom.plantInstance.plantDefinition)}</p>
+                  <p className="mt-1 line-clamp-2 text-xs text-stone-700">{plantDisplayName(bloom.plantInstance.plantDefinition)}</p>
                   <p className="mt-2 text-xs text-stone-600">
                     Peak {fmtDate(bloom.peakBloomDate)} · {bloom.flowerCount || '—'} flowers
                   </p>
-                  {bloom.notes && <p className="mt-2 line-clamp-2 text-xs text-stone-600">{bloom.notes}</p>}
+                  {bloom.notes && <p className="mt-2 line-clamp-2 text-xs text-stone-600">{formatTypography(bloom.notes)}</p>}
                 </div>
               </Link>
             </Card>

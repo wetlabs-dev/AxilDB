@@ -1,3 +1,6 @@
+import { normalizeTypographySearch } from '@/lib/typography'
+import { formatTypography } from '@/lib/typography'
+import { plantDisplayName } from '@/lib/utils'
 import { BulkCareEligibility } from '@/components/BulkCareEligibility'
 import { CareActionForm, CareQueueProvider } from '@/components/CareQueueOptimistic'
 import { randomUUID } from 'crypto'
@@ -131,7 +134,7 @@ export default async function BulkCarePage({
   const filteredPlants = plants.filter((plant) => {
     const haystack = `${plant.plantId} ${plantName(plant.plantDefinition)} ${plant.currentLocation?.name || ''} ${plant.currentLocation?.code || ''}`.toLowerCase()
     const dueItems = dueByPlant.get(plant.id) || []
-    if (search && !haystack.includes(search)) return false
+    if (search && !normalizeTypographySearch(haystack).includes(normalizeTypographySearch(search))) return false
     if (dueOnly && dueItems.length === 0) return false
     if (overdueOnly && !dueItems.some((item) => item.overdueDays > 0)) return false
     if (activeIssuesOnly && plant.conditions.length === 0) return false
@@ -268,7 +271,7 @@ export default async function BulkCarePage({
             )}
             {careType === 'REPOTTING' && (
               <p className="text-sm text-stone-700">
-                New substrate: {substrateMode === 'RECIPE' ? `${substrateVersions.find((version) => version.id === substrateRecipeVersionId)?.recipe.name || 'Recipe not selected'}` : substrateLabel(substrateMode)}{receivedSubstrateDescription ? ` · ${receivedSubstrateDescription}` : ''}
+                New substrate: {substrateMode === 'RECIPE' ? `${substrateVersions.find((version) => version.id === substrateRecipeVersionId)?.recipe.name || 'Recipe not selected'}` : substrateLabel(substrateMode)}{receivedSubstrateDescription ? ` · ${formatTypography(receivedSubstrateDescription)}` : ''}
               </p>
             )}
             <div className="grid gap-2">
@@ -276,7 +279,7 @@ export default async function BulkCarePage({
                 const skipped = firstParam(params[`skip:${plant.id}`]) === 'on'
                 return (
                   <div key={plant.id} className="rounded-md border border-[#c7d8bd] bg-white/70 p-3 text-sm">
-                    <p className="font-semibold">{plant.plantId} · {plantName(plant.plantDefinition)}{skipped ? ' · skipped' : ''}</p>
+                    <p className="font-semibold">{plant.plantId} · {plantDisplayName(plant.plantDefinition)}{skipped ? ' · skipped' : ''}</p>
                     {firstParam(params[`note:${plant.id}`]) && <p className="text-stone-600">Note: {firstParam(params[`note:${plant.id}`])}</p>}
                     {firstParam(params[`result:${plant.id}`]) && <p className="text-stone-600">Result: {firstParam(params[`result:${plant.id}`])}</p>}
                     {firstParam(params[`skipReason:${plant.id}`]) && <p className="text-stone-600">Skip reason: {firstParam(params[`skipReason:${plant.id}`])}</p>}
@@ -320,7 +323,7 @@ export default async function BulkCarePage({
                       <input className="mt-1" type="checkbox" name="plantInstanceId" value={plant.id} defaultChecked={selectedIds.size ? selectedIds.has(plant.id) : true} />
                       <span className="min-w-0 flex-1">
                         <span className="block font-mono text-sm font-semibold text-[#2f6b45]">{plant.plantId}</span>
-                        <span className="block font-serif text-xl font-semibold">{plantName(plant.plantDefinition)}</span>
+                        <span className="block font-serif text-xl font-semibold">{plantDisplayName(plant.plantDefinition)}</span>
                         <span className="block text-sm text-stone-600">{plant.currentLocation ? `${plant.currentLocation.code} · ${locationPathWithCodes(plant.currentLocation.id, locationNodes)}` : 'No location set'}</span>
                       </span>
                       <span className={`rounded-full px-2 py-1 text-xs font-semibold ${direct ? 'bg-[#e8efdf] text-[#2f6b45]' : 'bg-stone-100 text-stone-600'}`}>{direct ? 'Direct' : 'Nested'}</span>

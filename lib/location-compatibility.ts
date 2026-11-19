@@ -234,12 +234,12 @@ function rangeCheck(category: string, requirementMin: number | null, requirement
   if (overlap < 0) {
     const gap = Math.max(reqMin - locMax, locMin - reqMax)
     const high = category.includes('Temperature') ? gap >= 5 : category === 'Humidity' ? gap >= 15 : false
-    return { category, status: 'CONFLICT', plantRequirement, locationValue, explanation: `Recorded ${category.toLowerCase()} does not overlap the plant's preferred range${high ? ' and differs materially' : ''}.`, severity: high ? 'HIGH' : 'WARNING', measurement }
+    return { category, status: 'CONFLICT', plantRequirement, locationValue, explanation: `Recorded ${category.toLowerCase()} does not overlap the plant’s preferred range${high ? ' and differs materially' : ''}.`, severity: high ? 'HIGH' : 'WARNING', measurement }
   }
   if (locMin < reqMin || locMax > reqMax) {
-    return { category, status: 'CAUTION', plantRequirement, locationValue, explanation: `The ranges overlap, but part of the recorded location range falls outside the plant's preference.`, severity: 'WARNING', measurement }
+    return { category, status: 'CAUTION', plantRequirement, locationValue, explanation: `The ranges overlap, but part of the recorded location range falls outside the plant’s preference.`, severity: 'WARNING', measurement }
   }
-  return { category, status: 'MATCH', plantRequirement, locationValue, explanation: `The recorded location range sits within the plant's preferred range.`, severity: 'INFO', measurement }
+  return { category, status: 'MATCH', plantRequirement, locationValue, explanation: `The recorded location range sits within the plant’s preferred range.`, severity: 'INFO', measurement }
 }
 
 const lightRanks: Record<string, number> = { VERY_LOW: 0, LOW: 1, MODERATE: 2, BRIGHT: 3, VERY_BRIGHT: 4 }

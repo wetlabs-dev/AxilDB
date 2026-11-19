@@ -1,5 +1,6 @@
 'use client'
 
+import { formatTypography } from '@/lib/typography'
 import type { ReactNode } from 'react'
 import { useFormStatus } from 'react-dom'
 import { cn } from '@/lib/utils'
@@ -44,8 +45,8 @@ export function ConfirmDeleteButton({
       </button>
 
       <dialog className="w-full max-w-md rounded-lg border border-[color:var(--ax-border)] bg-[var(--ax-surface-solid)] p-5 text-[var(--ax-text)] shadow-xl backdrop:bg-black/50">
-        <h2 className="text-lg font-bold text-[var(--ax-heading)]">{title}</h2>
-        <p className="mt-2 text-sm text-[var(--ax-text)]">{message}</p>
+        <h2 className="text-lg font-bold text-[var(--ax-heading)]">{formatTypography(title)}</h2>
+        <p className="mt-2 text-sm text-[var(--ax-text)]">{formatTypography(message)}</p>
         {pending && (
           <div className="mt-4 flex items-center gap-3 rounded-lg border border-[#8fa58f]/60 bg-[#edf3e6] px-3 py-3 text-sm font-semibold text-[#255537]" role="status" aria-live="polite">
             <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-[#8fa58f] border-t-[#2f6b45]" aria-hidden="true" />

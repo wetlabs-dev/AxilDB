@@ -1,10 +1,12 @@
+import { formatTypography } from '@/lib/typography'
+import { plantDisplayName } from '@/lib/utils'
 import { SortControl } from '@/components/SortControl'
 import { Card } from '@/components/ui'
 import { getCurrentUser } from '@/lib/auth'
 import { collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
 import { compareText, sortPreference, timeValue, type SortOption } from '@/lib/sort-preferences'
-import { fmtDate, plantName } from '@/lib/utils'
+import { fmtDate } from '@/lib/utils'
 import Link from 'next/link'
 
 const archivedSortOptions: SortOption[] = [
@@ -45,8 +47,8 @@ export default async function Archived() {
           <Link className="font-bold underline" href={collectionPath(collection.slug, `/instances/${item.id}`)}>
             {item.plantId}
           </Link>
-          <p className="text-sm">{plantName(item.plantDefinition)} · {fmtDate(item.archiveDate)} · {item.archiveReason}</p>
-          <p>{item.archiveNotes}</p>
+          <p className="text-sm">{plantDisplayName(item.plantDefinition)} · {fmtDate(item.archiveDate)} · {item.archiveReason}</p>
+          <p>{formatTypography(item.archiveNotes)}</p>
         </Card>
       ))}
       {items.length === 0 && <Card>No archived plants yet.</Card>}

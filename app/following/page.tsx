@@ -1,3 +1,4 @@
+import { formatTypography } from '@/lib/typography'
 import { unfollowEntity } from '@/app/actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
 import { Card } from '@/components/ui'
@@ -111,7 +112,7 @@ export default async function FollowingPage({
                 <p className="text-stone-600">
                   {notification.status} · {notification.eventType} · {fmtDate(notification.sentAt || notification.createdAt)}
                 </p>
-                {notification.error && <p className="mt-1 text-[#9a3f35]">{notification.error}</p>}
+                {notification.error && <p className="mt-1 text-[#9a3f35]">{formatTypography(notification.error)}</p>}
                 <a className="mt-2 inline-block text-xs font-medium underline" href={notification.recordUrl}>
                   Open update
                 </a>

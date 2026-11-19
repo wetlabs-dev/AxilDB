@@ -1,5 +1,6 @@
 'use client'
 
+import { formatTypography } from '@/lib/typography'
 import { createContext, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type FormHTMLAttributes, type ReactNode } from 'react'
 import type { CareQueueItem } from '@/lib/care-queue'
 import { careOperationLocks, overlayCareItems, type CareOperation, type CareQueueAction } from '@/lib/care-queue-optimistic'
@@ -40,7 +41,7 @@ export function CareQueueProvider({ collectionSlug, userId, initialItems, snapsh
   const items = overlayCareItems(authoritativeItems, state.operations)
   return <Context.Provider value={{ store, items, authoritativeItems, operations: state.operations, timezone }}>
     <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">{state.notice}</div>
-    {state.operations.filter(op => op.message).map(op => <div key={op.operationId} role="alert" className="mb-3 flex flex-wrap items-center gap-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950"><span>{op.message}</span><button type="button" className="min-h-10 px-2 font-semibold underline" onClick={() => store.retry(op.operationId)}>{op.status === 'uncertain' ? 'Check again' : 'Retry'}</button></div>)}
+    {state.operations.filter(op => op.message).map(op => <div key={op.operationId} role="alert" className="mb-3 flex flex-wrap items-center gap-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950"><span>{formatTypography(op.message)}</span><button type="button" className="min-h-10 px-2 font-semibold underline" onClick={() => store.retry(op.operationId)}>{op.status === 'uncertain' ? 'Check again' : 'Retry'}</button></div>)}
     {state.notice.includes('refresh is unavailable') && <p className="mb-3 rounded-md border border-stone-300 bg-white/70 p-3 text-sm">{state.notice} <button className="min-h-10 font-semibold underline" onClick={() => void store.reconcile()}>Refresh queue</button></p>}
     {children}
   </Context.Provider>

@@ -1,3 +1,4 @@
+import { formatTypography } from '@/lib/typography'
 import { resolveImageModerationReview } from '@/app/actions'
 import { ModeratedImagePlaceholder } from '@/components/PlantImage'
 import { Button, Card, LinkButton } from '@/components/ui'
@@ -56,7 +57,7 @@ export default async function ImageModerationQueue() {
                   </div>
                   <span className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-900">Hidden</span>
                 </div>
-                {review.reason && <p className="mt-2 rounded-lg border border-red-100 bg-red-50/80 p-2 text-sm text-red-950">{review.reason}</p>}
+                {review.reason && <p className="mt-2 rounded-lg border border-red-100 bg-red-50/80 p-2 text-sm text-red-950">{formatTypography(review.reason)}</p>}
                 <p className="mt-2 text-xs text-stone-500">
                   Model: {review.model || review.photo.moderationModel || 'not recorded'} · Uploader account {review.uploaderUserId ? 'recorded' : 'not recorded'}
                 </p>

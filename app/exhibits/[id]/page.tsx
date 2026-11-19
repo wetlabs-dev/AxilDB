@@ -1,3 +1,5 @@
+import { formatTypography } from '@/lib/typography'
+import { plantDisplayName } from '@/lib/utils'
 import Link from 'next/link'
 import { CollectionExhibitAccessMode, CollectionExhibitStatus } from '@prisma/client'
 import {
@@ -41,7 +43,7 @@ function Checkbox({
       <input className="mt-1 h-4 w-4" type="checkbox" name={name} defaultChecked={defaultChecked} />
       <span>
         <span className="block font-semibold text-stone-900">{label}</span>
-        {description && <span className="mt-1 block text-xs leading-5 text-stone-600">{description}</span>}
+        {description && <span className="mt-1 block text-xs leading-5 text-stone-600">{formatTypography(description)}</span>}
       </span>
     </label>
   )
@@ -154,7 +156,7 @@ export default async function EditCollectionExhibitPage({ params }: { params: Pr
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#2f6b45]">Collection exhibit</p>
-          <h2 className="text-3xl font-bold">{exhibit.title}</h2>
+          <h2 className="text-3xl font-bold">{formatTypography(exhibit.title)}</h2>
           <p className="text-sm text-stone-600">
             {exhibit.status.toLowerCase()} · {exhibit.accessMode.toLowerCase()} · updated {formatDateTime(exhibit.updatedAt)}
           </p>
@@ -194,7 +196,7 @@ export default async function EditCollectionExhibitPage({ params }: { params: Pr
               <option value="">No cover photo</option>
               {coverPhotos.map((photo) => (
                 <option key={photo.id} value={photo.id}>
-                  {photo.caption || photo.filename || photo.id} · {photo.entityType.toLowerCase()}
+                  {formatTypography(photo.caption) || photo.filename || photo.id} · {photo.entityType.toLowerCase()}
                 </option>
               ))}
             </Select>
@@ -243,7 +245,7 @@ export default async function EditCollectionExhibitPage({ params }: { params: Pr
                 <article key={definition.id} className="grid gap-2 rounded-lg border border-stone-200 bg-white/50 p-3">
                   <label className="flex items-start gap-3">
                     <input className="mt-1 h-4 w-4" type="checkbox" name="wishlistDefinitionId" value={definition.id} defaultChecked={Boolean(selected)} />
-                    <span><span className="block font-serif text-lg font-semibold">{plantName(definition)}</span><span className="block text-xs text-stone-600">{definition.acquisitionStatus?.toLowerCase().replaceAll('_', ' ')} · {definition.instances.length} owned</span></span>
+                    <span><span className="block font-serif text-lg font-semibold">{plantDisplayName(definition)}</span><span className="block text-xs text-stone-600">{definition.acquisitionStatus?.toLowerCase().replaceAll('_', ' ')} · {definition.instances.length} owned</span></span>
                   </label>
                   <div className="grid gap-2 sm:grid-cols-[6rem_1fr]">
                     <Field label="Order" name={`wishlistSortOrder:${definition.id}`} type="number" min="0" defaultValue={String(selected?.sortOrder ?? index)} />
@@ -318,7 +320,7 @@ export default async function EditCollectionExhibitPage({ params }: { params: Pr
               <p className="font-semibold text-[#2f6b45]">Detected changes since the last sent update</p>
               <div className="mt-2 grid gap-1 text-stone-700">
                 {detectedChanges.slice(0, 8).map((change) => (
-                  <p key={change.key}>{change.label}: {change.summary}</p>
+                  <p key={change.key}>{change.label}: {formatTypography(change.summary)}</p>
                 ))}
               </div>
             </div>
@@ -365,7 +367,7 @@ export default async function EditCollectionExhibitPage({ params }: { params: Pr
             <div className="grid gap-2 border-t border-stone-200 pt-3 text-sm">
               {exhibit.updates.map((update) => (
                 <p key={update.id} className="text-stone-700">
-                  <span className="font-semibold">{update.title}</span> · {formatDateTime(update.createdAt)} · {update.deliveries.length} deliveries
+                  <span className="font-semibold">{formatTypography(update.title)}</span> · {formatDateTime(update.createdAt)} · {update.deliveries.length} deliveries
                 </p>
               ))}
             </div>

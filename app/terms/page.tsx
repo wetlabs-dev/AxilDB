@@ -70,7 +70,7 @@ export default function TermsPage() {
         <h2>Acceptable Use</h2>
         <p>You agree not to use AxilDB to:</p>
         <ul>
-          <li>break the law or violate someone else&apos;s rights;</li>
+          <li>break the law or violate someone else’s rights;</li>
           <li>attempt unauthorized access to accounts, collections, tokens, or server systems;</li>
           <li>upload malware or intentionally harmful content;</li>
           <li>spam, harass, or abuse other users;</li>

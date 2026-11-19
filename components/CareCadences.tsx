@@ -1,4 +1,5 @@
 'use client'
+import { formatTypography } from '@/lib/typography'
 import { useObservedCare, ObservedCareDetails } from '@/components/ObservedCare'
 
 import {
@@ -317,7 +318,7 @@ function CadenceDialog({
         </fieldset>
         {error && (
           <p role="alert" className="text-sm text-red-800">
-            {error}
+            {formatTypography(error)}
           </p>
         )}
         <div className="care-cadence-dialog-actions">

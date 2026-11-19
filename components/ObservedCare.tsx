@@ -1,4 +1,5 @@
 'use client'
+import { formatTypography } from '@/lib/typography'
 import { useCallback, useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { requestCadenceCalibration } from '@/app/calibration-actions'
@@ -25,13 +26,13 @@ export function ObservedCareDetails({rows,error,collectionSlug,definitionId,canE
   const [busy,start]=useTransition(),[message,setMessage]=useState('')
   return <details className="mt-3 text-sm"><summary>Observed care and cadence calibration</summary>
     <p className="mt-2 text-xs">Completed care describes observed practice, not proven optimal care. Statistics refresh on opening or focus with a one-minute cache; formal research has separate cooldowns.</p>
-    {error && <p role="status">{error}</p>}{message && <p role="status">{message}</p>}
+    {error && <p role="status">{formatTypography(error)}</p>}{message && <p role="status">{formatTypography(message)}</p>}
     <div className="mt-2 grid gap-2 md:grid-cols-2">{rows.map(row=><div key={row.activity} className="rounded border p-3">
       <b>{cadenceActivities.find(c=>c.activity===row.activity)?.label}</b> · {row.outcome.replaceAll('_',' ').toLowerCase()}
       <p>Observed mean: {row.evidence.summary.mean?.toFixed(1) ?? 'Insufficient history'}{row.evidence.summary.mean!=null?' days':''} · robust: {row.evidence.summary.robustEstimate?.toFixed(1) ?? '—'} days</p>
       <p className="text-xs">Weighted: {row.evidence.summary.weightedMean?.toFixed(1) ?? '—'} days · {row.evidence.summary.contributingInstances} specimens · {row.evidence.summary.intervalCount} completed intervals · {row.evidence.summary.spanDays} days of history · {row.evidence.summary.excluded} duplicate/invalid observations · {row.evidence.excludedInstances} excluded specimens</p>
       <p className="text-xs">Statistics: {new Date(row.statisticsAt).toLocaleString()} · {row.evidence.timezone}<br/>Last assessment: {row.lastAssessedAt?new Date(row.lastAssessedAt).toLocaleDateString():'Not yet assessed'} · Next: {row.nextEligibleAt?new Date(row.nextEligibleAt).toLocaleDateString():'Awaiting resolution or eligibility change'}</p>
-      <details className="text-xs"><summary>Evidence limitations</summary><ul>{row.evidence.warnings.map(w=><li key={w}>{w}</li>)}{Object.entries(row.evidence.excluded).map(([reason,count])=><li key={reason}>{reason}: {count}</li>)}</ul></details>
+      <details className="text-xs"><summary>Evidence limitations</summary><ul>{row.evidence.warnings.map(w=><li key={w}>{w}</li>)}{Object.entries(row.evidence.excluded).map(([reason,count])=><li key={reason}>{formatTypography(reason)}: {count}</li>)}</ul></details>
       {row.proposalId && <Link className="underline" href={`/server/care-cadence-research?tab=review&definition=${definitionId}&collection=${encodeURIComponent(collectionSlug)}`}>Review suggestion</Link>}
       {canEdit && <form onSubmit={event=>{event.preventDefault();const fd=new FormData(event.currentTarget);start(async()=>{try{setMessage((await requestCadenceCalibration(fd)).message)}catch(e){setMessage(e instanceof Error?e.message:'Could not enqueue assessment.')}})}}>
         <input type="hidden" name="collectionSlug" value={collectionSlug}/><input type="hidden" name="definitionId" value={definitionId}/><input type="hidden" name="activity" value={row.activity}/><button disabled={busy} className="mt-2 rounded border px-2 py-1">Reassess observed cadence</button>

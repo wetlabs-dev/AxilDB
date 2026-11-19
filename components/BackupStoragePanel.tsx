@@ -1,4 +1,5 @@
 'use client'
+import { formatTypography } from '@/lib/typography'
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { cleanBackupGarbage, refreshBackupStorage } from '@/app/server-actions'
@@ -35,7 +36,7 @@ export function BackupStoragePanel() {
       {[['Managed backup allocation', data?.filesystem ? bytes(managedBytes) : 'Unavailable'], ['Filesystem used', bytes(data?.filesystem?.usedBytes)], ['Filesystem available', bytes(data?.filesystem?.availableBytes)], ['Filesystem capacity', bytes(data?.filesystem?.totalBytes)]].map(([label, value]) => <div key={label} className="rounded border bg-white/60 p-2"><p>{label}</p><strong>{value}</strong></div>)}
     </div>
     <p className="text-xs">Last checked: {data?.checkedAt ? new Date(data.checkedAt).toLocaleString() : 'Not measured yet'}. PostgreSQL records have no recorded-size field; recorded-versus-actual size comparison is unavailable.</p>
-    {data?.error && <p role="alert">{data.error}</p>}
+    {data?.error && <p role="alert">{formatTypography(data.error)}</p>}
     {data?.uploadFilesystemSame === false && <p className="font-semibold text-amber-900">Backups and uploads use different filesystems. The historical dashboard storage chart measures uploads.</p>}
     <div className="flex flex-wrap gap-2">
       <button disabled={busy} className="rounded border bg-white px-3 py-2" onClick={() => start(async () => { await load(); router.refresh() })}>Refresh storage</button>
@@ -53,7 +54,7 @@ export function BackupStoragePanel() {
         catch (e) { setMessage(e instanceof Error ? e.message : 'Cleanup request failed; scan again.') }
       })}>Clean up eligible files</button>
     </div>}
-    <p role="status" aria-live="polite">{busy ? 'Checking storage…' : message}</p>
+    <p role="status" aria-live="polite">{busy ? 'Checking storage…' : formatTypography(message)}</p>
     <div className="space-y-2">{data?.recentJobs.map(j => {
       const progress = j.progress as any
       return <div key={j.id} className="break-words rounded border bg-white/60 p-2">
@@ -61,7 +62,7 @@ export function BackupStoragePanel() {
         <p>{progress?.stage || (j.status === 'REQUESTED' ? 'Deletion pending — waiting for backup worker' : '')}</p>
         {progress?.processed != null && <p>{progress.processed} processed · {progress.removed} artifacts removed or metadata reconciled · {progress.failed} failed</p>}
         {progress?.availableDelta != null && <p>Measured filesystem available-space change: {progress.availableDelta < 0 ? '−' : '+'}{bytes(Math.abs(progress.availableDelta))}. {progress.availableDelta <= 0 ? 'Files may be absent without an increase in available space. Check open files, other writes, hard links and snapshots.' : 'This is the observed filesystem change, not nominal archive size; concurrent writes may affect it.'}</p>}
-        {j.error && <p className="text-red-900">{j.error}</p>}
+        {j.error && <p className="text-red-900">{formatTypography(j.error)}</p>}
         <p className="text-xs">Job {j.id} · updated {new Date(j.updatedAt).toLocaleString()}</p>
       </div>
     })}</div>
@@ -69,7 +70,7 @@ export function BackupStoragePanel() {
       <p className="break-all">Configured: {data?.filesystem?.configured || 'Unavailable'} · resolved: {data?.filesystem?.resolved || 'Unavailable'} · filesystem device: {data?.filesystem?.device || 'Unavailable'} · reserved free blocks: {bytes(data?.filesystem?.reservedBytes)}</p>
       <p className="break-all">Mount: {data?.filesystem?.mount?.mountPoint || 'Unavailable'} · type: {data?.filesystem?.mount?.filesystemType || 'Unavailable'} · container-visible source: {data?.filesystem?.mount?.source || 'Unavailable'}</p>
       <p>Container mount paths do not reveal the host bind source reliably. See the host diagnostics runbook. Allocated bytes use filesystem blocks; hard links are deduplicated. No Docker pruning, retention changes or virtual-disk compaction is performed.</p>
-      <ul className="max-h-80 space-y-1 overflow-auto">{data?.entries.map((e, index) => <li className="break-words border-b py-1" key={`${e.name}-${index}`}><strong>{e.name}</strong> · {e.status} · allocated {bytes(e.allocatedBytes)} · logical {bytes(e.nominalBytes)}<p>{e.reason}</p></li>)}</ul>
+      <ul className="max-h-80 space-y-1 overflow-auto">{data?.entries.map((e, index) => <li className="break-words border-b py-1" key={`${e.name}-${index}`}><strong>{e.name}</strong> · {e.status} · allocated {bytes(e.allocatedBytes)} · logical {bytes(e.nominalBytes)}<p>{formatTypography(e.reason)}</p></li>)}</ul>
       <p>Open deleted files: {data?.openDeleted ? `${data.openDeleted.files.length} visible on this filesystem; ${data.openDeleted.inaccessible} process directories inaccessible. ${data.openDeleted.scope}` : 'Unavailable in this environment. Use host diagnostics.'}</p>
       {data?.openDeleted?.files.map(f => <p key={`${f.pid}:${f.fd}`}>PID {f.pid}, descriptor {f.fd}: {bytes(f.bytes)} retained allocation. Let the owning process close it; no process is automatically stopped.</p>)}
     </details>

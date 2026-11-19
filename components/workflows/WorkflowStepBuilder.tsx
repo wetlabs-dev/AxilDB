@@ -1,5 +1,6 @@
 'use client'
 
+import { formatTypography } from '@/lib/typography'
 import { useMemo, useState, useTransition } from 'react'
 import {
   DndContext,
@@ -82,8 +83,8 @@ function SortableStepCard({
             <span className={cn('rounded-full border px-2 py-0.5 text-[0.68rem] font-bold uppercase tracking-[0.12em]', familyClass(family))}>{family}</span>
             <span className="rounded-full border border-stone-200 bg-white/70 px-2 py-0.5 text-[0.68rem] font-semibold text-stone-600 dark:border-[color:var(--ax-border)] dark:bg-[color:var(--ax-field)] dark:text-[color:var(--ax-muted-strong)]">{workflowOutputBehaviorLabel(step.outputBehavior)}</span>
           </div>
-          <h4 className="mt-1 font-serif text-xl font-semibold">{step.title}</h4>
-          {step.instructions && <p className="mt-1 text-sm text-stone-600 dark:text-[color:var(--ax-muted)]">{step.instructions}</p>}
+          <h4 className="mt-1 font-serif text-xl font-semibold">{formatTypography(step.title)}</h4>
+          {step.instructions && <p className="mt-1 text-sm text-stone-600 dark:text-[color:var(--ax-muted)]">{formatTypography(step.instructions)}</p>}
         </div>
         <div className="flex flex-wrap gap-2">
           <button

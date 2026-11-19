@@ -1,3 +1,4 @@
+import { formatTypography } from '@/lib/typography'
 import Link from 'next/link'
 import { CollectionExhibitAccessMode } from '@prisma/client'
 import { createCollectionExhibit } from '@/app/exhibit-actions'
@@ -61,7 +62,7 @@ export default async function CollectionExhibitsPage() {
                   <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#2f6b45]">{exhibit.status.toLowerCase()} · {exhibit.accessMode.toLowerCase()}</p>
                   <h3 className="font-serif text-2xl font-bold">
                     <Link className="hover:underline" href={collectionPath(context.collection.slug, `/exhibits/${exhibit.id}`)}>
-                      {exhibit.title}
+                      {formatTypography(exhibit.title)}
                     </Link>
                   </h3>
                   <p className="text-sm text-stone-600">

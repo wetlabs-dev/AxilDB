@@ -1,3 +1,4 @@
+import { formatTypography } from '@/lib/typography'
 import Link from 'next/link'
 import { deleteCareSheet, revokeCareSheet } from '@/app/actions'
 import { ConfirmDeleteButton } from '@/components/ConfirmDeleteButton'
@@ -48,7 +49,7 @@ export default async function CareSheetsPage() {
                   <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#2f6b45]">{careSheetModeLabel(sheet.mode)}</p>
                   <h3 className="font-serif text-2xl font-bold">
                     <Link className="hover:underline" href={collectionPath(context.collection.slug, `/care-sheets/${sheet.id}`)}>
-                      {sheet.title}
+                      {formatTypography(sheet.title)}
                     </Link>
                   </h3>
                   <p className="text-sm text-stone-600">{careSheetStatusLabel(sheet.status)} · {sheet._count.plants} plants · {sheet._count.tasks} tasks · expires {formatDate(sheet.expiresAt)}</p>

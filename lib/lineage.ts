@@ -1,5 +1,5 @@
 import { prisma } from './prisma'
-import { plantName } from './utils'
+import { plantDisplayName } from './utils'
 
 export async function getLineageGraph(rootId: string, collectionId?: string) {
   const nodes = new Map<string, any>()
@@ -12,7 +12,7 @@ export async function getLineageGraph(rootId: string, collectionId?: string) {
     nodes.set(id, {
       id,
       data: {
-        label: `${item.plantId}\n${plantName(item.plantDefinition)}`,
+        label: `${item.plantId}\n${plantDisplayName(item.plantDefinition)}`,
         plantId: item.plantId,
         sportStatus: item.sportStatus,
       },

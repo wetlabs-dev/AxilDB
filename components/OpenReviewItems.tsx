@@ -1,3 +1,4 @@
+import { formatTypography } from '@/lib/typography'
 import React from 'react'
 import Link from 'next/link'
 import { Card } from '@/components/ui'
@@ -57,7 +58,7 @@ export function OpenReviewItems({ items }: { items: OpenReviewItem[] }) {
               <div className="min-w-0">
                 <p className="font-semibold text-stone-900">{item.label}</p>
                 <p className="mt-1 text-sm text-stone-600">
-                  {item.description}
+                  {formatTypography(item.description)}
                 </p>
               </div>
               <span className="shrink-0 rounded-md bg-[#d6dfc9]/70 px-2 py-1 text-sm font-bold text-[#2f6b45]">

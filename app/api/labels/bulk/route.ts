@@ -22,6 +22,9 @@ import {
   plantLabelNameLines,
 } from '@/lib/plant-labels'
 
+const PRIME_NAME_FONT = 'AxilDBPrimeName'
+function labelNameFont(lines: string[]) { return lines.some(line => /[′″]/.test(line)) ? PRIME_NAME_FONT : 'Times-Italic' }
+
 const LABEL_ID_FONT = 'AxilDBLabelId'
 const LABEL_ID_FONT_PATH = path.join(process.cwd(), 'public/fonts/IBMPlexMono-Regular.ttf')
 const SHEET_MARGIN_X = 36
@@ -153,10 +156,10 @@ function drawFixedLabel(
     lineBreak: false,
   })
   doc.image(qrBuffer, qrX, qrY, { width: qrSize, height: qrSize })
-  const nameSize = multiLineFontSize(doc, nameLines, 'Times-Italic', nameLines.length >= 3 ? 22 : 28, 9, nameWidth, nameHeight)
+  const nameSize = multiLineFontSize(doc, nameLines, labelNameFont(nameLines), nameLines.length >= 3 ? 22 : 28, 9, nameWidth, nameHeight)
   const lineHeight = nameSize * 0.9
   let currentY = nameY + (nameHeight - lineHeight * nameLines.length) / 2
-  doc.font('Times-Italic').fontSize(nameSize)
+  doc.font(labelNameFont(nameLines)).fontSize(nameSize)
   for (const line of nameLines) {
     doc.text(line, nameX, currentY, { width: nameWidth, lineBreak: false })
     currentY += lineHeight
@@ -185,7 +188,7 @@ function drawPortraitLabel(
   const qrSize = Math.min(width - 18, 58)
   const nameLines = labelNameLines(item)
   const collectionSize = oneLineFontSize(doc, collectionName, 'Times-Bold', 9, 5, textWidth)
-  const nameSize = multiLineFontSize(doc, nameLines, 'Times-Italic', 14, 6, textWidth, 48)
+  const nameSize = multiLineFontSize(doc, nameLines, labelNameFont(nameLines), 14, 6, textWidth, 48)
   const idText = labelCode(item)
   const idSize = oneLineFontSize(doc, idText, LABEL_ID_FONT, 8, 4.5, textWidth)
 
@@ -198,7 +201,7 @@ function drawPortraitLabel(
   currentY += collectionSize * 1.25 + 5
   doc.image(qrBuffer, x + (width - qrSize) / 2, currentY, { width: qrSize, height: qrSize })
   currentY += qrSize + 6
-  doc.font('Times-Italic').fontSize(nameSize)
+  doc.font(labelNameFont(nameLines)).fontSize(nameSize)
   for (const line of nameLines) {
     doc.text(line, x + margin, currentY, { width: textWidth, align: 'center', lineBreak: false })
     currentY += nameSize * 1.05
@@ -216,7 +219,7 @@ function brotherLabelHeight(doc: PDFKit.PDFDocument, item: LabelItem, collection
   const qrSize = textWidth
   const nameLines = labelNameLines(item)
   const collectionSize = oneLineFontSize(doc, collectionName, 'Times-Bold', 7.5, 4, textWidth)
-  const nameSize = multiLineFontSize(doc, nameLines, 'Times-Italic', 13, 6, textWidth, 60)
+  const nameSize = multiLineFontSize(doc, nameLines, labelNameFont(nameLines), 13, 6, textWidth, 60)
   const idSize = oneLineFontSize(doc, labelCode(item), LABEL_ID_FONT, 6.5, 3.8, textWidth)
   const collectionHeight = collectionSize * 1.2
   const nameHeight = nameSize * 1.05 * nameLines.length
@@ -236,7 +239,7 @@ function drawBrotherLabel(
   const qrSize = textWidth
   const nameLines = labelNameLines(item)
   const collectionSize = oneLineFontSize(doc, collectionName, 'Times-Bold', 7.5, 4, textWidth)
-  const nameSize = multiLineFontSize(doc, nameLines, 'Times-Italic', 13, 6, textWidth, 60)
+  const nameSize = multiLineFontSize(doc, nameLines, labelNameFont(nameLines), 13, 6, textWidth, 60)
   const idText = labelCode(item)
   const idSize = oneLineFontSize(doc, idText, LABEL_ID_FONT, 6.5, 3.8, textWidth)
 
@@ -249,7 +252,7 @@ function drawBrotherLabel(
     lineBreak: false,
   })
   y += collectionSize * 1.2 + 7
-  doc.font('Times-Italic').fontSize(nameSize)
+  doc.font(labelNameFont(nameLines)).fontSize(nameSize)
   for (const line of nameLines) {
     doc.text(line, margin, y, { width: textWidth, align: 'center', lineBreak: false })
     y += nameSize * 1.05
@@ -268,7 +271,7 @@ function brotherLandscapeWidth(doc: PDFKit.PDFDocument, item: LabelItem, collect
   const textWidth = Math.max(
     132,
     doc.font('Times-Bold').fontSize(8).widthOfString(collectionName) + 8,
-    ...nameLines.map((line) => doc.font('Times-Italic').fontSize(13).widthOfString(line) + 8),
+    ...nameLines.map((line) => doc.font(labelNameFont(nameLines)).fontSize(13).widthOfString(line) + 8),
     doc.font(LABEL_ID_FONT).fontSize(7).widthOfString(labelCode(item)) + 8,
   )
   return Math.max(210, margin + qrSize + 7 + textWidth + margin)
@@ -288,7 +291,7 @@ function drawBrotherLandscapeLabel(
   const textWidth = width - textX - margin
   const nameLines = labelNameLines(item)
   const collectionSize = oneLineFontSize(doc, collectionName, 'Times-Bold', 8, 4.5, textWidth)
-  const nameSize = multiLineFontSize(doc, nameLines, 'Times-Italic', 13, 6, textWidth, 38)
+  const nameSize = multiLineFontSize(doc, nameLines, labelNameFont(nameLines), 13, 6, textWidth, 38)
   const idText = labelCode(item)
   const idSize = oneLineFontSize(doc, idText, LABEL_ID_FONT, 7, 4, textWidth)
 
@@ -301,7 +304,7 @@ function drawBrotherLandscapeLabel(
 
   const lineHeight = nameSize * 1.05
   let currentY = (height - lineHeight * nameLines.length) / 2
-  doc.font('Times-Italic').fontSize(nameSize)
+  doc.font(labelNameFont(nameLines)).fontSize(nameSize)
   for (const line of nameLines) {
     doc.text(line, textX, currentY, { width: textWidth, align: 'center', lineBreak: false })
     currentY += lineHeight
@@ -381,6 +384,7 @@ export async function GET(req: Request) {
   const items=await getLabelItems(collection.id, all, ids, target, sort)
   const sizingDoc = new PDFDocument({ size: [BROTHER_DK_2210_WIDTH_PT, 170], margin: 0 })
   sizingDoc.registerFont(LABEL_ID_FONT, LABEL_ID_FONT_PATH)
+  sizingDoc.registerFont(PRIME_NAME_FONT, path.join(process.cwd(), 'public/fonts/Fraunces-600.ttf'))
   const firstBrotherLength = items[0]
     ? orientation === 'landscape'
       ? brotherLandscapeWidth(sizingDoc, items[0], collection.name)
@@ -390,6 +394,7 @@ export async function GET(req: Request) {
   const initialSize = labelPageSize(format, orientation, firstBrotherLength)
   const doc=new PDFDocument({size:initialSize,margin:0})
   doc.registerFont(LABEL_ID_FONT, LABEL_ID_FONT_PATH)
+  doc.registerFont(PRIME_NAME_FONT, path.join(process.cwd(), 'public/fonts/Fraunces-600.ttf'))
   const chunks:Buffer[]=[]
   doc.on('data',c=>chunks.push(c))
   const done=new Promise<Buffer>(resolve=>doc.on('end',()=>resolve(Buffer.concat(chunks))))

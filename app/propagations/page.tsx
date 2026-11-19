@@ -1,3 +1,4 @@
+import { plantDisplayName } from '@/lib/utils'
 import { createPropagationEvent } from '@/app/actions'
 import { PlantImage } from '@/components/PlantImage'
 import { PlantInstanceTypeSelect } from '@/components/PlantInstanceTypeSelect'
@@ -8,7 +9,7 @@ import { canCreateInCollection, canEditInCollection, collectionPath, requireColl
 import { prisma } from '@/lib/prisma'
 import { compareText, sortPreference, timeValue, type SortOption } from '@/lib/sort-preferences'
 import { locationPathWithCodes } from '@/lib/locations'
-import { fmtDate, plantName } from '@/lib/utils'
+import { fmtDate } from '@/lib/utils'
 import { plantInstanceTypeLabel, plantInstanceTypes, transitionalPlantInstanceTypes } from '@/lib/plant-instance-types'
 import Link from 'next/link'
 
@@ -121,7 +122,7 @@ export default async function Propagations() {
               <select className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm font-normal" name="parent1">
                 {instances.map((instance) => (
                   <option key={instance.id} value={instance.id}>
-                    {instance.plantId} · {plantName(instance.plantDefinition)}
+                    {instance.plantId} · {plantDisplayName(instance.plantDefinition)}
                   </option>
                 ))}
               </select>
@@ -132,7 +133,7 @@ export default async function Propagations() {
                 <option value="">—</option>
                 {instances.map((instance) => (
                   <option key={instance.id} value={instance.id}>
-                    {instance.plantId} · {plantName(instance.plantDefinition)}
+                    {instance.plantId} · {plantDisplayName(instance.plantDefinition)}
                   </option>
                 ))}
               </select>
@@ -178,7 +179,7 @@ export default async function Propagations() {
                     <h3 className="mt-1 line-clamp-2 text-sm font-bold leading-tight">{instance.plantId}</h3>
                     <p className="mt-1 text-xs text-stone-600">{instance.status}</p>
                     <p className="mt-2 line-clamp-2 text-xs text-stone-700">
-                      {plantInstanceTypeLabel(instance.instanceType)} · {plantName(instance.plantDefinition)}
+                      {plantInstanceTypeLabel(instance.instanceType)} · {plantDisplayName(instance.plantDefinition)}
                     </p>
                     <p className="mt-1 line-clamp-2 text-xs text-stone-600">
                       Source: {instance.source || instance.distributor || 'External source'}

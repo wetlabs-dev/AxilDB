@@ -1,3 +1,4 @@
+import { formatTypography } from '@/lib/typography'
 import Link from 'next/link'
 import { requestMembership } from '@/app/collection-actions'
 import { Button, Card, LinkButton } from '@/components/ui'
@@ -72,7 +73,7 @@ export default async function CollectionAccessPage({
 
       <Card>
         <h3 className="font-serif text-xl font-semibold">{collection.name}</h3>
-        {collection.description && <p className="mt-2 text-sm text-stone-600">{collection.description}</p>}
+        {collection.description && <p className="mt-2 text-sm text-stone-600">{formatTypography(collection.description)}</p>}
 
         {!user && (
           <p className="mt-4 text-sm text-stone-700">

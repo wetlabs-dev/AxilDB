@@ -1,8 +1,10 @@
+import { formatTypography } from '@/lib/typography'
+import { plantDisplayName } from '@/lib/utils'
 import { createLocalCopyFromValidatedDefinition, disputeValidatedPlantDefinition } from '@/app/actions'
 import { Button, Card, TextArea } from '@/components/ui'
 import { canManageCollection, requireCollectionViewer } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
-import { plantName } from '@/lib/utils'
+
 import { PlantDefinitionCompletenessBar } from '@/components/PlantDefinitionCompleteness'
 import { evaluatePlantDefinitionCompletenessBatch } from '@/lib/plant-definition-completeness'
 
@@ -61,14 +63,14 @@ export default async function ValidatedDefinitions() {
               <Card key={definition.id} id={`definition-${definition.id}`}>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <h3 className="font-serif text-2xl font-semibold">{plantName(definition)}</h3>
+                  <h3 className="font-serif text-2xl font-semibold">{plantDisplayName(definition)}</h3>
                   <p className="mt-1 text-sm text-stone-600">
                     <span className="rounded-full bg-[#edf3e6] px-2 py-0.5 text-xs font-semibold text-[#2f6b45]">Validated</span>
                     {' '}· {definition._count.instances} linked instance(s) site-wide
                   </p>
                 </div>
               </div>
-              {definition.description && <p className="mt-3 text-sm">{definition.description}</p>}
+              {definition.description && <p className="mt-3 text-sm">{formatTypography(definition.description)}</p>}
               {definition.aliases.length > 0 && (
                 <p className="mt-2 text-sm text-stone-600">Aliases: {definition.aliases.slice(0, 6).map((alias) => alias.name).join(', ')}</p>
               )}

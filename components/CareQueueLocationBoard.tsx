@@ -1,4 +1,5 @@
 'use client'
+import { formatTypography } from '@/lib/typography'
 import { careCategoryPresentation } from '@/lib/care-category-presentation'
 
 import { useEffect, useMemo, useState } from 'react'
@@ -119,7 +120,7 @@ export function CareQueueLocationBoard({
             {isExpanded && (
               <div id={`care-location-${section.id}`} className="grid gap-3 p-3 xl:grid-cols-2">
                 {originalSection.items.map((item) => (
-                  <div key={item.key} data-care-key={item.key} tabIndex={-1} aria-label={item.title} style={{ display: visibleByKey.has(item.key) ? undefined : 'none' }}>
+                  <div key={item.key} data-care-key={item.key} tabIndex={-1} aria-label={formatTypography(item.title)} style={{ display: visibleByKey.has(item.key) ? undefined : 'none' }}>
                   <CareQueueItemCard item={visibleByKey.get(item.key) || item} collectionSlug={collectionSlug} back={back} canAct={canAct} timezone={timezone} substrateVersions={substrateVersions} />
                   </div>
                 ))}

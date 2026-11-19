@@ -1,3 +1,5 @@
+import { formatTypography } from '@/lib/typography'
+import { plantDisplayName } from '@/lib/utils'
 import { prisma } from '@/lib/prisma'
 import {
   compatibilityDimensions,
@@ -11,7 +13,7 @@ import {
   reviewAiCuratorSuggestion,
 } from '@/app/ai-curator-actions'
 import { Button, Card } from '@/components/ui'
-import { plantName } from '@/lib/utils'
+
 export function HusbandryLinkComparison({
   value,
   context,
@@ -39,7 +41,7 @@ export function HusbandryLinkComparison({
         dimensions; proposed source covers {source.quality.covered.length}/12.
         Compatibility confidence: {Math.round(value.confidence * 100)}%.
       </p>
-      <p>{value.botanicalReasoning}</p>
+      <p>{formatTypography(value.botanicalReasoning)}</p>
       <p>Source quality: {value.sourceQualityAssessment}</p>
       <p>Evidence limitations: {value.evidenceLimitations}</p>
       <h5 className="font-semibold">Supporting similarities</h5>
@@ -136,8 +138,8 @@ export async function HusbandryConsolidationPanel() {
               <label key={p.id} className="block">
                 <input type="checkbox" name="suggestionId" value={p.id} />
                 {p.plantDefinition
-                  ? plantName(p.plantDefinition)
-                  : p.title} · {p.title}
+                  ? plantDisplayName(p.plantDefinition)
+                  : formatTypography(p.title)} · {formatTypography(p.title)}
               </label>
             ))}
             <p>
@@ -165,7 +167,7 @@ export async function HusbandryConsolidationPanel() {
           <summary>Stale comparisons · showing {stale.length}</summary>
           {stale.map((p) => (
             <div key={p.id} className="mt-2 rounded border p-2">
-              <p className="font-semibold">{p.title}</p>
+              <p className="font-semibold">{formatTypography(p.title)}</p>
               <p>{p.reviewNote} No link was applied.</p>
               {p.plantDefinitionId && (
                 <form action={requestAiCuratorResearchNow}>

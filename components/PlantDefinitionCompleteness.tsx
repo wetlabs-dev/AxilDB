@@ -1,3 +1,4 @@
+import { formatTypography } from '@/lib/typography'
 import Link from 'next/link'
 import type { PlantDefinitionCompleteness, PlantDefinitionCompletenessItem } from '@/lib/plant-definition-completeness'
 
@@ -49,7 +50,7 @@ function ChecklistGroup({
   if (!items.length) return null
   return (
     <div>
-      <h4 className="text-xs font-bold uppercase tracking-[0.12em] text-stone-500">{title}</h4>
+      <h4 className="text-xs font-bold uppercase tracking-[0.12em] text-stone-500">{formatTypography(title)}</h4>
       <div className="mt-2 grid gap-2">
         {items.map((entry) => (
           <div key={entry.key} className="flex flex-wrap items-start justify-between gap-2 rounded-md border border-[color:var(--ax-border)] bg-[var(--ax-surface-muted)] px-3 py-2 text-sm">

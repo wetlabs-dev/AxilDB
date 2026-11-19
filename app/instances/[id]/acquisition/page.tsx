@@ -1,3 +1,4 @@
+import { plantDisplayName } from '@/lib/utils'
 import Link from 'next/link'
 import { savePlantInstanceAcquisition } from '@/app/acquisition-actions'
 import { AcquisitionSourceChainFields } from '@/components/AcquisitionSourceChainFields'
@@ -5,7 +6,7 @@ import { DistributorFields } from '@/components/DistributorFields'
 import { Button, Card, Field, TextArea } from '@/components/ui'
 import { collectionPath, requireCollectionLogger } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
-import { dateInput, plantName } from '@/lib/utils'
+import { dateInput } from '@/lib/utils'
 import { isHistoricalConstituent } from '@/lib/plant-instance-merges'
 import { redirect } from 'next/navigation'
 
@@ -28,7 +29,7 @@ export default async function EditPlantAcquisition({ params }: { params: Promise
   const record = instance.acquisitionRecordLinks[0]?.acquisitionRecord
 
   return <div className="space-y-6">
-    <header><p className="text-sm font-semibold uppercase tracking-wide text-[#2f6b45]">{instance.plantId}</p><h2 className="text-3xl font-bold">Edit Acquisition &amp; Provenance</h2><p className="mt-1 text-sm text-stone-600">{plantName(instance.plantDefinition)} · acquisition history is kept separately from ordinary specimen details.</p></header>
+    <header><p className="text-sm font-semibold uppercase tracking-wide text-[#2f6b45]">{instance.plantId}</p><h2 className="text-3xl font-bold">Edit Acquisition &amp; Provenance</h2><p className="mt-1 text-sm text-stone-600">{plantDisplayName(instance.plantDefinition)} · acquisition history is kept separately from ordinary specimen details.</p></header>
     <Card>
       <form action={savePlantInstanceAcquisition} className="grid max-w-5xl gap-4">
         <input type="hidden" name="collectionSlug" value={collection.slug} />

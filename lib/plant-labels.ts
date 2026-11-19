@@ -1,3 +1,4 @@
+import { formatCultivar } from '@/lib/typography'
 export const LABEL_WIDTH_IN = 2.25
 export const LABEL_HEIGHT_IN = 1.25
 export const POINTS_PER_INCH = 72
@@ -42,7 +43,7 @@ export function plantLabelNameLines(definition: LabelDefinition) {
   const hybrid = (definition.hybridNotation || '').trim()
   const species = (definition.species || '').trim()
   const cultivar = (definition.cultivarName || '').trim()
-  return [genus, hybrid, species, cultivar ? `'${cultivar}'` : ''].filter(Boolean)
+  return [genus, hybrid, species, formatCultivar(cultivar)].filter(Boolean)
 }
 
 export function approximatePreviewFontSize(lines: string[], maxSize: number, minSize: number, maxChars: number) {

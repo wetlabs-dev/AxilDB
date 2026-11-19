@@ -1,5 +1,6 @@
 'use client'
 
+import { formatTypography } from '@/lib/typography'
 import { useState, useTransition } from 'react'
 import { previewDefinitionLocationCompatibility, previewPlantLocationCompatibility } from '@/app/location-environment-actions'
 
@@ -56,7 +57,7 @@ export function LocationCompatibilitySelect({
       {pending && <span className="text-xs text-stone-600" role="status">Checking environmental compatibility...</span>}
       {preview && (
         <div className={`rounded-md border px-2.5 py-2 text-xs ${warning ? 'border-[#d8bb72] bg-[#fff7dc] text-[#71551b]' : preview.overallStatus === 'GOOD_MATCH' ? 'border-[#a8c49a] bg-[#edf3e6] text-[#285d3b]' : 'border-stone-300 bg-stone-100 text-stone-700'}`}>
-          <strong>{preview.overallStatus.replaceAll('_', ' ').toLowerCase()}.</strong> {preview.summary}
+          <strong>{preview.overallStatus.replaceAll('_', ' ').toLowerCase()}.</strong> {formatTypography(preview.summary)}
           {preview.checks.length > 0 && <span className="block mt-1">Review: {preview.checks.map((check) => check.category).join(', ')}.</span>}
           {warning && (
             <label className="mt-2 flex items-start gap-2 font-medium">

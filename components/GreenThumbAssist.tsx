@@ -1,5 +1,6 @@
 'use client'
 
+import { formatTypography } from '@/lib/typography'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Sparkles } from 'lucide-react'
@@ -113,7 +114,7 @@ export function GreenThumbAssist({ collectionSlug, plantInstanceId, photos, used
               <option value="">No photo</option>
               {photos.map((photo) => (
                 <option key={photo.id} value={photo.id}>
-                  {photo.caption || 'Untitled specimen photo'}
+                  {formatTypography(photo.caption) || 'Untitled specimen photo'}
                 </option>
               ))}
             </Select>
@@ -124,8 +125,8 @@ export function GreenThumbAssist({ collectionSlug, plantInstanceId, photos, used
         </div>
       )}
 
-      {error && <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p>}
-      {answer && <p className="mt-3 rounded-md border border-[#bdd5b6] bg-white/70 px-3 py-2 text-sm text-[#255537]">{answer}</p>}
+      {error && <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{formatTypography(error)}</p>}
+      {answer && <p className="mt-3 rounded-md border border-[#bdd5b6] bg-white/70 px-3 py-2 text-sm text-[#255537]">{formatTypography(answer)}</p>}
       {treatmentOptions.length > 0 && <div className="mt-3 rounded-md border border-[#bdd5b6] bg-white/70 p-3"><p className="text-xs font-bold uppercase tracking-[0.14em] text-[#255537]">Relevant saved treatments</p><div className="mt-2 grid gap-2">{treatmentOptions.map((option) => <div key={option.id} className="flex flex-wrap items-center justify-between gap-2 text-sm"><Link href={option.href} className="font-semibold text-[#255537] underline">{option.name}</Link><span className="flex flex-wrap gap-2"><Link href={option.applyHref} className="rounded-md border border-[#bdd5b6] px-2 py-1 text-xs font-semibold text-[#255537]">Review application</Link><Link href={option.startPlanHref} className="rounded-md bg-[#2f6b45] px-2 py-1 text-xs font-semibold text-white">Start plan</Link></span></div>)}</div><p className="mt-2 text-xs text-stone-600">Review the saved safety details and product label before choosing a treatment.</p></div>}
 
       {pendingQuestion && (
@@ -138,7 +139,7 @@ export function GreenThumbAssist({ collectionSlug, plantInstanceId, photos, used
               <div>
                 <h4 className="font-serif text-xl">Ask Green Thumb today?</h4>
                 <p className="mt-2 text-sm leading-6 text-stone-700">
-                  This uses today&apos;s Green Thumb request for this specimen. You&apos;ll be able to ask another question tomorrow.
+                  This uses today’s Green Thumb request for this specimen. You’ll be able to ask another question tomorrow.
                 </p>
               </div>
             </div>

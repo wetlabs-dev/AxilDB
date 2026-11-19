@@ -1,5 +1,6 @@
 'use client'
 
+import { formatTypography } from '@/lib/typography'
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight, ExternalLink, X } from 'lucide-react'
@@ -102,7 +103,7 @@ export function PhotoGallery({
           >
             <button type="button" onClick={() => setActiveIndex(index)} className="block w-full text-left focus:outline-none focus:ring-2 focus:ring-[#8fa58f]/40">
               <div className="aspect-square overflow-hidden bg-[#d6dfc9]/45">
-                <PlantImage src={photo} alt={photo.caption || photo.plantId} className="transition duration-300 group-hover:scale-[1.04]" loading={index < 8 ? 'eager' : 'lazy'} />
+                <PlantImage src={photo} alt={formatTypography(photo.caption) || photo.plantId} className="transition duration-300 group-hover:scale-[1.04]" loading={index < 8 ? 'eager' : 'lazy'} />
               </div>
             </button>
             <div className="grid gap-2 p-2.5">
@@ -119,7 +120,7 @@ export function PhotoGallery({
                 {photo.isType && <span className="rounded-full border border-[#b7c9ac] bg-white px-2 py-0.5 text-[0.65rem] text-[#2f6b45]">Type</span>}
               </div>
               <p className="truncate text-sm font-semibold text-stone-900">{photo.plantId}</p>
-              <p className="line-clamp-2 text-xs text-stone-600">{photo.caption || photo.plantName}</p>
+              <p className="line-clamp-2 text-xs text-stone-600">{formatTypography(photo.caption) || formatTypography(photo.plantName)}</p>
             </div>
           </div>
         ))}
@@ -158,7 +159,7 @@ export function PhotoGallery({
               {isImageHiddenByModeration(activePhoto) ? (
                 <ModeratedImagePlaceholder status={activePhoto.moderationStatus} className="max-h-full max-w-full rounded-lg border border-white/15 p-10 shadow-2xl" />
               ) : (
-                <img src={activePhoto.path} alt={activePhoto.caption || activePhoto.plantId} decoding="async" className="max-h-full max-w-full object-contain shadow-2xl" />
+                <img src={activePhoto.path} alt={formatTypography(activePhoto.caption) || activePhoto.plantId} decoding="async" className="max-h-full max-w-full object-contain shadow-2xl" />
               )}
             </div>
             <div className="border-t border-white/10 bg-black/35 p-4 backdrop-blur">
@@ -168,8 +169,8 @@ export function PhotoGallery({
                     {activeIndex! + 1} of {photos.length} · {activePhoto.kind}
                   </p>
                   <h3 className="mt-1 truncate font-serif text-xl font-semibold text-white">{activePhoto.plantId}</h3>
-                  <p className="text-sm text-white/75">{activePhoto.plantName}</p>
-                  {activePhoto.caption && <p className="mt-1 max-w-3xl text-sm text-white/85">{activePhoto.caption}</p>}
+                  <p className="text-sm text-white/75">{formatTypography(activePhoto.plantName)}</p>
+                  {activePhoto.caption && <p className="mt-1 max-w-3xl text-sm text-white/85">{formatTypography(activePhoto.caption)}</p>}
                 </div>
                 <Link href={activePhoto.instanceHref} className="inline-flex items-center gap-2 rounded-md bg-white/12 px-3 py-2 text-sm font-medium text-white transition hover:bg-white/20">
                   Open record

@@ -64,7 +64,7 @@ export function fallbackBriefing(source: BriefingSource, status: 'FALLBACK' | 'F
 
   return {
     status,
-    title: "Today's Collection Briefing",
+    title: "Today’s Collection Briefing",
     summaryMarkdown: markdown,
     model: null,
   }
@@ -159,7 +159,7 @@ export async function generateBriefing(prisma: PrismaClient, input: {
     await recordAiUsage({ collectionId: input.collectionId, userId: input.userId, feature: 'AI_COLLECTION_BRIEFING', model, usage: tokenUsage(payload) })
     return {
       status: 'READY' as const,
-      title: "Today's Collection Briefing",
+      title: "Today’s Collection Briefing",
       summaryMarkdown: markdown,
       model,
     }

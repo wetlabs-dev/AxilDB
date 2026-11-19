@@ -1,10 +1,12 @@
+import { formatTypography } from '@/lib/typography'
+import { plantDisplayName } from '@/lib/utils'
 import Link from 'next/link'
 import { cancelWorkflowRun, completeWorkflowRun, completeWorkflowRunStep, skipWorkflowRunStep } from '@/app/workflow-actions'
 import { Button, Card, DangerButton, Field, LinkButton, Select, TextArea } from '@/components/ui'
 import { canCreateInCollection, canEditInCollection, collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { prisma } from '@/lib/prisma'
 import { workflowProgress, workflowScopeLabel, workflowStepLabel } from '@/lib/workflows'
-import { plantName } from '@/lib/utils'
+
 
 function stepStatusClass(status: string) {
   if (status === 'COMPLETED') return 'border-green-200 bg-green-50 text-green-900'
@@ -46,7 +48,7 @@ export default async function WorkflowRunPage({ params, searchParams }: { params
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-[#2f6b45]">{run.template?.name || 'Workflow run'} · {workflowScopeLabel(run.scopeType)}</p>
-          <h2 className="text-3xl font-bold">{run.title}</h2>
+          <h2 className="text-3xl font-bold">{formatTypography(run.title)}</h2>
           <p className="mt-1 text-sm text-stone-600">
             Started by {run.startedBy.email} · assigned to {run.assignedTo?.email || 'no one'} · {run.location ? `${run.location.code} ${run.location.name}` : `${run.plants.length} selected plant${run.plants.length === 1 ? '' : 's'}`}
           </p>
@@ -72,7 +74,7 @@ export default async function WorkflowRunPage({ params, searchParams }: { params
             {run.plants.map((entry) => (
               <Link key={entry.id} href={collectionPath(collection.slug, `/instances/${entry.plantInstanceId}`)} className="rounded-md border border-stone-200 bg-white/60 p-2 text-sm underline">
                 <span className="font-mono text-xs font-semibold text-[#2f6b45]">{entry.plantInstance.plantId}</span>
-                <span className="block">{plantName(entry.plantInstance.plantDefinition)}</span>
+                <span className="block">{plantDisplayName(entry.plantInstance.plantDefinition)}</span>
                 <span className="block text-xs text-stone-500">{entry.plantInstance.currentLocation ? `${entry.plantInstance.currentLocation.code} · ${entry.plantInstance.currentLocation.name}` : 'No location'}</span>
               </Link>
             ))}
@@ -86,10 +88,10 @@ export default async function WorkflowRunPage({ params, searchParams }: { params
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">Step {index + 1} · {workflowStepLabel(step.stepType)} · {step.required ? 'required' : 'optional'}</p>
-                <h3 className="mt-1 font-serif text-xl font-semibold">{step.title}</h3>
-                {step.instructions && <p className="mt-1 text-sm text-stone-600">{step.instructions}</p>}
+                <h3 className="mt-1 font-serif text-xl font-semibold">{formatTypography(step.title)}</h3>
+                {step.instructions && <p className="mt-1 text-sm text-stone-600">{formatTypography(step.instructions)}</p>}
                 {step.completedAt && <p className="mt-2 text-xs text-stone-500">Handled by {step.completedByUser?.email || 'unknown'} · {step.completedAt.toLocaleString()}</p>}
-                {step.notes && <p className="mt-2 rounded-md border border-stone-200 bg-[#fffaf0] p-2 text-sm text-stone-700">{step.notes}</p>}
+                {step.notes && <p className="mt-2 rounded-md border border-stone-200 bg-[#fffaf0] p-2 text-sm text-stone-700">{formatTypography(step.notes)}</p>}
               </div>
               <span className={`rounded-full border px-2 py-1 text-xs font-semibold ${stepStatusClass(step.status)}`}>{step.status.toLowerCase()}</span>
             </div>
@@ -104,7 +106,7 @@ export default async function WorkflowRunPage({ params, searchParams }: { params
                     <div className="grid gap-2">
                       <Select label="Photo target" name="target" defaultValue={run.plants[0] ? `PLANT_INSTANCE:${run.plants[0].plantInstanceId}` : run.location ? `LOCATION:${run.location.id}` : `COLLECTION:${collection.id}`}>
                         {run.plants.map((entry) => (
-                          <option key={entry.plantInstanceId} value={`PLANT_INSTANCE:${entry.plantInstanceId}`}>{entry.plantInstance.plantId} · {plantName(entry.plantInstance.plantDefinition)}</option>
+                          <option key={entry.plantInstanceId} value={`PLANT_INSTANCE:${entry.plantInstanceId}`}>{entry.plantInstance.plantId} · {plantDisplayName(entry.plantInstance.plantDefinition)}</option>
                         ))}
                         {run.location && <option value={`LOCATION:${run.location.id}`}>{run.location.code} · {run.location.name}</option>}
                         <option value={`COLLECTION:${collection.id}`}>Collection-level photo</option>

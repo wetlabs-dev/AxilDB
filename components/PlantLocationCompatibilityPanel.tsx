@@ -1,3 +1,4 @@
+import { formatTypography } from '@/lib/typography'
 import type { CompatibilityResult, EffectiveLocationEnvironment } from '@/lib/location-compatibility'
 import { defaultUnitPreferences, formatLightRange, formatTemperatureRange, type UnitPreferences } from '@/lib/units'
 import { cn } from '@/lib/utils'
@@ -69,15 +70,15 @@ function preferredCheckRange(check: CompatibilityResult['checks'][number], side:
 export function PlantLocationCompatibilityPanel({ result, title = 'Location compatibility', compact = false, unitPreferences = defaultUnitPreferences }: { result: CompatibilityResult; title?: string; compact?: boolean; unitPreferences?: UnitPreferences }) {
   const visibleChecks = compact ? result.checks.filter((check) => check.status === 'CAUTION' || check.status === 'CONFLICT') : result.checks
   return (
-    <section className={cn('rounded-lg border p-3', statusClasses[result.overallStatus])} aria-label={title}>
+    <section className={cn('rounded-lg border p-3', statusClasses[result.overallStatus])} aria-label={formatTypography(title)}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.14em]">{title}</p>
+          <p className="text-xs font-bold uppercase tracking-[0.14em]">{formatTypography(title)}</p>
           <p className="mt-1 font-serif text-xl font-semibold">{statusLabels[result.overallStatus]}</p>
         </div>
         <span className="rounded-full border border-current/20 bg-white/40 px-2.5 py-1 text-xs font-semibold">Advisory</span>
       </div>
-      <p className="mt-2 text-sm">{result.summary}</p>
+      <p className="mt-2 text-sm">{formatTypography(result.summary)}</p>
       {visibleChecks.length > 0 && (
         <div className="mt-3 grid gap-2">
           {visibleChecks.map((check) => (
@@ -86,7 +87,7 @@ export function PlantLocationCompatibilityPanel({ result, title = 'Location comp
                 <strong>{check.category}</strong>
                 <span className="text-xs font-bold uppercase tracking-[0.12em]">{check.status.toLowerCase()}</span>
               </div>
-              <p className="mt-1">{check.explanation}</p>
+              <p className="mt-1">{formatTypography(check.explanation)}</p>
               <p className="mt-1 text-xs opacity-80">Plant: {preferredCheckRange(check, 'plant', unitPreferences)} · Location: {preferredCheckRange(check, 'location', unitPreferences)}</p>
             </div>
           ))}

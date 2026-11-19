@@ -34,7 +34,7 @@ const fields: FieldConfig[] = [
   {
     name: 'species',
     label: 'Species',
-    help: 'Species epithet. Leave blank when the accepted horticultural name intentionally omits species (for example, Begonia \'Looking Glass\'). Use sp. only when the species is genuinely unknown.',
+    help: "Species epithet. Leave blank when the accepted horticultural name intentionally omits species (for example, Begonia ‘Looking Glass’). Use sp. only when the species is genuinely unknown.",
     list: 'definition-species-suggestions',
     autoCapitalize: 'none',
   },
@@ -47,7 +47,7 @@ const fields: FieldConfig[] = [
   {
     name: 'cultivarName',
     label: 'Cultivar name',
-    help: 'The named cultivated variety, usually written in single quotes, such as \'Morning Glow\'. Leave blank for unnamed species or clones.',
+    help: "The named cultivated variety, usually written in single quotes, such as ‘Morning Glow’. Leave blank for unnamed species or clones.",
     list: 'definition-cultivar-name-suggestions',
   },
 ]

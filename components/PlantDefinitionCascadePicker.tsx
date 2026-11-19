@@ -1,4 +1,5 @@
 'use client'
+import { plantDisplayName } from '@/lib/utils'
 
 import { PlantImage } from '@/components/PlantImage'
 import { cn } from '@/lib/utils'
@@ -214,7 +215,7 @@ export function PlantDefinitionCascadePicker({
           {resolved.thumbnail && <div className="h-14 w-14 shrink-0 overflow-hidden rounded-md border border-stone-200"><PlantImage src={resolved.thumbnail} alt="" /></div>}
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-wide text-stone-500">Resolved definition</p>
-            <p className="truncate font-semibold text-stone-900">{resolved.displayName}</p>
+            <p className="truncate font-semibold text-stone-900">{plantDisplayName(resolved)}</p>
             <p className="text-xs text-stone-600">
               {resolved.isValidated ? 'Validated definition' : resolved.identificationStatus === 'PROVISIONAL' ? 'Provisional local definition' : 'Local definition'}
               {resolved.taxonomicAuthorityName ? ` · ${resolved.taxonomicAuthorityName}` : ''}
@@ -228,7 +229,7 @@ export function PlantDefinitionCascadePicker({
           {cultivarMatches.length} Plant Definitions match these selections
           <select className={cn(inputClass, 'max-w-xl')} value={explicitDefinitionId} onChange={(event) => setExplicitDefinitionId(event.target.value)} required={required}>
             <option value="">Choose exact definition</option>
-            {cultivarMatches.map((definition) => <option key={definition.id} value={definition.id}>{definition.displayName}{definition.isValidated ? ' - Validated' : ''}</option>)}
+            {cultivarMatches.map((definition) => <option key={definition.id} value={definition.id}>{plantDisplayName(definition)}{definition.isValidated ? ' - Validated' : ''}</option>)}
           </select>
         </label>
       )}
