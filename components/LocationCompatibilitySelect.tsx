@@ -54,7 +54,7 @@ export function LocationCompatibilitySelect({
           {locations.map((location) => <option key={location.id} value={location.id}>{location.label}</option>)}
         </select>
       </label>
-      {pending && <span className="text-xs text-stone-600" role="status">Checking environmental compatibility...</span>}
+      {pending && <span className="text-xs text-stone-600" role="status">Checking environmental compatibility…</span>}
       {preview && (
         <div className={`rounded-md border px-2.5 py-2 text-xs ${warning ? 'border-[#d8bb72] bg-[#fff7dc] text-[#71551b]' : preview.overallStatus === 'GOOD_MATCH' ? 'border-[#a8c49a] bg-[#edf3e6] text-[#285d3b]' : 'border-stone-300 bg-stone-100 text-stone-700'}`}>
           <strong>{preview.overallStatus.replaceAll('_', ' ').toLowerCase()}.</strong> {formatTypography(preview.summary)}

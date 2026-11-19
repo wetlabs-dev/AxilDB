@@ -129,7 +129,7 @@ export function windowRange(w: AnnualWindow) {
     'November',
     'December',
   ]
-  return `${names[w.startMonth - 1]} ${w.startDay} – ${names[w.endMonth - 1]} ${w.endDay}`
+  return `${names[w.startMonth - 1]} ${w.startDay}–${names[w.endMonth - 1]} ${w.endDay}`
 }
 export function windowFingerprint(w: AnnualWindow) {
   return [

@@ -25,7 +25,7 @@ export function CompatibilityMoveForm({ collectionSlug, plantInstanceId, current
         let compatibilityAcknowledged = false
         let compatibilityNote: string | null = null
         if (destination) {
-          setStatus('Checking location compatibility...')
+          setStatus("Checking location compatibility…")
           const preview = await previewPlantLocationCompatibility({ collectionSlug, locationId: destination, plantInstanceIds: [plantInstanceId] })
           const result = preview.results[0]
           if (result && (result.overallStatus === 'CAUTION' || result.overallStatus === 'POOR_MATCH')) {

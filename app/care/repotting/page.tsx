@@ -1,3 +1,4 @@
+import { BotanicalName } from '@/components/BotanicalName'
 import { formatTypography } from '@/lib/typography'
 import { plantDisplayName } from '@/lib/utils'
 import Link from 'next/link'
@@ -214,7 +215,7 @@ export default async function Page({
                             `/instances/${item.plantInstanceId}`
                           )}
                         >
-                          {item.plantInstance.plantId} · {plantDisplayName(d)}
+                          {item.plantInstance.plantId} · {<BotanicalName value={d} />}
                         </Link>
                       </label>
                       <p>

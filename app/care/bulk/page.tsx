@@ -1,3 +1,4 @@
+import { BotanicalName } from '@/components/BotanicalName'
 import { normalizeTypographySearch } from '@/lib/typography'
 import { formatTypography } from '@/lib/typography'
 import { plantDisplayName } from '@/lib/utils'
@@ -279,7 +280,7 @@ export default async function BulkCarePage({
                 const skipped = firstParam(params[`skip:${plant.id}`]) === 'on'
                 return (
                   <div key={plant.id} className="rounded-md border border-[#c7d8bd] bg-white/70 p-3 text-sm">
-                    <p className="font-semibold">{plant.plantId} · {plantDisplayName(plant.plantDefinition)}{skipped ? ' · skipped' : ''}</p>
+                    <p className="font-semibold">{plant.plantId} · {<BotanicalName value={plant.plantDefinition} />}{skipped ? ' · skipped' : ''}</p>
                     {firstParam(params[`note:${plant.id}`]) && <p className="text-stone-600">Note: {firstParam(params[`note:${plant.id}`])}</p>}
                     {firstParam(params[`result:${plant.id}`]) && <p className="text-stone-600">Result: {firstParam(params[`result:${plant.id}`])}</p>}
                     {firstParam(params[`skipReason:${plant.id}`]) && <p className="text-stone-600">Skip reason: {firstParam(params[`skipReason:${plant.id}`])}</p>}
@@ -323,7 +324,7 @@ export default async function BulkCarePage({
                       <input className="mt-1" type="checkbox" name="plantInstanceId" value={plant.id} defaultChecked={selectedIds.size ? selectedIds.has(plant.id) : true} />
                       <span className="min-w-0 flex-1">
                         <span className="block font-mono text-sm font-semibold text-[#2f6b45]">{plant.plantId}</span>
-                        <span className="block font-serif text-xl font-semibold">{plantDisplayName(plant.plantDefinition)}</span>
+                        <span className="block font-serif text-xl font-semibold">{<BotanicalName value={plant.plantDefinition} />}</span>
                         <span className="block text-sm text-stone-600">{plant.currentLocation ? `${plant.currentLocation.code} · ${locationPathWithCodes(plant.currentLocation.id, locationNodes)}` : 'No location set'}</span>
                       </span>
                       <span className={`rounded-full px-2 py-1 text-xs font-semibold ${direct ? 'bg-[#e8efdf] text-[#2f6b45]' : 'bg-stone-100 text-stone-600'}`}>{direct ? 'Direct' : 'Nested'}</span>

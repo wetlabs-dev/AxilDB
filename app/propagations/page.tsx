@@ -1,3 +1,4 @@
+import { BotanicalName } from '@/components/BotanicalName'
 import { plantDisplayName } from '@/lib/utils'
 import { createPropagationEvent } from '@/app/actions'
 import { PlantImage } from '@/components/PlantImage'
@@ -179,7 +180,7 @@ export default async function Propagations() {
                     <h3 className="mt-1 line-clamp-2 text-sm font-bold leading-tight">{instance.plantId}</h3>
                     <p className="mt-1 text-xs text-stone-600">{instance.status}</p>
                     <p className="mt-2 line-clamp-2 text-xs text-stone-700">
-                      {plantInstanceTypeLabel(instance.instanceType)} · {plantDisplayName(instance.plantDefinition)}
+                      {plantInstanceTypeLabel(instance.instanceType)} · {<BotanicalName value={instance.plantDefinition} />}
                     </p>
                     <p className="mt-1 line-clamp-2 text-xs text-stone-600">
                       Source: {instance.source || instance.distributor || 'External source'}

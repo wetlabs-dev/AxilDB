@@ -1,3 +1,4 @@
+import { BotanicalName } from '@/components/BotanicalName'
 import { formatTypography } from '@/lib/typography'
 import { plantDisplayName } from '@/lib/utils'
 import Link from 'next/link'
@@ -104,7 +105,7 @@ export default async function WorkflowTemplatePage({ params }: { params: Promise
                   {plants.map((plant) => (
                     <label key={plant.id} className="flex gap-2 rounded border border-stone-200 bg-white/70 p-2 text-sm">
                       <input type="checkbox" name="plantInstanceId" value={plant.id} />
-                      <span><span className="font-mono text-xs font-semibold text-[#2f6b45]">{plant.plantId}</span> · {plantDisplayName(plant.plantDefinition)}</span>
+                      <span><span className="font-mono text-xs font-semibold text-[#2f6b45]">{plant.plantId}</span> · {<BotanicalName value={plant.plantDefinition} />}</span>
                     </label>
                   ))}
                 </div>

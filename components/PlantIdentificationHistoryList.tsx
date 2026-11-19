@@ -1,3 +1,4 @@
+import { BotanicalName } from '@/components/BotanicalName'
 import { formatTypography } from '@/lib/typography'
 import { plantDisplayName } from '@/lib/utils'
 import Link from 'next/link'
@@ -126,7 +127,7 @@ export function PlantIdentificationHistoryList({
                 )}
                 {!log.createdPlantDefinition && log.matchedPlantDefinition && matchedHref && (
                   <Link href={matchedHref} className="rounded-md border border-[#b7caa9] bg-[#edf3e6] px-3 py-1.5 font-semibold text-[#255537]">
-                    Matches {plantDisplayName(log.matchedPlantDefinition)}
+                    Matches {<BotanicalName value={log.matchedPlantDefinition} />}
                   </Link>
                 )}
                 {canCreateFromLog && (

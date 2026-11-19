@@ -1,4 +1,5 @@
 'use client'
+import { BotanicalText } from '@/components/BotanicalName'
 import { formatTypography } from '@/lib/typography'
 import Link from 'next/link'
 import { CareCategoryBadge } from '@/components/CareCategoryBadge'
@@ -102,7 +103,7 @@ export function CareQueueChecklist({ collectionSlug, canAct, timezone, rangeEnd 
                           </PlantIdPreviewLink>
                         ) : formatTypography(item.title)}
                       </p>
-                      {item.plantName && <p className="truncate text-sm text-stone-700">{formatTypography(item.plantName)}</p>}
+                      {item.plantName && <p className="truncate text-sm text-stone-700">{<BotanicalText text={item.plantName} />}</p>}
                       <p className="mt-1 line-clamp-2 text-xs text-stone-600">{formatTypography(item.reason)}</p>
                       <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
                         <Link href={item.href} className="inline-flex items-center whitespace-nowrap font-medium leading-5 text-[#2f6b45] underline">View</Link>

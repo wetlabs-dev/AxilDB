@@ -1,4 +1,5 @@
 'use client'
+import { BotanicalName } from '@/components/BotanicalName'
 import { plantDisplayName } from '@/lib/utils'
 
 import { PlantImage } from '@/components/PlantImage'
@@ -215,7 +216,7 @@ export function PlantDefinitionCascadePicker({
           {resolved.thumbnail && <div className="h-14 w-14 shrink-0 overflow-hidden rounded-md border border-stone-200"><PlantImage src={resolved.thumbnail} alt="" /></div>}
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-wide text-stone-500">Resolved definition</p>
-            <p className="truncate font-semibold text-stone-900">{plantDisplayName(resolved)}</p>
+            <p className="truncate font-semibold text-stone-900">{<BotanicalName value={resolved} />}</p>
             <p className="text-xs text-stone-600">
               {resolved.isValidated ? 'Validated definition' : resolved.identificationStatus === 'PROVISIONAL' ? 'Provisional local definition' : 'Local definition'}
               {resolved.taxonomicAuthorityName ? ` · ${resolved.taxonomicAuthorityName}` : ''}

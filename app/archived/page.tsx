@@ -1,3 +1,4 @@
+import { BotanicalName } from '@/components/BotanicalName'
 import { formatTypography } from '@/lib/typography'
 import { plantDisplayName } from '@/lib/utils'
 import { SortControl } from '@/components/SortControl'
@@ -47,7 +48,7 @@ export default async function Archived() {
           <Link className="font-bold underline" href={collectionPath(collection.slug, `/instances/${item.id}`)}>
             {item.plantId}
           </Link>
-          <p className="text-sm">{plantDisplayName(item.plantDefinition)} · {fmtDate(item.archiveDate)} · {item.archiveReason}</p>
+          <p className="text-sm">{<BotanicalName value={item.plantDefinition} />} · {fmtDate(item.archiveDate)} · {item.archiveReason}</p>
           <p>{formatTypography(item.archiveNotes)}</p>
         </Card>
       ))}

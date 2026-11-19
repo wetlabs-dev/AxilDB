@@ -1,3 +1,4 @@
+import { NBSP, formatNumericRange } from '@/lib/editorial-typography'
 import { lightFromCanonical, lightToCanonical } from './light'
 import { temperatureFromCanonical, temperatureToCanonical } from './temperature'
 import type { LightUnit, TemperatureUnit } from './types'
@@ -55,12 +56,12 @@ export function parseLightInput(value: string, unit: LightUnit) {
 
 export function formatTemperature(valueC: number | null | undefined, unit: TemperatureUnit) {
   if (valueC == null) return 'Unknown'
-  return `${displayNumber(temperatureFromCanonical(finite(valueC), unit), 1)} ${temperatureSymbol(unit)}`
+  return `${displayNumber(temperatureFromCanonical(finite(valueC), unit), 1).replace(/^-/,'−')}${NBSP}${temperatureSymbol(unit)}`
 }
 
 export function formatLight(valueLux: number | null | undefined, unit: LightUnit) {
   if (valueLux == null) return 'Unknown'
-  return `${displayNumber(lightFromCanonical(finite(valueLux), unit), unit === 'FOOT_CANDLE' ? 1 : 0)} ${lightSymbol(unit)}`
+  return `${displayNumber(lightFromCanonical(finite(valueLux), unit), unit === 'FOOT_CANDLE' ? 1 : 0).replace(/^-/,'−')}${NBSP}${lightSymbol(unit)}`
 }
 
 function formatRange(
@@ -74,9 +75,9 @@ function formatRange(
 }
 
 export function formatTemperatureRange(minC: number | null | undefined, maxC: number | null | undefined, unit: TemperatureUnit) {
-  return formatRange(minC, maxC, (value) => formatTemperature(value, unit))
+  return minC != null && maxC != null ? formatNumericRange(displayNumber(temperatureFromCanonical(finite(minC),unit),1), displayNumber(temperatureFromCanonical(finite(maxC),unit),1), temperatureSymbol(unit)) : formatRange(minC, maxC, (value) => formatTemperature(value, unit))
 }
 
 export function formatLightRange(minLux: number | null | undefined, maxLux: number | null | undefined, unit: LightUnit) {
-  return formatRange(minLux, maxLux, (value) => formatLight(value, unit))
+  return minLux != null && maxLux != null ? formatNumericRange(displayNumber(lightFromCanonical(finite(minLux),unit),unit==='FOOT_CANDLE'?1:0), displayNumber(lightFromCanonical(finite(maxLux),unit),unit==='FOOT_CANDLE'?1:0), lightSymbol(unit)) : formatRange(minLux, maxLux, (value) => formatLight(value, unit))
 }

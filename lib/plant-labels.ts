@@ -1,3 +1,4 @@
+import { botanicalPlainName, formatHybridNotation } from '@/lib/botanical-typography'
 import { formatCultivar } from '@/lib/typography'
 export const LABEL_WIDTH_IN = 2.25
 export const LABEL_HEIGHT_IN = 1.25
@@ -11,9 +12,9 @@ export const BROTHER_DK_2210_WIDTH_PT = (1 + 1 / 7) * POINTS_PER_INCH
 export type LabelFormat = 'fixed' | 'sheet' | 'brother-dk-2210'
 export type LabelOrientation = 'portrait' | 'landscape'
 export const labelFormatOptions: Array<{ value: LabelFormat; label: string }> = [
-  { value: 'fixed', label: '2.25 x 1.25 inch label, one per page' },
+  { value: 'fixed', label: '2.25 × 1.25 in label, one per page' },
   { value: 'sheet', label: 'Legacy print sheet, ganged labels' },
-  { value: 'brother-dk-2210', label: 'Brother DK-2210 continuous 1 1/7 inch label' },
+  { value: 'brother-dk-2210', label: 'Brother DK-2210 continuous 1 1/7 in label' },
 ]
 
 export function defaultLabelOrientation(format: LabelFormat): LabelOrientation {
@@ -39,9 +40,9 @@ type LabelDefinition = {
 }
 
 export function plantLabelNameLines(definition: LabelDefinition) {
-  const genus = (definition.genus || '').trim()
-  const hybrid = (definition.hybridNotation || '').trim()
-  const species = (definition.species || '').trim()
+  const genus = botanicalPlainName({genus:definition.genus})
+  const hybrid = formatHybridNotation((definition.hybridNotation || '').trim())
+  const species = botanicalPlainName({species:definition.species})
   const cultivar = (definition.cultivarName || '').trim()
   return [genus, hybrid, species, formatCultivar(cultivar)].filter(Boolean)
 }

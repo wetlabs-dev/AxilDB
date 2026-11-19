@@ -1,3 +1,4 @@
+import { BotanicalName } from '@/components/BotanicalName'
 import { typographySearchWhere } from '@/lib/typography-search'
 import { plantDisplayName } from '@/lib/utils'
 import LineageGraph from '@/components/LineageGraph'
@@ -88,7 +89,7 @@ export default async function Graphs({
                     href={`${collectionPath(collection.slug, '/graphs')}?root=${item.id}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
                   >
                     <span className="block font-semibold">{item.plantId}</span>
-                    <span className="line-clamp-2 text-xs text-stone-600">{plantDisplayName(item.plantDefinition)}</span>
+                    <span className="line-clamp-2 text-xs text-stone-600">{<BotanicalName value={item.plantDefinition} />}</span>
                   </Link>
                 )
               })}
@@ -104,7 +105,7 @@ export default async function Graphs({
               <Link className="font-semibold text-[#2f6b45] underline decoration-[#8fa58f] underline-offset-2" href={collectionPath(collection.slug, `/instances/${selected.id}`)}>
                 {selected.plantId}
               </Link>{' '}
-              · {plantDisplayName(selected.plantDefinition)}
+              · {<BotanicalName value={selected.plantDefinition} />}
             </div>
           )}
           {root ? <LineageGraph nodes={graph.nodes} edges={graph.edges} selectedId={root} /> : <Card>No plants yet.</Card>}

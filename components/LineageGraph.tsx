@@ -1,4 +1,5 @@
 'use client'
+import { BotanicalText } from '@/components/BotanicalName'
 import React, { useMemo } from 'react'
 import ReactFlow, { Background, Controls, MiniMap, Edge, MarkerType, Node } from 'reactflow'
 import dagre from 'dagre'
@@ -75,6 +76,7 @@ export default function LineageGraph({nodes, edges, selectedId}:{nodes:any[], ed
  const laidOut = useMemo(() => {
    const selected = nodes.map((node) => ({
      ...node,
+     data: { ...node.data, label: typeof node.data?.label === 'string' && node.data.label.includes('\n') ? <><span className="ax-literal">{node.data.label.split('\n')[0]}</span><br /><BotanicalText text={node.data.label.split('\n').slice(1).join('\n')} /></> : node.data?.label },
      className: `${node.className || ''} ${node.id === selectedId ? 'lineage-selected' : ''}`,
    }))
    return layout(selected, edges)

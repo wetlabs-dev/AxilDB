@@ -60,7 +60,7 @@ try {
   assert(text.includes(phase==='after' ? 'Epipremnum aureum ‘N’Joy’' : "Epipremnum aureum 'N'Joy'"))
   assert(text.includes("Damon's shelf"), 'User-controlled location names remain exact')
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth), 'No horizontal overflow')
-  await page.screenshot({ path: `${out}/care-${theme}-${width}-${phase}.jpg`, type:'jpeg', quality:82, fullPage:true })
+  await page.screenshot({ path: `${out}/care-${theme}-${width}-${phase}.jpg`, type:'jpeg', quality:82, fullPage:await page.evaluate(()=>document.documentElement.scrollHeight<14000) })
   results.push({ surface:'care', theme, width })
  }
  await page.setViewportSize({ width:1440,height:1000 })
@@ -76,7 +76,7 @@ try {
     await cultivar.fill("N'Joy")
    }
   }
-  await page.screenshot({ path:`${out}/${name}-${phase}.jpg`,type:'jpeg',quality:80,fullPage:true })
+  await page.screenshot({ path:`${out}/${name}-${phase}.jpg`,type:'jpeg',quality:80,fullPage:await page.evaluate(()=>document.documentElement.scrollHeight<14000) })
   results.push({surface:name})
  }
  if (phase==='after') {
@@ -100,13 +100,13 @@ try {
   await page.goto(`${base}/exhibit/${f.exhibitSlug}`)
   await expect(page.locator('main')).toContainText('Epipremnum aureum ‘N’Joy’')
   await expect(page.locator('main')).toContainText('The guide says, “Bright indirect light”. It is the plant’s preferred spot.')
-  await page.screenshot({path:`${out}/public-exhibit-after.jpg`,type:'jpeg',quality:80,fullPage:true})
+  await page.screenshot({path:`${out}/public-exhibit-after.jpg`,type:'jpeg',quality:80,fullPage:await page.evaluate(()=>document.documentElement.scrollHeight<14000)})
   results.push({surface:'public-exhibit'})
   await page.goto(base+'/server/ai-curator')
   await expect(page.locator('main')).toContainText('Today’s husbandry proposal')
   await expect(page.locator('main')).toContainText('The guide states, “Don’t overwater”.')
   await expect(page.locator('textarea[name="suggestedValueJson"]').first()).toHaveValue(/Water when it's partly dry/)
-  await page.screenshot({path:`${out}/curator-after.jpg`,type:'jpeg',quality:80,fullPage:true})
+  await page.screenshot({path:`${out}/curator-after.jpg`,type:'jpeg',quality:80,fullPage:await page.evaluate(()=>document.documentElement.scrollHeight<14000)})
   results.push({surface:'curator'})
   const csv = await context.request.get(`${base}/api/exports/plant-definitions?collectionSlug=typography-review`)
   assert.equal(csv.status(),200)

@@ -65,7 +65,7 @@ export function FertilizerProductMagicFillButton({ className = '' }: { className
     const formData = new FormData(form)
     const collectionSlug = String(formData.get('collectionSlug') || '').trim()
     setLoading(true)
-    setStatus('Searching product label data...')
+    setStatus("Searching product label data…")
     try {
       const response = await fetch('/api/ai/fertilizer-product-fill', {
         method: 'POST',
@@ -123,7 +123,7 @@ export function FertilizerProductMagicFillButton({ className = '' }: { className
             <p>NPK: {[draft.nitrogen, draft.phosphorus, draft.potassium].map((value) => value ?? '-').join('-')}</p>
             {draft.manufacturerRecommendedDilution && <p>Label dilution: {draft.manufacturerRecommendedDilution}</p>}
             {draft.manufacturerFeedAmount && <p>Feed rate: {[draft.manufacturerFeedAmount, draft.manufacturerFeedUnit, 'per', draft.manufacturerFeedWaterVolume, draft.manufacturerFeedWaterUnit].filter(Boolean).join(' ')}</p>}
-            {draft.guaranteedAnalysisNotes && <p className="sm:col-span-2">Notes: {formatTypography(draft.guaranteedAnalysisNotes)}</p>}
+            {draft.guaranteedAnalysisNotes && <p className="sm:col-span-2">Notes: {formatTypography(draft.guaranteedAnalysisNotes, { mode: 'chemical' })}</p>}
           </div>
           <button type="button" onClick={applyDraft} className="mt-3 rounded-md bg-[#2f6b45] px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[#28593b]">
             Apply draft to form

@@ -1,4 +1,5 @@
 'use client'
+import { BotanicalText } from '@/components/BotanicalName'
 import { formatTypography } from '@/lib/typography'
 import { Camera, X } from 'lucide-react'
 import { createPortal } from 'react-dom'
@@ -48,7 +49,7 @@ export function CareQueuePhoto({ item, collectionSlug, canUpload }: { item: Care
     <span role="status" className={message ? "pointer-events-none absolute inset-x-0 top-0 bg-[#fffdf7]/95 p-1 text-center text-[10px] font-semibold text-[#2f6b45]" : "sr-only"}>{formatTypography(message)}</span>
     {open && createPortal(<dialog ref={dialog} aria-labelledby={titleId} onCancel={event => { event.preventDefault(); if (!busy) setOpen(false) }} className="m-auto max-h-[92dvh] w-[min(38rem,calc(100vw-1rem))] overflow-y-auto rounded-xl border border-[#c7d8bd] bg-[#fffdf7] p-4 text-stone-800 shadow-xl backdrop:bg-black/40 sm:p-6">
       <div className="flex items-start justify-between gap-3">
-        <div><h2 id={titleId} className="font-serif text-xl font-bold">{heading}</h2><p className="mt-1 text-sm">{formatTypography(item.plantName)} · {item.plantId}</p>{item.locationPath && <p className="text-xs text-stone-500">{item.locationPath}</p>}</div>
+        <div><h2 id={titleId} className="font-serif text-xl font-bold">{heading}</h2><p className="mt-1 text-sm">{<BotanicalText text={item.plantName} />} · {item.plantId}</p>{item.locationPath && <p className="text-xs text-stone-500">{item.locationPath}</p>}</div>
         <button type="button" aria-label="Close photo dialog" disabled={busy} onClick={() => setOpen(false)} className="flex min-h-11 min-w-11 items-center justify-center rounded border border-stone-300"><X className="h-5 w-5" /></button>
       </div>
       {progress && <p className="my-3 text-sm text-stone-600">Document this plant’s current appearance. Your existing photos will be preserved.</p>}

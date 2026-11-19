@@ -1,3 +1,4 @@
+import { BotanicalName } from '@/components/BotanicalName'
 import { plantDisplayName } from '@/lib/utils'
 import Link from 'next/link'
 import { batchMovePlantLocations, createLocation, createLocationType, updateLocationType } from '@/app/actions'
@@ -243,7 +244,7 @@ export default async function LocationsPage({
                   <label key={plant.id} className="flex items-start gap-2 rounded-md border border-stone-200 bg-white/60 p-2 text-sm">
                     <input type="checkbox" name="plantInstanceId" value={plant.id} defaultChecked />
                     <span>
-                      <span className="font-semibold">{plant.plantId}</span> · {plantDisplayName(plant.plantDefinition)}
+                      <span className="font-semibold">{plant.plantId}</span> · {<BotanicalName value={plant.plantDefinition} />}
                       <span className="block text-xs text-stone-500">{plant.currentLocation ? `${plant.currentLocation.code} ${plant.currentLocation.name}` : 'No location'}</span>
                       {batchCompatibilityByPlantId.get(plant.id) && <span className="block text-xs font-semibold text-stone-600">Compatibility: {batchCompatibilityByPlantId.get(plant.id)!.overallStatus.replaceAll('_', ' ').toLowerCase()}</span>}
                     </span>
@@ -280,7 +281,7 @@ export default async function LocationsPage({
                   <PlantIdPreviewLink collectionSlug={collection.slug} plantId={plant.plantId} href={collectionPath(collection.slug, `/instances/${plant.id}`)}>
                     {plant.plantId}
                   </PlantIdPreviewLink>
-                  <p className="truncate text-sm text-stone-600">{plantDisplayName(plant.plantDefinition)} · {plant.currentLocation ? `${plant.currentLocation.code} ${plant.currentLocation.name}` : 'No location'}</p>
+                  <p className="truncate text-sm text-stone-600">{<BotanicalName value={plant.plantDefinition} />} · {plant.currentLocation ? `${plant.currentLocation.code} ${plant.currentLocation.name}` : 'No location'}</p>
                 </div>
                 <CompatibilityMoveForm collectionSlug={collection.slug} plantInstanceId={plant.id} currentLocationId={plant.currentLocationId} locations={locationNodes.map((location) => ({ id: location.id, label: `${location.code} · ${locationPath(location.id, locationNodes)}` }))} />
               </div>

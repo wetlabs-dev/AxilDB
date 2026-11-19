@@ -88,7 +88,7 @@ export function AIDescriptionField({
     }
 
     setLoading(true)
-    setStatus('Generating description...')
+    setStatus("Generating description…")
     try {
       const response = await fetch('/api/ai/plant-description', {
         method: 'POST',
@@ -201,7 +201,7 @@ export function AIMagicFillButton({
     const controller = new AbortController()
     researchController.current = controller
     setLoading(true)
-    setStatus('Researching plant definition...')
+    setStatus("Researching plant definition…")
     try {
       const response = await fetch('/api/ai/plant-definition-fill', {
         signal: controller.signal,

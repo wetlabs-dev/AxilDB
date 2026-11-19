@@ -1,3 +1,4 @@
+import { BotanicalName } from '@/components/BotanicalName'
 import { plantDisplayName } from '@/lib/utils'
 import { createLocation, createPlantInstance } from '@/app/actions'
 import { startWorkflowRun } from '@/app/workflow-actions'
@@ -209,7 +210,7 @@ export default async function Instances({
           <h2 className="text-3xl font-bold">Plant Instances</h2>
           {filteredDefinition && (
             <p className="mt-1 text-sm text-stone-600">
-              Showing {plantDisplayName(filteredDefinition)}.
+              Showing {<BotanicalName value={filteredDefinition} />}.
               {' '}
               <Link className="font-medium text-[#2f6b45] underline" href={collectionPath(collection.slug, '/instances')}>Show all instances</Link>
             </p>
@@ -374,7 +375,7 @@ export default async function Instances({
                 <div className="min-h-0 overflow-hidden p-3">
                   <p className="line-clamp-2 text-sm font-bold underline">{instance.plantId}</p>
                   <p className="line-clamp-2 text-sm text-stone-700">
-                    {instance.plantDefinition.isValidated ? 'Validated: ' : ''}{plantDisplayName(instance.plantDefinition)}
+                    {instance.plantDefinition.isValidated ? 'Validated: ' : ''}{<BotanicalName value={instance.plantDefinition} />}
                   </p>
                   <p className="truncate text-sm text-stone-600">
                     {plantInstanceTypeLabel(instance.instanceType)} · {instance.currentLocation ? `${instance.currentLocation.code} · ${locationPath(instance.currentLocation.id, locationNodes)}` : 'No location'}

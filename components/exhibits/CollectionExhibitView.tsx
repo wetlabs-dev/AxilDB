@@ -1,3 +1,4 @@
+import { BotanicalName } from '@/components/BotanicalName'
 import { formatTypography } from '@/lib/typography'
 import { plantDisplayName } from '@/lib/utils'
 import Link from 'next/link'
@@ -96,7 +97,7 @@ function PlantCard({ entry, settings, collectionSlug, visibility }: { entry: any
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="font-mono text-xs font-semibold uppercase tracking-[0.08em] text-[#2f6b45]">{plant.plantId}</p>
-          <h4 className="mt-1 font-serif text-2xl font-semibold">{plantDisplayName(plant.plantDefinition)}</h4>
+          <h4 className="mt-1 font-serif text-2xl font-semibold">{<BotanicalName value={plant.plantDefinition} />}</h4>
           {entry.customCaption && <p className="mt-1 text-sm text-stone-700">{formatTypography(entry.customCaption)}</p>}
         </div>
         <div className="flex flex-wrap gap-2 text-xs">
@@ -200,7 +201,7 @@ function DefinitionGroup({ group, settings, collectionSlug, visibility }: { grou
       <div className="grid gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-stone-500">{group.entries.length} selected specimens</p>
-          <h2 className="font-serif text-3xl font-semibold">{plantDisplayName(definition)}</h2>
+          <h2 className="font-serif text-3xl font-semibold">{<BotanicalName value={definition} />}</h2>
           {definition.description && <p className="mt-2 text-sm leading-6 text-stone-700">{formatTypography(definition.description)}</p>}
           {settings.plantTags && <div className="mt-2"><PlantTagRow tags={definition.tags.map((item: any) => item.plantTag)} limit={8} compact={false} /></div>}
         </div>
@@ -267,7 +268,7 @@ function WishlistSection({ items, heading }: { items: any[]; heading: string }) 
               {entry.typePhotos[0] && <div className="aspect-[4/3]"><PlantImage src={entry.typePhotos[0]} alt={plantDisplayName(definition)} className="h-full w-full object-cover" /></div>}
               <div className="p-4">
                 <div className="flex flex-wrap items-center gap-2 text-xs"><span className="font-bold uppercase tracking-wide text-[#2f6b45]">Planned acquisition</span>{entry.featured && <span className="rounded-full border border-[#b7caa9] bg-[#edf3e6] px-2 py-0.5 font-semibold">Featured</span>}</div>
-                <h3 className="mt-1 font-serif text-2xl font-semibold">{plantDisplayName(definition)}</h3>
+                <h3 className="mt-1 font-serif text-2xl font-semibold">{<BotanicalName value={definition} />}</h3>
                 {entry.customCaption && <p className="mt-2 text-sm text-stone-700">{formatTypography(entry.customCaption)}</p>}
                 <DetailList items={[
                   ['Status', formatStatus(definition.acquisitionStatus || 'wishlist')],

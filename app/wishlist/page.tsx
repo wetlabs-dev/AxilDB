@@ -1,3 +1,4 @@
+import { BotanicalName } from '@/components/BotanicalName'
 import { normalizeTypographySearch, formatTypography } from '@/lib/typography'
 import { plantDisplayName } from '@/lib/utils'
 import Link from 'next/link'
@@ -173,7 +174,7 @@ export default async function WishlistPage({ searchParams }: {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#2f6b45]">{statusLabels[entry.acquisitionStatus || '']}</p>
-                        <h2 className="mt-1 font-serif text-xl font-semibold leading-tight">{plantDisplayName(entry)}</h2>
+                        <h2 className="mt-1 font-serif text-xl font-semibold leading-tight">{<BotanicalName value={entry} />}</h2>
                         {entry.aliases.length > 0 && <p className="mt-1 line-clamp-1 text-xs text-stone-500">{entry.aliases.slice(0, 3).map((alias) => alias.name).join(', ')}</p>}
                         {(!publicVisitor || settings.showTags) && <div className="mt-2"><PlantTagRow tags={entry.tags.map((item) => item.plantTag)} limit={4} /></div>}
                       </div>

@@ -1,3 +1,4 @@
+import { writeBotanicalPdf } from '@/lib/pdf-botanical'
 import { formatTypography } from '@/lib/typography'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -88,7 +89,7 @@ async function pdfBuffer(collectionName: string, rows: Array<ReturnType<typeof p
     if (doc.y + height > 720) { doc.addPage(); addBackground(); doc.y = 54 }
     const y = doc.y
     doc.roundedRect(48, y, 516, height, 7).fillAndStroke('#fffaf0', '#d8d0bc')
-    doc.fillColor('#2f2618').font(SERIF).fontSize(16).text(String(row.name), 62, y + 12, { width: 488 })
+    doc.fillColor('#2f2618').fontSize(16); writeBotanicalPdf(doc, String(row.name), { width: 488 }, 62, y + 12, {normal:SERIF,italic:SERIF})
     doc.fillColor('#5f584e').font(SANS).fontSize(8.5).text(body, 62, doc.y + 6, { width: 488, lineGap: 2 })
     doc.y = y + height + 10
   }

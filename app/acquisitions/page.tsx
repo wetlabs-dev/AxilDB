@@ -1,3 +1,4 @@
+import { BotanicalName } from '@/components/BotanicalName'
 import { formatTypography } from '@/lib/typography'
 import { plantDisplayName, acceptedPlantDisplayName } from '@/lib/utils'
 import Link from 'next/link'
@@ -249,7 +250,7 @@ export default async function AcquisitionPipelinePage({
         <h3 className="font-serif text-xl font-semibold">Purchase History</h3>
         <p className="mt-1 text-sm text-stone-600">Canonical acquisition records are kept here; wishlist and research tools below are planning aids.</p>
         <div className="mt-3 grid gap-2 lg:grid-cols-2">
-          {purchaseHistory.map((record) => <article key={record.id} className="rounded-lg border border-stone-200 bg-white/50 p-3 text-sm"><p className="text-xs text-stone-500">{formatDate(record.acquiredAt)} · {record.quantity} specimen{record.quantity === 1 ? '' : 's'}</p><h4 className="font-semibold">{plantDisplayName(record.plantDefinition)}</h4><p>{record.seller?.name || 'Seller unknown'}{record.sellerStorefront ? ` · ${record.sellerStorefront.handleOrName}` : ''} · {money(record.price, record.currency)}</p><p className="text-xs text-stone-600">Sources: {sourceChainDisplay(record.sources)}</p>{record.plantInstances.length > 0 && <div className="mt-2 flex flex-wrap gap-2">{record.plantInstances.map(({ plantInstance }) => <Link key={plantInstance.id} className="font-mono text-xs font-semibold text-[#2f6b45] underline" href={collectionPath(collection.slug, `/instances/${plantInstance.id}/acquisition`)}>{plantInstance.plantId}</Link>)}</div>}</article>)}
+          {purchaseHistory.map((record) => <article key={record.id} className="rounded-lg border border-stone-200 bg-white/50 p-3 text-sm"><p className="text-xs text-stone-500">{formatDate(record.acquiredAt)} · {record.quantity} specimen{record.quantity === 1 ? '' : 's'}</p><h4 className="font-semibold">{<BotanicalName value={record.plantDefinition} />}</h4><p>{record.seller?.name || 'Seller unknown'}{record.sellerStorefront ? ` · ${record.sellerStorefront.handleOrName}` : ''} · {money(record.price, record.currency)}</p><p className="text-xs text-stone-600">Sources: {sourceChainDisplay(record.sources)}</p>{record.plantInstances.length > 0 && <div className="mt-2 flex flex-wrap gap-2">{record.plantInstances.map(({ plantInstance }) => <Link key={plantInstance.id} className="font-mono text-xs font-semibold text-[#2f6b45] underline" href={collectionPath(collection.slug, `/instances/${plantInstance.id}/acquisition`)}>{plantInstance.plantId}</Link>)}</div>}</article>)}
           {!purchaseHistory.length && <p className="text-sm text-stone-600">No purchases recorded yet.</p>}
         </div>
       </Card>
@@ -317,8 +318,8 @@ export default async function AcquisitionPipelinePage({
                 )}
               >
                 <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#2f6b45]">{statusLabel(definition.acquisitionStatus)}</p>
-                <h3 className="mt-1 font-serif text-xl font-semibold leading-tight">{plantDisplayName(definition)}</h3>
-                {plantNeedsIdentification(definition) && <p className="mt-1 text-xs font-semibold text-amber-800">Needs identification review · working placement {acceptedPlantDisplayName(definition)}</p>}
+                <h3 className="mt-1 font-serif text-xl font-semibold leading-tight">{<BotanicalName value={definition} />}</h3>
+                {plantNeedsIdentification(definition) && <p className="mt-1 text-xs font-semibold text-amber-800">Needs identification review · working placement {<BotanicalName accepted value={definition} />}</p>}
                 <p className="mt-1 font-mono text-xs text-[#2f6b45]">{stars(definition.acquisitionPriority)}</p>
                 <p className="mt-2 text-xs text-stone-600">
                   {definition.instances.length ? `Already owned (${definition.instances.length})` : 'Not yet owned'}
@@ -346,8 +347,8 @@ export default async function AcquisitionPipelinePage({
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#2f6b45]">{statusLabel(selected.acquisitionStatus)} · {stars(selected.acquisitionPriority)}</p>
-                      <h3 className="font-serif text-3xl font-semibold">{plantDisplayName(selected)}</h3>
-                      {plantNeedsIdentification(selected) && <p className="mt-1 text-sm font-semibold text-amber-800">Needs identification review · working placement {acceptedPlantDisplayName(selected)}</p>}
+                      <h3 className="font-serif text-3xl font-semibold">{<BotanicalName value={selected} />}</h3>
+                      {plantNeedsIdentification(selected) && <p className="mt-1 text-sm font-semibold text-amber-800">Needs identification review · working placement {<BotanicalName accepted value={selected} />}</p>}
                       <p className="mt-1 text-sm text-stone-600">{ownedCount ? `Already owned (${ownedCount} active specimen${ownedCount === 1 ? '' : 's'})` : 'Not yet owned'}</p>
                     </div>
                     <LinkButton href={collectionPath(collection.slug, `/plants/${selected.id}/edit`)}>Open definition</LinkButton>

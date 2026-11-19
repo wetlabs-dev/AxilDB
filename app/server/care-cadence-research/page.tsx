@@ -1,3 +1,4 @@
+import { BotanicalName } from '@/components/BotanicalName'
 import { formatTypography } from '@/lib/typography'
 import { plantDisplayName } from '@/lib/utils'
 import { CalibrationEvidence } from '@/components/ObservedCare'
@@ -302,11 +303,9 @@ export default async function CadenceResearchPage({
                 className="flex flex-wrap gap-3 rounded-lg border p-3"
               >
                 <span>
-                  {plantDisplayName(
-                    definitions.find((d) => d.id === j.plantDefinitionId) || {
+                  {<BotanicalName value={definitions.find((d) => d.id === j.plantDefinitionId) || {
                       genus: 'Deleted definition',
-                    }
-                  )}{' '}
+                    }} />}{' '}
                   · {j.status} · attempt {j.attempts}/{j.maxAttempts}
                 </span>
                 <span>{j.status === 'COMPLETED' && all.some(p => p.jobId === j.id)
@@ -437,7 +436,7 @@ export default async function CadenceResearchPage({
                 <tbody>
                   {rows.map((p) => (
                     <tr key={p.id}>
-                      <td className="p-2">{plantDisplayName(p.definition)}</td>
+                      <td className="p-2">{<BotanicalName value={p.definition} />}</td>
                       <td>{p.activity.replaceAll('_', ' ')}</td>
                       <td>
                         {p.applicability === 'NOT_APPLICABLE'
@@ -473,7 +472,7 @@ export default async function CadenceResearchPage({
                           `/plants/${d.id}/husbandry`
                         )}
                       >
-                        {plantDisplayName(d)}
+                        {<BotanicalName value={d} />}
                       </Link>
                     ) : (
                       plantDisplayName(d)

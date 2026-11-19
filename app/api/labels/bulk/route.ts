@@ -1,3 +1,4 @@
+import { registerBotanicalPdfFont, drawBotanicalLine, botanicalLineWidth } from '@/lib/pdf-botanical'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
@@ -48,7 +49,7 @@ function multiLineFontSize(doc: PDFKit.PDFDocument, lines: string[], font: strin
   for (let size = max; size >= min; size -= 0.5) {
     doc.font(font).fontSize(size)
     const lineHeight = size * 0.9
-    const fitsWidth = lines.every((line) => doc.widthOfString(line) <= width)
+    const fitsWidth = lines.every((line) => botanicalLineWidth(doc, line, size) <= width)
     if (fitsWidth && lineHeight * lines.length <= height) return size
   }
   return min
@@ -161,7 +162,7 @@ function drawFixedLabel(
   let currentY = nameY + (nameHeight - lineHeight * nameLines.length) / 2
   doc.font(labelNameFont(nameLines)).fontSize(nameSize)
   for (const line of nameLines) {
-    doc.text(line, nameX, currentY, { width: nameWidth, lineBreak: false })
+    drawBotanicalLine(doc, line, nameX, currentY, nameWidth, nameSize)
     currentY += lineHeight
   }
   const idText = labelCode(item)
@@ -203,7 +204,7 @@ function drawPortraitLabel(
   currentY += qrSize + 6
   doc.font(labelNameFont(nameLines)).fontSize(nameSize)
   for (const line of nameLines) {
-    doc.text(line, x + margin, currentY, { width: textWidth, align: 'center', lineBreak: false })
+    drawBotanicalLine(doc, line, x + margin, currentY, textWidth, nameSize, true)
     currentY += nameSize * 1.05
   }
   doc.font(LABEL_ID_FONT).fontSize(idSize).text(idText, x + margin, y + height - margin - idSize * 1.2, {
@@ -254,7 +255,7 @@ function drawBrotherLabel(
   y += collectionSize * 1.2 + 7
   doc.font(labelNameFont(nameLines)).fontSize(nameSize)
   for (const line of nameLines) {
-    doc.text(line, margin, y, { width: textWidth, align: 'center', lineBreak: false })
+    drawBotanicalLine(doc, line, margin, y, textWidth, nameSize, true)
     y += nameSize * 1.05
   }
   doc.font(LABEL_ID_FONT).fontSize(idSize).text(idText, margin, height - margin - idSize * 1.25, {
@@ -306,7 +307,7 @@ function drawBrotherLandscapeLabel(
   let currentY = (height - lineHeight * nameLines.length) / 2
   doc.font(labelNameFont(nameLines)).fontSize(nameSize)
   for (const line of nameLines) {
-    doc.text(line, textX, currentY, { width: textWidth, align: 'center', lineBreak: false })
+    drawBotanicalLine(doc, line, textX, currentY, textWidth, nameSize, true)
     currentY += lineHeight
   }
 
@@ -383,6 +384,7 @@ export async function GET(req: Request) {
   }
   const items=await getLabelItems(collection.id, all, ids, target, sort)
   const sizingDoc = new PDFDocument({ size: [BROTHER_DK_2210_WIDTH_PT, 170], margin: 0 })
+  registerBotanicalPdfFont(sizingDoc)
   sizingDoc.registerFont(LABEL_ID_FONT, LABEL_ID_FONT_PATH)
   sizingDoc.registerFont(PRIME_NAME_FONT, path.join(process.cwd(), 'public/fonts/Fraunces-600.ttf'))
   const firstBrotherLength = items[0]
@@ -393,6 +395,7 @@ export async function GET(req: Request) {
   sizingDoc.end()
   const initialSize = labelPageSize(format, orientation, firstBrotherLength)
   const doc=new PDFDocument({size:initialSize,margin:0})
+  registerBotanicalPdfFont(doc)
   doc.registerFont(LABEL_ID_FONT, LABEL_ID_FONT_PATH)
   doc.registerFont(PRIME_NAME_FONT, path.join(process.cwd(), 'public/fonts/Fraunces-600.ttf'))
   const chunks:Buffer[]=[]

@@ -1,3 +1,4 @@
+import { BotanicalName } from '@/components/BotanicalName'
 import { formatTypography } from '@/lib/typography'
 import { plantDisplayName } from '@/lib/utils'
 import { QuietDaysManager } from '@/components/QuietDaysManager'
@@ -219,7 +220,7 @@ export default async function LocationDetail({ params }: { params: Promise<{ id:
             {activeQuarantines.length === 0 && <p className="text-sm text-stone-600">No active quarantines in this location tree.</p>}
             {activeQuarantines.map((quarantine) => (
               <Link key={quarantine.id} href={collectionPath(collection.slug, `/instances/${quarantine.plantInstanceId}#quarantine`)} className="rounded-lg border border-stone-200 bg-white/55 p-3 text-sm underline">
-                {quarantine.plantInstance.plantId} · {plantDisplayName(quarantine.plantInstance.plantDefinition)} · {quarantine.riskLevel.toLowerCase()} risk · release review {quarantine.targetReleaseDate.toLocaleDateString()}
+                {quarantine.plantInstance.plantId} · {<BotanicalName value={quarantine.plantInstance.plantDefinition} />} · {quarantine.riskLevel.toLowerCase()} risk · release review {quarantine.targetReleaseDate.toLocaleDateString()}
               </Link>
             ))}
           </div>
@@ -289,7 +290,7 @@ export default async function LocationDetail({ params }: { params: Promise<{ id:
                   <PlantIdPreviewLink collectionSlug={collection.slug} plantId={plant.plantId} href={collectionPath(collection.slug, `/instances/${plant.id}`)}>
                     {plant.plantId}
                   </PlantIdPreviewLink>
-                  <p className="text-stone-600">{plantDisplayName(plant.plantDefinition)}</p>
+                  <p className="text-stone-600">{<BotanicalName value={plant.plantDefinition} />}</p>
                 </div>
                 {canMovePlants && (
                   <CompatibilityMoveForm collectionSlug={collection.slug} plantInstanceId={plant.id} currentLocationId={location.id} locations={locationNodes.map((option) => ({ id: option.id, label: `${option.code} · ${locationPath(option.id, locationNodes)}` }))} />
@@ -308,7 +309,7 @@ export default async function LocationDetail({ params }: { params: Promise<{ id:
                 <PlantIdPreviewLink collectionSlug={collection.slug} plantId={plant.plantId} href={collectionPath(collection.slug, `/instances/${plant.id}`)}>
                   {plant.plantId}
                 </PlantIdPreviewLink>
-                <p className="text-stone-600">{plantDisplayName(plant.plantDefinition)}</p>
+                <p className="text-stone-600">{<BotanicalName value={plant.plantDefinition} />}</p>
                 <p className="text-xs text-stone-500">{plant.currentLocation ? `${plant.currentLocation.code} · ${plant.currentLocation.name}` : 'No location'}</p>
               </div>
             ))}

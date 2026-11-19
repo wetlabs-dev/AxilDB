@@ -1,3 +1,4 @@
+import { BotanicalName } from '@/components/BotanicalName'
 import { plantDisplayName } from '@/lib/utils'
 import { quietDateReasons } from '@/lib/care-calendar'
 import Link from 'next/link'
@@ -198,7 +199,7 @@ export default async function CareScheduleSyncPage({
                     <input className="mt-1" type="checkbox" name="plantInstanceId" value={plant.id} defaultChecked={selectedPlantIds.has(plant.id) || defaultSelectFilteredPlants} />
                     <span>
                       <span className="block font-mono text-xs font-semibold text-[#2f6b45]">{plant.plantId}</span>
-                      <span className="block font-medium">{plantDisplayName(plant.plantDefinition)}</span>
+                      <span className="block font-medium">{<BotanicalName value={plant.plantDefinition} />}</span>
                       {plant.quarantines.length > 0 && <span className="mt-1 inline-flex rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-amber-900">Quarantine</span>}
                     </span>
                     <span className="text-xs text-stone-500">{plant.currentLocation ? locationPathWithCodes(plant.currentLocation.id, locationNodes) : 'No location'}</span>
@@ -243,7 +244,7 @@ export default async function CareScheduleSyncPage({
               <tbody>
                 {proposedRows.map((row) => (
                   <tr key={`${row.plant.id}-${row.careType}`} className="align-top">
-                    <td className="border-b border-stone-200 px-3 py-2"><span className="font-mono text-xs font-semibold text-[#2f6b45]">{row.plant.plantId}</span><span className="block">{plantDisplayName(row.plant.plantDefinition)}</span></td>
+                    <td className="border-b border-stone-200 px-3 py-2"><span className="font-mono text-xs font-semibold text-[#2f6b45]">{row.plant.plantId}</span><span className="block">{<BotanicalName value={row.plant.plantDefinition} />}</span></td>
                     <td className="border-b border-stone-200 px-3 py-2">{careScheduleLabel(row.careType)}</td>
                     <td className="border-b border-stone-200 px-3 py-2">{row.current ? formatDateTime(row.current.dueAt, timezone) : 'No current schedule/queue item'}</td>
                     <td className="border-b border-stone-200 px-3 py-2">

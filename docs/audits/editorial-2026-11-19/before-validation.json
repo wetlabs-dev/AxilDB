@@ -1,0 +1,455 @@
+{
+  "phase": "before",
+  "collectionDefinitions": 203,
+  "routes": [
+    {
+      "id": "dashboard",
+      "theme": "light",
+      "width": 1440,
+      "durationMs": 737,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "definitions",
+      "theme": "light",
+      "width": 1440,
+      "durationMs": 817,
+      "overflow": false,
+      "capture": "viewport; large collection"
+    },
+    {
+      "id": "editor",
+      "theme": "light",
+      "width": 1440,
+      "durationMs": 898,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "instance",
+      "theme": "light",
+      "width": 1440,
+      "durationMs": 774,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "care",
+      "theme": "light",
+      "width": 1440,
+      "durationMs": 715,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "husbandry",
+      "theme": "light",
+      "width": 1440,
+      "durationMs": 663,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "repotting",
+      "theme": "light",
+      "width": 1440,
+      "durationMs": 633,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "gallery",
+      "theme": "light",
+      "width": 1440,
+      "durationMs": 651,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "curator",
+      "theme": "light",
+      "width": 1440,
+      "durationMs": 652,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "server",
+      "theme": "light",
+      "width": 1440,
+      "durationMs": 1464,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "deployment",
+      "theme": "light",
+      "width": 1440,
+      "durationMs": 649,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "splash",
+      "theme": "light",
+      "width": 1440,
+      "durationMs": 690,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "public",
+      "theme": "light",
+      "width": 1440,
+      "durationMs": 762,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "labels",
+      "theme": "light",
+      "width": 1440,
+      "durationMs": 648,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "dashboard",
+      "theme": "light",
+      "width": 390,
+      "durationMs": 689,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "definitions",
+      "theme": "light",
+      "width": 390,
+      "durationMs": 781,
+      "overflow": false,
+      "capture": "viewport; large collection"
+    },
+    {
+      "id": "editor",
+      "theme": "light",
+      "width": 390,
+      "durationMs": 788,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "instance",
+      "theme": "light",
+      "width": 390,
+      "durationMs": 730,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "care",
+      "theme": "light",
+      "width": 390,
+      "durationMs": 684,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "husbandry",
+      "theme": "light",
+      "width": 390,
+      "durationMs": 634,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "repotting",
+      "theme": "light",
+      "width": 390,
+      "durationMs": 664,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "gallery",
+      "theme": "light",
+      "width": 390,
+      "durationMs": 667,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "curator",
+      "theme": "light",
+      "width": 390,
+      "durationMs": 638,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "server",
+      "theme": "light",
+      "width": 390,
+      "durationMs": 673,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "deployment",
+      "theme": "light",
+      "width": 390,
+      "durationMs": 626,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "splash",
+      "theme": "light",
+      "width": 390,
+      "durationMs": 681,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "public",
+      "theme": "light",
+      "width": 390,
+      "durationMs": 768,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "labels",
+      "theme": "light",
+      "width": 390,
+      "durationMs": 635,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "dashboard",
+      "theme": "dark",
+      "width": 1440,
+      "durationMs": 709,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "definitions",
+      "theme": "dark",
+      "width": 1440,
+      "durationMs": 800,
+      "overflow": false,
+      "capture": "viewport; large collection"
+    },
+    {
+      "id": "editor",
+      "theme": "dark",
+      "width": 1440,
+      "durationMs": 806,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "instance",
+      "theme": "dark",
+      "width": 1440,
+      "durationMs": 752,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "care",
+      "theme": "dark",
+      "width": 1440,
+      "durationMs": 692,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "husbandry",
+      "theme": "dark",
+      "width": 1440,
+      "durationMs": 649,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "repotting",
+      "theme": "dark",
+      "width": 1440,
+      "durationMs": 646,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "gallery",
+      "theme": "dark",
+      "width": 1440,
+      "durationMs": 637,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "curator",
+      "theme": "dark",
+      "width": 1440,
+      "durationMs": 635,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "server",
+      "theme": "dark",
+      "width": 1440,
+      "durationMs": 698,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "deployment",
+      "theme": "dark",
+      "width": 1440,
+      "durationMs": 632,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "splash",
+      "theme": "dark",
+      "width": 1440,
+      "durationMs": 688,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "public",
+      "theme": "dark",
+      "width": 1440,
+      "durationMs": 731,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "labels",
+      "theme": "dark",
+      "width": 1440,
+      "durationMs": 631,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "dashboard",
+      "theme": "dark",
+      "width": 390,
+      "durationMs": 690,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "definitions",
+      "theme": "dark",
+      "width": 390,
+      "durationMs": 780,
+      "overflow": false,
+      "capture": "viewport; large collection"
+    },
+    {
+      "id": "editor",
+      "theme": "dark",
+      "width": 390,
+      "durationMs": 794,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "instance",
+      "theme": "dark",
+      "width": 390,
+      "durationMs": 756,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "care",
+      "theme": "dark",
+      "width": 390,
+      "durationMs": 688,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "husbandry",
+      "theme": "dark",
+      "width": 390,
+      "durationMs": 651,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "repotting",
+      "theme": "dark",
+      "width": 390,
+      "durationMs": 629,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "gallery",
+      "theme": "dark",
+      "width": 390,
+      "durationMs": 631,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "curator",
+      "theme": "dark",
+      "width": 390,
+      "durationMs": 656,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "server",
+      "theme": "dark",
+      "width": 390,
+      "durationMs": 662,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "deployment",
+      "theme": "dark",
+      "width": 390,
+      "durationMs": 633,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "splash",
+      "theme": "dark",
+      "width": 390,
+      "durationMs": 687,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "public",
+      "theme": "dark",
+      "width": 390,
+      "durationMs": 749,
+      "overflow": false,
+      "capture": "full page"
+    },
+    {
+      "id": "labels",
+      "theme": "dark",
+      "width": 390,
+      "durationMs": 638,
+      "overflow": false,
+      "capture": "full page"
+    }
+  ],
+  "errors": []
+}

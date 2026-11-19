@@ -1,3 +1,4 @@
+import { BotanicalName } from '@/components/BotanicalName'
 import { formatCultivar, formatTypography } from '@/lib/typography'
 import { plantDisplayName } from '@/lib/utils'
 import { CalibrationOverview } from '@/components/CalibrationOverview'
@@ -633,7 +634,7 @@ export default async function AiCuratorPage({
               <div key={job.id} className="rounded-lg border border-amber-200 ax-status-warning p-3">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <p className="font-semibold">{job.plantDefinition ? plantDisplayName(job.plantDefinition) : job.collection.name}</p>
+                    <p className="font-semibold">{job.plantDefinition ? <BotanicalName value={job.plantDefinition} /> : job.collection.name}</p>
                     <p className="text-sm ax-text-warning">{curatorFailureDescription(job.blockingReason)}</p>
                     {!isCuratorHistoryConflict(job.blockingReason) && (!isCuratorResponseFailure(job.blockingReason) || job.blockingReason?.includes('configured output limit')) && job.humanActionRequired && <p className="mt-1 text-sm text-stone-700">Suggested action: {job.humanActionRequired}</p>}
                     {!isCuratorHistoryConflict(job.blockingReason) && (!isCuratorResponseFailure(job.blockingReason) || job.blockingReason?.includes('configured output limit')) && job.retryConditions && <p className="mt-1 text-xs text-stone-600">Retry when: {job.retryConditions}</p>}

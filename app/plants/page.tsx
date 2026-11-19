@@ -1,3 +1,4 @@
+import { BotanicalName } from '@/components/BotanicalName'
 import { typographySearchWhere } from '@/lib/typography-search'
 import { formatTypography } from '@/lib/typography'
 import { plantDisplayName, acceptedPlantDisplayName } from '@/lib/utils'
@@ -434,14 +435,14 @@ export default async function Plants({
                 )}
 
                 <div data-plant-definition-content className="min-w-0">
-                  <span className="line-clamp-2 text-sm font-bold leading-tight">{plantDisplayName(plant)}</span>
+                  <span className="line-clamp-2 text-sm font-bold leading-tight">{<BotanicalName value={plant} />}</span>
                   <p className="truncate text-sm">
                     {plant.taxonomicAuthority?.abbreviation || 'No matching Taxonomic Authority'} · {plant._count.instances} instance(s) ·{' '}
                     {taxonomyLabel(plant.confidence)}
                   </p>
                   {(plantNeedsIdentification(plant) || plant.authority) && (
                     <p className="line-clamp-2 text-sm text-stone-600">
-                      {plantNeedsIdentification(plant) && <>Needs identification review. Working placement: {acceptedPlantDisplayName(plant)}. </>}
+                      {plantNeedsIdentification(plant) && <>Needs identification review. Working placement: {<BotanicalName accepted value={plant} />}. </>}
                       {plant.authority && <>Author citation: {plant.authority}.</>}
                     </p>
                   )}

@@ -1,4 +1,5 @@
 'use client'
+import { BotanicalText } from '@/components/BotanicalName'
 
 import { formatTypography } from '@/lib/typography'
 import Link from 'next/link'
@@ -100,7 +101,7 @@ function PlantHeading({ item, collectionSlug }: { item: CareQueueItem; collectio
           </PlantIdPreviewLink>
         ) : formatTypography(item.title)}
       </h3>
-      <p className="text-sm text-stone-700">{formatTypography(item.plantName)}</p>
+      <p className="text-sm text-stone-700">{<BotanicalText text={item.plantName} />}</p>
       {item.locationPath && <p className="text-xs text-stone-500">{item.locationPath}</p>}
     </div>
   )

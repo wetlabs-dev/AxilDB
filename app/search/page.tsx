@@ -1,3 +1,4 @@
+import { BotanicalName } from '@/components/BotanicalName'
 import { formatTypography, normalizeTypographySearch } from '@/lib/typography'
 import { typographySearchWhere } from '@/lib/typography-search'
 import { plantDisplayName } from '@/lib/utils'
@@ -248,7 +249,7 @@ export default async function SearchPage({
                 <Link className="font-bold underline" href={collectionPath(collection.slug, `/instances/${instance.id}`)}>
                   {instance.plantId}
                 </Link>{' '}
-                · {plantDisplayName(instance.plantDefinition)} · {plantInstanceTypeLabel(instance.instanceType)} · {instance.status} · {fmtDate(instance.propagationDate || instance.acquisitionDate)}
+                · {<BotanicalName value={instance.plantDefinition} />} · {plantInstanceTypeLabel(instance.instanceType)} · {instance.status} · {fmtDate(instance.propagationDate || instance.acquisitionDate)}
                 {instance.mergeConstituent && <> · merged into <Link className="font-semibold underline" href={collectionPath(collection.slug, `/instances/${instance.mergeConstituent.merge.survivingPlantInstanceId}`)}>{instance.mergeConstituent.merge.survivingPlantInstance.plantId}</Link></>}
               </p>
               <p className="w-full text-xs text-stone-600">Substrate: {substrateAssignmentLabel(instance.currentSubstrate)}</p>
@@ -270,7 +271,7 @@ export default async function SearchPage({
             <div key={definition.id} className="border-t border-stone-200 py-2 text-sm">
               <p>
                 <Link className="font-bold underline" href={collectionPath(collection.slug, definition.isValidated ? '/validated-definitions' : `/plants/${definition.id}/edit`)}>
-                  {plantDisplayName(definition)}
+                  {<BotanicalName value={definition} />}
                 </Link>{' '}
                 {definition.isValidated && <span className="rounded-full bg-[#edf3e6] px-2 py-0.5 text-xs font-semibold text-[#2f6b45]">Validated</span>}{' '}
                 · {definition._count.instances} instance(s) · {taxonomyLabel(definition.confidence)}

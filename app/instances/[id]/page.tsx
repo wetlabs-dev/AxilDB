@@ -1,3 +1,4 @@
+import { BotanicalName } from '@/components/BotanicalName'
 import { formatTypography } from '@/lib/typography'
 import { plantDisplayName, acceptedPlantDisplayName } from '@/lib/utils'
 import { PlantPhotoUploadForm } from '@/components/PlantPhotoUploadForm'
@@ -924,7 +925,7 @@ export default async function InstanceDetail({
               </form>
             )}
           </div>
-          <p>{plantDisplayName(i.plantDefinition)}</p>
+          <p>{<BotanicalName value={i.plantDefinition} />}</p>
           <div className="mt-3 flex flex-wrap gap-3 text-sm font-semibold">
             {canEditRecords && <Link className="min-h-11 rounded-md border border-stone-300 px-3 py-2" href={collectionPath(collection.slug, `/instances/${i.id}/edit`)}>Edit Instance</Link>}
             <Link className="min-h-11 rounded-md border border-stone-300 px-3 py-2" href={collectionPath(collection.slug, `/plants/${i.plantDefinitionId}/husbandry`)}>View Plant Definition</Link>
@@ -999,13 +1000,13 @@ export default async function InstanceDetail({
       <div className="grid gap-4 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.35fr)]">
         <Card>
           <h3 className="font-bold">Identity</h3>
-          <p className="font-medium">{plantDisplayName(i.plantDefinition)}</p>
+          <p className="font-medium">{<BotanicalName value={i.plantDefinition} />}</p>
           <p>Confidence: {taxonomyLabel(i.plantDefinition.confidence)}</p>
           {plantNeedsIdentification(i.plantDefinition) && (
             <div className="my-2 rounded-md border border-amber-300 bg-amber-50 p-2 text-amber-950">
               <p className="font-semibold">Needs identification review</p>
-              <p>Provisional identity: {plantDisplayName(i.plantDefinition)}</p>
-              <p>Working placement: {acceptedPlantDisplayName(i.plantDefinition)}</p>
+              <p>Provisional identity: {<BotanicalName value={i.plantDefinition} />}</p>
+              <p>Working placement: {<BotanicalName accepted value={i.plantDefinition} />}</p>
             </div>
           )}
           <p>Author citation: {i.plantDefinition.authority || '—'}</p>
@@ -1278,7 +1279,7 @@ export default async function InstanceDetail({
                 <p className="text-xs text-stone-600">
                   {relationship.role.replaceAll('_', ' ').toLowerCase()} · {relationship.event.method} · {fmtDate(relationship.event.date, timezone)}
                 </p>
-                <p className="text-xs text-stone-700">{plantDisplayName(relationship.plant.plantDefinition)}</p>
+                <p className="text-xs text-stone-700">{<BotanicalName value={relationship.plant.plantDefinition} />}</p>
               </div>
             ))}
           </div>
@@ -1296,7 +1297,7 @@ export default async function InstanceDetail({
                 <p className="text-xs text-stone-600">
                   {relationship.event.method} · {fmtDate(relationship.event.date, timezone)}
                 </p>
-                <p className="text-xs text-stone-700">{plantDisplayName(relationship.plant.plantDefinition)}</p>
+                <p className="text-xs text-stone-700">{<BotanicalName value={relationship.plant.plantDefinition} />}</p>
               </div>
             ))}
           </div>

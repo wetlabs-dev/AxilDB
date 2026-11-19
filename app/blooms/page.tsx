@@ -1,3 +1,4 @@
+import { BotanicalName } from '@/components/BotanicalName'
 import { formatTypography } from '@/lib/typography'
 import { plantDisplayName } from '@/lib/utils'
 import { PlantImage } from '@/components/PlantImage'
@@ -109,7 +110,7 @@ export default async function Blooms() {
                 <div className="min-h-0 flex-1 overflow-hidden p-3">
                   <p className="text-xs font-medium uppercase tracking-[0.12em] text-[#2f6b45]">{status} · {fmtDate(bloom.bloomStartDate)}</p>
                   <h3 className="mt-1 line-clamp-2 text-sm font-bold leading-tight">{bloom.plantInstance.plantId}</h3>
-                  <p className="mt-1 line-clamp-2 text-xs text-stone-700">{plantDisplayName(bloom.plantInstance.plantDefinition)}</p>
+                  <p className="mt-1 line-clamp-2 text-xs text-stone-700">{<BotanicalName value={bloom.plantInstance.plantDefinition} />}</p>
                   <p className="mt-2 text-xs text-stone-600">
                     Peak {fmtDate(bloom.peakBloomDate)} · {bloom.flowerCount || '—'} flowers
                   </p>

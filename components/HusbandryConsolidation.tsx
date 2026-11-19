@@ -1,3 +1,4 @@
+import { BotanicalName } from '@/components/BotanicalName'
 import { formatTypography } from '@/lib/typography'
 import { plantDisplayName } from '@/lib/utils'
 import { prisma } from '@/lib/prisma'
@@ -138,7 +139,7 @@ export async function HusbandryConsolidationPanel() {
               <label key={p.id} className="block">
                 <input type="checkbox" name="suggestionId" value={p.id} />
                 {p.plantDefinition
-                  ? plantDisplayName(p.plantDefinition)
+                  ? <BotanicalName value={p.plantDefinition} />
                   : formatTypography(p.title)} · {formatTypography(p.title)}
               </label>
             ))}

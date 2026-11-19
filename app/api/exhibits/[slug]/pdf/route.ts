@@ -1,3 +1,4 @@
+import { writeBotanicalPdf } from '@/lib/pdf-botanical'
 import { formatTypography } from '@/lib/typography'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -190,7 +191,7 @@ function drawDefinitionSection(
   doc.font(FONT.sansBold).fontSize(8.5).fillColor(GREEN).text(`${group.entries.length} selected specimen${group.entries.length === 1 ? '' : 's'}`.toUpperCase(), left(doc), doc.y, { characterSpacing: 1.1 })
   doc.moveDown(0.18)
   doc.font(FONT.serifBold).fontSize(25).fillColor(INK)
-  text(doc, plantDisplayName(group.definition))
+  writeBotanicalPdf(doc, plantDisplayName(group.definition), { width: width(doc) }, left(doc), doc.y, {normal:FONT.serifBold,italic:FONT.serifBold})
   doc.moveDown(0.35)
   writeParagraph(doc, group.definition.description, 10, data.exhibit.title)
   if (data.settings.plantTags && group.definition.tags.length) {
@@ -336,7 +337,7 @@ function drawSpecimenCard(doc: PDFKit.PDFDocument, data: NonNullable<Awaited<Ret
   doc.roundedRect(x, y, width(doc), cardH, 10).fillAndStroke(CARD, BORDER)
 
   doc.font(FONT.mono).fontSize(8.2).fillColor(GREEN).text(plant.plantId, textX, y + 14, { width: textW })
-  doc.font(FONT.serifBold).fontSize(15).fillColor(INK).text(plantDisplayName(plant.plantDefinition), textX, doc.y + 2, { width: textW })
+  doc.fontSize(15).fillColor(INK); writeBotanicalPdf(doc, plantDisplayName(plant.plantDefinition), { width: textW }, textX, doc.y + 2, {normal:FONT.serifBold,italic:FONT.serifBold})
   doc.font(FONT.sans).fontSize(8.7).fillColor('#4d463c')
   const meta = [
     data.settings.location ? entry.locationPath || 'No location set' : null,
@@ -393,7 +394,7 @@ function drawWishlistSection(doc: PDFKit.PDFDocument, data: NonNullable<Awaited<
     const y = doc.y
     doc.roundedRect(left(doc), y, width(doc), cardH, 8).fillAndStroke(CARD, BORDER)
     doc.font(FONT.sansBold).fontSize(7.5).fillColor(GREEN).text('PLANNED ACQUISITION', left(doc) + 14, y + 12, { characterSpacing: 0.8 })
-    doc.font(FONT.serifBold).fontSize(16).fillColor(INK).text(plantDisplayName(definition), left(doc) + 14, y + 27, { width: width(doc) - 28 })
+    doc.fontSize(16).fillColor(INK); writeBotanicalPdf(doc, plantDisplayName(definition), { width: width(doc) - 28 }, left(doc) + 14, y + 27, {normal:FONT.serifBold,italic:FONT.serifBold})
     doc.font(FONT.sans).fontSize(8.5).fillColor('#4d463c').text(body, left(doc) + 14, doc.y + 5, { width: width(doc) - 28, lineGap: 2 })
     doc.y = y + cardH + 10
   }

@@ -1,5 +1,6 @@
 'use client'
 
+import { BotanicalText } from '@/components/BotanicalName'
 import { useEffect, useRef, useState } from 'react'
 import { plantDisplayName, type BotanicalNameInput } from '@/lib/utils'
 
@@ -58,14 +59,14 @@ export function PlantDefinitionEditorHeader({ identity, formId }: { identity: Id
   return <>
     <header ref={heading} className="space-y-3">
       <p className="text-sm font-semibold text-stone-600">Edit Plant Definition</p>
-      <h1 className="break-words font-serif text-3xl font-bold sm:text-4xl">{name}</h1>
+      <h1 className="break-words font-serif text-3xl font-bold sm:text-4xl"><BotanicalText text={name} /></h1>
       <nav aria-label="Jump to section" className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
         {sections.map(([id, label]) => <a key={id} className="rounded text-[#2f6b45] underline underline-offset-2 focus-visible:outline focus-visible:outline-2" href={`#${id}`}>{label}</a>)}
       </nav>
     </header>
     <div className="definition-editor-sticky no-print" aria-hidden="true">
       <div data-compact-definition-title hidden={!compact} className="flex min-w-0 items-center gap-3 rounded-b-lg border border-[color:var(--ax-border)] bg-[color:var(--ax-surface-solid)] px-3 py-2 shadow-sm">
-        <span title={name} className="min-w-0 flex-1 truncate font-serif font-semibold">{name}</span><span className="shrink-0 text-xs text-stone-600">Editing</span>
+        <span title={name} className="min-w-0 flex-1 truncate font-serif font-semibold"><BotanicalText text={name} /></span><span className="shrink-0 text-xs text-stone-600">Editing</span>
       </div>
     </div>
   </>

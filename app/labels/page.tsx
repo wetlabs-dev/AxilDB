@@ -1,3 +1,4 @@
+import { BotanicalName } from '@/components/BotanicalName'
 import { plantDisplayName } from '@/lib/utils'
 import { LabelPdfPreferences } from '@/components/LabelPdfPreferences'
 import { labelPdfStorageKey } from '@/lib/label-pdf-preferences'
@@ -67,7 +68,7 @@ export default async function BulkLabels({
                   <label key={instance.id} className="flex min-w-0 items-start gap-2 text-sm">
                     <input className="mt-1" type="checkbox" name="id" value={`plant:${instance.id}`} />
                     <span className="font-bold">{instance.plantId}</span>
-                    <span className="min-w-0 break-words">{plantDisplayName(instance.plantDefinition)}</span>
+                    <span className="min-w-0 break-words">{<BotanicalName value={instance.plantDefinition} />}</span>
                   </label>
                 ))}
               </div>

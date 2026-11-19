@@ -1,3 +1,4 @@
+import { BotanicalName } from '@/components/BotanicalName'
 import { plantDisplayName } from '@/lib/utils'
 import { updateValidatedPlantDefinition } from '@/app/actions'
 import { Button, Card, Field, Select, TextArea } from '@/components/ui'
@@ -29,7 +30,7 @@ export default async function EditValidatedDefinition({
       </div>
 
       <Card>
-        <h3 className="font-serif text-2xl font-semibold">{plantDisplayName(definition)}</h3>
+        <h3 className="font-serif text-2xl font-semibold">{<BotanicalName value={definition} />}</h3>
         <form action={updateValidatedPlantDefinition} className="mt-4 grid gap-x-3 gap-y-3 md:grid-cols-2">
           <input type="hidden" name="id" value={definition.id} />
           <Field label="Genus" name="genus" defaultValue={definition.genus} required />

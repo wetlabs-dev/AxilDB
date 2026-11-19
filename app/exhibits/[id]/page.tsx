@@ -1,3 +1,4 @@
+import { BotanicalName } from '@/components/BotanicalName'
 import { formatTypography } from '@/lib/typography'
 import { plantDisplayName } from '@/lib/utils'
 import Link from 'next/link'
@@ -245,7 +246,7 @@ export default async function EditCollectionExhibitPage({ params }: { params: Pr
                 <article key={definition.id} className="grid gap-2 rounded-lg border border-stone-200 bg-white/50 p-3">
                   <label className="flex items-start gap-3">
                     <input className="mt-1 h-4 w-4" type="checkbox" name="wishlistDefinitionId" value={definition.id} defaultChecked={Boolean(selected)} />
-                    <span><span className="block font-serif text-lg font-semibold">{plantDisplayName(definition)}</span><span className="block text-xs text-stone-600">{definition.acquisitionStatus?.toLowerCase().replaceAll('_', ' ')} · {definition.instances.length} owned</span></span>
+                    <span><span className="block font-serif text-lg font-semibold">{<BotanicalName value={definition} />}</span><span className="block text-xs text-stone-600">{definition.acquisitionStatus?.toLowerCase().replaceAll('_', ' ')} · {definition.instances.length} owned</span></span>
                   </label>
                   <div className="grid gap-2 sm:grid-cols-[6rem_1fr]">
                     <Field label="Order" name={`wishlistSortOrder:${definition.id}`} type="number" min="0" defaultValue={String(selected?.sortOrder ?? index)} />

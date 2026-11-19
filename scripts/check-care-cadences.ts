@@ -15,8 +15,8 @@ assert.equal(resolveCadence('WATERING', defaults, []).source, 'From definition')
 assert.equal(resolveCadence('WATERING', [], []).source, 'Not scheduled')
 for (const interval of [0, -1, 1.5, NaN, Infinity, 3651]) assert.throws(() => validateCadence(interval, 'DAY'))
 assert.throws(() => validateCadence(7, 'FORTNIGHT'))
-assert.equal(cadenceLabel({ interval: 2, unit: 'WEEK' }), 'Every 2 weeks')
-assert.equal(cadenceLabel({ interval: 1, unit: 'YEAR' }), 'Every 1 year')
+assert.equal(cadenceLabel({ interval: 2, unit: 'WEEK' }), 'Every 2\u00a0weeks')
+assert.equal(cadenceLabel({ interval: 1, unit: 'YEAR' }), 'Every year')
 const tz = 'America/New_York'
 const date = (s: string) => parseDateLocal(s, tz)!
 const due = (s: string, interval: number, unit: string) => dateInputValue(cadenceDueAt(date(s), { activity: 'WATERING', interval, unit }, tz), tz)

@@ -2,11 +2,11 @@ import { formatTypography, normalizeTypographySearch } from '@/lib/typography'
 
 export function typographySearchVariants(value: string): string[] {
   const ascii = normalizeTypographySearch(value)
-  return [...new Set([value, ascii, ascii.replaceAll("'", '’').replaceAll('"', '”'), formatTypography(ascii)])]
+  return [...new Set([value, ascii, ascii.replaceAll("'", '’').replaceAll('"', '”'), formatTypography(ascii), ascii.replace(/(^|\s)x(?=\s|$)/gi,'$1×'), ascii.replace(/(\d)\s+(?=°?[CF]\b|mL\b|cm\b|lux\b)/g,'$1')])]
 }
 
 /** Expand only human-readable Prisma contains filters; literal IDs/URLs stay exact.
- * Bounded to four variants per field; no SQL extensions or database rewrites.
+ * Bounded to six variants per field; no SQL extensions or database rewrites.
  */
 export function typographySearchWhere<T extends object>(where: T): T {
   const literal = /(?:Id|Ids|Url|Code|Hash|Token|Key|Path)$|^(?:id|code|url|slug|email|website|plantId|stockNumber)$/i

@@ -216,9 +216,9 @@ export default function SplashPage() {
                 <span className="rounded-md bg-[#d6dfc9] px-3 py-1 text-sm text-[#2f6b45]">probable</span>
               </div>
               <div className="mt-5 grid gap-3 text-sm">
-                <p><span className="font-medium">Acquired as:</span> Sansevieria zeylanica</p>
+                <p><span className="font-medium">Acquired as:</span> <i>Sansevieria zeylanica</i></p>
                 <p><span className="font-medium">Provisional taxon:</span> Dracaena zeylanica</p>
-                <p><span className="font-medium">Aliases:</span> Snake Plant, Mother-in-law’s Tongue, Sansevieria trifasciata</p>
+                <p><span className="font-medium">Aliases:</span> Snake Plant, Mother-in-law’s Tongue, <i>Sansevieria trifasciata</i></p>
                 <p><span className="font-medium">Notes:</span> Awaiting morphological confirmation from bloom and leaf traits.</p>
               </div>
             </div>

@@ -30,9 +30,9 @@ close(parseLightInput(lightInputValue(8_500, 'FOOT_CANDLE'), 'FOOT_CANDLE'), 8_5
 
 assert.equal(temperatureInputValue(null, 'CELSIUS'), '')
 assert.equal(lightInputValue(undefined, 'LUX'), '')
-assert.equal(formatTemperatureRange(18, 24, 'FAHRENHEIT'), '64.4 °F–75.2 °F')
-assert.equal(formatTemperatureRange(18, null, 'CELSIUS'), 'at least 18 °C')
-assert.equal(formatLightRange(null, 10_000, 'FOOT_CANDLE'), 'up to 929 fc')
+assert.equal(formatTemperatureRange(18, 24, 'FAHRENHEIT'), '64.4–75.2\u00a0°F')
+assert.equal(formatTemperatureRange(18, null, 'CELSIUS'), 'at least 18\u00a0°C')
+assert.equal(formatLightRange(null, 10_000, 'FOOT_CANDLE'), 'up to 929\u00a0fc')
 
 for (const invalid of ['', '1,5', 'NaN', 'Infinity', '12 C', '--2']) {
   assert.throws(() => parseMeasurementInput(invalid))

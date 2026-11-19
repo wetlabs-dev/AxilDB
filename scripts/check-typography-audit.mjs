@@ -11,3 +11,6 @@ assert.equal(audit('<input defaultValue="Today\'s exact value" />').length,0)
 assert.equal(audit('<a href="https://example.test/?q=\'x\'">Link</a>').length,0)
 assert.equal(audit('// typography-literal: Exact text for a clipboard command example.\n<p>"Today\'s"</p>').length,0)
 console.log('Typography audit detection, input/URL/code exclusions and documented literal exceptions passed.')
+
+assert.equal(audit('<p>Researching...</p>').length,1)
+assert.equal(audit('<p>2.25 x 1.25 in</p>').length,1)

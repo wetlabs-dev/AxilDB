@@ -1,3 +1,4 @@
+import { writeBotanicalPdf } from '@/lib/pdf-botanical'
 import path from 'node:path'
 import { formatTypography } from '@/lib/typography'
 export const runtime = 'nodejs'
@@ -26,7 +27,7 @@ function contentWidth(doc: PDFKit.PDFDocument) {
 
 function line(doc: PDFKit.PDFDocument, text: string, options: PDFKit.Mixins.TextOptions = {}) {
   doc.x = contentLeft(doc)
-  const prime = /[′″]/.test(text)
+  const prime = /[^\u0000-\u00ff\u2018-\u201d\u2013\u2014\u2026]/u.test(text)
   if (prime) doc.font('AxilTypographyBody')
   doc.text(text, { width: contentWidth(doc), ...options })
   if (prime) doc.font('Helvetica')
@@ -60,7 +61,7 @@ function drawChecklistTask(doc: PDFKit.PDFDocument, task: any) {
   doc.text(`${careTaskLabel(task.taskType as any)} · ${taskDate(task.dueAt)} · ${formatTypography(task.title)}`, textX, startY - 1, { width: textWidth })
   doc.font('Helvetica').fontSize(9).fillColor('#555')
   if (plant) {
-    doc.text(`${plant.plantId} · ${plantDisplayName(plant.plantDefinition)}`, textX, doc.y, { width: textWidth })
+    writeBotanicalPdf(doc, plantDisplayName(plant.plantDefinition), { width: textWidth }, textX, doc.y, {normal:'Helvetica',italic:'Helvetica-Oblique'}, {prefix:`${plant.plantId} · `})
   }
   if (task.reason) {
     doc.text(formatTypography(task.reason), textX, doc.y, { width: textWidth })
@@ -147,7 +148,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     ensureRoom(doc, 120)
     doc.font('Times-Bold').fontSize(13).fillColor('#222').text(instance.plantId)
     doc.font('Helvetica').fontSize(10).fillColor('#444')
-    line(doc, `${plantDisplayName(instance.plantDefinition)}${instance.currentLocation ? ` · ${instance.currentLocation.code} ${instance.currentLocation.name}` : ''}`)
+    writeBotanicalPdf(doc, plantDisplayName(instance.plantDefinition), { width: contentWidth(doc) }, contentLeft(doc), doc.y, {normal:'Helvetica',italic:'Helvetica-Oblique'}, {suffix:instance.currentLocation?` · ${instance.currentLocation.code} ${instance.currentLocation.name}`:''})
     const guide = (instance.plantDefinition as any).resolvedHusbandryGuide || instance.plantDefinition.husbandryGuide
     const summaries = [
       maybeValue(instance.husbandryOverride?.summaryWater) || maybeValue(guide?.summaryWater),
@@ -166,7 +167,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       doc.font('Helvetica-Bold').fillColor('#2f6b45').text(section.title)
       doc.font('Helvetica').fillColor('#444')
       for (const field of values.slice(0, 5)) {
-        line(doc, `${field.label}: ${formatTypography(field.value)}${field.overridden ? ' (local adjustment)' : ''}`)
+        line(doc, `${field.label}: ${formatTypography(field.value, { mode: /fertili|nutrient/i.test(field.label) ? 'chemical' : 'prose' })}${field.overridden ? ' (local adjustment)' : ''}`)
       }
     }
     doc.moveDown(0.8)

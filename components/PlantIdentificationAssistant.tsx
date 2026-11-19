@@ -1,5 +1,6 @@
 'use client'
 
+import { BotanicalName } from '@/components/BotanicalName'
 import { formatTypography } from '@/lib/typography'
 import { acceptedPlantDisplayName } from '@/lib/utils'
 import { useRef, useState } from 'react'
@@ -306,7 +307,7 @@ export function PlantIdentificationAssistant({
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
                   <p className="font-semibold text-[var(--ax-heading)]">
-                    {acceptedPlantDisplayName({ ...suggestion, genus: suggestion.genus || 'Unknown genus' })}
+                    {<BotanicalName accepted value={{ ...suggestion, genus: suggestion.genus || 'Unknown genus' }} />}
                   </p>
                   <p className="mt-1 text-sm text-[var(--ax-muted)]">{suggestion.confidenceExplanation}</p>
                 </div>

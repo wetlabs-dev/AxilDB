@@ -20,7 +20,7 @@ export function typographyCandidates(file, source) {
     return false
   }
   function add(n, text, kind) {
-    if (!technical.test(text) && /(?:\p{L}'\p{L}|\p{L}s'(?=\s|$)|&apos;|&#(?:39|x27);|&quot;|["'][\p{L}][^\n]*["'])/u.test(text)) {
+    if (!technical.test(text) && /(?:\p{L}'\p{L}|\p{L}s'(?=\s|$)|&apos;|&#(?:39|x27);|&quot;|["'][\p{L}][^\n]*["']|\b(?:Loading|Saving|Searching|Researching|Preparing|Checking|Uploading|Copying|Working|Creating|Deleting|Sending|Generating|Processing)[^\n]*\.{3}|\b\d+(?:\.\d+)? [xX] \d)/u.test(text)) {
       const start = n.getStart(sf)
       const line = sf.getLineAndCharacterOfPosition(start).line + 1
       const preceding = source.split('\n').slice(Math.max(0, line - 3), line).join('\n')

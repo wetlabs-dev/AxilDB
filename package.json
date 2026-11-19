@@ -33,7 +33,7 @@
     "check:collection-scope": "node scripts/check-collection-scope.mjs",
     "check:collection-integrity": "prisma generate && tsx scripts/check-collection-integrity.ts",
     "check:mobile-overflow": "node scripts/check-mobile-overflow.mjs",
-    "check:typography": "tsx scripts/check-typography.ts && node scripts/check-typography-audit.mjs && node scripts/audit-typography.mjs",
+    "check:typography": "tsx scripts/check-typography.ts && tsx scripts/check-editorial-typography.ts && node scripts/check-typography-audit.mjs && node scripts/audit-typography.mjs",
     "check:typography:ui": "node scripts/check-typography-ui.mjs",
     "check:production": "sh scripts/check-production.sh",
     "check:care-scheduling": "tsx scripts/check-care-scheduling.ts",

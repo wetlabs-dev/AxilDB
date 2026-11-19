@@ -1,3 +1,5 @@
+Expanded editorial, botanical and scientific conventions: [AxilDB style guide](design/typography.md).
+
 # Quotation marks, apostrophes and primes
 
 AxilDB’s English interfaces use ‘opening single’, ’closing single/apostrophe’, “opening double” and ”closing double” characters. Use literal UTF-8 in static copy, including accessibility labels: `<h1>Today’s Care</h1>`. Keep programming-language string delimiters ASCII. This convention concerns quotes and primes, not a rewrite of dashes, ellipses or grammar.
@@ -25,7 +27,7 @@ Existing typographic marks, primes, ʻokina, modifier apostrophes, language-spec
 
 ## Search, messages and print
 
-`normalizeTypographySearch` is for human-readable comparisons only. `typographySearchWhere` expands human-readable Prisma `contains` filters to at most four quote variants while preserving literal identifier/URL fields and existing collection constraints. It does not change indexes, uniqueness, stored values, exact search input or operators. Main search, definition filters, queue, wishlist, graph, care-bulk, treatment-batch, tag, exhibit and provenance filters use explicit matching boundaries.
+`normalizeTypographySearch` is for human-readable comparisons only. `typographySearchWhere` expands human-readable Prisma `contains` filters to at most six presentation variants while preserving literal identifier/URL fields and existing collection constraints. It does not change indexes, uniqueness, stored values, exact search input or operators. Main search, definition filters, queue, wishlist, graph, care-bulk, treatment-batch, tag, exhibit and provenance filters use explicit matching boundaries.
 
 Branded email copy is formatted before HTML escaping; destinations stay literal. Email subjects and push display text use UTF-8 presentation without changing recipients, preferences or delivery. No real notifications are sent by the checks.
 

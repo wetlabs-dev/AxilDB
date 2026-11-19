@@ -190,7 +190,7 @@ export function HusbandryGuideView({
   const canEditFields = canEdit && editAction && collectionSlug && plantDefinitionId
 
   return (
-    <div className="space-y-4">
+    <div className="ax-editorial-prose space-y-4">
       <div>
         <h3 className="font-serif text-2xl font-semibold">{formatTypography(title)}</h3>
         {sourceLabel && <p className="mt-1 text-sm text-stone-600">{formatTypography(sourceLabel)}</p>}
@@ -267,7 +267,7 @@ export function HusbandryGuideView({
                         </details>
                       )}
                     </dt>
-                    <dd className={cn('text-stone-700', !values?.[field] && 'text-stone-400')}>{formatTypography(values?.[field]) || '—'}</dd>
+                    <dd className={cn('text-stone-700', !values?.[field] && 'text-stone-400')}>{formatTypography(values?.[field], { mode: field.startsWith('fertiliz') ? 'chemical' : 'prose' }) || '—'}</dd>
                     {field === 'repottingInterval' && legacyInterval && legacyInterval !== repottingIntervalLabel && <dd className="text-xs">Preserved legacy guidance: {formatTypography(legacyInterval)}</dd>}
                     {differences.has(field) && baseValues?.[field] && <dd className="text-xs text-stone-500">Inherited: {formatTypography(baseValues[field])}</dd>}
                   </div>

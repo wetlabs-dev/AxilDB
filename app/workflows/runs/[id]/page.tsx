@@ -1,3 +1,4 @@
+import { BotanicalName } from '@/components/BotanicalName'
 import { formatTypography } from '@/lib/typography'
 import { plantDisplayName } from '@/lib/utils'
 import Link from 'next/link'
@@ -74,7 +75,7 @@ export default async function WorkflowRunPage({ params, searchParams }: { params
             {run.plants.map((entry) => (
               <Link key={entry.id} href={collectionPath(collection.slug, `/instances/${entry.plantInstanceId}`)} className="rounded-md border border-stone-200 bg-white/60 p-2 text-sm underline">
                 <span className="font-mono text-xs font-semibold text-[#2f6b45]">{entry.plantInstance.plantId}</span>
-                <span className="block">{plantDisplayName(entry.plantInstance.plantDefinition)}</span>
+                <span className="block">{<BotanicalName value={entry.plantInstance.plantDefinition} />}</span>
                 <span className="block text-xs text-stone-500">{entry.plantInstance.currentLocation ? `${entry.plantInstance.currentLocation.code} · ${entry.plantInstance.currentLocation.name}` : 'No location'}</span>
               </Link>
             ))}

@@ -1,3 +1,4 @@
+import { BotanicalName } from '@/components/BotanicalName'
 import { formatTypography } from '@/lib/typography'
 import { plantDisplayName, acceptedPlantDisplayName } from '@/lib/utils'
 import { PlantDefinitionEditorHeader } from '@/components/PlantDefinitionEditorHeader'
@@ -203,7 +204,7 @@ export default async function EditPlant({
           {plantNeedsIdentification(plant) && (
             <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 lg:col-span-4">
               <p className="font-semibold">Needs identification review</p>
-              <p className="mt-1">{plantDisplayName(plant)} is the displayed provisional identity. Its working placement is {acceptedPlantDisplayName(plant)}. Replace the provisional taxon or sp. only after identifying the species.</p>
+              <p className="mt-1">{<BotanicalName value={plant} />} is the displayed provisional identity. Its working placement is {<BotanicalName accepted value={plant} />}. Replace the provisional taxon or sp. only after identifying the species.</p>
             </div>
           )}
           <h3 className="font-serif text-lg font-semibold lg:col-span-4">Identity and nomenclature</h3>
@@ -367,7 +368,7 @@ export default async function EditPlant({
               <p className="text-sm text-stone-700">
                 This definition uses live-linked husbandry from{' '}
                 <a className="font-semibold underline" href={collectionPath(collection.slug, `/plants/${sourceDefinition.id}/edit#husbandry`)}>
-                  {plantDisplayName(sourceDefinition)}
+                  {<BotanicalName value={sourceDefinition} />}
                 </a>
                 . Changes to that source guide will appear here.
               </p>
@@ -492,7 +493,7 @@ export default async function EditPlant({
             <summary className="cursor-pointer font-serif text-xl font-semibold">Environmental requirements</summary>
             <p className="mt-1 text-sm text-stone-600">These structured fields power deterministic location compatibility checks. They supplement the readable husbandry guide.</p>
             {sourceDefinition ? (
-              <p className="mt-3 rounded-md border border-stone-200 bg-white/55 p-3 text-sm">Environmental requirements are inherited from {plantDisplayName(sourceDefinition)}. Make a local copy above to override them.</p>
+              <p className="mt-3 rounded-md border border-stone-200 bg-white/55 p-3 text-sm">Environmental requirements are inherited from {<BotanicalName value={sourceDefinition} />}. Make a local copy above to override them.</p>
             ) : (
               <div className="mt-4">
                 <PlantEnvironmentRequirementsForm
@@ -660,7 +661,7 @@ export default async function EditPlant({
           </div>
           {matchingValidatedDefinition ? (
             <p className="mt-3 rounded-lg border border-[#d6dfc9] bg-[#f7f4e8]/80 p-3 text-sm text-stone-700">
-              A matching validated definition already exists: <strong>{plantDisplayName(matchingValidatedDefinition)}</strong>. Use the validated definition for new instances, or keep this local definition independent.
+              A matching validated definition already exists: <strong>{<BotanicalName value={matchingValidatedDefinition} />}</strong>. Use the validated definition for new instances, or keep this local definition independent.
             </p>
           ) : pendingValidationCandidate ? (
             <p className="mt-3 rounded-lg border border-[#dfcc87] bg-[#fff8dc] p-3 text-sm text-[#6f541f]">

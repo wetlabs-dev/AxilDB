@@ -1,3 +1,4 @@
+import { BotanicalName } from '@/components/BotanicalName'
 import { plantDisplayName } from '@/lib/utils'
 import { repottingCadenceLabel } from '@/lib/repotting-label'
 import { DefinitionRepotting } from '@/components/Repotting'
@@ -92,7 +93,7 @@ export default async function PlantHusbandryPage({
             </Link>
           </p>
           <h2 className="mt-1 text-3xl font-bold">
-            {plantDisplayName(plant)} husbandry
+            {<BotanicalName value={plant} />} husbandry
           </h2>
           <HusbandryBadges values={effectiveGuide as any} />
         </div>
@@ -119,7 +120,7 @@ export default async function PlantHusbandryPage({
                 `/plants/${sourceDefinition.id}/husbandry`
               )}
             >
-              {plantDisplayName(sourceDefinition)}
+              {<BotanicalName value={sourceDefinition} />}
             </Link>
             .
           </div>

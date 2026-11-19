@@ -1,3 +1,4 @@
+import { BotanicalName } from '@/components/BotanicalName'
 import { formatTypography } from '@/lib/typography'
 import { plantDisplayName } from '@/lib/utils'
 import Link from 'next/link'
@@ -398,7 +399,7 @@ export default async function CollectionTransfersPage({ searchParams }: { search
                   <PlantImage src={typePhotoByDefinition[definition.id]} alt={plantDisplayName(definition)} />
                 </div>
                 <div className="min-w-0">
-                  <p className="font-semibold">{plantDisplayName(definition)}</p>
+                  <p className="font-semibold">{<BotanicalName value={definition} />}</p>
                   <p className="text-stone-600">{definition.collection?.name} · {definition.taxonomicAuthority?.abbreviation || definition.taxonomicAuthority?.name || 'No taxonomic authority'}</p>
                   <p className="mt-2 text-stone-600">Aliases: {definition.aliases.length} · Instances: {definition._count.instances}</p>
                 </div>
@@ -423,7 +424,7 @@ export default async function CollectionTransfersPage({ searchParams }: { search
             <div key={request.id} className="rounded-lg border border-stone-200 bg-white/60 p-3 text-sm">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="font-semibold">{plantDisplayName(request.sourcePlantDefinition)} to {request.targetCollection.name}</p>
+                  <p className="font-semibold">{<BotanicalName value={request.sourcePlantDefinition} />} to {request.targetCollection.name}</p>
                   <p className="text-stone-600">Requested {fmtDate(request.requestedAt)}</p>
                 </div>
                 <span className={statusBadge(request.status)}>{request.status.toLowerCase()}</span>

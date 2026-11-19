@@ -1,3 +1,4 @@
+import { formatCareInterval } from '@/lib/editorial-typography'
 import { addCalendarDays, dateInputValue, parseDateLocal } from '@/lib/time'
 
 export const cadenceActivities = [
@@ -147,7 +148,7 @@ export function cadenceLabel(
 ): string {
   if (cadence?.status === 'NOT_APPLICABLE') return 'Not applicable'
   if (!cadence || !cadence.interval || !cadence.unit) return 'Not scheduled'
-  return `Every ${cadence.interval} ${cadence.unit.toLowerCase()}${cadence.interval === 1 ? '' : 's'}`
+  return formatCareInterval(cadence.interval, cadence.unit)
 }
 // Calendar intervals clamp to the final day of the destination month, in the user's timezone.
 export function cadenceDueAt(

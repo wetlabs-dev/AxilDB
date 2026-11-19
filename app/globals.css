@@ -1593,3 +1593,14 @@ section {
 
 /* A subtree can opt into its own language’s native quotation convention. */
 [lang]:not(:lang(en)) { quotes: auto; }
+
+/* Editorial refinements use existing families and theme roles. */
+body { font-kerning: normal; font-variant-ligatures: common-ligatures contextual; }
+.ax-botanical-name { font-style: normal; hyphens: none; overflow-wrap: anywhere; }
+.ax-botanical-name i { font-style: italic; }
+.ax-botanical-name .not-italic { font-style: normal; }
+.ax-numeric, .ax-metric-chart, .deployment-progress, td, input[type='number'] { font-variant-numeric: tabular-nums lining-nums; }
+code, pre, .font-mono, .ax-literal, input, textarea { font-variant-ligatures: none; }
+.ax-fraction { font-variant-numeric: diagonal-fractions; }
+@supports (text-wrap: balance) { h1, h2, [role='dialog'] h3 { text-wrap: balance; } }
+@supports (text-wrap: pretty) { .ax-editorial-prose { text-wrap: pretty; } }

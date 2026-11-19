@@ -172,7 +172,7 @@ export function formatDate(value: DateInput, timeZone = defaultTimeZone(), optio
   const key = JSON.stringify(Object.entries(settings).sort(([a], [b]) => a.localeCompare(b)))
   let formatter = displayFormatters.get(key)
   if (!formatter) { formatter = new Intl.DateTimeFormat(undefined, settings); displayFormatters.set(key, formatter) }
-  return formatter.format(date)
+  return formatter.format(date).replace(/\s+(AM|PM)\b/g, (_,period:string) => `\u00a0${period==='AM'?'a.m.':'p.m.'}`)
 }
 
 export function formatDateTime(value: DateInput, timeZone = defaultTimeZone(), options: Intl.DateTimeFormatOptions = {}) {
@@ -193,4 +193,13 @@ export function dateInputValue(value: DateInput, timeZone = defaultTimeZone()) {
   if (Number.isNaN(date.getTime())) return ''
   const parts = zonedParts(date, timeZone)
   return `${parts.year}-${String(parts.month).padStart(2, '0')}-${String(parts.day).padStart(2, '0')}`
+}
+
+/** Display range only; date inputs, ISO serialization and timezone arithmetic stay canonical. */
+export function formatDateRange(start: DateInput, end: DateInput, timeZone = defaultTimeZone()) {
+  if (!start || !end) return '—'
+  const a = new Date(start), b = new Date(end)
+  if (!Number.isFinite(a.getTime()) || !Number.isFinite(b.getTime())) return '—'
+  const formatter = new Intl.DateTimeFormat('en-US', { timeZone: normalizeTimeZone(timeZone), month:'short', day:'numeric', year:'numeric' })
+  return formatter.formatRange(a,b).replace(/\s*–\s*/g,'–')
 }

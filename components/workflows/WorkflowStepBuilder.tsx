@@ -179,7 +179,7 @@ export function WorkflowStepBuilder({
     setRows(next)
     startTransition(async () => {
       try {
-        setStatus('Saving order...')
+        setStatus("Saving order…")
         await reorderWorkflowSteps({ collectionSlug, templateId, orderedStepIds: orderedIds })
         setStatus('Step order saved.')
         router.refresh()

@@ -1,3 +1,4 @@
+import { BotanicalName } from '@/components/BotanicalName'
 import { formatTypography } from '@/lib/typography'
 import { plantDisplayName } from '@/lib/utils'
 import Link from 'next/link'
@@ -135,7 +136,7 @@ export default async function WorkflowsPage({ searchParams }: { searchParams: Pr
                       <input type="checkbox" name="plantInstanceId" value={plant.id} />
                       <span>
                         <span className="block font-mono text-xs font-semibold text-[#2f6b45]">{plant.plantId}</span>
-                        <span className="block">{plantDisplayName(plant.plantDefinition)}</span>
+                        <span className="block">{<BotanicalName value={plant.plantDefinition} />}</span>
                         <span className="block text-xs text-stone-500">{plant.currentLocation ? `${plant.currentLocation.code} · ${plant.currentLocation.name}` : 'No location'}</span>
                       </span>
                     </label>

@@ -227,7 +227,7 @@ export function LocationDragDropManager({
         let compatibilityAcknowledged = false
         let compatibilityNote: string | null = null
         if (!startQuarantine) {
-          setStatus('Checking location compatibility...')
+          setStatus("Checking location compatibility…")
           const preview = await previewPlantLocationCompatibility({ collectionSlug, locationId: toLocationId, plantInstanceIds: plantIds })
           const warnings = preview.results.filter((result) => result.overallStatus === 'CAUTION' || result.overallStatus === 'POOR_MATCH')
           if (warnings.length) {
@@ -496,7 +496,7 @@ export function LocationDragDropManager({
 
       {status && (
         <p className={`xl:col-span-2 rounded-lg border px-3 py-2 text-sm ${status.includes('failed') || status.includes('Cannot') || status.includes('Confirm') ? 'border-[#c98278] bg-[#fff1ef] text-[#7d3028]' : 'border-[#c7d8bd] bg-[#f5fbf0] text-[#255537]'}`}>
-          {isPending ? 'Working... ' : ''}{status}
+          {isPending ? "Working… " : ''}{status}
         </p>
       )}
     </div>

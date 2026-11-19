@@ -1,3 +1,4 @@
+import { BotanicalName } from '@/components/BotanicalName'
 import { plantDisplayName } from '@/lib/utils'
 import { mergePlantInstances } from '@/app/plant-instance-merge-actions'
 import { Button, Card, Field, TextArea } from '@/components/ui'
@@ -50,7 +51,7 @@ export default async function MergePlantInstancesPage({
           <input type="hidden" name="collectionSlug" value={collection.slug} />
           <Card>
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-stone-500">1. Select specimens</p>
-            <h3 className="mt-1 text-xl font-bold">{plantDisplayName(candidates[0].plantDefinition)}</h3>
+            <h3 className="mt-1 text-xl font-bold">{<BotanicalName value={candidates[0].plantDefinition} />}</h3>
             <div className="mt-3 grid gap-2 md:grid-cols-2">
               {candidates.map((candidate) => (
                 <label key={candidate.id} className="flex gap-3 rounded-md border border-stone-200 bg-white/55 p-3">

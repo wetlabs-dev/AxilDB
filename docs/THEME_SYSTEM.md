@@ -48,3 +48,5 @@ Print media and intentional public-light interfaces remain explicit exceptions. 
 The implementation report, starting inventory, final token reference and limitations are under docs/audits/light-mode. Keep large screenshot galleries out of Git; retain small representative comparisons and a portable local bundle. Revalidate actual compositing, active/hover/selected states, images, opacity and gradients; nominal token ratios alone do not establish application-wide accessibility conformance. This refinement does not claim screen-reader or hardware-printer certification.
 
 Quotation marks and botanical display names follow [the typography convention](TYPOGRAPHY.md). Use Unicode in static copy and explicit display formatters for dynamic prose; keep inputs and technical data literal.
+
+The expanded [typographic and editorial standard](design/typography.md) governs botanical styles, numerical typography, scientific units and literal-content boundaries.

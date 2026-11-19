@@ -1,3 +1,4 @@
+import { BotanicalName } from '@/components/BotanicalName'
 import { plantDisplayName } from '@/lib/utils'
 import { randomUUID } from 'crypto'
 import Link from 'next/link'
@@ -29,7 +30,7 @@ export default async function BulkAcquisitionPage({ searchParams }: {
         <Card className="grid gap-3">
           <p className="text-sm"><span className="font-semibold">Source:</span> {acquisitionProvenanceDisplay({ seller: batch.seller, storefront: batch.sellerStorefront, distributor: batch.distributor, outlet: batch.distributorOutlet })}</p>
           {batch.orderNumber && <p className="text-sm"><span className="font-semibold">Order:</span> {batch.orderNumber}</p>}
-          {batch.items.map((item) => <div key={item.id} className="rounded-md border border-stone-200 bg-white/55 p-3"><p className="font-serif text-lg font-semibold">{plantDisplayName(item.plantDefinition)}</p><p className="text-sm text-stone-600">{item.quantity} acquired · {item.acquisitionRecord?.plantInstances.length || 0} specimen records created · {item.fulfillmentChoice.toLowerCase().replaceAll('_', ' ')}</p></div>)}
+          {batch.items.map((item) => <div key={item.id} className="rounded-md border border-stone-200 bg-white/55 p-3"><p className="font-serif text-lg font-semibold">{<BotanicalName value={item.plantDefinition} />}</p><p className="text-sm text-stone-600">{item.quantity} acquired · {item.acquisitionRecord?.plantInstances.length || 0} specimen records created · {item.fulfillmentChoice.toLowerCase().replaceAll('_', ' ')}</p></div>)}
           <Link className="font-semibold text-[#2f6b45] underline" href={collectionPath(context.collection.slug, '/acquisitions')}>Return to Acquisition Pipeline</Link>
         </Card>
       </div>
@@ -68,7 +69,7 @@ export default async function BulkAcquisitionPage({ searchParams }: {
             {definitions.map((definition) => (
               <Card key={definition.id} className="relative grid gap-3 md:grid-cols-4">
                 <input type="hidden" name="definitionId" value={definition.id} />
-                <div className="md:col-span-4"><p className="text-xs font-bold uppercase tracking-wide text-[#2f6b45]">Acquisition item</p><h2 className="font-serif text-xl font-semibold">{plantDisplayName(definition)}</h2></div>
+                <div className="md:col-span-4"><p className="text-xs font-bold uppercase tracking-wide text-[#2f6b45]">Acquisition item</p><h2 className="font-serif text-xl font-semibold">{<BotanicalName value={definition} />}</h2></div>
                 <Field label="Quantity" name={`quantity:${definition.id}`} type="number" min="1" max="50" defaultValue="1" />
                 <Field label="Unit price" name={`unitPrice:${definition.id}`} type="number" step="0.01" />
                 <Field label="Specimen size" name={`specimenSize:${definition.id}`} defaultValue={definition.desiredSpecimenSize} />
