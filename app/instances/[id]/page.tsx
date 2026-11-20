@@ -1,3 +1,5 @@
+import { PlantInstanceQuickCare } from '@/components/PlantInstanceQuickCare'
+import { loadQuickCare } from '@/lib/quick-care'
 import { BotanicalName } from '@/components/BotanicalName'
 import { formatTypography } from '@/lib/typography'
 import { plantDisplayName, acceptedPlantDisplayName } from '@/lib/utils'
@@ -326,6 +328,7 @@ export default async function InstanceDetail({
   ])
   const openConditions = careConditions.filter((condition) => condition.status !== 'RESOLVED')
   const latestCadenceEvents = await prisma.plantCareEvent.groupBy({ by: ['eventType'], where: { collectionId: collection.id, plantInstanceId: id }, _max: { performedAt: true } })
+  const quickCare = canCreateRecords && i.status === 'ACTIVE' ? await loadQuickCare(prisma, collection.id, id, timezone, resolveCadence('FERTILIZING', i.plantDefinition.careCadences, i.careCadenceOverrides).status !== 'NOT_APPLICABLE') : null
   const lastWatered = latestCadenceEvents.find(row => row.eventType === 'WATERED')?._max.performedAt
   const dueLabels: Record<string, string> = {}
   const cadenceDates = new Map<string, Date | null>()
@@ -924,6 +927,7 @@ export default async function InstanceDetail({
                 </ConfirmDeleteButton>
               </form>
             )}
+            {quickCare && <PlantInstanceQuickCare collectionSlug={collection.slug} plantInstanceId={id} initial={quickCare} photo={{ plantInstanceId: id, plantId: i.plantId, plantName: plantDisplayName(i.plantDefinition), title: i.plantId, image: photos[0] || undefined }} />}
           </div>
           <p>{<BotanicalName value={i.plantDefinition} />}</p>
           <div className="mt-3 flex flex-wrap gap-3 text-sm font-semibold">

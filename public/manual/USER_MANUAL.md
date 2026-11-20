@@ -217,6 +217,9 @@ App route: `/instances`
 - Open a specimen detail page to review identity, photos, Plant Health Timeline, husbandry summary, sport status, follows, children, notes, reminders, bloom tracker, and archive actions.
 - Use the Plant Health Timeline to scan accession, propagation, care, condition, bloom, photo, note, reminder, archive, and sport activity in a compact strip, then open the Life Story list for grouped deterministic history.
 - Use the generated QR label to open the specimen record quickly from a printed label.
+- On active specimen pages, use the circular Water or Fertilize button beside the plant ID to record care immediately. Watering can be recorded early or on a Quiet Day; the next routine due date uses the actual care baseline.
+- A check on the water or fertilizer icon means care was recorded today. Activate it to explicitly confirm additional care if you actually performed it again. Fertilize is hidden when its effective cadence is Not applicable; Not scheduled still allows recording care.
+- Use the camera button to add a first or progress photo without leaving the specimen page. A small exclamation badge indicates that this instance has no photos yet. Existing representative photos are preserved unless explicitly changed.
 - Give sunshine to plant instances as a quiet appreciation/bookmark marker, then use Most sunshine or Least sunshine sorting when reviewing instance lists.
 - Use Mark established on Seed, Corm, or Tissue culture specimens once they reach normal growth, choosing Mother or Propagation as the new current lifecycle type.
 - Use the plant ID refresh action when the current ID no longer matches the generated ID format after type or date changes.
@@ -228,6 +231,7 @@ App route: `/instances`
 
 ### Notes
 
+- Quick Care requires logger access or higher and has no general Undo. Use the detailed care workflow for fertilizer recipe and dose information; Quick Fertilize does not invent those details or record watering.
 - Plant IDs are generated from the plant definition and relevant date context, then made unique inside the collection.
 - Seed, Corm, and Tissue culture are transitional Plant Instance types. They describe the current physical state of one accession; parentage and origin method still belong in Propagation records.
 - Seed IDs use SD, corm IDs use CO, and tissue culture IDs use TC. Blank-species cultivar names use genus+cultivar segments without inventing sp.; explicit sp. remains a separate unknown-species token.
@@ -407,6 +411,9 @@ App route: `/care`
 ### How It Is Used
 
 - Open Care Queue from the sidebar to review today’s tasks, overdue work, watering, fertilizing, repotting, treatment plan steps, propagation checks, health issues, pest checks, bloom follow-ups, custom reminders, and completed care.
+- Care due on a local calendar day is available from midnight in the configured timezone. Overdue work remains visible; explicit dates and snoozes are respected. Exact care-history timestamps are unchanged.
+- The Care forecast on the dashboard and Care Queue shows today plus six days, care-type counts, overdue carryover and Quiet Days. Select a date to inspect projected work. Counts assume care is completed on time and update when actual care changes.
+- Collection managers can set, remove or move Quiet Days from the forecast. Review the earlier/later workload and required exceptions before confirming. A Quiet Day tomorrow warns when watering assessments need attention today. Incomplete advanced care remains outstanding; check substrate moisture before watering.
 - Use the dynamic Location chips to focus on one physical area. In All locations, work is grouped into collapsible Location sections with due, overdue, and care-type counts.
 - Choose Parent grouped for room-by-room rounds, Flat paths for one section per exact Location, or Full hierarchy for an indented tree view. Location sections can open bulk care or start a workflow already scoped to that Location and its children.
 - Expand a repot task to compare the current substrate with the top-ranked recommendation, then record the new recipe or explicit non-recipe substrate state when completing it.
@@ -414,7 +421,7 @@ App route: `/care`
 - If saving fails, the affected item and its form details return with a Retry message. If the result cannot be confirmed, use Check again to safely retry the same request without creating duplicate care records.
 - Queue totals and location counts update immediately. Pending actions remain consistent when switching filters or navigating to the weekly checklist; the queue reconciles with saved care after requests settle.
 - For condition-related queue items, use the condition actions to resolve the condition, update severity/status/follow-up details, or mark that it still needs attention with a follow-up date.
-- Use Bulk care by location to record one care event per selected plant in a location, with direct-only or nested-location scope and a required review step before submit. Fertilizing bulk care can include a recipe, strength, dose, and water volume.
+- Use Bulk care by location to record one care event per selected plant in a location, with direct-only or nested-location scope and a required review step before submit. Fertilizing bulk care can include a recipe, strength, dose, and water volume. The review shows same-day care in your configured timezone and excludes equivalent completed care by default. Expand the exclusions to see existing records, or explicitly include already-completed plants for intentional repeat care. Fertilizer matching respects the selected recipe; free-form Other care is not automatically matched. The server rechecks eligibility at submission and reports actual created and skipped counts.
 - Open Bulk care from a location detail page when you want the location preselected.
 - Use Care Schedule Sync from the Care Queue, Plant Instances, or a location detail page to align selected plants and care types, including fertilizing, to a new next-due date without recording completed care. Optionally sync cadence days at the same time when a group should share the same interval.
 - Use per-plant overrides for individual notes, results, or skip reasons while keeping shared task details on the batch.
@@ -784,6 +791,7 @@ App route: `/server`
 - Use AI Curator to configure the autonomous botanical research worker, monitor daily/monthly spend, inspect queue health, resolve Waiting for Human jobs, and review suggestions grouped by plant definition.
 - Open Server Management → Application Updates to view the running image revision, check the trusted release channel, review commits and run preflight. The first installation requires a separately installed host deployment agent; the web application cannot grant itself host deployment permissions.
 - New migrations flagged by SQL screening can be reviewed and explicitly approved in Application Updates: expand the SQL, acknowledge the database risks and type the shown target revision. Approval is bound to the exact files and does not bypass mandatory backups, critical preflight checks or health verification. This needs a one-time host agent update; changed historical migrations and host topology changes still require host administration.
+- Deployment progress uses eight operational stages, with a spinner only on the active stage, checkmarks for confirmed steps, and an explicit Skipped label when migrations are unnecessary. Expand Deployment details for complete identifiers, backup references and copy controls. Detailed deployment logs remain available; failures open them automatically. Temporary restart disconnections preserve the last confirmed progress. Reduced-motion preferences disable animation.
 - Review Upgrade requires explicit confirmation of the exact revision. The independent host agent verifies a backup, builds images, runs required production migrations, recreates only configured application workers and verifies application, database and local proxy readiness. PostgreSQL and Cloudflare Tunnel are not routine upgrade targets.
 - Upgrade jobs and logs persist on the host across browser closure and application restarts. Keep the progress page open or return later; temporary disconnection displays a reconnecting state and missed events are replayed. Detailed logs support auto-scroll pause, sanitized copy/download and history review.
 - A migration or health failure can require manual recovery. Application-only recovery is offered only after the previous images, configuration and unchanged live database schema are verified. Database backups are never automatically restored; any restore requires separate explicit authorization. See docs/APPLICATION_UPDATES.md for host installation, rollout, agent updates and recovery procedures.

@@ -1,0 +1,26 @@
+{
+  "phase": "after",
+  "captures": [
+    {
+      "theme": "light",
+      "width": 390,
+      "headerHeight": 340
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "headerHeight": 164
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "headerHeight": 340
+    },
+    {
+      "theme": "dark",
+      "width": 1440,
+      "headerHeight": 164
+    }
+  ],
+  "errors": []
+}

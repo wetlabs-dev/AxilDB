@@ -38,3 +38,7 @@ Without a recipe, Fertilizing shows **Recipe required** and its tile links direc
 The existing save action accepts an optional validated `activity` for focused edits; it writes only that activity and only clears legacy fertilizer fields when fertilizing is edited. Existing bulk requests keep their original behavior. This prevents a focused save from replacing unrelated cadence/override values changed concurrently. There are no schema, formatting, cadence resolution, queue calculation or AI provenance changes.
 
 `npm run check:care-cadences:redesign` creates/removes isolated fixtures at localhost:55439/axildb and uses the local app at port 3107 with installed Chrome. It covers tile rendering, container widths, desktop/mobile and themes, keyboard/cancel/focus restoration, individual save with an unrelated concurrent change, real recipe-removal validation and draft retry, bulk save, inheritance/reset/disabled settings, read-only access and preserved research/care history.
+
+## Header Quick Care
+
+Plant instance headers provide one-tap actual watering and fertilization plus the shared photo dialog. See [Quick Care](QUICK_CARE.md) for same-day safeguards, repeat care and scheduling behavior.

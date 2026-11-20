@@ -1,7 +1,7 @@
 'use client'
 import { BotanicalText } from '@/components/BotanicalName'
 import { formatTypography } from '@/lib/typography'
-import { Camera, X } from 'lucide-react'
+import { Camera, CircleAlert, X } from 'lucide-react'
 import { createPortal } from 'react-dom'
 import { useEffect, useId, useRef, useState } from 'react'
 import { PlantImage, type PlantImageFrame } from '@/components/PlantImage'
@@ -10,7 +10,7 @@ import type { CareQueueItem } from '@/lib/care-queue'
 
 type ExistingPhoto = PlantImageFrame & { id: string; caption?: string | null; isCover: boolean }
 type PhotoState = { photos: ExistingPhoto[]; canSetRepresentative: boolean }
-export function CareQueuePhoto({ item, collectionSlug, canUpload }: { item: CareQueueItem; collectionSlug: string; canUpload: boolean }) {
+export function CareQueuePhoto({ item, collectionSlug, canUpload, compact = false, onSaved }: { item: Pick<CareQueueItem, 'image' | 'plantName' | 'title' | 'plantInstanceId' | 'plantId' | 'locationPath'>; collectionSlug: string; canUpload: boolean; compact?: boolean; onSaved?: () => void }) {
   const [image, setImage] = useState(item.image), [open, setOpen] = useState(false), [message, setMessage] = useState('')
   const [state, setState] = useState<PhotoState | null>(null), [error, setError] = useState(''), [busy, setBusy] = useState(false), [attempt, setAttempt] = useState(0)
   const trigger = useRef<HTMLButtonElement>(null), dialog = useRef<HTMLDialogElement>(null)
@@ -37,23 +37,24 @@ export function CareQueuePhoto({ item, collectionSlug, canUpload }: { item: Care
   useEffect(() => { if (!message) return; const timer = setTimeout(() => setMessage(''), 3500); return () => clearTimeout(timer) }, [message])
   function saved(result: PhotoUploadResult, confirmation?: string) {
     window.dispatchEvent(new CustomEvent('axildb:plant-photo', { detail: { collectionSlug, plantInstanceId: plantId, image: result.image } }))
-    setMessage(confirmation || (image?.path ? 'Progress photo added' : 'Plant photo added')); setOpen(false)
+    setMessage(confirmation || (image?.path ? 'Progress photo added' : 'Plant photo added')); setOpen(false); onSaved?.()
   }
   const progress = Boolean(image?.path)
   const heading = progress ? 'Add progress photo' : 'Add plant photo'
-  return <div className="relative h-full w-full">
-    <PlantImage src={image} alt={formatTypography(item.plantName) || formatTypography(item.title)} />
-    {canUpload && plantId && <button ref={trigger} type="button" title={progress ? 'Add progress photo' : 'Add photo to this plant'} aria-label={`${progress ? 'Add progress photo' : 'Add photo'} to ${item.plantId || formatTypography(item.plantName)}`} onClick={() => { setState(null); setError(''); setMessage(''); setOpen(true) }} className={`absolute z-10 flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-md border border-[#9caf91] bg-[#fffdf7]/90 px-2 text-xs font-semibold text-[#2f6b45] shadow-sm hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2f6b45] ${progress ? 'bottom-1 right-1' : 'bottom-1 right-1 md:bottom-0 md:right-0'}`}>
-      <Camera className="h-4 w-4" aria-hidden="true" />{!progress && <span className="md:sr-only">Add photo</span>}
+  return <div className={compact ? "relative" : "relative h-full w-full"}>
+    {!compact && <PlantImage src={image} alt={formatTypography(item.plantName) || formatTypography(item.title)} />}
+    {canUpload && plantId && <button ref={trigger} type="button" title={progress ? 'Add progress photo' : 'Add photo to this plant'} aria-label={`${progress ? 'Add progress photo' : 'Add photo'} to ${item.plantId || formatTypography(item.plantName)}${compact && !progress ? '; no photos yet' : ''}`} onClick={() => { setState(null); setError(''); setMessage(''); setOpen(true) }} className={compact ? "ax-quick-care semantic-color-violet" : `absolute z-10 flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-md border border-[#9caf91] bg-[#fffdf7]/90 px-2 text-xs font-semibold text-[#2f6b45] shadow-sm hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2f6b45] ${progress ? 'bottom-1 right-1' : 'bottom-1 right-1 md:bottom-0 md:right-0'}`}>
+      {compact && <span className="sr-only">Add plant photograph</span>}
+      <Camera className="h-4 w-4" aria-hidden="true" />{compact && !progress && <CircleAlert className="ax-quick-care-attention" aria-hidden="true" />}{!compact && !progress && <span className="md:sr-only">Add photo</span>}
     </button>}
-    <span role="status" className={message ? "pointer-events-none absolute inset-x-0 top-0 bg-[#fffdf7]/95 p-1 text-center text-[10px] font-semibold text-[#2f6b45]" : "sr-only"}>{formatTypography(message)}</span>
+    <span role="status" className={message && !compact ? "pointer-events-none absolute inset-x-0 top-0 bg-[#fffdf7]/95 p-1 text-center text-[10px] font-semibold text-[#2f6b45]" : "sr-only"}>{formatTypography(message)}</span>
     {open && createPortal(<dialog ref={dialog} aria-labelledby={titleId} onCancel={event => { event.preventDefault(); if (!busy) setOpen(false) }} className="m-auto max-h-[92dvh] w-[min(38rem,calc(100vw-1rem))] overflow-y-auto rounded-xl border border-[#c7d8bd] bg-[#fffdf7] p-4 text-stone-800 shadow-xl backdrop:bg-black/40 sm:p-6">
       <div className="flex items-start justify-between gap-3">
         <div><h2 id={titleId} className="font-serif text-xl font-bold">{heading}</h2><p className="mt-1 text-sm">{<BotanicalText text={item.plantName} />} · {item.plantId}</p>{item.locationPath && <p className="text-xs text-stone-500">{item.locationPath}</p>}</div>
         <button type="button" aria-label="Close photo dialog" disabled={busy} onClick={() => setOpen(false)} className="flex min-h-11 min-w-11 items-center justify-center rounded border border-stone-300"><X className="h-5 w-5" /></button>
       </div>
       {progress && <p className="my-3 text-sm text-stone-600">Document this plant’s current appearance. Your existing photos will be preserved.</p>}
-      <p className="my-3 text-xs text-stone-600">This photo stays with the plant. It will not be linked to or complete this care activity.</p>
+      <p className="my-3 text-xs text-stone-600">{compact ? 'This photo stays with the plant. Adding a photo does not record care.' : 'This photo stays with the plant. It will not be linked to or complete this care activity.'}</p>
       {!state && !error && <p role="status">Loading photo options…</p>}
       {error && <div role="alert" className="my-3 text-sm text-red-800">{formatTypography(error)} <button type="button" onClick={() => setAttempt(value => value + 1)} className="underline">Retry</button></div>}
       {state && <>

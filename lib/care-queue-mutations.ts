@@ -1,4 +1,5 @@
 import { bulkCareEvents, findSameDayCareRecords, lockCarePlants, requireBulkCareType } from '@/lib/bulk-care'
+import { resolveCadence } from '@/lib/care-cadences'
 import { queueRepotting } from '@/lib/repotting'
 import { Prisma } from '@prisma/client'
 import { prisma as database } from '@/lib/prisma'
@@ -14,7 +15,7 @@ import { executeCareOperation, type CareOperationIdentity } from '@/lib/care-que
 import type { CareQueueAction } from '@/lib/care-queue-optimistic'
 
 export type MutationContext = Awaited<ReturnType<typeof requireCollectionLogger>>
-export type MutationResult = { destination?: string; duplicate?: boolean; events?: number; completed?: number; skipped?: number; requestedCount?: number; createdCount?: number; skippedAlreadyCompletedCount?: number; skippedOtherCount?: number; createdPlantInstanceIds?: string[]; skippedPlantInstanceIds?: string[] }
+export type MutationResult = { eventId?: string; performedAt?: string; destination?: string; duplicate?: boolean; events?: number; completed?: number; skipped?: number; requestedCount?: number; createdCount?: number; skippedAlreadyCompletedCount?: number; skippedOtherCount?: number; createdPlantInstanceIds?: string[]; skippedPlantInstanceIds?: string[] }
 const val = (fd: FormData, key: string) => String(fd.get(key) || '').trim() || undefined
 const clearableVal = (fd: FormData, key: string) => fd.has(key) ? val(fd, key) || null : undefined
 const boundedInt = (value: string | undefined, fallback: number, min: number, max: number) => Number.isFinite(Number(value)) ? Math.max(min, Math.min(max, Math.floor(Number(value)))) : fallback
@@ -76,6 +77,8 @@ async function complete(prisma: Prisma.TransactionClient, context: MutationConte
   const preferences = await prisma.emailPreference.findUnique({ where: { userId: context.user.id } })
   const timezone = timeZoneForPreference(preferences)
   const taskType = val(fd, 'taskType') || 'OTHER'
+  const quickCare = fd.get('quickCare') === 'on'
+  if (quickCare && (!['WATER', 'FERTILIZE'].includes(taskType) || fd.get('reminderId') || fd.get('conditionId') || fd.get('bloomEventId'))) throw new Error('Choose a routine Quick Care activity.')
   const reminderId = val(fd, 'reminderId')
 
   if (reminderId) {
@@ -104,6 +107,10 @@ async function complete(prisma: Prisma.TransactionClient, context: MutationConte
     where: { id: plantInstanceId, collectionId: context.collection.id, status: 'ACTIVE' },
     select: { id: true, plantId: true },
   })
+  if (quickCare && taskType === 'FERTILIZE') {
+    const eligibility = await prisma.plantInstance.findUniqueOrThrow({ where: { id: plant.id }, include: { plantDefinition: { include: { careCadences: true } }, careCadenceOverrides: true } })
+    if (resolveCadence('FERTILIZING', eligibility.plantDefinition.careCadences, eligibility.careCadenceOverrides).status === 'NOT_APPLICABLE') throw new Error('Fertilizing is marked not applicable for this plant.')
+  }
   const fertilizerRecipeId = taskType === 'FERTILIZE'
     ? await verifiedFertilizerRecipeId(prisma, context.collection.id, val(fd, 'fertilizerRecipeId') || null)
     : null
@@ -114,14 +121,15 @@ async function complete(prisma: Prisma.TransactionClient, context: MutationConte
   const substrateRecipeVersionId = substrateMode === 'RECIPE'
     ? (await requireSubstrateRecipeVersion(prisma, context.collection.id, val(fd, 'substrateRecipeVersionId')))?.id || null
     : null
-  const performedAt = parseDateLocal(val(fd, 'performedAt'), timezone) || new Date()
+  const performedAt = quickCare ? new Date() : parseDateLocal(val(fd, 'performedAt'), timezone) || new Date()
 
   await lockCarePlants(prisma, context.collection.id, [plantInstanceId])
   const bulkType = Object.entries(bulkCareEvents).find(([, event]) => event === careEventForTask(taskType))?.[0]
-  if (fd.get('queueCompletion') === 'on' && bulkType && (await findSameDayCareRecords(prisma, {
+  const previous = (fd.get('queueCompletion') === 'on' || quickCare && fd.get('intentionalRepeat') !== 'on') && bulkType ? await findSameDayCareRecords(prisma, {
     collectionId: context.collection.id, plantInstanceIds: [plantInstanceId], careType: requireBulkCareType(bulkType),
     referenceDate: performedAt, timezone, fertilizerRecipeId,
-  })).length) return { skipped: 1 }
+  }) : []
+  if (previous.length) return { skipped: 1, performedAt: previous[0].performedAt.toISOString() }
 
   const event = await withinMutation(prisma, async (tx) => {
     const created = await tx.plantCareEvent.create({ data: {
@@ -135,6 +143,7 @@ async function complete(prisma: Prisma.TransactionClient, context: MutationConte
       substrateRecipeVersionId,
       metadata: {
         taskType,
+        ...(quickCare ? { source: 'QUICK_CARE', intentionalRepeat: fd.get('intentionalRepeat') === 'on' } : {}),
         conditionId: val(fd, 'conditionId') || null,
         bloomEventId: val(fd, 'bloomEventId') || null,
         fertilizerRecipeId,
@@ -174,7 +183,7 @@ async function complete(prisma: Prisma.TransactionClient, context: MutationConte
     return created
   })
   await mutationAudit(prisma, context.user, 'CREATE', 'PLANT_CARE_EVENT', event.id, `Completed ${taskType.toLowerCase().replaceAll('_', ' ')} for ${plant.plantId}`, undefined, context.collection.id)
-  return {}
+  return { eventId: event.id, performedAt: event.performedAt.toISOString() }
 }
 
 async function snooze(prisma: Prisma.TransactionClient, context: MutationContext, fd: FormData): Promise<MutationResult> {

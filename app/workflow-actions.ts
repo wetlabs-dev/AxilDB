@@ -1,5 +1,6 @@
 'use server'
 
+import { findSameDayCareRecords, lockCarePlants } from '@/lib/bulk-care'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { Prisma } from '@prisma/client'
@@ -346,18 +347,24 @@ export async function completeWorkflowRunStep(fd: FormData) {
   if (['WATER', 'FERTILIZE', 'PEST_CHECK', 'HEALTH_CHECK', 'PROPAGATION_CHECK', 'BLOOM_CHECK', 'CREATE_CARE_EVENT'].includes(step.stepType)) {
     const queueTaskType = queueTaskForWorkflowStep(step.stepType, optional(fd, 'careEventType'))
     for (const plant of plants) {
-      const event = await prisma.plantCareEvent.create({
-        data: {
-          collectionId: context.collection.id,
-          plantInstanceId: plant.id,
-          userId: context.user.id,
-          eventType: careEventForWorkflowStep(step.stepType, optional(fd, 'careEventType')),
-          performedAt,
-          notes,
-          metadata: { source: 'WORKFLOW', workflowRunId: step.runId, workflowRunStepId: step.id, result: optional(fd, 'result') },
-        },
+      const event = await prisma.$transaction(async tx => {
+        await lockCarePlants(tx, context.collection.id, [plant.id])
+        const eventType = careEventForWorkflowStep(step.stepType, optional(fd, 'careEventType'))
+        const careType = eventType === 'WATERED' ? 'WATERING' : eventType === 'FERTILIZED' ? 'FERTILIZING' : null
+        if (careType && (await findSameDayCareRecords(tx, { collectionId: context.collection.id, plantInstanceIds: [plant.id], careType, referenceDate: performedAt, timezone })).length) return null
+        return tx.plantCareEvent.create({
+          data: {
+            collectionId: context.collection.id,
+            plantInstanceId: plant.id,
+            userId: context.user.id,
+            eventType,
+            performedAt,
+            notes,
+            metadata: { source: 'WORKFLOW', workflowRunId: step.runId, workflowRunStepId: step.id, result: optional(fd, 'result') },
+          },
+        })
       })
-      createdRecords.push({ type: 'PLANT_CARE_EVENT', id: event.id })
+      if (event) createdRecords.push({ type: 'PLANT_CARE_EVENT', id: event.id })
     }
     if (fd.get('createCondition') === 'on') {
       for (const plant of plants) {
