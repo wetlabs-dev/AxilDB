@@ -1,3 +1,4 @@
+import { recordQrUrl } from '@/lib/qr-labels'
 import { PlantInstanceQuickCare } from '@/components/PlantInstanceQuickCare'
 import { loadQuickCare } from '@/lib/quick-care'
 import { BotanicalName } from '@/components/BotanicalName'
@@ -424,7 +425,7 @@ export default async function InstanceDetail({
   )
 
   const qr = await QRCode.toDataURL(
-    `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.axildb.com'}${collectionPath(collection.slug, `/instances/${id}`)}`
+    recordQrUrl('plant', collection.slug, id)
   )
 
   const followCard = user ? (

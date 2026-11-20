@@ -1,0 +1,40 @@
+{
+  "phase": "after",
+  "results": [
+    {
+      "theme": "light",
+      "width": 390,
+      "headerHeight": 65
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "headerHeight": null
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "headerHeight": 65
+    },
+    {
+      "theme": "dark",
+      "width": 1440,
+      "headerHeight": null
+    },
+    {
+      "stressCycles": 40,
+      "durationMs": 5498,
+      "lookups": 40,
+      "stats": {
+        "calls": 56,
+        "stops": 55,
+        "active": 0,
+        "maxActive": 1,
+        "frames": 54,
+        "heapBytes": 23249454
+      },
+      "decoderLazyLoaded": true
+    }
+  ],
+  "errors": []
+}

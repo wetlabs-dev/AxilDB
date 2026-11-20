@@ -108,7 +108,7 @@ async function complete(prisma: Prisma.TransactionClient, context: MutationConte
     select: { id: true, plantId: true },
   })
   if (quickCare && taskType === 'FERTILIZE') {
-    const eligibility = await prisma.plantInstance.findUniqueOrThrow({ where: { id: plant.id }, include: { plantDefinition: { include: { careCadences: true } }, careCadenceOverrides: true } })
+    const eligibility = await prisma.plantInstance.findFirstOrThrow({ where: { id: plant.id, collectionId: context.collection.id }, include: { plantDefinition: { include: { careCadences: true } }, careCadenceOverrides: true } })
     if (resolveCadence('FERTILIZING', eligibility.plantDefinition.careCadences, eligibility.careCadenceOverrides).status === 'NOT_APPLICABLE') throw new Error('Fertilizing is marked not applicable for this plant.')
   }
   const fertilizerRecipeId = taskType === 'FERTILIZE'

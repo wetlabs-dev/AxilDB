@@ -2,8 +2,9 @@
 import { careQueueSummary } from '@/lib/care-queue-view'
 import type { CareQueueItem } from '@/lib/care-queue'
 
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
-import { usePathname, useSearchParams } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { MobileMenuAutoClose } from './MobileMenuAutoClose'
 import { ThemeToggle } from './ThemeToggle'
@@ -32,6 +33,7 @@ import {
   FlaskConical,
   MapPinned,
   Menu,
+  ScanQrCode,
   Search,
   Settings,
   ShoppingBag,
@@ -41,6 +43,8 @@ import {
   Users,
 } from 'lucide-react'
 import { collectionRoleAtLeast, collectionRoleLabel, isServerAdminRole } from '@/lib/roles'
+
+const QrScanner = dynamic(() => import('./QrScanner'), { ssr: false })
 
 export type SidebarCollection = {
   id: string
@@ -153,18 +157,26 @@ export function SidebarClient({
   collections,
   badges = {},
   logoutAction,
+  scannerOrigins = [],
 }: {
   user: SidebarUser | null
   initialCollection: { name: string; slug: string }
   collections: SidebarCollection[]
   badges?: SidebarBadges
+  scannerOrigins?: string[]
   logoutAction: () => Promise<void>
 }) {
+  const router = useRouter()
+  const [scannerOpen, setScannerOpen] = useState<string | null>(null), [scanNotice, setScanNotice] = useState('')
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const pathSlug = slugFromPathname(pathname)
   const querySlug = searchParams.get('collection')
   const slug = pathSlug || querySlug || initialCollection.slug
+  const scannerScope = JSON.stringify([pathname, slug, user?.email])
+  useEffect(() => setScannerOpen(null), [pathname, slug, user?.email])
+  useEffect(() => { if (!scanNotice) return; const timer = setTimeout(() => setScanNotice(''), 4000); return () => clearTimeout(timer) }, [scanNotice])
+  const scanButton = user ? <button type="button" className="ax-scan-launcher" title="Scan QR code" aria-label="Scan QR code" onClick={() => { setScanNotice(''); setScannerOpen(scannerScope) }}><ScanQrCode className="h-5 w-5" aria-hidden="true" /></button> : null
   const currentCollection = collections.find((collection) => collection.slug === slug)
   const currentName = currentCollection?.name || (initialCollection.slug === slug ? initialCollection.name : slug)
   const role = activeRole(currentCollection)
@@ -331,7 +343,7 @@ export function SidebarClient({
 
   return (
     <>
-      <header data-app-mobile-header className="no-print sticky top-0 z-40 border-b border-stone-200/80 bg-[#fffaf0]/95 px-4 py-3 shadow-sm backdrop-blur md:hidden">
+      <header data-app-mobile-header className="no-print sticky top-0 z-40 border-b border-stone-200/80 bg-[#fffaf0]/95 px-4 py-2.5 shadow-sm backdrop-blur md:hidden">
         <div className="flex items-center justify-between gap-3">
           <Link href={collectionPath(slug)} className="flex items-center gap-2 rounded-md outline-none transition hover:text-[#1f472f] focus:ring-2 focus:ring-[#8fa58f]/30">
             <img src="/axildb-logo.png" alt="" className="h-9 w-9 shrink-0 object-contain" />
@@ -340,9 +352,11 @@ export function SidebarClient({
               <p className="text-xs text-stone-600">Botanical Accession</p>
             </div>
           </Link>
+          <div className="flex shrink-0 items-center gap-2">
+          {scanButton}
           <details className="relative" data-mobile-menu>
             <MobileMenuAutoClose />
-            <summary className="flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-lg border border-stone-200 bg-white/80 shadow-sm">
+            <summary aria-label="Open navigation menu" className="flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-lg border border-stone-200 bg-white/80 shadow-sm">
               <Menu className="h-5 w-5" />
             </summary>
             <div className="absolute right-0 mt-2 max-h-[80vh] w-[min(21rem,calc(100vw-2rem))] overflow-auto rounded-lg border border-stone-200 bg-[#fffaf0] p-3 shadow-xl">
@@ -351,21 +365,30 @@ export function SidebarClient({
               <div className="mt-4 border-t border-stone-200 pt-4 text-sm">{account}</div>
             </div>
           </details>
+          </div>
         </div>
       </header>
 
       <aside className="no-print sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-stone-200/80 ax-navigation p-4 shadow-sm backdrop-blur md:flex">
-        <Link href={collectionPath(slug)} className="mb-3 flex items-center gap-3 rounded-md outline-none transition hover:text-[#1f472f] focus:ring-2 focus:ring-[#8fa58f]/30">
+        <div className="mb-3 flex items-center justify-between gap-1">
+        <Link href={collectionPath(slug)} className="flex min-w-0 items-center gap-2 rounded-md outline-none transition hover:text-[#1f472f] focus:ring-2 focus:ring-[#8fa58f]/30">
           <img src="/axildb-logo.png" alt="" className="h-11 w-11 shrink-0 object-contain" />
           <div>
             <span className="block font-serif text-2xl font-semibold leading-none">AxilDB</span>
             <p className="text-xs text-stone-600">Botanical Accession</p>
           </div>
         </Link>
+        {scanButton}
+        </div>
         {collectionSwitcher}
         <div className="min-h-0 flex-1 overflow-auto">{nav}</div>
         <div className="mt-6 border-t border-stone-200 pt-4 text-sm">{account}</div>
       </aside>
+      {scannerOpen === scannerScope && user && <QrScanner origins={scannerOrigins} currentPath={pathname} onClose={() => setScannerOpen(null)} onFound={record => {
+        setScannerOpen(null); setScanNotice(record.kind === 'plant' ? 'Plant found' : 'Location found')
+        if (pathname.replace(/\/$/, '') !== record.href) router.push(record.href)
+      }} />}
+      <span role="status" className={scanNotice ? 'ax-scan-toast' : 'sr-only'}>{scanNotice}</span>
     </>
   )
 }

@@ -171,6 +171,8 @@ export const manualSections: ManualSection[] = [
       'Open a specimen detail page to review identity, photos, Plant Health Timeline, husbandry summary, sport status, follows, children, notes, reminders, bloom tracker, and archive actions.',
       'Use the Plant Health Timeline to scan accession, propagation, care, condition, bloom, photo, note, reminder, archive, and sport activity in a compact strip, then open the Life Story list for grouped deterministic history.',
       'Use the generated QR label to open the specimen record quickly from a printed label.',
+      'While signed in, tap Scan QR code beside the mobile menu or desktop branding to open the integrated scanner. Plant and location labels open automatically inside AxilDB after access is checked; scanning never records care.',
+      'If camera access is unavailable, choose Photo to decode an existing image locally, or Enter accession ID manually for an exact plant ID or location code. Multiple matching records or photo labels show a choice. Photos selected for scanning are not uploaded.',
       'On active specimen pages, use the circular Water or Fertilize button beside the plant ID to record care immediately. Watering can be recorded early or on a Quiet Day; the next routine due date uses the actual care baseline.',
       'A check on the water or fertilizer icon means care was recorded today. Activate it to explicitly confirm additional care if you actually performed it again. Fertilize is hidden when its effective cadence is Not applicable; Not scheduled still allows recording care.',
       'Use the camera button to add a first or progress photo without leaving the specimen page. A small exclamation badge indicates that this instance has no photos yet. Existing representative photos are preserved unless explicitly changed.',
@@ -184,6 +186,7 @@ export const manualSections: ManualSection[] = [
       'Managers can check two or more active specimens with the same definition and choose Pot together, or start from an individual specimen. Review the survivor, current metadata sources, merge date, reason, and irreversible confirmation before completing the merge.',
     ],
     notes: [
+      'The scanner requires HTTPS for camera access and prefers the rear camera. Flashlight and camera switching appear only when supported. Closing or backgrounding the scanner stops camera capture. Allow camera permission in your browser settings if it was denied.',
       'Quick Care requires logger access or higher and has no general Undo. Use the detailed care workflow for fertilizer recipe and dose information; Quick Fertilize does not invent those details or record watering.',
       'Plant IDs are generated from the plant definition and relevant date context, then made unique inside the collection.',
       'Seed, Corm, and Tissue culture are transitional Plant Instance types. They describe the current physical state of one accession; parentage and origin method still belong in Propagation records.',

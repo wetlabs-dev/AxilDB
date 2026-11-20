@@ -1,3 +1,4 @@
+import { recordQrUrl } from '@/lib/qr-labels'
 import { registerBotanicalPdfFont, drawBotanicalLine, botanicalLineWidth } from '@/lib/pdf-botanical'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -122,8 +123,7 @@ function labelCode(item: LabelItem) {
 }
 
 function labelLink(collectionSlug: string, item: LabelItem) {
-  const path = isLocationItem(item) ? `/locations/${item.id}` : `/instances/${item.id}`
-  return `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.axildb.com'}${collectionPath(collectionSlug, path)}`
+  return recordQrUrl(isLocationItem(item) ? 'location' : 'plant', collectionSlug, item.id)
 }
 
 async function qrBufferFor(link: string) {

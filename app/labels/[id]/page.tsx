@@ -1,3 +1,4 @@
+import { recordQrUrl } from '@/lib/qr-labels'
 import QRCode from 'qrcode'
 import { collectionPath, requireCollectionViewer } from '@/lib/collections'
 import { Button, Select } from '@/components/ui'
@@ -19,7 +20,7 @@ export default async function Label({
     where: { id, collectionId: collection.id },
     include: { plantDefinition: true },
   })
-  const url = `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.axildb.com'}${collectionPath(collection.slug, `/instances/${id}`)}`
+  const url = recordQrUrl('plant', collection.slug, id)
   const qr = await QRCode.toDataURL(url, { margin: 1, width: 256 })
   const nameLines = plantLabelNameLines(instance.plantDefinition)
   const isPortrait = orientation === 'portrait'

@@ -1,3 +1,4 @@
+import { qrOrigins } from '@/lib/qr-payload'
 import { logout } from '@/app/auth-actions'
 import { getCurrentUser } from '@/lib/auth'
 import { getCollectionContext, publicCollectionsForUser } from '@/lib/collections'
@@ -158,6 +159,7 @@ export async function Sidebar() {
       initialCollection={{ name: context.collection.name, slug: context.collection.slug }}
       collections={sidebarCollections}
       badges={badges}
+      scannerOrigins={qrOrigins([process.env.NEXT_PUBLIC_APP_URL, ...(process.env.AXILDB_QR_TRUSTED_ORIGINS || '').split(',')])}
       logoutAction={logout}
     />
   )

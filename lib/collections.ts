@@ -220,7 +220,7 @@ export function canManageCollection(user: AuthUser | null, context: CollectionCo
   return Boolean(user && role && collectionRoleRank[role] >= collectionRoleRank.MANAGER)
 }
 
-async function assertCollectionTwoFactorReady(user: AuthUser, role: CollectionRole | null) {
+export async function assertCollectionTwoFactorReady(user: AuthUser, role: CollectionRole | null) {
   if (!role || collectionRoleRank[role] < collectionRoleRank.GARDENER) return
   const twoFactor = await prisma.userTwoFactor.findUnique({ where: { userId: user.id } })
   if (!twoFactor?.enabledAt) redirect('/account/security?setup=required')

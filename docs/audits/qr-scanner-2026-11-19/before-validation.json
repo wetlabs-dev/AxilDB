@@ -1,0 +1,26 @@
+{
+  "phase": "before",
+  "results": [
+    {
+      "theme": "light",
+      "width": 390,
+      "headerHeight": 65
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "headerHeight": null
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "headerHeight": 65
+    },
+    {
+      "theme": "dark",
+      "width": 1440,
+      "headerHeight": null
+    }
+  ],
+  "errors": []
+}
