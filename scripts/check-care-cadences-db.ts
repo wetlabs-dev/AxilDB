@@ -19,7 +19,7 @@ async function main() {
     await assert.rejects(db.plantInstanceCareCadenceOverride.create({ data: { plantInstanceId: instance.id, activity: 'WATERING', mode: 'OVERRIDE' } }))
     await assert.rejects(db.plantInstanceCareCadenceOverride.create({ data: { plantInstanceId: instance.id, activity: 'WATERING', mode: 'DISABLED', interval: 7 } }))
     const queue = () => getCareQueue(db, { collectionId, collectionSlug: collection.slug, now: new Date('2026-10-18T12:00:00Z'), timezone: 'America/New_York' })
-    assert.equal((await queue()).filter(row => row.taskType === 'WATER').length, 0)
+    assert.equal((await queue()).filter(row => row.taskType === 'WATER').length, 1, 'A scheduled plant has an initial obligation without completed care.')
     await db.plantCareEvent.create({ data: { collectionId, plantInstanceId: instance.id, eventType: 'WATERED', performedAt: new Date('2026-10-12T12:00:00Z') } })
     assert.equal((await queue()).find(row => row.taskType === 'WATER')?.dueAt.toISOString(), '2026-10-19T04:00:00.000Z')
     const override = await db.plantInstanceCareCadenceOverride.create({ data: { plantInstanceId: instance.id, activity: 'WATERING', mode: 'DISABLED' } })

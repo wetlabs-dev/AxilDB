@@ -32,6 +32,7 @@ export const cadenceActivities = [
 export const cadenceUnits = ['DAY', 'WEEK', 'MONTH', 'YEAR'] as const
 export type CareCadenceStatus = 'SCHEDULED' | 'NOT_APPLICABLE' | 'NOT_SCHEDULED'
 export type Cadence = {
+  activatedAt?: Date | null
   activity: string
   status?: string
   interval: number | null
@@ -58,6 +59,7 @@ export function validateCadenceState(
     throw new Error('Unscheduled decisions cannot retain an interval or unit.')
 }
 export type CadenceOverride = {
+  activatedAt?: Date | null
   activity: string
   mode: string
   interval: number | null
@@ -101,7 +103,7 @@ export function resolveCadence(
     state === 'SCHEDULED' && value?.interval && value.unit
       ? { activity, interval: value.interval, unit: value.unit }
       : null
-  return { cadence, status: state as CareCadenceStatus, source }
+  return { cadence, activatedAt: value?.activatedAt, status: state as CareCadenceStatus, source }
 }
 export function evaluateCareScheduleCompleteness(
   defaults: Cadence[],
@@ -183,4 +185,33 @@ export function cadenceDueAt(
       timezone
     ) || null
   )
+}
+
+/** One stable outstanding occurrence; absence of care history is never an exclusion. */
+export function resolveInitialCareSchedule(input: {
+  cadence: Cadence | null
+  activatedAt?: Date | null
+  lastCompleted?: Date | null
+  lifecycleDate?: Date | null
+  initialAnchorAt?: Date | null
+  createdAt: Date
+  nextDueAt?: Date | null
+  snoozedUntil?: Date | null
+  disabled?: boolean
+  hasRecipe?: boolean
+  timezone?: string
+}) {
+  const { cadence, timezone } = input
+  if (!cadence || input.disabled) return { dueAt: null, anchor: null, basis: 'Not scheduled' }
+  if (cadence.activity === 'FERTILIZING' && input.hasRecipe === false)
+    return { dueAt: null, anchor: null, basis: 'Scheduling configuration incomplete: fertilizer recipe required' }
+  // Existing completed care remains authoritative, even after an interval edit.
+  // Without history, onboarding cannot precede either collection entry or activation.
+  const lifecycle = input.initialAnchorAt || input.lifecycleDate || input.createdAt
+  const initial = input.activatedAt && input.activatedAt > lifecycle ? input.activatedAt : lifecycle
+  const anchor = input.lastCompleted || initial
+  const natural = input.nextDueAt || cadenceDueAt(anchor, cadence, timezone)
+  const dueAt = natural && input.snoozedUntil && input.snoozedUntil > natural ? input.snoozedUntil : natural
+  const basis = input.nextDueAt ? 'Based on explicit due date' : input.lastCompleted ? 'Based on last completed care' : input.activatedAt && input.activatedAt >= lifecycle ? 'Based on cadence activation' : 'Based on initial collection scheduling'
+  return { dueAt, anchor, basis: input.snoozedUntil && natural && input.snoozedUntil > natural ? 'Snoozed' : basis }
 }

@@ -1,3 +1,7 @@
+import { resolveCalendarPlan } from '@/lib/care-calendar-store'
+import { forecastConfiguration } from '@/lib/care-forecast-service'
+import type { CareQueueItem } from '@/lib/care-queue'
+import { effectiveFertilizerAssignment } from '@/lib/fertilizers'
 import { notFound } from 'next/navigation'
 import { recordQrUrl } from '@/lib/qr-labels'
 import { PlantInstanceQuickCare } from '@/components/PlantInstanceQuickCare'
@@ -9,7 +13,7 @@ import { PlantPhotoUploadForm } from '@/components/PlantPhotoUploadForm'
 import { repottingCadenceLabel } from '@/lib/repotting-label'
 import { InstanceRepotting } from '@/components/Repotting'
 import { CareCadences } from '@/components/CareCadences'
-import { cadenceActivities, cadenceDueAt, resolveCadence } from '@/lib/care-cadences'
+import { cadenceActivities, resolveInitialCareSchedule, resolveCadence } from '@/lib/care-cadences'
 import {
   archivePlantInstance,
   addNote,
@@ -68,7 +72,7 @@ import { recurrenceLabel, reminderCategories, reminderCategoryLabel, reminderRec
 import { hasHusbandryData, husbandryFieldNames, mergeHusbandryValues } from '@/lib/husbandry'
 import { isServerAdminRole } from '@/lib/roles'
 import { sunshineCounts, sunshineKey, sunshineStateForUser } from '@/lib/sunshine'
-import { addCalendarDays, formatDateTime, startOfDayInTimeZone } from '@/lib/time'
+import { addCalendarDays, calendarDayIndexInTimeZone, dateInputValue, formatDateTime, startOfDayInTimeZone } from '@/lib/time'
 import { collectPlantTimelineEvents, getPlantTimelineMetrics } from '@/lib/timeline/plantTimeline'
 import { allowedEventVisibilities } from '@/lib/events/visibility'
 import { dateInput, fmtDate, plantName, plantNeedsIdentification, taxonomyLabel } from '@/lib/utils'
@@ -335,13 +339,27 @@ export default async function InstanceDetail({
   const lastWatered = latestCadenceEvents.find(row => row.eventType === 'WATERED')?._max.performedAt
   const dueLabels: Record<string, string> = {}
   const cadenceDates = new Map<string, Date | null>()
+  const carePreviews: CareQueueItem[] = []
+  const careBasis = new Map<string, string>()
   for (const { activity, event, task } of cadenceActivities) {
-    const { cadence } = resolveCadence(activity, i.plantDefinition.careCadences, i.careCadenceOverrides)
+    const { cadence, activatedAt } = resolveCadence(activity, i.plantDefinition.careCadences, i.careCadenceOverrides)
     const last = latestCadenceEvents.find(row => row.eventType === event)?._max.performedAt
     const adjustment = i.careAdjustments.find(row => row.taskType === task)
-    const due = cadence ? adjustment?.nextDueAt || cadenceDueAt(last, cadence, timezone || undefined) : null
+    const schedule = resolveInitialCareSchedule({ cadence, activatedAt, lastCompleted: last, lifecycleDate: i.propagationDate || i.acquisitionDate, createdAt: i.createdAt, initialAnchorAt: adjustment?.initialAnchorAt, nextDueAt: adjustment?.nextDueAt, snoozedUntil: adjustment?.snoozedUntil, disabled: adjustment?.disabled || i.status !== 'ACTIVE', hasRecipe: Boolean(effectiveFertilizerAssignment(i.plantDefinition.husbandryGuide, i.husbandryOverride).recipe?.active), timezone: timezone || undefined })
+    const due = schedule.dueAt
     cadenceDates.set(activity, due)
-    dueLabels[activity] = due ? `${due < today ? 'Overdue · ' : 'Next due: '}${fmtDate(due, timezone)}` : 'Next due: Not established'
+    dueLabels[activity] = schedule.basis
+    careBasis.set(task, schedule.basis)
+    if (due && cadence) carePreviews.push({ key: `${task}:${i.id}`, taskType: task, source: 'derived', title: '', reason: '', dueAt: startOfDayInTimeZone(due, timezone || undefined), priority: 0, overdueDays: 0, href: '', locationId: i.currentLocationId, cadenceDays: Math.max(1, calendarDayIndexInTimeZone(due, timezone || undefined) - calendarDayIndexInTimeZone(schedule.anchor!, timezone || undefined)), notBeforeDate: dateInputValue(last ? addCalendarDays(startOfDayInTimeZone(last, timezone || undefined), 1, timezone || undefined) : schedule.anchor, timezone || undefined), manualSchedule: Boolean(adjustment?.nextDueAt || adjustment?.snoozedUntil), scheduleAnchor: [`${schedule.anchor?.toISOString() || 'initial'}:${JSON.stringify(cadence)}`, adjustment?.nextDueAt?.toISOString(), adjustment?.snoozedUntil?.toISOString()].join(':') })
+  }
+  if (carePreviews.length) {
+    const config = await forecastConfiguration(prisma, { collectionId: collection.id, collectionSlug: collection.slug, timezone: timezone || undefined })
+    const plan = await resolveCalendarPlan(prisma, collection.id, carePreviews, config, today, false)
+    for (const item of plan) {
+      const activity = cadenceActivities.find(row => row.task === item.taskType)!.activity
+      cadenceDates.set(activity, item.dueAt)
+      dueLabels[activity] = item.schedulingConflict ? 'Scheduling exception requires attention · Check Quiet Days' : `${item.dueAt < today ? 'Overdue · ' : 'Next due: '}${fmtDate(item.dueAt, timezone)} · ${item.originalDueAt ? 'Adjusted for Quiet Days' : careBasis.get(item.taskType)}`
+    }
   }
   const nextWatering = cadenceDates.get('WATERING')
   const greenThumbUsedToday = !!greenThumbToday

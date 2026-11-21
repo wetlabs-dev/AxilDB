@@ -3296,6 +3296,7 @@ model PlantCondition {
 }
 
 model PlantCareAdjustment {
+  initialAnchorAt DateTime?
   id                  String    @id @default(cuid())
   collectionId        String?
   plantInstanceId     String
@@ -3967,6 +3968,7 @@ model ReminderDelivery {
 }
 
 model PlantDefinitionCareCadence {
+  activatedAt DateTime? @default(now())
   id String @id @default(cuid())
   plantDefinitionId String
   activity String
@@ -3978,6 +3980,7 @@ model PlantDefinitionCareCadence {
 }
 
 model PlantInstanceCareCadenceOverride {
+  activatedAt DateTime? @default(now())
   id String @id @default(cuid())
   plantInstanceId String
   activity String

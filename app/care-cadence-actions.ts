@@ -121,6 +121,7 @@ export async function saveCareCadences(fd: FormData) {
                 plantInstanceId: instanceId,
                 activity,
                 mode,
+                activatedAt: previous && 'mode' in previous && previous.mode === 'OVERRIDE' && mode === 'OVERRIDE' ? previous.activatedAt : new Date(),
                 interval,
                 unit,
               },

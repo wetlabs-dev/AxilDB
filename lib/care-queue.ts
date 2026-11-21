@@ -1,5 +1,5 @@
 import { conditionPriority, conditionFollowUpDays } from '@/lib/care-queue-view'
-import { cadenceActivities, cadenceDueAt, cadenceLabel, resolveCadence } from '@/lib/care-cadences'
+import { cadenceActivities, cadenceLabel, resolveCadence, resolveInitialCareSchedule } from '@/lib/care-cadences'
 import type { Prisma, PrismaClient } from '@prisma/client'
 import type { PlantImageFrame } from '@/components/PlantImage'
 import { resolveCalendarPlan } from '@/lib/care-calendar-store'
@@ -405,23 +405,24 @@ export async function getCareQueue(
 
     const fertilizer = effectiveFertilizerAssignment(instance.plantDefinition.husbandryGuide, instance.husbandryOverride)
     for (const { activity, label, task, event } of cadenceActivities) {
-      const { cadence } = resolveCadence(activity, instance.plantDefinition.careCadences, instance.careCadenceOverrides)
+      const { cadence, activatedAt } = resolveCadence(activity, instance.plantDefinition.careCadences, instance.careCadenceOverrides)
       if (!cadence) continue
       if (task === 'REPOT' && instance.repottingQueueItems.length) continue
-      if (activity === 'FERTILIZING' && (!instance.plantDefinition.husbandryGuide?.fertilizerRecipe)) continue
+      if (activity === 'FERTILIZING' && (!fertilizer.recipe?.active)) continue
       if (activity === 'PEST_INSPECTION' && openPestConditionPlantIds.has(instance.id)) continue
       if (activity === 'GENERAL_INSPECTION' && conditions.some(row => row.plantInstanceId === instance.id && row.category !== 'PESTS')) continue
       const latest = latestCadenceEventByKey.get(`${instance.id}:${event}`)
       const adjustment = adjustmentMap.get(`${instance.id}:${task}`)
-      const dueAt = adjustment?.nextDueAt || cadenceDueAt(latest, cadence, timezone)
+      const schedule = resolveInitialCareSchedule({ cadence, activatedAt, lastCompleted: latest, lifecycleDate: baseDate, createdAt: instance.createdAt, initialAnchorAt: adjustment?.initialAnchorAt, nextDueAt: adjustment?.nextDueAt, timezone })
+      const dueAt = schedule.dueAt
       if (!dueAt) continue
       const recommendation = instance.plantDefinition.substrateRecommendations[0]
       pushDerived({
         key: `${task}:${instance.id}`, taskType: task, title: `${label}: ${instance.plantId}`,
-        reason: `${cadenceLabel(cadence)}${latest ? '; based on last completed care.' : '; initial due date set manually.'}`,
-        scheduleAnchor: `${latest?.toISOString() || 'initial'}:${JSON.stringify(cadence)}`,
-        notBeforeDate: latest ? dateInputValue(addCalendarDays(dayStart(latest, timezone), 1, timezone), timezone) : undefined,
-        cadenceDays: latest ? Math.max(1, daysBetween(dueAt, latest, timezone)) : undefined,
+        reason: `${cadenceLabel(cadence)}; ${schedule.basis.toLowerCase()}.`,
+        scheduleAnchor: `${schedule.anchor?.toISOString() || 'initial'}:${JSON.stringify(cadence)}`,
+        notBeforeDate: dateInputValue(latest ? addCalendarDays(dayStart(latest, timezone), 1, timezone) : dayStart(schedule.anchor!, timezone), timezone),
+        cadenceDays: Math.max(1, daysBetween(dueAt, schedule.anchor!, timezone)),
         recurrenceCadence: cadence,
         dueAt, basePriority: 55, plantInstanceId: instance.id, plantId: instance.plantId,
         plantName: plantDisplayName, ...itemLocation(instance), image,

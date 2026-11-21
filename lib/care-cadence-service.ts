@@ -24,6 +24,7 @@ export async function configureDefinitionCadence(
   const status =
     input.status || (input.interval == null ? 'NOT_SCHEDULED' : 'SCHEDULED')
   validateCadenceState(input.activity, status, input.interval, input.unit)
+  const previous = await tx.plantDefinitionCareCadence.findUnique({ where: { plantDefinitionId_activity: where } })
   if (!input.missingOnly) {
     await tx.plantDefinitionCareCadence.deleteMany({ where })
     await tx.careCadenceProposal.updateMany({
@@ -41,6 +42,7 @@ export async function configureDefinitionCadence(
   const created = await tx.plantDefinitionCareCadence.createMany({
     data: {
       ...where,
+      activatedAt: previous?.status === 'SCHEDULED' && status === 'SCHEDULED' ? previous.activatedAt : new Date(),
       status,
       interval: input.interval ?? null,
       unit: input.unit ?? null,
