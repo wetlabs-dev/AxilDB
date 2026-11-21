@@ -4,7 +4,9 @@ import sharp from 'sharp'
 import { parseQrPayload, qrOrigins, qrTargetKey } from '../lib/qr-payload'
 import { recordQrUrl } from '../lib/qr-labels'
 import { qrImageDimensions, validateQrImage } from '../lib/qr-image'
-import { decodeQrCodes } from '../lib/qr-decode'
+import { createLiveQrDecoder, decodeQrCodes } from '../lib/qr-decode'
+import { directQrDestination } from '../lib/qr-payload'
+import { visibleQrCrop, qrFrameCrop, qrDecodeDelay } from '../lib/qr-framing'
 import { QrCamera, type CameraState } from '../lib/qr-camera'
 const origin = 'https://app.example.test', legacy = 'https://old.example.test', origins = [origin, legacy]
 async function main() {
@@ -41,6 +43,18 @@ async function main() {
  assert.throws(()=>validateQrImage(16000000,{width:100,height:100}));assert.throws(()=>validateQrImage(10,{width:10000,height:10000}));assert.throws(()=>validateQrImage(10,null))
  const {data,info}=await sharp(first).ensureAlpha().raw().toBuffer({resolveWithObject:true});const timings=[]
  for(let i=0;i<20;i++){const start=performance.now();decodeQrCodes(new Uint8ClampedArray(data),info.width,info.height);timings.push(performance.now()-start)}
+ assert.deepEqual(visibleQrCrop(720,1280,400,500),{x:0,y:190,width:720,height:900})
+ assert.deepEqual(visibleQrCrop(1280,720,400,500),{x:352,y:0,width:576,height:720})
+ assert.equal(qrFrameCrop(720,1280,400,500,1).width,720*.72)
+ assert.deepEqual(qrFrameCrop(720,1280,400,500,2),{x:0,y:190,width:720,height:900})
+ assert(qrDecodeDelay(20)>=64&&qrDecodeDelay(200)>=100)
+ const parsed=parseQrPayload(recordQrUrl('plant','garden','cmtest123',origin),origins)!
+ assert.deepEqual(directQrDestination(parsed),{kind:'plant',href:'/c/garden/instances/cmtest123'})
+ assert.equal(directQrDestination({kind:'plant',identifier:'cmtest123'}),null)
+ assert.equal(directQrDestination({kind:'identifier',identifier:'HOYA-001'}),null)
+ const dim=new Uint8ClampedArray(data);for(let i=0;i<dim.length;i+=4)dim[i]=dim[i+1]=dim[i+2]=128+dim[i]/255*10
+ const recover=createLiveQrDecoder();let recovered:string|null=null;for(let i=0;i<6&&!recovered;i++)recovered=recover(dim,info.width,info.height)
+ assert.equal(recovered,a,'Shadow/low-contrast recovery works without a decoder dependency change')
  await cameraTests()
  console.log(JSON.stringify({passed:true,decodeFixtureMs:{min:Math.min(...timings),max:Math.max(...timings)},checks:'current/legacy/generated labels, origin/path attacks, exact IDs, photo rotation/JPEG/multiple codes, size limits, 40 camera cycles, cancellation, late permission, switching, torch, background, partial initialization failure'}))
 }
@@ -50,7 +64,7 @@ async function cameraTests(){
  const tracks:Track[]=[],constraints:MediaStreamConstraints[]=[]
  class Track extends EventTarget{stopped=false;settings={deviceId:selected}; applied:unknown[]=[];stop(){this.stopped=true}getSettings(){return this.settings}getCapabilities(){return {torch:canTorch}}async applyConstraints(c:unknown){this.applied.push(c)}}
  const getStream=()=>{const t=new Track();tracks.push(t);return {getTracks:()=>[t],getVideoTracks:()=>[t]} as unknown as MediaStream}
- let acquire:(c:MediaStreamConstraints)=>Promise<MediaStream>=async c=>{selected=(c.video as MediaTrackConstraints).deviceId?((c.video as MediaTrackConstraints).deviceId as ConstrainDOMStringParameters).exact as string:'rear';return getStream()}
+ let acquire:(c:MediaStreamConstraints)=>Promise<MediaStream>=async c=>{selected=(c.video as MediaTrackConstraints).deviceId?((c.video as MediaTrackConstraints).deviceId as ConstrainDOMStringParameters).ideal as string:'rear';return getStream()}
  const video={pause(){},srcObject:null,async play(){if(playFailure)throw Error('play')},readyState:2,videoWidth:64,videoHeight:64} as unknown as HTMLVideoElement
  Object.defineProperty(globalThis,'document',{configurable:true,value:{get visibilityState(){return hidden?'hidden':'visible'},createElement(){return {width:0,height:0,getContext(){return {drawImage(){},getImageData(){return {data:new Uint8ClampedArray(64*64*4)}}}}}}}})
  Object.defineProperty(globalThis,'navigator',{configurable:true,value:{mediaDevices:{async getUserMedia(c:MediaStreamConstraints){calls++;constraints.push(c);return acquire(c)},async enumerateDevices(){enumerations++;return [{kind:'videoinput',deviceId:'rear'},{kind:'videoinput',deviceId:'front'}]}}}})
@@ -66,6 +80,9 @@ async function cameraTests(){
   acquire=async()=>getStream();read='label';const success=make();await success.start();assert.equal(payloads,1);assert(tracks.at(-1)!.stopped);read=null
   canTorch=false;const unsupported=make();await unsupported.start();assert.equal(state!.torchSupported,false);unsupported.stop()
   playFailure=true;const failure=make();await failure.start();assert.equal(state!.status,'unavailable');assert(tracks.at(-1)!.stopped)
+  playFailure=false;let rejectOld!:(reason:Error)=>void,counter=0
+  const racing=new QrCamera(video,()=>++counter===1?new Promise((_,reject)=>rejectOld=reject):null,()=>{},()=>{})
+  await racing.start();await racing.start('front');rejectOld(Error('Old decoder failure'));await new Promise(r=>setTimeout(r,0));assert.equal(tracks.at(-1)!.stopped,false,'Old async failure cannot stop a replacement camera');racing.stop()
   assert(constraints.every(c=>c.audio===false));assert.equal(enumerations,calls-2,'No enumeration before denied/late/failed initialization')
  }finally{for(const [k,d]of Object.entries(descriptors)){if(d)Object.defineProperty(globalThis,k,d);else delete (globalThis as any)[k]}}
 }

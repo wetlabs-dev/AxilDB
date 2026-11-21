@@ -1,4 +1,6 @@
 'use client'
+import { beginQrTiming, finishQrNavigation } from '@/lib/qr-performance'
+import { warmQrDecoder } from '@/lib/qr-warmup'
 import { careQueueSummary } from '@/lib/care-queue-view'
 import type { CareQueueItem } from '@/lib/care-queue'
 
@@ -176,7 +178,9 @@ export function SidebarClient({
   const scannerScope = JSON.stringify([pathname, slug, user?.email])
   useEffect(() => setScannerOpen(null), [pathname, slug, user?.email])
   useEffect(() => { if (!scanNotice) return; const timer = setTimeout(() => setScanNotice(''), 4000); return () => clearTimeout(timer) }, [scanNotice])
-  const scanButton = user ? <button type="button" className="ax-scan-launcher" title="Scan QR code" aria-label="Scan QR code" onClick={() => { setScanNotice(''); setScannerOpen(scannerScope) }}><ScanQrCode className="h-5 w-5" aria-hidden="true" /></button> : null
+  useEffect(() => { const frame = requestAnimationFrame(() => { finishQrNavigation(); setScanNotice(current => current.startsWith('Opening ') ? '' : current) }); return () => cancelAnimationFrame(frame) }, [pathname])
+  const prewarmScanner = () => { void import('./QrScanner').catch(() => {}); void warmQrDecoder().catch(() => {}) }
+  const scanButton = user ? <button type="button" className="ax-scan-launcher" title="Scan QR code" aria-label="Scan QR code" onPointerEnter={prewarmScanner} onFocus={prewarmScanner} onPointerDown={prewarmScanner} onClick={() => { beginQrTiming(); setScanNotice(''); setScannerOpen(scannerScope) }}><ScanQrCode className="h-5 w-5" aria-hidden="true" /></button> : null
   const currentCollection = collections.find((collection) => collection.slug === slug)
   const currentName = currentCollection?.name || (initialCollection.slug === slug ? initialCollection.name : slug)
   const role = activeRole(currentCollection)
@@ -385,8 +389,9 @@ export function SidebarClient({
         <div className="mt-6 border-t border-stone-200 pt-4 text-sm">{account}</div>
       </aside>
       {scannerOpen === scannerScope && user && <QrScanner origins={scannerOrigins} currentPath={pathname} onClose={() => setScannerOpen(null)} onFound={record => {
-        setScannerOpen(null); setScanNotice(record.kind === 'plant' ? 'Plant found' : 'Location found')
+        setScannerOpen(null); setScanNotice(record.verified === false ? record.kind === 'plant' ? 'Opening plant…' : 'Opening location…' : record.kind === 'plant' ? 'Plant found' : 'Location found')
         if (pathname.replace(/\/$/, '') !== record.href) router.push(record.href)
+        else finishQrNavigation()
       }} />}
       <span role="status" className={scanNotice ? 'ax-scan-toast' : 'sr-only'}>{scanNotice}</span>
     </>

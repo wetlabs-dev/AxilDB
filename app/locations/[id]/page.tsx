@@ -1,3 +1,4 @@
+import { notFound } from 'next/navigation'
 import { BotanicalName } from '@/components/BotanicalName'
 import { formatTypography } from '@/lib/typography'
 import { plantDisplayName } from '@/lib/utils'
@@ -31,7 +32,7 @@ export default async function LocationDetail({ params }: { params: Promise<{ id:
   const canMovePlants = canEditInCollection(user, context)
   if (canBulkCare) await ensureStarterWorkflowTemplates(prisma, collection.id)
   const [location, allLocations, types, unitPreferences] = await Promise.all([
-    prisma.location.findFirstOrThrow({
+    prisma.location.findFirst({
       where: { id, collectionId: collection.id },
       include: { locationType: true, parentLocation: { include: { locationType: true } }, environmentProfile: true },
     }),
@@ -43,6 +44,7 @@ export default async function LocationDetail({ params }: { params: Promise<{ id:
     prisma.locationType.findMany({ where: { collectionId: collection.id, status: 'ACTIVE' }, orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }] }),
     getUserUnitPreferences(prisma, user?.id),
   ])
+  if (!location) notFound()
   const activeLocations = allLocations.filter((item) => item.status === 'ACTIVE')
   const locationNodes = activeLocations.map((item) => ({
     id: item.id,

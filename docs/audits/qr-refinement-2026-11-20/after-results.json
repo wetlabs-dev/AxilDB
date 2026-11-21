@@ -1,0 +1,113 @@
+{
+  "phase": "after",
+  "results": [
+    {
+      "theme": "light",
+      "width": 390,
+      "headerHeight": 65
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "headerHeight": null
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "headerHeight": 65
+    },
+    {
+      "theme": "dark",
+      "width": 1440,
+      "headerHeight": null
+    },
+    {
+      "clearLabelReadyCamera": [
+        {
+          "visibleToClosedMs": 181.39999997615814,
+          "recognizedMs": 158,
+          "lookups": 0
+        },
+        {
+          "visibleToClosedMs": 179.60000002384186,
+          "recognizedMs": 151.5,
+          "lookups": 0
+        },
+        {
+          "visibleToClosedMs": 180.89999997615814,
+          "recognizedMs": 154.10000002384186,
+          "lookups": 0
+        },
+        {
+          "visibleToClosedMs": 180,
+          "recognizedMs": 156.60000002384186,
+          "lookups": 0
+        },
+        {
+          "visibleToClosedMs": 181.5999999642372,
+          "recognizedMs": 157.5,
+          "lookups": 0
+        },
+        {
+          "visibleToClosedMs": 180.5999999642372,
+          "recognizedMs": 151.5,
+          "lookups": 0
+        },
+        {
+          "visibleToClosedMs": 181.39999997615814,
+          "recognizedMs": 153.30000001192093,
+          "lookups": 0
+        },
+        {
+          "visibleToClosedMs": 180.30000001192093,
+          "recognizedMs": 155.5,
+          "lookups": 0
+        },
+        {
+          "visibleToClosedMs": 181.39999997615814,
+          "recognizedMs": 154.89999997615814,
+          "lookups": 0
+        },
+        {
+          "visibleToClosedMs": 181.69999998807907,
+          "recognizedMs": 154.19999998807907,
+          "lookups": 0
+        }
+      ]
+    },
+    {
+      "actualNavigationTrace": {
+        "id": 1,
+        "stages": {
+          "pressed": 150,
+          "mounted": 453.0999999642372,
+          "permissionRequested": 461.5,
+          "decoderReady": 461.7999999523163,
+          "streamAcquired": 464.7999999523163,
+          "videoReady": 481.19999998807907,
+          "firstDecode": 483.89999997615814,
+          "recognized": 497,
+          "validated": 497.5,
+          "navigationStart": 497.5,
+          "destinationRendered": 547.1999999880791
+        }
+      }
+    },
+    {
+      "timingTraces": [],
+      "stressCycles": 40,
+      "durationMs": 4367,
+      "lookups": 0,
+      "stats": {
+        "calls": 58,
+        "stops": 57,
+        "active": 0,
+        "maxActive": 1,
+        "frames": 59,
+        "heapBytes": 24267057
+      },
+      "decoderLazyLoaded": true
+    }
+  ],
+  "errors": []
+}

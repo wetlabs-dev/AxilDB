@@ -1,0 +1,70 @@
+{
+  "phase": "before",
+  "results": [
+    {
+      "theme": "light",
+      "width": 390,
+      "headerHeight": 65
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "headerHeight": null
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "headerHeight": 65
+    },
+    {
+      "theme": "dark",
+      "width": 1440,
+      "headerHeight": null
+    },
+    {
+      "clearLabelReadyCamera": [
+        {
+          "visibleToClosedMs": 283.9000000357628,
+          "lookups": 1
+        },
+        {
+          "visibleToClosedMs": 285.69999998807907,
+          "lookups": 1
+        },
+        {
+          "visibleToClosedMs": 284.5,
+          "lookups": 1
+        },
+        {
+          "visibleToClosedMs": 285.2000000476837,
+          "lookups": 1
+        },
+        {
+          "visibleToClosedMs": 284.5,
+          "lookups": 1
+        },
+        {
+          "visibleToClosedMs": 180.80000001192093,
+          "lookups": 1
+        },
+        {
+          "visibleToClosedMs": 182.80000001192093,
+          "lookups": 1
+        },
+        {
+          "visibleToClosedMs": 180,
+          "lookups": 1
+        },
+        {
+          "visibleToClosedMs": 183.69999998807907,
+          "lookups": 1
+        },
+        {
+          "visibleToClosedMs": 182.10000002384186,
+          "lookups": 1
+        }
+      ]
+    }
+  ],
+  "errors": []
+}

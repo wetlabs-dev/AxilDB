@@ -1,3 +1,4 @@
+import { notFound } from 'next/navigation'
 import { recordQrUrl } from '@/lib/qr-labels'
 import { PlantInstanceQuickCare } from '@/components/PlantInstanceQuickCare'
 import { loadQuickCare } from '@/lib/quick-care'
@@ -130,7 +131,7 @@ export default async function InstanceDetail({
   const timezone = preferences?.timezone
   const unitPreferences = resolveUnitPreferences(preferences)
 
-  const i = await prisma.plantInstance.findFirstOrThrow({
+  const i = await prisma.plantInstance.findFirst({
     where: { id, ...collectionWhere },
     include: {
       acquisitionRecordLinks: {
@@ -186,6 +187,7 @@ export default async function InstanceDetail({
       survivingMerges: { include: { constituents: { include: { plantInstance: { include: { plantDefinition: true } } } }, createdBy: { select: { email: true } } }, orderBy: { mergeDate: 'desc' } },
     },
   })
+  if (!i) notFound()
   const historicalConstituent = isHistoricalConstituent(i.status)
   const canCreateRecords = canCreateRecordsForRole && !historicalConstituent
   const canEditRecords = canEditRecordsForRole && !historicalConstituent

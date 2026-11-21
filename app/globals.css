@@ -1644,3 +1644,22 @@ code, pre, .font-mono, .ax-literal, input, textarea { font-variant-ligatures: no
 .ax-scanner-control[aria-pressed='true'] { background:var(--ax-primary); color:var(--ax-action-text); }
 .ax-scan-toast { position:fixed; z-index:70; bottom:max(1rem,env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); padding:.75rem 1rem; border:1px solid var(--ax-success-border); border-radius:.75rem; background:var(--ax-surface-solid); color:var(--ax-text); box-shadow:0 4px 16px #0003; }
 @media(max-width:480px) { .ax-scanner-dialog { width:calc(100vw - .5rem); max-height:98dvh; border-radius:.75rem; } }
+
+/* Camera-first refinement: cover rather than letterbox, one compact control row. */
+.ax-scanner-dialog { width:min(38rem,calc(100vw - 1rem)); padding:.75rem; }
+.ax-scanner-dialog > div:first-child { align-items:center; margin-bottom:.6rem; }
+.ax-scanner-preview { aspect-ratio:4/5; max-height:min(66dvh,38rem); }
+.ax-scanner-preview video { object-fit:cover; object-position:center; }
+.ax-scanner-reticle { inset:18%; }
+.ax-scanner-overlay-status { position:absolute; left:50%; bottom:.75rem; transform:translateX(-50%); max-width:calc(100% - 1rem); width:max-content; border-radius:999px; padding:.35rem .7rem; background:#000b; color:#fff; font-size:.75rem; text-align:center; }
+.ax-scanner-toolbar { display:flex; align-items:center; gap:.25rem; margin-top:.5rem; }
+.ax-scanner-toolbar .ax-scanner-control { flex-basis:44px; }
+.ax-scanner-toolbar .ax-scanner-control:focus-within { outline:2px solid var(--ax-primary); outline-offset:2px; }
+.ax-scanner-manual { margin-left:auto; min-height:44px; font-size:.8rem; padding:0 .25rem; text-decoration:underline; white-space:nowrap; }
+.ax-scanner-info { display:inline-flex; align-items:center; justify-content:center; width:44px; min-height:44px; flex:0 0 44px; }
+.ax-scanner-help, .ax-scanner-recovery { margin-top:.5rem; font-size:.8rem; }
+.ax-scanner-recovery .ax-scanner-secondary { margin-top:.5rem; }
+.ax-scanner-help { padding:.75rem; background:var(--ax-surface-muted); border-radius:.5rem; }
+@media(min-width:768px) { .ax-scanner-preview { aspect-ratio:4/3; max-height:60dvh; } }
+@media(max-height:500px) and (orientation:landscape) { .ax-scanner-dialog { width:min(42rem,calc(100vw - 1rem)); } .ax-scanner-preview { aspect-ratio:16/7; max-height:48dvh; } }
+@media(max-width:350px) { .ax-scanner-dialog { padding:.5rem; } .ax-scanner-toolbar { gap:0; } .ax-scanner-manual { font-size:.75rem; } }

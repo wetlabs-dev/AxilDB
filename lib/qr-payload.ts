@@ -1,4 +1,4 @@
-/** QR text is untrusted. Never navigate to it; construct a route from an authorized record. */
+/** QR text is untrusted. Never navigate to raw text; construct an allowlisted route that authorizes at its destination. */
 export const maxQrPayloadLength = 2048
 export type QrTarget = { kind: 'plant' | 'location'; identifier: string; collectionSlug?: string } | { kind: 'identifier'; identifier: string }
 const identifier = /^[A-Za-z0-9][A-Za-z0-9._-]{0,159}$/
@@ -34,3 +34,9 @@ export function parseQrPayload(input: string, origins: string[], manual = false)
   } catch { return null }
 }
 export function qrTargetKey(target: QrTarget) { return `${target.kind}:${'collectionSlug' in target ? target.collectionSlug || '' : ''}:${target.identifier}` }
+
+/** Canonical scoped URLs already contain their destination. Authorization stays on that route. */
+export function directQrDestination(target: QrTarget): { href: string; kind: 'plant' | 'location' } | null {
+  if (target.kind === 'identifier' || !target.collectionSlug) return null
+  return { kind: target.kind, href: `/c/${target.collectionSlug}/${target.kind === 'plant' ? 'instances' : 'locations'}/${encodeURIComponent(target.identifier)}` }
+}
