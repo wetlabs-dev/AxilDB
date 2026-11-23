@@ -36,3 +36,9 @@ Use the existing **Web deployment / Application Updates** workflow. It already b
 Automated calendar policy checks cover office weekends, unaffected locations, additive overlap/provenance, year-crossing closures, safety exceptions, manual dates, recurrence validation, local-day boundaries and DST. Database checks cover persistent plans, concurrency, restarts, early completion, snoozes, cadence overrides, preview isolation, moving plants into/out of restricted locations, idempotency, preserved history, and location deletion.
 
 Browser/API checks cover preview/cancel/confirm, same-day warnings, stale and concurrent confirmations, origin checks, viewer/anonymous authorization, recurring local weekdays, creating/editing/deleting ranges, inherited settings, and mobile layouts in light/dark modes. TypeScript and production builds are checked. Changed production files are linted with the installed Next core-web-vitals rules; the repository's bare `npm run lint` currently opens an unconfigured-linter setup prompt.
+
+## Upcoming-date visibility
+
+Past one-time Quiet Days and fully ended date ranges are hidden from the management list, inherited collection summary and location date/range indicators. Dates expire only after their inclusive end day in the timezone returned by the existing forecast service; today and ongoing ranges remain visible. Weekly recurring rules never expire this way. Open management views refresh this visibility every minute and when revisited. Historical rules and durable scheduling decisions remain stored so hiding old dates does not recalculate previously shifted care.
+
+Verification: `check:care-calendar` covers expiry, inclusive end dates, recurring rules and timezone boundaries; typography, targeted lint and production build/type checks passed for the change. No database migration or host change is needed; deploy through Web deployment.

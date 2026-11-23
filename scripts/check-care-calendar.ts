@@ -1,3 +1,4 @@
+import { isUpcomingQuietDay } from '../lib/quiet-day-visibility'
 import { proposedQuietDays } from '../lib/care-forecast-service'
 import assert from 'node:assert/strict'
 import { calendarSchedule, careForecast, effectiveQuietRules, quietDateReasons, type CalendarConfig, type QuietDate } from '../lib/care-calendar'
@@ -135,3 +136,18 @@ for (const length of [3,5]) {
   const output = calendarSchedule(assortment, cfg, now)
   for (const item of output) assert.ok(item.schedulingConflict || !quietDateReasons(item.dueAt, cfg, item.locationId).length)
 }
+
+// Management lists expire finite rules only after their inclusive local end date.
+
+const visibilityNow = new Date('2026-11-24T02:00:00Z') // Still November 23 in New York.
+for (const zone of ['America/New_York', 'UTC']) {
+  assert.equal(isUpcomingQuietDay({ quietType: 'WEEKLY_RECURRING' }, visibilityNow, zone), true)
+  assert.equal(isUpcomingQuietDay({ quietType: 'ONE_TIME', date: '2026-11-22T05:00:00Z' }, visibilityNow, zone), false)
+  assert.equal(isUpcomingQuietDay({ quietType: 'DATE_RANGE', endDate: '2026-11-22T05:00:00Z' }, visibilityNow, zone), false)
+  assert.equal(isUpcomingQuietDay({ quietType: 'DATE_RANGE', endDate: '2026-11-29T05:00:00Z' }, visibilityNow, zone), true)
+}
+assert.equal(isUpcomingQuietDay({ quietType: 'ONE_TIME', date: '2026-11-23T05:00:00Z' }, visibilityNow, 'America/New_York'), true)
+assert.equal(isUpcomingQuietDay({ quietType: 'DATE_RANGE', endDate: '2026-11-23T05:00:00Z' }, visibilityNow, 'America/New_York'), true)
+assert.equal(isUpcomingQuietDay({ quietType: 'ONE_TIME', date: '2026-11-23T05:00:00Z' }, visibilityNow, 'UTC'), false)
+assert.equal(isUpcomingQuietDay({ quietType: 'DATE_RANGE', endDate: null }, visibilityNow, 'UTC'), true)
+console.log('Quiet Day management visibility: past dates/ranges hidden, inclusive today and future retained, recurring days and timezone boundaries passed.')
