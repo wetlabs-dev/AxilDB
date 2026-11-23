@@ -28,7 +28,7 @@ function validateSelections(selections: ResolutionSelection[]) {
 export async function previewDeconfliction(db: Prisma.TransactionClient, scope: ForecastScope, selections: ResolutionSelection[]) {
   validateSelections(selections)
   const state = await deconflictionState(db,scope), rows = new Map(state.rows.map(row=>[row.key,row]))
-  const valid: Array<{ selection: ResolutionSelection; item: CareQueueItem; date: Date; exception: boolean }> = [], changed: string[] = []
+  const valid: Array<{ selection: ResolutionSelection; item: CareQueueItem; date: Date; exception: boolean; earlyWatering: boolean }> = [], changed: string[] = []
   const manual = new Map(state.config.manualResolutions || [])
   const occurrenceByKey = new Map(state.occurrences.map(item=>[manualCareKey(item,state.config.timezone),item]))
   for(const selection of selections) {
@@ -36,8 +36,8 @@ export async function previewDeconfliction(db: Prisma.TransactionClient, scope: 
     if(!row || row.token!==selection.token || !candidate) { changed.push(selection.key);continue }
     const item=occurrenceByKey.get(selection.key)!
     const date=parseDateLocal(candidate.date,state.config.timezone)!
-    valid.push({selection,item,date,exception:candidate.exception})
-    manual.set(selection.key,{originalDueAt:item.originalDueAt||item.dueAt,adjustedDueAt:date,ruleUsed:manualDeconflictionRule,shiftDirection:selection.direction,reason:'Manually resolved around Quiet Days.',quietDayId:null})
+    valid.push({selection,item,date,exception:candidate.exception,earlyWatering:candidate.earlyWatering})
+    manual.set(selection.key,{originalDueAt:item.originalDueAt||item.dueAt,adjustedDueAt:date,ruleUsed:manualDeconflictionRule,shiftDirection:selection.direction,reason:candidate.earlyWatering?'Early watering: check substrate moisture before watering.':'Manually resolved around Quiet Days.',quietDayId:null})
   }
   const after=projectCareOccurrences(state.items,{...state.config,manualResolutions:manual},state.now)
   const horizon=dateInputValue(addCalendarDays(startOfDayInTimeZone(state.now,state.config.timezone),21,state.config.timezone),state.config.timezone)
@@ -45,7 +45,7 @@ export async function previewDeconfliction(db: Prisma.TransactionClient, scope: 
   const counts=(items:CareQueueItem[])=>{const result=new Map<string,number>();for(const item of items)if(!item.schedulingConflict){const date=dateInputValue(item.dueAt,state.config.timezone);result.set(date,(result.get(date)||0)+1)}return result}
   const beforeCounts=counts(state.occurrences),afterCounts=counts(after)
   const impact=dates.map(date=>({date,before:date<=horizon?beforeCounts.get(date)||0:null,after:date<=horizon?afterCounts.get(date)||0:null,staged:valid.filter(v=>dateInputValue(v.date,state.config.timezone)===date).length}))
-  return {state,valid,changed,impact,hash:scheduleDigest(valid.map(v=>[v.selection,v.date,v.exception])),exceptions:valid.filter(v=>v.exception).length}
+  return {state,valid,changed,impact,hash:scheduleDigest(valid.map(v=>[v.selection,v.date,v.exception,v.earlyWatering])),exceptions:valid.filter(v=>v.exception).length,earlyWaterings:valid.filter(v=>v.earlyWatering).length}
 }
 export async function applyDeconfliction(db: PrismaClient, scope: ForecastScope & {userId:string}, input: {selections:ResolutionSelection[]; hash:string; confirmExceptions?:boolean; operationId:string; issuedAt:number}) {
   validateSelections(input.selections)
@@ -68,7 +68,7 @@ export async function applyDeconfliction(db: PrismaClient, scope: ForecastScope 
     if(plantIds.length)await tx.$queryRaw(Prisma.sql`SELECT id FROM "PlantInstance" WHERE "collectionId"=${scope.collectionId} AND id IN (${Prisma.join([...new Set(plantIds)].sort())}) ORDER BY id FOR UPDATE NOWAIT`)
     const preview=await previewDeconfliction(tx,scope,input.selections)
     if(preview.hash!==input.hash || preview.exceptions && input.confirmExceptions !== true) return {reviewRequired:true,changed:preview.changed,applied:[],notice:'The schedule changed or manual exceptions need confirmation. Review the refreshed suggestions.'}
-    const decisions=preview.valid.map(({selection,item,date})=>({collectionId:scope.collectionId,scheduleKey:selection.key,taskKey:item.key.replace(/(:projection)+$/,''),plantInstanceId:item.plantInstanceId||null,careType:item.taskType,timezone:preview.state.config.timezone,originalDueAt:item.originalDueAt||item.dueAt,adjustedDueAt:date,shiftDirection:selection.direction,ruleUsed:manualDeconflictionRule,reason:'Manually resolved around Quiet Days.'}))
+    const decisions=preview.valid.map(({selection,item,date,earlyWatering})=>({collectionId:scope.collectionId,scheduleKey:selection.key,taskKey:item.key.replace(/(:projection)+$/,''),plantInstanceId:item.plantInstanceId||null,careType:item.taskType,timezone:preview.state.config.timezone,originalDueAt:item.originalDueAt||item.dueAt,adjustedDueAt:date,shiftDirection:selection.direction,ruleUsed:manualDeconflictionRule,reason:earlyWatering?'Early watering: check substrate moisture before watering.':'Manually resolved around Quiet Days.'}))
     const applied=decisions.map(row=>row.scheduleKey)
     const existing=applied.length?await tx.careQuietDayAdjustment.findMany({where:{collectionId:scope.collectionId,scheduleKey:{in:applied}},select:{scheduleKey:true}}):[]
     const existingKeys=new Set(existing.map(row=>row.scheduleKey))
@@ -76,11 +76,11 @@ export async function applyDeconfliction(db: PrismaClient, scope: ForecastScope 
     if(creates.length)await tx.careQuietDayAdjustment.createMany({data:creates})
     if(updates.length)await tx.$executeRaw(Prisma.sql`
       UPDATE "CareQuietDayAdjustment" AS current
-      SET "adjustedDueAt"=candidate.destination, "shiftDirection"=candidate.direction, "reason"='Manually resolved around Quiet Days.', "ruleUsed"=${manualDeconflictionRule}
-      FROM (VALUES ${Prisma.join(updates.map(row=>Prisma.sql`(${row.scheduleKey}::text, ${row.adjustedDueAt}::timestamp, ${row.shiftDirection}::text)`))}) AS candidate(key,destination,direction)
+      SET "adjustedDueAt"=candidate.destination, "shiftDirection"=candidate.direction, "reason"=candidate.reason, "ruleUsed"=${manualDeconflictionRule}
+      FROM (VALUES ${Prisma.join(updates.map(row=>Prisma.sql`(${row.scheduleKey}::text, ${row.adjustedDueAt}::timestamp, ${row.shiftDirection}::text, ${row.reason}::text)`))}) AS candidate(key,destination,direction,reason)
       WHERE current."collectionId"=${scope.collectionId} AND current."scheduleKey"=candidate.key
     `)
-    if(applied.length) await tx.auditLog.create({data:{collectionId:scope.collectionId,userId:scope.userId,action:'UPDATE',entityType:'CARE_DECONFLICTION',summary:`Resolved ${applied.length} scheduling conflict(s)`,metadata:JSON.stringify({source:manualDeconflictionRule,approvedAt:new Date(),hash:input.hash,decisions:preview.valid.map(v=>({key:v.selection.key,direction:v.selection.direction,originalDate:v.item.originalDueAt||v.item.dueAt,destination:v.date,exception:v.exception}))})}})
+    if(applied.length) await tx.auditLog.create({data:{collectionId:scope.collectionId,userId:scope.userId,action:'UPDATE',entityType:'CARE_DECONFLICTION',summary:`Resolved ${applied.length} scheduling conflict(s)`,metadata:JSON.stringify({source:manualDeconflictionRule,approvedAt:new Date(),hash:input.hash,decisions:preview.valid.map(v=>({key:v.selection.key,direction:v.selection.direction,originalDate:v.item.originalDueAt||v.item.dueAt,destination:v.date,exception:v.exception,earlyWatering:v.earlyWatering}))})}})
     const result={reviewRequired:false,changed:preview.changed,applied,notice:`${applied.length} resolution(s) applied. ${preview.changed.length} changed task(s) need review.`}
     await tx.careQueueOperation.deleteMany({where:{collectionId:scope.collectionId,expiresAt:{lt:new Date()}}})
     await tx.careQueueOperation.create({data:{...receiptKey,action:'deconflict',payloadHash,result,expiresAt:new Date(input.issuedAt+7*86400000)}})

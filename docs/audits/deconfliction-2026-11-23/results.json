@@ -3,6 +3,7 @@
   "defaultLater": true,
   "stagingReadOnly": true,
   "exceptionConfirmation": true,
+  "earlyWateringConfirmed": true,
   "networkRetryIdempotent": true,
   "persistedAfterReload": true,
   "careEventsCreated": 0,

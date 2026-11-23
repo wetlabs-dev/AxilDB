@@ -42,6 +42,7 @@ export type CareTaskType = (typeof careTaskTypes)[number]
 export type CareQueueFilter = 'today' | 'overdue' | 'water' | 'fertilize' | 'repot' | 'treatment' | 'propagation' | 'health' | 'pest' | 'bloom' | 'custom' | 'completed'
 
 export type CareQueueItem = {
+  lastCompletedCareAt?: Date | null
   notBeforeDate?: string
   scheduleAnchor?: string
   cadenceDays?: number
@@ -425,6 +426,7 @@ export async function getCareQueue(
         notBeforeDate: dateInputValue(latest ? addCalendarDays(dayStart(latest, timezone), 1, timezone) : dayStart(schedule.anchor!, timezone), timezone),
         cadenceDays: Math.max(1, daysBetween(dueAt, schedule.anchor!, timezone)),
         recurrenceCadence: cadence,
+        lastCompletedCareAt: latest || null,
         dueAt, basePriority: 55, plantInstanceId: instance.id, plantId: instance.plantId,
         plantName: plantDisplayName, ...itemLocation(instance), image,
         ...(task === 'FERTILIZE' ? {

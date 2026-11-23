@@ -108,7 +108,7 @@ export function calendarSchedule(items: CareQueueItem[], config: CalendarConfig,
       result.set(item.key, item); count(item.dueAt, 1)
     }
   }
-  return [...result.values()].map(item => ({ ...item, overdueDays: Math.max(0, calendarDayIndexInTimeZone(now, timezone) - calendarDayIndexInTimeZone(item.dueAt, timezone)) }))
+  return [...result.values()].map(item => ({ ...item, quietDayReason: item.taskType === 'WATER' && item.originalDueAt && item.dueAt < item.originalDueAt && !item.quietDayReason?.startsWith('Early watering') ? `Early watering: ${item.quietDayReason || 'check moisture before watering.'}` : item.quietDayReason, overdueDays: Math.max(0, calendarDayIndexInTimeZone(now, timezone) - calendarDayIndexInTimeZone(item.dueAt, timezone)) }))
 }
 
 export function projectCareOccurrences(items: CareQueueItem[], config: CalendarConfig, now = new Date()) {

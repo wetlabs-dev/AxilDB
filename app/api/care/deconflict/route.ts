@@ -30,7 +30,7 @@ export async function POST(req:NextRequest) {
     if(input.operation==='preview')return json(await prisma.$transaction(async tx=>{
       await tx.$executeRaw`SELECT pg_advisory_xact_lock_shared(hashtextextended(${`care-calendar:${s.collectionId}`}, 0))`
       const p=await previewDeconfliction(tx,s,input.selections)
-      return {hash:p.hash,changed:p.changed,exceptions:p.exceptions,impact:p.impact,valid:p.valid.length}
+      return {hash:p.hash,changed:p.changed,exceptions:p.exceptions,earlyWaterings:p.earlyWaterings,impact:p.impact,valid:p.valid.length}
     },{timeout:30000}))
     const result=await applyDeconfliction(prisma,s,input)
     if(result.applied.length)revalidatePath(collectionPath(s.collectionSlug), 'layout')

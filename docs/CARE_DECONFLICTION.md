@@ -65,3 +65,13 @@ This is not a claim that all 45 suggested cases were independently tested. Parti
 Deploy through **Web deployment**. No migration, new worker, scheduled job, environment setting or host configuration is required. Existing tables and indexes are reused. No production data is altered during testing. Reload an already-open forecast after deployment to load the new controls.
 
 Visual review: [mobile light](audits/deconfliction-2026-11-23/light-390.png), [mobile dark](audits/deconfliction-2026-11-23/dark-390.png), [desktop light](audits/deconfliction-2026-11-23/light-1440.png), [desktop dark](audits/deconfliction-2026-11-23/dark-1440.png), [browser verification](audits/deconfliction-2026-11-23/results.json). Mobile checks verify that the fixed, safe-area-aware confirmation bar remains within the viewport. The screenshots contain synthetic plants, not production data.
+
+## Early watering
+
+Watering cadence is a scheduling guide, not a mandatory waiting period. For an actual outstanding watering with known completion history, the earliest eligible local day is the day after the last completion; the normal cadence threshold does not block an earlier choice. Past dates and Quiet Days remain excluded. Separate conditional forecast occurrences retain their ordering boundary so selecting early care cannot duplicate a preceding projected watering.
+
+Earlier watering choices are labeled **Early watering**, require confirmation and warn users to check substrate moisture first. The warning persists with the manual decision and remains visible in the resulting queue/forecast. Automatically advanced watering also displays an early-watering warning, including existing durable shifts.
+
+Regression: an isolated fixture with Plant ID `COLSCU-STO-20260731-AC-001`, completed watering November 23, 2026, three-day cadence, natural due November 26 and November 26–29 quiet, offers Wednesday November 25 as early watering and Monday November 30 as the later choice. Production records were not accessed; this reproduces the supplied dates rather than claiming the exact live cause was established. The previous implementation already allowed Wednesday in a fresh actual-occurrence calculation; stale state, additional rules or a separate hypothetical occurrence could explain a different live option list.
+
+Early-watering verification: the exact-date backend regression and browser choice/warning/confirmation/persistence checks passed, along with calendar regressions, typography, targeted lint, TypeScript and production build. No schema or host changes are required.

@@ -30,6 +30,13 @@ assert.equal(deconflictionSuggestions({...item,dueAt:date('2025-01-01')},{...con
 const forwardBlocked={...config,quietDays:[{...config.quietDays[0],startDate:date('2026-11-28'),endDate:date('2028-01-01')}]}
 assert.equal(deconflictionSuggestions(item,forwardBlocked,now).next,null)
 assert.equal(deconflictionSuggestions(item,forwardBlocked,now).recommended,'EARLIER')
+const thursdayQuiet={...config,quietDays:[{...config.quietDays[0],startDate:date('2026-11-26'),endDate:date('2026-11-29')}]}
+const mondayWater={...water,dueAt:date('2026-11-26'),cadenceDays:3,lastCompletedCareAt:date('2026-11-23'),notBeforeDate:'2026-11-26'}
+const early=deconflictionSuggestions(mondayWater,thursdayQuiet,now)
+assert.equal(early.previous?.date,'2026-11-25','A cadence threshold cannot block Wednesday after a Monday completion.')
+assert.equal(early.previous?.earlyWatering,true);assert.equal(early.previous?.exception,true)
+assert.equal(early.next?.date,'2026-11-30')
+assert.equal(deconflictionSuggestions({...mondayWater,projected:true},thursdayQuiet,now).previous,null,'Separate forecast occurrences retain their ordering constraint.')
 const url=new URL(process.env.DATABASE_URL||'postgresql://invalid/invalid');if(url.hostname!=='localhost'||url.port!=='55444'||url.pathname!=='/axildb_deconflict')throw new Error('Only the disposable deconfliction database is allowed.')
 const db=new PrismaClient()
 async function main(){
@@ -86,6 +93,22 @@ async function main(){
   assert.equal(dateInputValue((await getCareQueue(db,scope))[0].dueAt,timezone),'2026-12-02')
   await db.plantCareEvent.create({data:{collectionId:collection.id,plantInstanceId:plant.id,eventType:'HEALTH_CHECK',performedAt:date('2026-12-02')}})
   assert.equal(dateInputValue((await getCareQueue(db,scope))[0].dueAt,timezone),'2026-12-06')
+  // Exact reported dates, with automatic movement disabled to exercise the manual conflict workflow.
+  await db.collectionQuietDay.updateMany({where:{collectionId:collection.id,name:'Thanksgiving'},data:{startDate:date('2026-11-26')}})
+  const waterDefinition=await db.plantDefinition.create({data:{collectionId:collection.id,genus:'Colocasia',species:'esculenta',cultivarName:'Storm',careCadences:{create:{activity:'WATERING',interval:3,unit:'DAY',activatedAt:null}}}})
+  const wateredPlant=await db.plantInstance.create({data:{collectionId:collection.id,plantDefinitionId:waterDefinition.id,plantId:'COLSCU-STO-20260731-AC-001',instanceType:'ACQUIRED',acquisitionDate:date('2026-07-31')}})
+  await db.plantCareEvent.create({data:{collectionId:collection.id,plantInstanceId:wateredPlant.id,eventType:'WATERED',performedAt:date('2026-11-23')}})
+  await db.collectionQuietDayShiftRule.create({data:{collectionId:collection.id,careType:'WATER',defaultShiftDirection:'EARLIER',maxShiftDaysBefore:0,maxShiftDaysAfter:0}})
+  const waterRow=(await state()).rows.find(row=>row.plantId==='COLSCU-STO-20260731-AC-001'&&!row.projected)!
+  assert.equal(waterRow.originalDate,'2026-11-26');assert.equal(waterRow.previous?.date,'2026-11-25');assert.equal(waterRow.previous?.earlyWatering,true)
+  const waterChoice={key:waterRow.key,token:waterRow.token,direction:'EARLIER' as const},waterPreview=await db.$transaction(tx=>previewDeconfliction(tx,scope,[waterChoice]))
+  assert.equal(waterPreview.earlyWaterings,1)
+  const earlyInput={selections:[waterChoice],hash:waterPreview.hash,operationId:randomUUID(),issuedAt:Date.now()}
+  assert.equal((await applyDeconfliction(db,scope,earlyInput)).reviewRequired,true)
+  await applyDeconfliction(db,scope,{...earlyInput,confirmExceptions:true})
+  const earlyItem=(await getCareQueue(db,scope)).find(row=>row.plantInstanceId===wateredPlant.id)!
+  assert.equal(dateInputValue(earlyItem.dueAt,timezone),'2026-11-25');assert.match(earlyItem.quietDayReason!,/Early watering/)
+  assert.equal(await db.plantCareEvent.count({where:{plantInstanceId:wateredPlant.id}}),1,'Staging early care never completes it.')
   // Bounded bulk fixture.
   await db.plantInstance.createMany({data:Array.from({length:150},(_,i)=>({collectionId:collection.id,plantDefinitionId:definition.id,plantId:`BULK-${i}`,instanceType:'ACQUIRED',acquisitionDate:date('2026-11-24')}))})
   const started=performance.now(),many=await state();assert.ok(many.rows.length>=150)
