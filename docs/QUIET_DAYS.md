@@ -42,3 +42,5 @@ Browser/API checks cover preview/cancel/confirm, same-day warnings, stale and co
 Past one-time Quiet Days and fully ended date ranges are hidden from the management list, inherited collection summary and location date/range indicators. Dates expire only after their inclusive end day in the timezone returned by the existing forecast service; today and ongoing ranges remain visible. Weekly recurring rules never expire this way. Open management views refresh this visibility every minute and when revisited. Historical rules and durable scheduling decisions remain stored so hiding old dates does not recalculate previously shifted care.
 
 Verification: `check:care-calendar` covers expiry, inclusive end dates, recurring rules and timezone boundaries; typography, targeted lint and production build/type checks passed for the change. No database migration or host change is needed; deploy through Web deployment.
+
+For conflicts outside the automatic shift limits, use [Care Schedule Deconfliction](CARE_DECONFLICTION.md) from the forecast. Choices are staged and explicitly confirmed; Quiet Day rules themselves are not changed.

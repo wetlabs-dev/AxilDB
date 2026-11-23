@@ -1,0 +1,59 @@
+import assert from 'node:assert/strict'
+import {randomUUID,randomBytes,createHash} from 'node:crypto'
+import {mkdir,writeFile} from 'node:fs/promises'
+import {PrismaClient} from '@prisma/client'
+import {chromium,expect} from '@playwright/test'
+const url=new URL(process.env.DATABASE_URL||'');assert(url.hostname==='localhost'&&url.port==='55444'&&url.pathname==='/axildb_deconflict')
+const db=new PrismaClient(),base='http://localhost:3107',out='/tmp/axildb-deconfliction-ui';await mkdir(out,{recursive:true})
+const todayText=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())
+// Winter fixture; use a noon UTC source so all date labels resolve to the same New York day.
+const today=new Date(todayText+'T12:00:00Z'),day=n=>new Date(today.getTime()+n*86400000)
+const user=await db.user.create({data:{email:`deconfliction-ui-${randomUUID()}@example.test`,passwordHash:'fixture',emailVerifiedAt:new Date(),twoFactor:{create:{enabledAt:new Date(),secretCiphertext:'fixture'}}}})
+const collection=await db.collection.create({data:{name:'Scheduling review',slug:`deconfliction-ui-${randomUUID()}`,memberships:{create:{userId:user.id,role:'MANAGER',status:'ACTIVE'}}}})
+const browser=await chromium.launch({channel:'chrome',headless:true})
+try{
+ await db.emailPreference.create({data:{userId:user.id,timezone:'America/New_York'}})
+ const definition=await db.plantDefinition.create({data:{collectionId:collection.id,genus:'Hoya',species:'carnosa',cultivarName:'Chelsea',careCadences:{create:{activity:'GENERAL_INSPECTION',interval:7,unit:'DAY',activatedAt:null}}}})
+ const type=await db.locationType.create({data:{collectionId:collection.id,name:'Room',abbreviation:'RM'}})
+ const location=await db.location.create({data:{collectionId:collection.id,locationTypeId:type.id,name:'Work Office',code:'OFFICE'}})
+ await db.plantInstance.createMany({data:Array.from({length:3},(_,i)=>({collectionId:collection.id,plantDefinitionId:definition.id,plantId:`HOYA-${i+1}`,instanceType:'ACQUIRED',currentLocationId:location.id,acquisitionDate:day(-7)}))})
+ await db.collectionQuietDay.create({data:{collectionId:collection.id,locationId:location.id,name:'Office closure',quietType:'DATE_RANGE',startDate:day(0),endDate:day(4),timezone:'America/New_York'}})
+ await db.collectionQuietDay.createMany({data:[0,6].map(dayOfWeek=>({collectionId:collection.id,locationId:location.id,name:'Office weekend',quietType:'WEEKLY_RECURRING',dayOfWeek,timezone:'America/New_York'}))})
+ await db.collectionQuietDayShiftRule.create({data:{collectionId:collection.id,careType:'HEALTH_CHECK',defaultShiftDirection:'SMART',maxShiftDaysBefore:0,maxShiftDaysAfter:0}})
+ const token=randomBytes(32).toString('hex');await db.session.create({data:{userId:user.id,tokenHash:createHash('sha256').update(token).digest('hex'),expiresAt:new Date(Date.now()+3600000),twoFactorVerifiedAt:new Date()}})
+ const context=await browser.newContext();await context.addCookies([{name:'axildb_session',value:token,url:base}]);const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message))
+ await page.goto(`${base}/c/${collection.slug}/care`,{waitUntil:'networkidle'})
+ await page.getByRole('button',{name:'Resolve conflicts',exact:true}).click()
+ const panel=page.getByRole('region',{name:'Care Schedule Deconfliction'})
+ await expect(panel.getByText('Previous date unavailable.',{exact:false})).toHaveCount(3)
+ await expect(panel.getByRole('button',{name:'Review 3 resolutions'})).toBeVisible()
+ assert.equal(await db.auditLog.count({where:{collectionId:collection.id,entityType:'CARE_DECONFLICTION'}}),0)
+ for(const theme of ['light','dark'])for(const width of [390,1440]){
+  await page.setViewportSize({width,height:1000});await page.evaluate(t=>document.documentElement.dataset.theme=t,theme)
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth))
+  if(width<640){const action=await panel.getByRole('button',{name:'Review 3 resolutions'}).boundingBox();assert.ok(action&&action.y>=0&&action.y+action.height<=1000,'Mobile review action remains inside the viewport.')}
+  if(width<640){await panel.getByRole('heading',{name:'Care Schedule Deconfliction',exact:true}).evaluate(el=>el.scrollIntoView({block:'start'}));await page.screenshot({path:`${out}/${theme}-${width}.png`})}else await panel.screenshot({path:`${out}/${theme}-${width}.png`})
+ }
+ await panel.getByRole('button',{name:'Review 3 resolutions'}).click()
+ await expect(panel.getByRole('button',{name:'Apply 3 resolutions'})).toBeDisabled()
+ await panel.getByRole('checkbox',{name:/I confirm 3 manual exception/}).check()
+ let dropped=false
+ await page.route('**/api/care/deconflict',async route=>{const request=route.request();if(request.method()==='POST'&&request.postDataJSON()?.operation==='apply'&&!dropped){dropped=true;await route.fetch();await route.abort('failed')}else await route.continue()})
+ await panel.getByRole('button',{name:'Apply 3 resolutions'}).click()
+ await expect(panel.getByRole('button',{name:'Apply 3 resolutions'})).toBeEnabled()
+ await panel.getByRole('button',{name:'Apply 3 resolutions'}).click()
+ await expect(panel.getByText('No unresolved conflicts in this forecast.')).toBeVisible()
+ assert.equal(await db.plantCareEvent.count({where:{collectionId:collection.id}}),0)
+ assert.equal(await db.auditLog.count({where:{collectionId:collection.id,entityType:'CARE_DECONFLICTION'}}),1)
+ await page.reload({waitUntil:'networkidle'})
+ await expect(page.getByRole('button',{name:'Resolve conflicts',exact:true})).toHaveCount(0)
+ // Access and origin checks: no unauthenticated read/mutation or cross-origin mutation.
+ const guest=await browser.newContext();assert.notEqual((await guest.request.get(`${base}/api/care/deconflict?collectionSlug=${collection.slug}`)).status(),200)
+ assert.equal((await context.request.post(`${base}/api/care/deconflict`,{headers:{Origin:'https://unrelated.test'},data:{collectionSlug:collection.slug,operation:'preview',selections:[]}})).status(),403)
+ await db.collectionMembership.updateMany({where:{collectionId:collection.id,userId:user.id},data:{role:'VIEWER'}})
+ assert.equal((await context.request.post(`${base}/api/care/deconflict`,{headers:{Origin:base},data:{collectionSlug:collection.slug,operation:'preview',selections:[]}})).status(),403)
+ await guest.close();assert.deepEqual(errors,[])
+ await writeFile(`${out}/results.json`,JSON.stringify({conflicts:3,defaultLater:true,stagingReadOnly:true,exceptionConfirmation:true,networkRetryIdempotent:true,persistedAfterReload:true,careEventsCreated:0,authorizationAndOrigin:true,themes:['light','dark'],widths:[390,1440],browserErrors:errors},null,2))
+ console.log('Deconfliction UI: forecast entry, automatic later staging, explicit exception confirmation, apply/reload persistence, zero care events, authorization/origin and responsive light/dark passed.')
+ await context.close()
+}finally{await browser.close();await db.collection.delete({where:{id:collection.id}});await db.user.delete({where:{id:user.id}});await db.$disconnect()}

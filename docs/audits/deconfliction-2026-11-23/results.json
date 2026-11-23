@@ -1,0 +1,19 @@
+{
+  "conflicts": 3,
+  "defaultLater": true,
+  "stagingReadOnly": true,
+  "exceptionConfirmation": true,
+  "networkRetryIdempotent": true,
+  "persistedAfterReload": true,
+  "careEventsCreated": 0,
+  "authorizationAndOrigin": true,
+  "themes": [
+    "light",
+    "dark"
+  ],
+  "widths": [
+    390,
+    1440
+  ],
+  "browserErrors": []
+}

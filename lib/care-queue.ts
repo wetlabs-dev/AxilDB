@@ -49,6 +49,7 @@ export type CareQueueItem = {
   recurrenceCadence?: import('@/lib/care-cadences').Cadence
   schedulingConflict?: boolean
   manualSchedule?: boolean
+  manualDeconfliction?: boolean
   projected?: boolean
   key: string
   taskType: CareTaskType

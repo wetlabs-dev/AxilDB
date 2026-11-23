@@ -73,6 +73,8 @@
     "check:plant-instance-lifecycle": "tsx scripts/check-plant-instance-lifecycle.ts",
     "migration": "python3 scripts/migration/cli.py",
     "check:migration": "python3 -m unittest discover -s scripts/migration -p \"test_*.py\" && tsx scripts/check-migration.ts",
+    "check:deconfliction": "tsx scripts/check-deconfliction.ts",
+    "check:deconfliction:ui": "node scripts/check-deconfliction-ui.mjs",
     "check:initial-care:ui": "node scripts/check-initial-care-ui.mjs",
     "check:initial-care": "tsx scripts/check-initial-care.ts",
     "care:audit": "tsx scripts/audit-care-schedules.ts",

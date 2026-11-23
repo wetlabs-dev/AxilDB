@@ -1,3 +1,4 @@
+import { manualCareKey, manualDeconflictionRule } from '@/lib/care-deconfliction-policy'
 import { createHash } from 'node:crypto'
 import type { Prisma, PrismaClient } from '@prisma/client'
 import type { CareQueueItem } from '@/lib/care-queue'
@@ -18,16 +19,18 @@ export async function resolveCalendarPlan(db: PrismaClient | Prisma.TransactionC
   }
   const revisions = new Map(items.map(item => [item.key, revisionFor(item)]))
   const keys = new Map(items.map(item => [item.key, occurrenceKey(collectionId, item, config.timezone)]))
-  const rows = keys.size ? await db.careQuietDayAdjustment.findMany({ where: { collectionId, scheduleKey: { in: [...keys.values()] } } }) : []
+  const rows = keys.size ? await db.careQuietDayAdjustment.findMany({ where: { collectionId, scheduleKey: { in: [...keys.values(), ...items.map(item => manualCareKey(item, config.timezone))] } } }) : []
   const saved = new Map<string, SavedShift>()
   const byKey = new Map(rows.map(row => [row.scheduleKey, row]))
   for (const item of items) {
     const row = byKey.get(keys.get(item.key)!)
     if (row) saved.set(item.key, row)
   }
-  const plan = calendarSchedule(items, config, now, saved, revisions)
+  const manualResolutions = new Map(config.manualResolutions || [])
+  rows.filter(row => row.ruleUsed === manualDeconflictionRule && row.scheduleKey).forEach(row => manualResolutions.set(row.scheduleKey!, row))
+  const plan = calendarSchedule(items, { ...config, manualResolutions }, now, saved, revisions)
   if (!persist) return plan
-  const changes = plan.filter(item => item.originalDueAt && (item.schedulingConflict || item.originalDueAt.getTime() !== item.dueAt.getTime()) && !byKey.has(keys.get(item.key)!))
+  const changes = plan.filter(item => !item.manualDeconfliction && item.originalDueAt && (item.schedulingConflict || item.originalDueAt.getTime() !== item.dueAt.getTime()) && !byKey.has(keys.get(item.key)!))
   if (changes.length) {
     await db.careQuietDayAdjustment.createMany({ data: changes.map(item => ({
       collectionId, scheduleKey: keys.get(item.key)!, taskKey: item.key, timezone: config.timezone,
@@ -40,7 +43,7 @@ export async function resolveCalendarPlan(db: PrismaClient | Prisma.TransactionC
   // Existing decisions change only when their explicit Quiet Day configuration changes.
   for (const item of plan) {
     const row = byKey.get(keys.get(item.key)!)
-    if (!row || row.ruleUsed === revisionFor(item) && row.adjustedDueAt.getTime() === item.dueAt.getTime() && row.shiftDirection === (item.quietDayShiftDirection || 'NONE')) continue
+    if (item.manualDeconfliction || !row || row.ruleUsed === revisionFor(item) && row.adjustedDueAt.getTime() === item.dueAt.getTime() && row.shiftDirection === (item.quietDayShiftDirection || 'NONE')) continue
     await db.careQuietDayAdjustment.updateMany({ where: { id: row.id, ruleUsed: row.ruleUsed }, data: {
       adjustedDueAt: item.dueAt, originalDueAt: item.originalDueAt || item.dueAt,
       quietDayId: quietDateReasons(item.originalDueAt || item.dueAt, config, item.locationId)[0]?.id || null,

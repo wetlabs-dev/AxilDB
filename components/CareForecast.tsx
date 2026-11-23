@@ -1,4 +1,5 @@
 'use client'
+import { CareDeconfliction } from '@/components/CareDeconfliction'
 import { formatTypography } from '@/lib/typography'
 import { careCategoryPresentation } from '@/lib/care-category-presentation'
 import { useCallback, useEffect, useState, useRef } from 'react'
@@ -18,12 +19,14 @@ type Preview = { careRisks?: { key: string; title: string; taskType: string; loc
 export function CareForecast({ collectionSlug, initialDraft, stayOnPage = false }: { collectionSlug: string; initialDraft?: QuietDraft; stayOnPage?: boolean }) {
   const router = useRouter()
   const readRevision = useRef(0)
+  const deconflictLauncher = useRef<HTMLButtonElement>(null)
   const [forecast, setForecast] = useState<Forecast | null>(null)
   const [selected, setSelected] = useState('')
   const [locationFilter, setLocationFilter] = useState('')
   const [preview, setPreview] = useState<Preview | null>(null)
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
+  const [deconflict, setDeconflict] = useState(false)
   const load = useCallback(async (signal?: AbortSignal) => {
     const revision = ++readRevision.current
     const response = await fetch(`/api/care/forecast?collectionSlug=${encodeURIComponent(collectionSlug)}`, { cache: 'no-store', signal })
@@ -119,7 +122,7 @@ export function CareForecast({ collectionSlug, initialDraft, stayOnPage = false 
       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">{Object.entries(day.categories).map(([type, count]) => <span key={type} data-semantic-color={careCategoryPresentation(type).color} className="semantic-chip rounded-full border px-2 py-0.5">{careTaskLabel(type as CareTaskType)}: <b>{count}</b></span>)}{day.total === 0 && <span>No projected care.</span>}</div>
       {day.quietDay && <p className="mt-2 text-[#2f6b45]">{day.quietDay.name}{day.total ? ' · Outstanding work or required exceptions are never hidden.' : ''}</p>}
       {!!day.restrictions?.length && <ul className="mt-2 text-xs">{day.restrictions.map(rule => <li key={rule.id}>{rule.locationId ? forecast?.locations?.find(location => location.id === rule.locationId)?.name : 'Collection-wide'} · {rule.name}</li>)}</ul>}
-      {!!day.conflicts?.length && <div role="alert" className="mt-2 rounded border border-amber-300 p-2"><b>Care needs a scheduling decision</b><ul>{day.conflicts.map(item => <li key={item.key}><Link className="underline" href={item.href}>{formatTypography(item.title)}</Link> · {item.quietDayReason}</li>)}</ul></div>}
+      {!!day.conflicts?.length && <div className="mt-2 rounded border border-amber-300 p-3"><b>{day.conflicts.length} scheduling conflicts need attention</b>{forecast?.canManage && <button type="button" className="ml-3 min-h-11 rounded border px-3 font-semibold" ref={deconflictLauncher} onClick={()=>setDeconflict(true)}>Resolve conflicts</button>}<details className="text-xs"><summary>Scheduling details</summary>{day.conflicts.map(item=><p key={item.key}><Link className="underline" href={item.href}>{formatTypography(item.title)}</Link> · {item.quietDayReason}</p>)}</details></div>}
       {forecast?.canManage && !locationFilter && <div className="my-3 flex flex-wrap gap-2">
         {!day.quietDay && <button type="button" disabled={busy} className="rounded border px-3 py-1" onClick={() => void propose({ kind: 'set', date: day.date })}>Set as Quiet Day</button>}
         {day.quietDay && <button type="button" disabled={busy} className="rounded border px-3 py-1" onClick={() => void propose({ kind: 'remove', id: day.quietDay!.id })}>Remove {day.quietDay.quietType === 'ONE_TIME' ? 'Quiet Day' : 'entire recurring/range rule'}</button>}
@@ -128,6 +131,7 @@ export function CareForecast({ collectionSlug, initialDraft, stayOnPage = false 
       <ul className="mt-2 max-h-64 space-y-2 overflow-auto">{day.tasks.slice(0, 100).map(task => <li key={task.key} className="border-t border-stone-200 pt-2"><Link href={task.href} className="font-medium underline">{formatTypography(task.title)}</Link><span className="ml-2 text-xs text-stone-600">{task.locationName && `${task.locationName} · `}{day.date === today && !task.projected ? 'Actionable today' : task.projected ? 'Conditional projection' : 'Scheduled future care'}</span>{task.originalDueAt && <span className="block text-xs">Originally {dateInputValue(task.originalDueAt, forecast!.timezone)}</span>}{task.quietDayReason && <p className="text-xs text-stone-600">{task.quietDayReason}</p>}</li>)}</ul>
       {day.tasks.length > 100 && <p className="mt-2 text-xs">Showing 100 of {day.total} projected tasks.</p>}
     </details>}
+    {deconflict && <CareDeconfliction collectionSlug={collectionSlug} onClose={()=>{setDeconflict(false);deconflictLauncher.current?.focus()}} />}
     {preview && <section role="dialog" aria-labelledby="quiet-preview-heading" className="space-y-3 rounded-lg border border-[#c7d8bd] bg-[#f5fbf0] p-3 text-sm">
       <h4 id="quiet-preview-heading" className="text-lg font-semibold">Review Quiet Day change</h4>
       {preview.tomorrow && <p className="font-semibold">Quiet Day tomorrow: some care may need to be completed today. {preview.wateringToday} watering assessment(s) move into today.</p>}

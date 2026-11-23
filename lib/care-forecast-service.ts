@@ -1,9 +1,10 @@
+import { manualDeconflictionRule } from '@/lib/care-deconfliction-policy'
 import type { Prisma, PrismaClient } from '@prisma/client'
 import { isQuietDate, schedulableCareTypes } from '@/lib/care-scheduling'
 import { getCareQueue, type CareQueueItem } from '@/lib/care-queue'
 import { careForecast, type CalendarConfig, type QuietDate } from '@/lib/care-calendar'
 import { scheduleDigest } from '@/lib/care-calendar-store'
-import { addCalendarDays, calendarDayIndexInTimeZone, dateInputValue, normalizeTimeZone, parseDateLocal } from '@/lib/time'
+import { addCalendarDays, calendarDayIndexInTimeZone, dateInputValue, normalizeTimeZone, parseDateLocal, startOfDayInTimeZone } from '@/lib/time'
 export type QuietDraft = { kind: 'set'; date: string; moveId?: string } | { kind: 'remove'; id: string } | { kind: 'rule'; careType: string; defaultShiftDirection: string; maxShiftDaysBefore: number; maxShiftDaysAfter: number; active: boolean } | { kind: 'weekly'; locationId?: string | null; weekdays: number[] } | { kind: 'create'; id?: string; locationId?: string | null; name: string; quietType: string; description?: string; active?: boolean; date?: string; startDate?: string; endDate?: string; dayOfWeek?: number }
 export type ForecastScope = { collectionId: string; collectionSlug: string; userId?: string; timezone?: string; now?: Date }
 export async function forecastConfiguration(db: PrismaClient | Prisma.TransactionClient, scope: ForecastScope): Promise<CalendarConfig> {
@@ -11,7 +12,11 @@ export async function forecastConfiguration(db: PrismaClient | Prisma.Transactio
     db.collectionQuietDay.findMany({ where: { collectionId: scope.collectionId }, orderBy: { id: 'asc' } }),
     db.collectionQuietDayShiftRule.findMany({ where: { collectionId: scope.collectionId, active: true }, orderBy: { careType: 'asc' } }),
   ])
-  return { quietDays, rules, timezone: normalizeTimeZone(scope.timezone) }
+  const timezone = normalizeTimeZone(scope.timezone)
+  const today = startOfDayInTimeZone(scope.now || new Date(), timezone)
+  const manual = await db.careQuietDayAdjustment.findMany({ where: { collectionId: scope.collectionId, ruleUsed: manualDeconflictionRule, originalDueAt: { gte: today, lte: addCalendarDays(today, 22, timezone) } }, take: 2001 })
+  if (manual.length > 2000) throw new Error('Too many manual decisions in this forecast horizon. Narrow the scheduling workload before continuing.')
+  return { quietDays, rules, timezone, manualResolutions: new Map(manual.filter(row => row.scheduleKey).map(row => [row.scheduleKey!, row])) }
 }
 export async function loadCareForecast(db: PrismaClient | Prisma.TransactionClient, scope: ForecastScope, suppliedItems?: CareQueueItem[]): Promise<{ timezone: string; days: ReturnType<typeof careForecast>; quietDays: QuietDate[]; allQuietDays: QuietDate[]; locations: { id: string; name: string }[] }> {
   if ('$transaction' in db) return db.$transaction(tx => loadCareForecast(tx, scope, suppliedItems), { maxWait: 15000, timeout: 30000 })

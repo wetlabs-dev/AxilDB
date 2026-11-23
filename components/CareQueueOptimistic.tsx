@@ -25,7 +25,8 @@ export function CareQueueProvider({ collectionSlug, userId, initialItems, snapsh
     // Other pages also receive current counters and care history when the user returns.
     window.addEventListener('online', refresh)
     window.addEventListener('focus', refresh)
-    return () => { window.removeEventListener('online', refresh); window.removeEventListener('focus', refresh) }
+    window.addEventListener('axildb:care-saved', refresh)
+    return () => { window.removeEventListener('online', refresh); window.removeEventListener('focus', refresh); window.removeEventListener('axildb:care-saved', refresh) }
   }, [store])
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>

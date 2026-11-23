@@ -1663,3 +1663,20 @@ code, pre, .font-mono, .ax-literal, input, textarea { font-variant-ligatures: no
 @media(min-width:768px) { .ax-scanner-preview { aspect-ratio:4/3; max-height:60dvh; } }
 @media(max-height:500px) and (orientation:landscape) { .ax-scanner-dialog { width:min(42rem,calc(100vw - 1rem)); } .ax-scanner-preview { aspect-ratio:16/7; max-height:48dvh; } }
 @media(max-width:350px) { .ax-scanner-dialog { padding:.5rem; } .ax-scanner-toolbar { gap:0; } .ax-scanner-manual { font-size:.75rem; } }
+
+/* Deconfliction keeps date choices on opposing sides without a mobile table. */
+.ax-deconfliction, .ax-deconflict-actions { background:var(--ax-surface-solid); color:var(--ax-text); border-color:var(--ax-border); }
+.ax-deconflict-row { display:grid; grid-template-columns:minmax(8rem,1fr) minmax(0,3fr) minmax(8rem,1fr); gap:.75rem; align-items:center; border-color:var(--ax-border); }
+.ax-deconflict-choice { width:100%; border-color:var(--ax-border-strong); }
+.ax-deconflict-choice[aria-pressed='true'] { background:var(--ax-action); color:var(--ax-action-text); }
+.ax-deconflict-choice:disabled { opacity:.55; }
+.ax-deconfliction button:focus-visible { outline:2px solid var(--ax-primary); outline-offset:2px; }
+@media(max-width:640px) { .ax-deconflict-row { grid-template-columns:minmax(0,1fr) minmax(0,1fr); } .ax-deconflict-task { grid-column:1/-1; grid-row:1; } .ax-deconflict-previous { grid-column:1;grid-row:2; } .ax-deconflict-next { grid-column:2;grid-row:2; } }
+
+.ax-deconfliction h4 { scroll-margin-top:5rem; }
+@media(max-width:640px) { .ax-deconflict-bulk { display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr); } }
+
+@media(max-width:640px) {
+  .ax-deconfliction { padding-bottom:12rem; }
+  .ax-deconflict-actions { position:fixed; z-index:65; left:max(.5rem,env(safe-area-inset-left)); right:max(.5rem,env(safe-area-inset-right)); bottom:max(.5rem,env(safe-area-inset-bottom)); max-height:45dvh; overflow-y:auto; box-shadow:0 4px 16px #0003; }
+}

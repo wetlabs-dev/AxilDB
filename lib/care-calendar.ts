@@ -1,16 +1,17 @@
+import { calendarPolicy, calendarShiftPolicy } from '@/lib/care-calendar-policy'
+export { calendarPolicy, calendarPolicyVersion } from '@/lib/care-calendar-policy'
+import { manualCareKey } from '@/lib/care-occurrence-key'
 import type { CareQueueItem } from '@/lib/care-queue'
 import { nextOccurrence } from '@/lib/reminders'
 import { cadenceDueAt } from '@/lib/care-cadences'
-import { isQuietDate, quietDayRuleDefaults } from '@/lib/care-scheduling'
+import { isQuietDate } from '@/lib/care-scheduling'
 import { addCalendarDays, calendarDayIndexInTimeZone, dateInputValue, normalizeTimeZone, startOfDayInTimeZone } from '@/lib/time'
 
 export type QuietDate = { locationId?: string | null; description?: string | null; id: string; name: string; quietType: string; date: Date | null; startDate: Date | null; endDate: Date | null; dayOfWeek: number | null; active: boolean }
 export type ShiftRule = { careType: string; active: boolean; defaultShiftDirection: string; maxShiftDaysBefore: number; maxShiftDaysAfter: number }
-export type CalendarConfig = { quietDays: QuietDate[]; rules: ShiftRule[]; timezone: string }
+export type CalendarConfig = { quietDays: QuietDate[]; rules: ShiftRule[]; timezone: string; manualResolutions?: Map<string, SavedShift> }
 export type SavedShift = { adjustedDueAt: Date; originalDueAt: Date; reason: string; ruleUsed: string; shiftDirection: string; quietDayId: string | null }
 // Cadence is a moisture-assessment heuristic, never a drought-tolerance claim.
-export const calendarPolicyVersion = 2
-export const calendarPolicy = { shortWateringDays: 7, longWateringDays: 14, maximumShiftDays: 14, coherentGroupLimit: 40 }
 // Exact assignment only: parent locations do not implicitly restrict children.
 export function effectiveQuietRules(quietDays: QuietDate[], locationId?: string | null) {
   return quietDays.filter(rule => !rule.locationId || rule.locationId === locationId)
@@ -27,6 +28,22 @@ export function calendarSchedule(items: CareQueueItem[], config: CalendarConfig,
   const waiting: CareQueueItem[] = []
   for (const original of items) {
     const item: CareQueueItem = { ...original, dueAt: startOfDayInTimeZone(!original.manualSchedule && !original.completedAt && original.originalDueAt || original.dueAt, timezone), originalDueAt: null, quietDayReason: null, quietDayName: null, quietDayShiftDirection: null, schedulingConflict: false }
+    const manual = !item.manualSchedule && !item.completedAt ? config.manualResolutions?.get(manualCareKey(original, timezone)) : undefined
+    if (manual) {
+      item.originalDueAt = manual.originalDueAt
+      item.quietDayName = 'Manual deconfliction'
+      item.manualDeconfliction = true
+      if (quietDateReasons(manual.adjustedDueAt, config, item.locationId).length) {
+        item.schedulingConflict = true
+        item.quietDayShiftDirection = 'CONFLICT'
+        item.quietDayReason = 'The previously selected date is now a Quiet Day. Review this decision again.'
+      } else {
+        item.dueAt = manual.adjustedDueAt
+        item.quietDayShiftDirection = manual.shiftDirection
+        item.quietDayReason = manual.reason
+      }
+      result.set(item.key, item); count(item.dueAt, 1); continue
+    }
     const previous = saved.get(item.key)
     // Stable during ordinary reads; explicit calendar revisions invalidate even today's decisions.
     if (previous && !item.completedAt && !item.manualSchedule && previous.ruleUsed === (typeof revision === 'string' ? revision : revision.get(item.key)) && (previous.shiftDirection === 'CONFLICT' || !quietDateReasons(previous.adjustedDueAt, config, item.locationId).length)) {
@@ -57,18 +74,7 @@ export function calendarSchedule(items: CareQueueItem[], config: CalendarConfig,
   })
   for (const group of coherentGroups) {
     const first = group[0]
-    const type = first.taskType === 'REPOT' ? 'REPOTTING' : first.taskType
-    const defaults = quietDayRuleDefaults[type as keyof typeof quietDayRuleDefaults] || { direction: 'SMART', before: 1, after: 1 }
-    const rule = config.rules.find(rule => rule.careType === type && rule.active)
-    const bound = first.taskType === 'WATER' ? Math.min(calendarPolicy.maximumShiftDays, Math.min(first.cadenceDays || 3, Math.max(2, Math.floor((first.cadenceDays || 3) / 3)))) : calendarPolicy.maximumShiftDays
-    const before = Math.min(bound, rule?.maxShiftDaysBefore ?? (first.taskType === 'WATER' ? bound : defaults.before))
-    const after = Math.min(bound, rule?.maxShiftDaysAfter ?? (first.taskType === 'WATER' ? bound : defaults.after))
-    const direction = rule?.defaultShiftDirection || 'SMART'
-    let preferred: string | null = direction === 'SMART' ? null : direction
-    if (!preferred && first.taskType === 'WATER') {
-      if ((first.cadenceDays || 0) <= calendarPolicy.shortWateringDays) preferred = 'EARLIER'
-      else if ((first.cadenceDays || 0) >= calendarPolicy.longWateringDays) preferred = 'LATER'
-    }
+    const { type, before, after, preferred } = calendarShiftPolicy(first, config.rules)
     const candidates: { date: Date; direction: string; score: number }[] = []
     for (const [sign, limit, label] of [[-1, before, 'EARLIER'], [1, after, 'LATER']] as const) {
       for (let offset = 1; offset <= limit; offset++) {
@@ -105,7 +111,7 @@ export function calendarSchedule(items: CareQueueItem[], config: CalendarConfig,
   return [...result.values()].map(item => ({ ...item, overdueDays: Math.max(0, calendarDayIndexInTimeZone(now, timezone) - calendarDayIndexInTimeZone(item.dueAt, timezone)) }))
 }
 
-export function careForecast(items: CareQueueItem[], config: CalendarConfig, now = new Date()) {
+export function projectCareOccurrences(items: CareQueueItem[], config: CalendarConfig, now = new Date()) {
   const today = startOfDayInTimeZone(now, config.timezone)
   // Include the full configured shift halo, including day-eight work advanced into day seven.
   const end = addCalendarDays(today, 7 + calendarPolicy.maximumShiftDays, config.timezone)
@@ -115,11 +121,11 @@ export function careForecast(items: CareQueueItem[], config: CalendarConfig, now
     const nextItems: CareQueueItem[] = []
     for (const item of frontier) {
       if (item.schedulingConflict) continue
-      const basis = item.originalDueAt || item.dueAt
+      const basis = item.manualDeconfliction ? item.dueAt : item.originalDueAt || item.dueAt
       const anchor = basis < today ? today : basis
       const next = item.recurrenceRule ? nextOccurrence(anchor, item.recurrenceRule, config.timezone) : cadenceDueAt(anchor, item.recurrenceCadence!, config.timezone)
       if (!next || next <= anchor || next >= end) continue
-      nextItems.push({ ...item, key: `${item.key}:projection`, dueAt: next, originalDueAt: null, projected: true, notBeforeDate: dateInputValue(addCalendarDays(item.dueAt < today ? today : item.dueAt, 1, config.timezone), config.timezone), quietDayReason: null, quietDayName: null, quietDayShiftDirection: null })
+      nextItems.push({ ...item, key: `${item.key}:projection`, dueAt: next, originalDueAt: null, manualDeconfliction: false, projected: true, notBeforeDate: dateInputValue(addCalendarDays(item.dueAt < today ? today : item.dueAt, 1, config.timezone), config.timezone), quietDayReason: null, quietDayName: null, quietDayShiftDirection: null })
     }
     // Lock previous hypothetical decisions while calculating each next occurrence.
     const preserved = new Map(projected.map(item => [item.key, { originalDueAt: item.originalDueAt || item.dueAt, adjustedDueAt: item.dueAt, reason: item.quietDayReason || '', ruleUsed: 'forecast', shiftDirection: item.quietDayShiftDirection || 'NONE', quietDayId: null }]))
@@ -127,6 +133,12 @@ export function careForecast(items: CareQueueItem[], config: CalendarConfig, now
     projected = calendarSchedule([...projected, ...nextItems], config, now, preserved, 'forecast')
     frontier = projected.filter(item => nextKeys.has(item.key))
   }
+  return projected
+}
+
+export function careForecast(items: CareQueueItem[], config: CalendarConfig, now = new Date()) {
+  const today = startOfDayInTimeZone(now, config.timezone)
+  const projected = projectCareOccurrences(items, config, now)
   return Array.from({ length: 7 }, (_, offset) => {
     const date = addCalendarDays(today, offset, config.timezone)
     const key = dateInputValue(date, config.timezone)
