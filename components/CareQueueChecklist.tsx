@@ -1,4 +1,5 @@
 'use client'
+import { careViewReturnQuery } from '@/lib/care-view'
 import { BotanicalText } from '@/components/BotanicalName'
 import { formatTypography } from '@/lib/typography'
 import Link from 'next/link'
@@ -27,14 +28,14 @@ function groupByLocation(items: CareQueueItem[]) {
   }, {})
 }
 
-export function CareQueueChecklist({ collectionSlug, canAct, timezone, rangeEnd }: { collectionSlug: string; canAct: boolean; timezone?: string; rangeEnd: Date }) {
+export function CareQueueChecklist({ collectionSlug, canAct, timezone, rangeEnd, queueView = '' }: { queueView?: string; collectionSlug: string; canAct: boolean; timezone?: string; rangeEnd: Date }) {
  const context = { collection: { slug: collectionSlug } }
  const { items: queue, authoritativeItems } = useCareQueue()
  const items = queue.filter(item => !item.completedAt && item.dueAt <= rangeEnd)
  const renderItems = authoritativeItems.filter(item => !item.completedAt && item.dueAt <= rangeEnd)
  const visibleKeys = new Set(items.map(item => item.key))
  const grouped = groupByLocation(renderItems)
- const back = collectionPath(collectionSlug, '/care/checklist')
+ const back = `${collectionPath(collectionSlug, '/care/checklist')}?${new URLSearchParams({queueView})}`
   return (
     <div className="space-y-5" data-care-queue-root>
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -42,7 +43,7 @@ export function CareQueueChecklist({ collectionSlug, canAct, timezone, rangeEnd 
           <h2 className="text-3xl font-bold">Weekly Greenhouse Checklist</h2>
           <p className="text-sm text-stone-600">Overdue, due today, and upcoming care grouped by location.</p>
         </div>
-        <Link className="text-sm font-medium text-[#2f6b45] underline" href={collectionPath(context.collection.slug, '/care')}>
+        <Link className="text-sm font-medium text-[#2f6b45] underline" href={`${collectionPath(context.collection.slug, '/care')}${careViewReturnQuery(queueView)}`}>
           Care queue
         </Link>
       </div>

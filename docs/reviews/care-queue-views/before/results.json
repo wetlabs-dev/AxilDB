@@ -1,0 +1,30 @@
+{
+  "phase": "before",
+  "measurements": [
+    {
+      "theme": "light",
+      "width": 390,
+      "firstTaskTop": 1755.515625,
+      "headingToTask": 1670.515625
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "firstTaskTop": 1314,
+      "headingToTask": 1282
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "firstTaskTop": 1755.515625,
+      "headingToTask": 1670.515625
+    },
+    {
+      "theme": "dark",
+      "width": 1440,
+      "firstTaskTop": 1314,
+      "headingToTask": 1282
+    }
+  ],
+  "browserErrors": []
+}

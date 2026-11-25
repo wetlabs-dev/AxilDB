@@ -16,7 +16,7 @@ type Conflict = { key: string; title: string; href: string; locationId?: string 
 type Day = { conflicts?: Conflict[]; date: string; total: number; overdue: number; categories: Record<string, number>; quietDay: { id: string; name: string; quietType: string } | null; restrictions?: { id: string; name: string; locationId?: string | null }[]; tasks: Task[] }
 type Forecast = { timezone: string; days: Day[]; canManage: boolean; quietDays: { id: string; name: string; quietType: string; locationId?: string | null }[]; locations: { id: string; name: string }[] }
 type Preview = { careRisks?: { key: string; title: string; taskType: string; locationName?: string | null; date: string; reason: string }[]; hash: string; draft: QuietDraft; earlier: number; later: number; todayCount: number; wateringToday: number; tomorrow: boolean; days: Day[]; exceptions: { key: string; title: string; date: string; reason: string }[]; changes: { key: string; title: string; from: string; to: string; reason: string }[] }
-export function CareForecast({ collectionSlug, initialDraft, stayOnPage = false }: { collectionSlug: string; initialDraft?: QuietDraft; stayOnPage?: boolean }) {
+export function CareForecast({ collectionSlug, initialDraft, stayOnPage = false, onConflictCount }: { collectionSlug: string; initialDraft?: QuietDraft; stayOnPage?: boolean; onConflictCount?: (count:number)=>void }) {
   const router = useRouter()
   const readRevision = useRef(0)
   const deconflictLauncher = useRef<HTMLButtonElement>(null)
@@ -99,6 +99,7 @@ export function CareForecast({ collectionSlug, initialDraft, stayOnPage = false 
     tasks.forEach(task => { categories[task.taskType] = (categories[task.taskType] || 0) + 1 })
     return { ...day, conflicts: day.conflicts?.filter(item => item.locationId === locationFilter), tasks, total: tasks.length, categories, overdue: tasks.filter(task => dateInputValue(task.dueAt, forecast!.timezone) < day.date).length, restrictions, quietDay: restrictions.length ? { ...restrictions[0], quietType: forecast!.quietDays.find(rule => rule.id === restrictions[0].id)?.quietType || '' } : null }
   })
+  useEffect(()=>{if(forecast)onConflictCount?.(forecast.days.reduce((sum,day)=>sum+(day.conflicts?.length||0),0))},[forecast,onConflictCount])
   const day = visibleDays?.find(day => day.date === selected)
   const today = forecast?.days[0].date
   return <Card className="space-y-3" data-care-forecast>

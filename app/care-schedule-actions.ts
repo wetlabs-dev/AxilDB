@@ -1,4 +1,5 @@
 'use server'
+import { careViewContinuation } from '@/lib/care-view'
 
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
@@ -165,5 +166,5 @@ export async function applyCareScheduleSync(fd: FormData) {
   }, context.collection.id)
   revalidatePath(collectionPath(context.collection.slug, '/care'))
   revalidatePath(collectionPath(context.collection.slug, '/care/sync'))
-  redirect(collectionPath(context.collection.slug, `/care/sync?synced=${batch.id}`))
+  redirect(collectionPath(context.collection.slug, `/care/sync?synced=${batch.id}&queueView=${encodeURIComponent(careViewContinuation(fd.get('queueView')))}`))
 }

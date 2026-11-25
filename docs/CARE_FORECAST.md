@@ -1,5 +1,7 @@
 # Calendar care planning
 
+The Care Queue now places this planning module below actionable care. See [Care Queue layout and personal views](CARE_QUEUE_VIEWS.md) for navigation and saved presentation preferences.
+
 ## Existing architecture inspected
 
 - `lib/care-cadences.ts` resolves definition cadences and instance overrides, Not Applicable states, recipe prerequisites and calendar due dates.

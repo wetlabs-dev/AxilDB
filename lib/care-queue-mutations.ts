@@ -1,3 +1,4 @@
+import { careViewContinuation } from '@/lib/care-view'
 import { bulkCareEvents, findSameDayCareRecords, lockCarePlants, requireBulkCareType } from '@/lib/bulk-care'
 import { resolveCadence } from '@/lib/care-cadences'
 import { queueRepotting } from '@/lib/repotting'
@@ -467,7 +468,7 @@ async function bulk(prisma: Prisma.TransactionClient, context: MutationContext, 
     select: { id: true },
   })
   if (existingBatch) {
-    return { duplicate: true, destination: collectionPath(context.collection.slug, `/care/bulk?locationId=${encodeURIComponent(locationId)}&includeNested=${includeNested ? '1' : '0'}&bulk=duplicate`) }
+    return { duplicate: true, destination: collectionPath(context.collection.slug, `/care/bulk?locationId=${encodeURIComponent(locationId)}&includeNested=${includeNested ? '1' : '0'}&bulk=duplicate&queueView=${encodeURIComponent(careViewContinuation(fd.get('queueView')))}`) }
   }
 
   await lockCarePlants(prisma, context.collection.id, eventPlants.map(plant => plant.id))
@@ -612,6 +613,7 @@ async function bulk(prisma: Prisma.TransactionClient, context: MutationContext, 
     locationId,
     includeNested: includeNested ? '1' : '0',
     bulk: 'success',
+    queueView: careViewContinuation(fd.get('queueView')),
     alreadyCompleted: String(alreadyCompleted.length),
     events: String(events.length),
     completed: String(matchingQueueItems.length),

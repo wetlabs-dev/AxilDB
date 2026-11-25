@@ -1,3 +1,4 @@
+import { careViewContinuation } from '@/lib/care-view'
 import { CareQueueProvider } from '@/components/CareQueueOptimistic'
 import { CareQueueChecklist } from '@/components/CareQueueChecklist'
 import { canCreateInCollection, requireCollectionViewer } from '@/lib/collections'
@@ -9,7 +10,8 @@ function endOfChecklistRange(timezone?: string | null) {
   return endOfDayInTimeZone(addCalendarDays(new Date(), 7, timezone || undefined), timezone || undefined)
 }
 
-export default async function WeeklyChecklistPage() {
+export default async function WeeklyChecklistPage({searchParams}:{searchParams:Promise<Record<string,string|undefined>>}) {
+  const queueView=careViewContinuation((await searchParams).queueView)
   const context = await requireCollectionViewer()
   const canAct = canCreateInCollection(context.user, context)
   const preferences = context.user
@@ -25,6 +27,6 @@ export default async function WeeklyChecklistPage() {
     timezone,
   })
   return <CareQueueProvider collectionSlug={context.collection.slug} userId={context.user?.id || 'public'} initialItems={queue} snapshotAt={snapshotAt} timezone={timezone}>
-    <CareQueueChecklist collectionSlug={context.collection.slug} canAct={canAct} timezone={timezone} rangeEnd={rangeEnd} />
+    <CareQueueChecklist queueView={queueView} collectionSlug={context.collection.slug} canAct={canAct} timezone={timezone} rangeEnd={rangeEnd} />
   </CareQueueProvider>
 }

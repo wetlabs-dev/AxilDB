@@ -1,3 +1,4 @@
+import { careViewContinuation, careViewReturnQuery } from '@/lib/care-view'
 import { BotanicalName } from '@/components/BotanicalName'
 import { normalizeTypographySearch } from '@/lib/typography'
 import { formatTypography } from '@/lib/typography'
@@ -55,6 +56,7 @@ export default async function BulkCarePage({
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
   const params = await searchParams
+  const queueView = careViewContinuation(firstParam(params.queueView))
   const context = await requireCollectionLogger()
   const timezone = timeZoneForPreference(await prisma.emailPreference.findUnique({ where: { userId: context.user.id } }))
   const [locations, fertilizerRecipes, substrateVersions] = await Promise.all([
@@ -168,7 +170,7 @@ export default async function BulkCarePage({
           <h2 className="text-3xl font-bold">Bulk care by location</h2>
           <p className="text-sm text-stone-600">Record one care event per selected plant, scoped to a location or location tree.</p>
         </div>
-        <Link href={collectionPath(context.collection.slug, '/care')} className="rounded-md border border-stone-300 bg-white/70 px-3 py-2 text-sm font-semibold">
+        <Link href={`${collectionPath(context.collection.slug, '/care')}${careViewReturnQuery(queueView)}`} className="rounded-md border border-stone-300 bg-white/70 px-3 py-2 text-sm font-semibold">
           Care Queue
         </Link>
       </div>
@@ -186,6 +188,7 @@ export default async function BulkCarePage({
 
       <Card>
         <form method="get" action={collectionPath(context.collection.slug, '/care/bulk')} className="grid gap-3 md:grid-cols-4">
+          <input type="hidden" name="queueView" value={queueView} />
           <label className="grid gap-1 text-sm font-medium text-stone-800 md:col-span-2">
             Location
             <select className={selectClass} name="locationId" defaultValue={locationId} required>
@@ -212,6 +215,7 @@ export default async function BulkCarePage({
       </Card>
 
       <CareActionForm actionName="bulk" optimistic={false} id={formId} method={review ? undefined : 'get'} action={review ? completeBulkCare : collectionPath(context.collection.slug, '/care/bulk')} className="space-y-4">
+          <input type="hidden" name="queueView" value={queueView} />
         <input type="hidden" name="collectionSlug" value={context.collection.slug} />
         <input type="hidden" name="locationId" value={locationId} />
         <input type="hidden" name="careType" value={careType} />
@@ -299,7 +303,7 @@ export default async function BulkCarePage({
             ))}
             <div className="flex flex-wrap gap-2">
               <BulkCareEligibility key={firstParam(params.bulkCareBatchId)} formId={formId} collectionSlug={context.collection.slug} careType={careType} scopeCount={filteredPlants.length} />
-              <Link href={collectionPath(context.collection.slug, `/care/bulk?locationId=${encodeURIComponent(locationId)}&includeNested=${includeNested ? '1' : '0'}&careType=${encodeURIComponent(careType)}`)} className="rounded-md border border-stone-300 bg-white/80 px-4 py-2 text-sm font-semibold">
+              <Link href={collectionPath(context.collection.slug, `/care/bulk?locationId=${encodeURIComponent(locationId)}&includeNested=${includeNested ? '1' : '0'}&careType=${encodeURIComponent(careType)}&queueView=${encodeURIComponent(queueView)}`)} className="rounded-md border border-stone-300 bg-white/80 px-4 py-2 text-sm font-semibold">
                 Back to edit
               </Link>
             </div>

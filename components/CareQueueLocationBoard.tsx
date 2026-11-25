@@ -71,7 +71,7 @@ export function CareQueueLocationBoard({
         const section = { ...originalSection, items: visible, overdue: visible.filter(item => item.overdueDays > 0).length, typeCounts: [...counts].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([type, count]) => ({ type, count })) }
         const isExpanded = expanded[section.id] ?? true
         const bulkHref = section.locationId
-          ? `${bulkCarePath}?locationId=${encodeURIComponent(section.locationId)}&includeNested=1`
+          ? `${bulkCarePath}${bulkCarePath.includes('?')?'&':'?'}locationId=${encodeURIComponent(section.locationId)}&includeNested=1`
           : bulkCarePath
         return (
           <section data-care-section key={section.id} className="rounded-lg border ax-surface border-[var(--ax-border)] shadow-sm" style={{ display: visible.length ? undefined : 'none', marginLeft: section.depth ? `${Math.min(section.depth, 3) * 0.75}rem` : undefined }}>
@@ -103,7 +103,7 @@ export function CareQueueLocationBoard({
                 <div className="flex flex-wrap gap-1.5">
                   <Link href={bulkHref} className="rounded-md border border-[#c7d8bd] bg-white/70 px-2.5 py-1.5 text-xs font-semibold text-[#2f6b45]">Complete visible care</Link>
                   {workflowTemplates.length > 0 && (
-                    <form action={startWorkflowRun} className="flex gap-1.5">
+                    <details className="care-workflow-menu"><summary className="min-h-11 cursor-pointer rounded border px-2 py-1 text-xs">Start workflow</summary><form action={startWorkflowRun} className="care-view-popover flex flex-wrap gap-1.5 rounded border p-3">
                       <input type="hidden" name="collectionSlug" value={collectionSlug} />
                       <input type="hidden" name="scopeType" value="LOCATION" />
                       <input type="hidden" name="locationId" value={section.locationId} />
@@ -112,7 +112,7 @@ export function CareQueueLocationBoard({
                         {workflowTemplates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}
                       </select>
                       <Button className="px-2.5 py-1 text-xs">Start workflow</Button>
-                    </form>
+                    </form></details>
                   )}
                 </div>
               )}

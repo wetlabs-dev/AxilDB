@@ -1,8 +1,9 @@
+import { readCareViewPreference } from '@/lib/care-view-preferences'
+import { resolveCareView } from '@/lib/care-view'
 import { CareQueueProvider } from '@/components/CareQueueOptimistic'
 import { CareQueueView } from '@/components/CareQueueView'
 import { canCreateInCollection, requireCollectionViewer } from '@/lib/collections'
 import { getCareQueue } from '@/lib/care-queue'
-import type { CareQueueGroupingMode, CareQueueLocationSort } from '@/lib/care-queue-locations'
 import { prisma } from '@/lib/prisma'
 import { ensureStarterWorkflowTemplates } from '@/lib/workflows'
 
@@ -17,8 +18,8 @@ export default async function CareQueuePage({ searchParams }: { searchParams: Pr
   const timezone = preferences?.timezone
   const filter = params.filter || 'today'
   const search = (params.q || '').trim()
-  const grouping: CareQueueGroupingMode = ['flat', 'hierarchy'].includes(params.grouping || '') ? params.grouping as CareQueueGroupingMode : 'parent'
-  const locationSort: CareQueueLocationSort = ['alphabetical', 'items', 'overdue'].includes(params.locationSort || '') ? params.locationSort as CareQueueLocationSort : 'tree'
+  const viewPreference = await readCareViewPreference(prisma, context.user?.id, context.collection.id)
+  const { grouping, locationSort } = resolveCareView(viewPreference, params)
   const snapshotAt = Date.now()
   const [allItems, substrateRecipeVersions, locations] = await Promise.all([
     getCareQueue(prisma, {
@@ -57,6 +58,6 @@ export default async function CareQueuePage({ searchParams }: { searchParams: Pr
     : []
 
   return <CareQueueProvider collectionSlug={context.collection.slug} userId={context.user?.id || 'public'} initialItems={allItems} snapshotAt={snapshotAt} timezone={timezone}>
-    <CareQueueView collectionSlug={context.collection.slug} canAct={canAct} timezone={timezone} filter={filter} search={search} grouping={grouping} locationSort={locationSort} selectedLocationParam={params.location} locations={locations} substrateVersions={substrateVersions} workflowTemplates={workflowTemplates.map(template => ({ id: template.id, name: template.name }))} />
+    <CareQueueView key={`${context.user?.id || 'public'}:${context.collection.id}`} initialPreference={viewPreference} canRemember={Boolean(context.user)} collectionSlug={context.collection.slug} canAct={canAct} timezone={timezone} filter={filter} search={search} grouping={grouping} locationSort={locationSort} selectedLocationParam={params.location} locations={locations} substrateVersions={substrateVersions} workflowTemplates={workflowTemplates.map(template => ({ id: template.id, name: template.name }))} />
   </CareQueueProvider>
 }

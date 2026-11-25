@@ -1,3 +1,4 @@
+import { careViewContinuation, careViewReturnQuery } from '@/lib/care-view'
 import { BotanicalName } from '@/components/BotanicalName'
 import { plantDisplayName } from '@/lib/utils'
 import { quietDateReasons } from '@/lib/care-calendar'
@@ -36,6 +37,7 @@ export default async function CareScheduleSyncPage({
   const context = await requireCollectionViewer()
   const canSync = canCreateInCollection(context.user, context)
   const params = await searchParams
+  const queueView = careViewContinuation(firstParam(params.queueView))
   const preferences = context.user ? await prisma.emailPreference.findUnique({ where: { userId: context.user.id } }) : null
   const timezone = timeZoneForPreference(preferences)
   const definitionId = firstParam(params.definitionId)
@@ -131,7 +133,7 @@ export default async function CareScheduleSyncPage({
           <h2 className="text-3xl font-bold">Care Schedule Sync</h2>
           <p className="mt-1 max-w-3xl text-sm text-stone-600">Align next due dates for selected care items without recording completed care or deleting history.</p>
         </div>
-        <Link className="rounded-md border border-stone-300 bg-white/70 px-3 py-2 text-sm font-semibold" href={collectionPath(context.collection.slug, '/care')}>Care queue</Link>
+        <Link className="rounded-md border border-stone-300 bg-white/70 px-3 py-2 text-sm font-semibold" href={`${collectionPath(context.collection.slug, '/care')}${careViewReturnQuery(queueView)}`}>Care queue</Link>
       </div>
 
       {params.synced && <Card className="border-green-200 bg-green-50 text-sm text-green-900">Care schedule sync applied. Updated care queue dates should now reflect the new schedule.</Card>}
@@ -142,6 +144,7 @@ export default async function CareScheduleSyncPage({
       ) : (
         <Card>
           <form method="get" action={collectionPath(context.collection.slug, '/care/sync')} className="grid gap-4">
+          <input type="hidden" name="queueView" value={queueView} />
             <div className="grid gap-3 lg:grid-cols-5">
               <Select label="Definition filter" name="definitionId" defaultValue={selectedDefinition?.id || ''}>
                 <option value="">All active definitions</option>
@@ -264,6 +267,7 @@ export default async function CareScheduleSyncPage({
             </table>
           </div>
           <form action={applyCareScheduleSync} className="mt-4 grid gap-3">
+          <input type="hidden" name="queueView" value={queueView} />
             <input type="hidden" name="collectionSlug" value={context.collection.slug} />
             <input type="hidden" name="definitionId" value={selectedDefinition?.id || ''} />
             <input type="hidden" name="locationId" value={locationId} />

@@ -1680,3 +1680,17 @@ code, pre, .font-mono, .ax-literal, input, textarea { font-variant-ligatures: no
   .ax-deconfliction { padding-bottom:12rem; }
   .ax-deconflict-actions { position:fixed; z-index:65; left:max(.5rem,env(safe-area-inset-left)); right:max(.5rem,env(safe-area-inset-right)); bottom:max(.5rem,env(safe-area-inset-bottom)); max-height:45dvh; overflow-y:auto; box-shadow:0 4px 16px #0003; }
 }
+
+/* Action-first care workspace. Menus disclose secondary controls without layout panels. */
+.care-view-menu,.care-workflow-menu { position:relative; }
+.care-view-popover { position:absolute; z-index:45; top:100%; right:0; width:min(24rem,calc(100vw - 2rem)); background:var(--ax-surface-solid); color:var(--ax-text); border-color:var(--ax-border); box-shadow:0 4px 16px #0002; }
+.care-workflow-menu .care-view-popover { left:0;right:auto; }
+.care-primary-actions>a,.care-primary-actions summary { display:inline-flex;align-items:center; }
+.care-forecast-section { scroll-margin-top:5rem; }
+.care-view-controls select { max-width:100%; }
+.care-view-controls .care-view-menu>summary { display:flex;align-items:center; }
+@media(max-width:640px) { .care-primary-actions { gap:.25rem; } .care-primary-actions>a,.care-primary-actions summary { padding:.5rem;font-size:.75rem; } .care-view-controls { display:flex; } .care-view-popover { left:0;right:auto; } }
+@media(max-width:640px) {
+  .care-view-menu .care-view-popover,.care-workflow-menu .care-view-popover { position:fixed; left:max(1rem,env(safe-area-inset-left)); right:max(1rem,env(safe-area-inset-right)); top:5rem; width:auto; max-height:calc(100dvh - 6rem); overflow-y:auto; }
+}
+@media(min-width:641px) { [data-care-section] .care-workflow-menu .care-view-popover { left:auto;right:0; } }

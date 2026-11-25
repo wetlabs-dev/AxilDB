@@ -1,4 +1,7 @@
 'use client'
+import { useEffect, useState } from 'react'
+import { CareQueueViewSettings } from '@/components/CareQueueViewSettings'
+import type { CarePresentation, CareViewPreference } from '@/lib/care-view'
 import { normalizeTypographySearch } from '@/lib/typography'
 import Link from 'next/link'
 import { careFilterPresentation } from '@/lib/care-category-presentation'
@@ -29,9 +32,14 @@ const filters = [
   ['completed', 'Completed'],
 ] as const
 
-export function CareQueueView({ collectionSlug, canAct, timezone, filter, search, grouping, locationSort, selectedLocationParam, locations, substrateVersions, workflowTemplates }: {
- collectionSlug: string; canAct: boolean; timezone?: string; filter: string; search: string; grouping: CareQueueGroupingMode; locationSort: CareQueueLocationSort; selectedLocationParam?: string; locations: LocationNode[]; substrateVersions: Array<{ id: string; label: string }>; workflowTemplates: Array<{ id: string; name: string }>
+export function CareQueueView({ collectionSlug, canAct, timezone, filter, search, grouping: initialGrouping, locationSort: initialSort, initialPreference, canRemember, selectedLocationParam, locations, substrateVersions, workflowTemplates }: {
+ initialPreference: CareViewPreference; canRemember: boolean; collectionSlug: string; canAct: boolean; timezone?: string; filter: string; search: string; grouping: CareQueueGroupingMode; locationSort: CareQueueLocationSort; selectedLocationParam?: string; locations: LocationNode[]; substrateVersions: Array<{ id: string; label: string }>; workflowTemplates: Array<{ id: string; name: string }>
 }) {
+ const [view,setView] = useState<CarePresentation>({grouping:initialGrouping,locationSort:initialSort})
+ const [conflicts,setConflicts] = useState(0)
+ useEffect(()=>setView({grouping:initialGrouping,locationSort:initialSort}),[initialGrouping,initialSort])
+ const {grouping,locationSort}=view
+ function applyView(next:CarePresentation){setView(next);const params=new URLSearchParams(window.location.search);params.set('grouping',next.grouping);params.set('locationSort',next.locationSort);window.history.replaceState(null,'',`${window.location.pathname}?${params}`)}
  const { items: allItems, authoritativeItems } = useCareQueue()
  const context = { collection: { slug: collectionSlug } }
  const params = { location: selectedLocationParam }
@@ -56,44 +64,22 @@ export function CareQueueView({ collectionSlug, canAct, timezone, filter, search
     return `${collectionPath(context.collection.slug, '/care')}?${next.toString()}`
   }
   const back = query({})
+  const continuation = `queueView=${grouping}:${locationSort}`
   return (
-    <div className="space-y-5" data-care-queue-root>
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="text-3xl font-bold">Today’s Care</h2>
-          <p className="text-sm text-stone-600">{formatDate(new Date(), timezone)} · Calendar-day care, available from local midnight.</p>
+    <div className="space-y-3" data-care-queue-root>
+      <header className="space-y-2">
+        <div className="flex flex-wrap items-end justify-between gap-2"><div><h2 className="text-3xl font-bold">Today’s Care</h2><p className="text-sm ax-text-muted">{formatDate(new Date(), timezone)} · Calendar-day care, available from local midnight.</p></div>
+          <div className="grid grid-cols-4 gap-2 text-center text-xs"><div className="rounded border px-3 py-1"><b data-care-summary="today" className="block text-base">{summary.today}</b> due today</div><div className="rounded border px-3 py-1"><b data-care-summary="overdue" className="block text-base">{summary.overdue}</b> overdue</div><div className="rounded border px-3 py-1"><b className="block text-base">{summary.health}</b> attention</div><div className="rounded border px-3 py-1"><b className="block text-base">{summary.propagation}</b> props</div></div>
         </div>
-        <div className="flex flex-wrap items-end justify-end gap-2">
-          <Link
-            href={collectionPath(context.collection.slug, '/care/bulk')}
-            className="rounded-md border border-[#c7d8bd] bg-white/70 px-3 py-2 text-sm font-semibold text-[#2f6b45] shadow-sm hover:bg-[#f5fbf0]"
-          >
-            Bulk care by location
-          </Link>
-          {canAct && (
-            <Link
-              href={collectionPath(context.collection.slug, '/care/sync')}
-              className="rounded-md border border-[#c7d8bd] bg-white/70 px-3 py-2 text-sm font-semibold text-[#2f6b45] shadow-sm hover:bg-[#f5fbf0]"
-            >
-              Sync care schedules
-            </Link>
-          )}
-          <Link
-            href={collectionPath(context.collection.slug, '/care/checklist')}
-            className="rounded-md border border-[#c7d8bd] bg-white/70 px-3 py-2 text-sm font-semibold text-[#2f6b45] shadow-sm hover:bg-[#f5fbf0]"
-          >
-            Weekly checklist
-          </Link>
-          <div className="grid grid-cols-4 gap-2 text-center text-xs sm:flex">
-            <div className="rounded-lg border border-stone-200 bg-white/60 px-3 py-2"><b data-care-summary="today" className="block text-base">{summary.today}</b> due today</div>
-            <div className="rounded-lg border border-stone-200 bg-white/60 px-3 py-2"><b data-care-summary="overdue" className="block text-base">{summary.overdue}</b> overdue</div>
-            <div className="rounded-lg border border-stone-200 bg-white/60 px-3 py-2"><b className="block text-base">{summary.health}</b> attention</div>
-            <div className="rounded-lg border border-stone-200 bg-white/60 px-3 py-2"><b className="block text-base">{summary.propagation}</b> props</div>
-          </div>
-        </div>
-      </div>
-
-      <CareForecast collectionSlug={collectionSlug} />
+        <nav aria-label="Care actions" className="care-primary-actions flex flex-wrap items-center gap-2 text-sm">
+          <Link className="min-h-11 rounded border px-3 py-2" href={`${collectionPath(collectionSlug,'/care/bulk')}?${continuation}`}>Bulk care by location</Link>
+          {canAct&&<Link className="min-h-11 rounded border px-3 py-2" href={`${collectionPath(collectionSlug,'/care/sync')}?${continuation}`}>Sync care schedules</Link>}
+          <Link className="min-h-11 rounded border px-3 py-2" href={`${collectionPath(collectionSlug,'/care/checklist')}?${continuation}`}>Weekly checklist</Link>
+          {canAct&&workflowTemplates.length>0&&<details data-care-workflow className="care-workflow-menu" onKeyDown={event=>{if(event.key==='Escape'){event.preventDefault();event.currentTarget.open=false;event.currentTarget.querySelector('summary')?.focus()}}}><summary className="min-h-11 cursor-pointer rounded border px-3 py-2">Start workflow</summary><form action={startWorkflowRun} className="care-view-popover space-y-2 rounded border p-3"><input type="hidden" name="collectionSlug" value={collectionSlug}/><input type="hidden" name="scopeType" value="COLLECTION"/><p>Scope: this collection</p><label className="grid gap-1">Workflow<select name="templateId" className="ax-control min-h-11 max-w-full rounded border p-2">{workflowTemplates.map(template=><option key={template.id} value={template.id}>{template.name}</option>)}</select></label><Button>Start workflow</Button></form></details>}
+          <a className="min-h-11 px-2 py-2 underline" href="#care-forecast">Forecast{conflicts>0?` · ${conflicts} scheduling conflict${conflicts===1?'':'s'}`:''}</a>
+        </nav>
+      </header>
+      <section aria-label="Care filters and view" className="space-y-2">
       <div className="flex gap-2 overflow-x-auto pb-1">
         {filters.map(([value, label]) => (
           <Link
@@ -101,7 +87,7 @@ export function CareQueueView({ collectionSlug, canAct, timezone, filter, search
             aria-current={filter===value?'page':undefined}
             data-semantic-color={careFilterPresentation(value)?.color}
             href={query({ filter: value, location: undefined })}
-            className={`care-category-filter shrink-0 rounded-full border px-3 py-1 text-sm font-medium ${filter === value ? 'border-[#2f6b45] bg-[#d6dfc9] text-[#1f472f]' : 'border-stone-200 bg-white/60 text-stone-700'}`}
+            className={`care-category-filter inline-flex min-h-11 items-center shrink-0 rounded-full border px-3 py-1 text-sm font-medium ${filter === value ? 'border-[#2f6b45] bg-[#d6dfc9] text-[#1f472f]' : 'border-stone-200 bg-white/60 text-stone-700'}`}
           >
             {label}
           </Link>
@@ -120,45 +106,29 @@ export function CareQueueView({ collectionSlug, canAct, timezone, filter, search
         <div className="flex flex-wrap items-end justify-between gap-2 text-sm">
           <p className="text-stone-600"><strong>{locationCount}</strong> location{locationCount === 1 ? '' : 's'} with visible care</p>
           <form className="flex flex-wrap items-end gap-2">
+            <input type="hidden" name="grouping" value={grouping}/><input type="hidden" name="locationSort" value={locationSort}/>
             <input type="hidden" name="filter" value={filter} />
             {selectedLocation && <input type="hidden" name="location" value={selectedLocation} />}
-            <label className="grid gap-1 text-xs font-semibold">Search<input name="q" defaultValue={search} placeholder="Plant, task, or Location" className="w-44 rounded-md border border-stone-300 bg-[#fffdf7] px-2 py-1.5 text-sm font-normal" /></label>
-            <label className="grid gap-1 text-xs font-semibold">Grouping<select name="grouping" defaultValue={grouping} className="rounded-md border border-stone-300 bg-[#fffdf7] px-2 py-1.5 text-sm font-normal"><option value="parent">Parent grouped</option><option value="flat">Flat paths</option><option value="hierarchy">Full hierarchy</option></select></label>
-            <label className="grid gap-1 text-xs font-semibold">Location order<select name="locationSort" defaultValue={locationSort} className="rounded-md border border-stone-300 bg-[#fffdf7] px-2 py-1.5 text-sm font-normal"><option value="tree">Tree order</option><option value="alphabetical">Alphabetical</option><option value="items">Most items due</option><option value="overdue">Most overdue</option></select></label>
-            <Button className="px-3 py-1.5">Apply view</Button>
+            <label className="grid gap-1 text-xs font-semibold">Search<input name="q" key={search} defaultValue={search} placeholder="Plant, task, or location" className="w-36 rounded-md border border-stone-300 bg-[#fffdf7] px-2 py-1.5 text-sm font-normal" /></label>
+            <Button className="min-h-11 px-3">Search</Button>
           </form>
+          <CareQueueViewSettings collectionSlug={collectionSlug} view={view} onChange={applyView} initialPreference={initialPreference} canRemember={canRemember}/>
         </div>
       </div>
 
-      {canAct && workflowTemplates.length > 0 && (
-        <Card>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h3 className="font-serif text-xl font-semibold">Start a workflow from the queue</h3>
-              <p className="mt-1 text-sm text-stone-600">Use workflows for repeatable rounds that go beyond one care task.</p>
-            </div>
-            <form action={startWorkflowRun} className="flex flex-wrap items-end gap-2">
-              <input type="hidden" name="collectionSlug" value={context.collection.slug} />
-              <input type="hidden" name="scopeType" value="COLLECTION" />
-              <select name="templateId" className="rounded-md border border-stone-300 bg-[#fffdf7] px-2.5 py-1.5 text-sm">
-                {workflowTemplates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}
-              </select>
-              <Button>Start workflow</Button>
-            </form>
-          </div>
-        </Card>
-      )}
+      </section>
 
       {items.length === 0 ? (
-        <Card className="py-10 text-center">
-          <CheckCircle2 className="mx-auto mb-3 h-10 w-10 text-[#2f6b45]" />
-          <h3 data-care-empty-focus tabIndex={-1} className="font-serif text-2xl font-bold">Nothing pressing here.</h3>
-          <p className="mx-auto mt-2 max-w-xl text-sm text-stone-600">The queue is clear for this filter. Keep an eye on the leaves, but no task is asking for your hands right now.</p>
+        <Card className="p-3 text-center">
+          <CheckCircle2 className="mx-auto mb-1 h-5 w-5 text-[#2f6b45]" />
+          <h3 data-care-empty-focus tabIndex={-1} className="font-serif text-2xl font-bold">{filter==='today'&&!search&&!selectedLocation ? conflicts>0?'Care needs a scheduling decision.':'No care due today.':'No tasks match this view.'}</h3>
+          <p className="mx-auto mt-2 max-w-xl text-sm text-stone-600">{conflicts>0?'Review scheduling conflicts in the forecast below.':search||selectedLocation||filter!=='today'?'Try another filter or location to see other care.':'The forecast below shows upcoming care.'}</p>
         </Card>
       ) : null}
       {sections.length > 0 && (
-        <CareQueueLocationBoard visibleItems={items} sections={sections} collectionSlug={context.collection.slug} back={back} canAct={canAct} timezone={timezone} substrateVersions={substrateVersions} workflowTemplates={workflowTemplates.map((template) => ({ id: template.id, name: template.name }))} bulkCarePath={collectionPath(context.collection.slug, '/care/bulk')} />
+        <CareQueueLocationBoard visibleItems={items} sections={sections} collectionSlug={context.collection.slug} back={back} canAct={canAct} timezone={timezone} substrateVersions={substrateVersions} workflowTemplates={workflowTemplates.map((template) => ({ id: template.id, name: template.name }))} bulkCarePath={`${collectionPath(context.collection.slug, '/care/bulk')}?${continuation}`} />
       )}
+      <section id="care-forecast" className="care-forecast-section" aria-label="Care planning"><CareForecast collectionSlug={collectionSlug} onConflictCount={setConflicts}/></section>
     </div>
   )
 }
