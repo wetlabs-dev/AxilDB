@@ -3,7 +3,7 @@ import { formatTypography } from '@/lib/typography'
 import { careCategoryPresentation } from '@/lib/care-category-presentation'
 
 import { useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
+import { CompleteVisibleCare } from '@/components/CompleteVisibleCare'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { startWorkflowRun } from '@/app/workflow-actions'
 import { CareQueueItemCard } from '@/components/CareQueueItemCard'
@@ -20,7 +20,7 @@ export function CareQueueLocationBoard({
   timezone,
   substrateVersions,
   workflowTemplates,
-  bulkCarePath,
+  resultsSummary,
 }: {
   sections: CareQueueLocationSection[]
   visibleItems: CareQueueItem[]
@@ -30,7 +30,7 @@ export function CareQueueLocationBoard({
   timezone?: string
   substrateVersions: Array<{ id: string; label: string }>
   workflowTemplates: Array<{ id: string; name: string }>
-  bulkCarePath: string
+  resultsSummary: string
 }) {
   const visibleByKey = new Map(visibleItems.map(item => [item.key, item]))
   const storageKey = `axildb:care-location-sections:${collectionSlug}`
@@ -60,9 +60,9 @@ export function CareQueueLocationBoard({
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-end gap-2 text-xs">
+      <div className="care-results-row flex flex-wrap items-center justify-between gap-2 text-xs"><p>{resultsSummary}</p><div className="flex gap-2">
         <button type="button" className="rounded-md border border-stone-300 bg-white/70 px-2.5 py-1.5 font-semibold" onClick={() => setAll(true)}>Expand all</button>
-        <button type="button" className="rounded-md border border-stone-300 bg-white/70 px-2.5 py-1.5 font-semibold" onClick={() => setAll(false)}>Collapse all</button>
+        <button type="button" className="rounded-md border border-stone-300 bg-white/70 px-2.5 py-1.5 font-semibold" onClick={() => setAll(false)}>Collapse all</button></div>
       </div>
       {sections.map((originalSection) => {
         const visible = originalSection.items.flatMap(item => visibleByKey.has(item.key) ? [visibleByKey.get(item.key)!] : [])
@@ -70,12 +70,9 @@ export function CareQueueLocationBoard({
         for (const item of visible) counts.set(item.taskType, (counts.get(item.taskType) || 0) + 1)
         const section = { ...originalSection, items: visible, overdue: visible.filter(item => item.overdueDays > 0).length, typeCounts: [...counts].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([type, count]) => ({ type, count })) }
         const isExpanded = expanded[section.id] ?? true
-        const bulkHref = section.locationId
-          ? `${bulkCarePath}${bulkCarePath.includes('?')?'&':'?'}locationId=${encodeURIComponent(section.locationId)}&includeNested=1`
-          : bulkCarePath
         return (
           <section data-care-section key={section.id} className="rounded-lg border ax-surface border-[var(--ax-border)] shadow-sm" style={{ display: visible.length ? undefined : 'none', marginLeft: section.depth ? `${Math.min(section.depth, 3) * 0.75}rem` : undefined }}>
-            <div className="flex flex-wrap items-center gap-2 border-b border-stone-200 px-3 py-2.5">
+            <div className="care-location-header grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b border-stone-200 px-3 py-2.5">
               <button
                 type="button"
                 onClick={() => toggle(section.id)}
@@ -90,8 +87,8 @@ export function CareQueueLocationBoard({
               >
                 {isExpanded ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
                 <span className="min-w-0">
-                  <strong className="block truncate font-serif text-lg">{section.label}</strong>
-                  <span className="block truncate text-xs text-stone-500">{section.path}</span>
+                  <strong className="block break-words font-serif text-lg">{section.label}</strong>
+                  <span className="block break-words text-xs text-stone-500">{section.path}</span>
                 </span>
               </button>
               <div className="flex flex-wrap items-center gap-1.5 text-xs text-stone-600">
@@ -99,10 +96,10 @@ export function CareQueueLocationBoard({
                 {section.overdue > 0 && <span className="rounded-full border ax-status-warning px-2 py-1">{section.overdue} overdue</span>}
                 {section.typeCounts.map(({ type, count }) => <span key={type} data-semantic-color={careCategoryPresentation(type).color} className="semantic-chip hidden rounded-full border px-2 py-1 sm:inline">{count} {type.toLowerCase().replaceAll('_', ' ')}</span>)}
               </div>
-              {canAct && section.locationId && (
-                <div className="flex flex-wrap gap-1.5">
-                  <Link href={bulkHref} className="rounded-md border border-[#c7d8bd] bg-white/70 px-2.5 py-1.5 text-xs font-semibold text-[#2f6b45]">Complete visible care</Link>
-                  {workflowTemplates.length > 0 && (
+              {canAct && (
+                <div className="care-location-actions flex flex-wrap gap-2">
+                  <CompleteVisibleCare items={visible} label={section.label} collectionSlug={collectionSlug} timezone={timezone} substrateVersions={substrateVersions}/>
+                  {section.locationId && workflowTemplates.length > 0 && (
                     <details className="care-workflow-menu"><summary className="min-h-11 cursor-pointer rounded border px-2 py-1 text-xs">Start workflow</summary><form action={startWorkflowRun} className="care-view-popover flex flex-wrap gap-1.5 rounded border p-3">
                       <input type="hidden" name="collectionSlug" value={collectionSlug} />
                       <input type="hidden" name="scopeType" value="LOCATION" />

@@ -1,5 +1,7 @@
 # Care Queue layout and personal views
 
+See [the follow-up refinement](CARE_QUEUE_REFINEMENT.md) for the compact toolbar, transient feedback, Attention explanation and obligation-based Complete visible care review.
+
 The Care Queue is an operational page: heading/date and compact summaries, primary actions, filters/search/view controls, care groups and tasks, then the complete Care forecast. Forecast is a client-loaded planning module, independent of the server-rendered actionable queue. Its existing seven-day data, location selector, Quiet Day controls, conflict details and deconfliction remain available. A top Forecast link includes the live conflict count and scrolls to planning without duplicating the forecast above care.
 
 Global **Start workflow** is a compact disclosure with a collection-scoped selector. Group headers retain a separate location-scoped workflow disclosure and their existing nested-location behavior. Bulk care, schedule sync and weekly checklist links remain available. Empty states distinguish a clear today view, hidden/filtered care and unresolved scheduling attention.

@@ -1694,3 +1694,21 @@ code, pre, .font-mono, .ax-literal, input, textarea { font-variant-ligatures: no
   .care-view-menu .care-view-popover,.care-workflow-menu .care-view-popover { position:fixed; left:max(1rem,env(safe-area-inset-left)); right:max(1rem,env(safe-area-inset-right)); top:5rem; width:auto; max-height:calc(100dvh - 6rem); overflow-y:auto; }
 }
 @media(min-width:641px) { [data-care-section] .care-workflow-menu .care-view-popover { left:auto;right:0; } }
+
+/* Shared badges identify categories; outer links retain interactive filter semantics. */
+.care-category-filter[data-semantic-color]::before { content:none; }
+.care-category-filter .semantic-chip { border:0; background:transparent; padding:0; }
+:root .care-category-filter[data-semantic-color] { color:var(--semantic-fg); background:var(--semantic-bg); border-color:var(--semantic-border); }
+.care-category-filter:hover { filter:brightness(.97); }
+.care-category-filter:active { transform:translateY(1px); }
+.care-category-filter[aria-current='page'] { box-shadow:inset 0 0 0 1px currentColor; font-weight:700; }
+.care-search-toolbar .care-view-controls { flex:none; }
+.care-search-toolbar .care-view-menu>summary>span { display:none; }
+.care-location-actions { grid-column:1 / -1; }
+.care-location-actions>button,.care-location-actions>details { flex:1 1 auto; }
+.care-location-actions summary { display:flex; min-height:44px; align-items:center; justify-content:center; }
+.care-location-header strong,.care-location-header button>span { overflow-wrap:anywhere; }
+.care-transient-status { position:fixed; z-index:90; right:max(1rem,env(safe-area-inset-right)); top:max(1rem,env(safe-area-inset-top)); max-width:calc(100vw - 2rem); padding:.75rem 1rem; border:1px solid var(--ax-border); border-radius:.5rem; background:var(--ax-surface-solid); color:var(--ax-text); box-shadow:0 4px 16px #0002; }
+.visible-care-dialog { width:min(48rem,calc(100vw - 1rem)); padding:max(1rem,env(safe-area-inset-top)) max(1rem,env(safe-area-inset-right)) max(1rem,env(safe-area-inset-bottom)) max(1rem,env(safe-area-inset-left)); }
+@media(min-width:900px){ .care-location-header { grid-template-columns:minmax(12rem,1fr) auto auto; } .care-location-actions { grid-column:auto; } }
+@media(max-width:640px){ .care-results-row p { flex:1 1 8rem; } .care-view-menu .care-view-popover { top:max(1rem,env(safe-area-inset-top)); max-height:calc(100dvh - 2rem); } }

@@ -127,7 +127,9 @@
     "check:quick-care:ui": "node scripts/check-quick-care-ui.mjs",
     "check:qr-scanner": "tsx scripts/check-qr-scanner.ts",
     "check:qr-scanner:db": "tsx scripts/check-qr-resolution.ts",
-    "check:qr-scanner:ui": "node scripts/check-qr-scanner-ui.mjs"
+    "check:qr-scanner:ui": "node scripts/check-qr-scanner-ui.mjs",
+    "check:visible-care": "tsx scripts/check-visible-care.ts",
+    "check:care-refinement:ui": "node scripts/check-care-refinement-ui.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

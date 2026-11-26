@@ -21,7 +21,8 @@ export function careCategoryPresentation(type: string, label?: string): CareCate
   return {category:'custom',label:label || type?.replaceAll('_',' ').toLowerCase().replace(/^./,c=>c.toUpperCase()) || 'Care',color:'stone',icon:'bell'}
 }
 const filterTypes: Partial<Record<CareQueueFilter,CareTaskType>> = {water:'WATER',fertilize:'FERTILIZE',repot:'REPOT',treatment:'TREATMENT',propagation:'PROPAGATION_CHECK',health:'HEALTH_CHECK',pest:'PEST_CHECK',bloom:'BLOOM_CHECK',custom:'REMINDER'}
+export function careFilterTaskType(filter:string) { return Object.prototype.hasOwnProperty.call(filterTypes,filter)?filterTypes[filter as CareQueueFilter]:undefined }
 export function careFilterPresentation(filter:string) {
-  const type=Object.prototype.hasOwnProperty.call(filterTypes,filter)?filterTypes[filter as CareQueueFilter]:undefined
+  const type=careFilterTaskType(filter)
   return type?careCategoryPresentation(type):null
 }

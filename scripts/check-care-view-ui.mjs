@@ -22,6 +22,7 @@ try{f=JSON.parse(await readFile(fixture,'utf8'))}catch{
 if(phase==='after'){
  await db.userSortPreference.deleteMany({where:{userId:f.userId,section:`care-queue:${f.collectionId}`}})
  await db.plantCareEvent.deleteMany({where:{collectionId:f.collectionId}})
+ await db.plantDefinitionCareCadence.deleteMany({where:{plantDefinition:{collectionId:f.collectionId},activity:{not:'WATERING'}}})
 }
 const browser=await chromium.launch({channel:'chrome',headless:true}),errors=[],measurements=[]
 try{
